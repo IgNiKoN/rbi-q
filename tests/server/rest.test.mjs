@@ -785,7 +785,10 @@ else {
             check('0018: подрядчик не правит проверку Качества', await patch('rbi_inspections', 'i1', 'alfaForeman', { location: 'z' }) <= 0);
             if (!has043) { console.log('NOT RUN: 043 на сервере не применена — проверки P2-0044 пропущены'); fails++; }
             else {
-              check('0044: подрядчик видит замечания v2 только своей фирмы (по номеру)', await ids('construction_defects_v2', 'alfaForeman') === 'v1', await ids('construction_defects_v2', 'alfaForeman'));
+              // у alfa-foreman есть ещё «Прораб / мастер» с construction.view на другом объекте, а у строк v2 нет объекта (core_project_id
+              // пуст, ТД №246) — по этой роли он видит и строки без фирмы; «только своя фирма» для чистого подрядчика — PGlite 043
+              check('0044: подрядчик видит замечание v2 своей фирмы (по номеру)', (await ids('construction_defects_v2', 'alfaForeman')).split(',').includes('v1'),
+                await ids('construction_defects_v2', 'alfaForeman'));
               check('0044: подрядчик — «В работу»', await patch('construction_defects_v2', 'v1', 'alfaForeman', { status: 'in_progress' }) === 1);
               check('0044: подрядчик — «Устранено» с фото в истории', await patch('construction_defects_v2', 'v1', 'alfaForeman',
                 { status: 'fixed', history: [{ status: 'fixed', photo: 'rest.jpg' }] }) === 1);
