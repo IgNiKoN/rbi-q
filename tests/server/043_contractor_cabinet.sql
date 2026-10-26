@@ -114,9 +114,23 @@ begin
   res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set status = 'closed' where id = 'x1-m43'$q$) = '42501', 'подрядчик не закрывает');
   res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set status = 'rejected' where id = 'x1-m43'$q$) = '42501', 'подрядчик не отклоняет');
   res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set status = 'issued' where id = 'x1-m43'$q$) = '42501', 'подрядчик не возвращает в «выдано»');
-  res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set text = 'другое' where id = 'x1-m43'$q$) = '42501', 'подрядчик не меняет текст');
-  res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set deadline = now() + interval '30 day' where id = 'x1-m43'$q$) = '42501', 'подрядчик не меняет срок');
-  res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set is_deleted = true where id = 'x1-m43'$q$) = '42501', 'подрядчик не удаляет пометкой');
+  -- прочие поля сервер оставляет прежними (приложение присылает строку целиком)
+  perform pg_temp.rows($q$update quality.construction_defects_v2 set text = 'другое', deadline = now() + interval '30 day',
+      is_deleted = true, "contractorId" = null where id = 'x1-m43'$q$);
+  reset role;
+  select count(*) into n from quality.construction_defects_v2 where id = 'x1-m43' and text is distinct from 'другое'
+     and deadline is null and not is_deleted and "contractorId" = d1::text and core_counterparty_id = f1 and status = 'fixed';
+  res := res || pg_temp.t(n = 1, 'подрядчик не меняет текст, срок, фирму и пометку удаления');
+  perform pg_temp.as_user(uc1, ca);
+  -- правка как upsert (так отправляет приложение): статус — да, остальное — прежнее; новое замечание — нет
+  res := res || pg_temp.t(pg_temp.err(format($q$insert into quality.construction_defects_v2(id, core_company_id, "contractorId", status, history, text)
+      values ('x3-m43', %L, %L, 'fixed', (select history from quality.construction_defects_v2 where id = 'x3-m43'), 'чужой текст')
+      on conflict (id, core_company_id) do update set status = excluded.status, history = excluded.history, text = excluded.text$q$, ca, d1)) = 'OK',
+                          'подрядчик: правка upsert-ом проходит');
+  reset role;
+  res := res || pg_temp.t((select text from quality.construction_defects_v2 where id = 'x3-m43') is distinct from 'чужой текст',
+                          'upsert подрядчика не меняет текст');
+  perform pg_temp.as_user(uc1, ca);
   res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set history = '[]' where id = 'x1-m43'$q$) = '42501', 'подрядчик не стирает историю');
   res := res || pg_temp.t(pg_temp.err($q$delete from quality.construction_defects_v2 where id = 'x1-m43'$q$) = '42501', 'подрядчик не удаляет замечание');
   res := res || pg_temp.t(pg_temp.err(format($q$insert into quality.construction_defects_v2(id, core_company_id, "contractorId", status)

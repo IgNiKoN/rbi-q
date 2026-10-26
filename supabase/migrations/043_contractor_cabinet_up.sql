@@ -6,8 +6,9 @@
 --     25 из 25 строк с подрядчиком привязываются однозначно (scripts/p2-0044/01_dryrun.sql);
 --  2) «только своя фирма» в этих таблицах — по id (quality.row_visible_id: как row_visible, сравнение фирмы — assignment_sees_id);
 --  3) подрядчик (назначение с quality.scope.contractor, без назначений правки без этого ограничения) в замечаниях
---     (construction_defects, construction_defects_v2): не создаёт и не удаляет; правит только статус и историю —
---     переходы issued|rejected → in_progress → fixed, история только дописывается. Принять/отклонить — инженер.
+--     (construction_defects, construction_defects_v2): не создаёт и не удаляет; меняет только статус и историю —
+--     переходы issued|rejected → in_progress → fixed, история только дописывается; прочие поля строки сервер оставляет
+--     прежними (приложение присылает строку целиком). Принять/отклонить — инженер.
 -- Приёмки (construction_acceptance*) — только п. 1–2: заявку на приёмку подрядчик подаёт сам (acceptance-form), как раньше.
 -- Применять после 042, одним запросом. Откат — 043_contractor_cabinet_down.sql.
 begin;
@@ -117,25 +118,21 @@ revoke all on function quality.contractor_limited(uuid, uuid) from public, anon,
 create function quality.contractor_defect_guard()
 returns trigger language plpgsql security definer set search_path = pg_catalog as $$
 declare
-  n jsonb; o jsonb; k text; v_old text; v_new text; v_oh jsonb; v_nh jsonb;
+  n jsonb; o jsonb; v_old text; v_new text; v_oh jsonb; v_nh jsonb; v_exists boolean;
 begin
   if tg_op = 'DELETE' then
     if not quality.contractor_limited(old.core_company_id, old.core_project_id) then return old; end if;
-  elsif not quality.contractor_limited(new.core_company_id, new.core_project_id) then
-    return new;
-  end if;
-  if tg_op = 'DELETE' then
     raise exception 'Подрядчик не удаляет замечания' using errcode = '42501';
   end if;
+  if not quality.contractor_limited(new.core_company_id, new.core_project_id) then return new; end if;
   if tg_op = 'INSERT' then
+    -- приложение отправляет правку как upsert: для существующего замечания проверка — в BEFORE UPDATE (тот же сторож)
+    execute format('select exists (select 1 from %I.%I where id = $1 and core_company_id = $2)', tg_table_schema, tg_table_name)
+      into v_exists using new.id, new.core_company_id;
+    if v_exists then return new; end if;
     raise exception 'Подрядчик не создаёт замечания' using errcode = '42501';
   end if;
   n := to_jsonb(new); o := to_jsonb(old);
-  for k in select key from jsonb_each(n) loop
-    if k not in ('status', 'history', 'updated_at', 'version', 'sync_status') and (n -> k) is distinct from (o -> k) then
-      raise exception 'Подрядчик меняет только статус замечания (поле %)', k using errcode = '42501';
-    end if;
-  end loop;
   v_old := coalesce(nullif(o ->> 'status', ''), 'issued');
   v_new := coalesce(nullif(n ->> 'status', ''), 'issued');
   if v_new is distinct from v_old and not ((v_old, v_new) in (('issued', 'in_progress'), ('issued', 'fixed'), ('in_progress', 'fixed'),
@@ -150,6 +147,8 @@ begin
                    where i <= jsonb_array_length(v_oh)), '[]'::jsonb) <> v_oh then
     raise exception 'Подрядчик не меняет историю замечания (только дописывает)' using errcode = '42501';
   end if;
+  -- остальные поля (текст, срок, фирма, место, пометка удаления …) — как были: приложение присылает строку целиком
+  new := jsonb_populate_record(new, o - array['status', 'history', 'updated_at', 'version', 'sync_status']);
   return new;
 end $$;
 revoke all on function quality.contractor_defect_guard() from public, anon, authenticated;
