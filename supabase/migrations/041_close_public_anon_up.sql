@@ -5,7 +5,8 @@
 --     (новое приложение работает со схемами quality/core/planfact и функциями pf_*; потребителей public нет).
 --  2. Правила RLS «для всех» (using(true) / with check(true) для anon/public) удалены.
 --  3. Функции public, кроме pf_*: выполнение снято у anon и PUBLIC; у authenticated — как было.
---  4. Права по умолчанию (владелец postgres, схема public): новые объекты больше не получают права anon.
+--  4. Права по умолчанию (схема public; владельцы postgres и supabase_admin — на сервере объекты создаёт supabase_admin):
+--     новые объекты больше не получают права anon.
 begin;
 do $$
 begin
@@ -30,7 +31,7 @@ create table p2_backup.p2_0042_policies (
   cmd text not null, qual text, with_check text
 );
 create table p2_backup.p2_0042_defaults (
-  objtype "char" not null, grantee text not null, privilege text not null
+  owner text not null, objtype "char" not null, grantee text not null, privilege text not null
 );
 revoke all on all tables in schema p2_backup from public, anon, authenticated;
 
@@ -96,17 +97,21 @@ begin
   end loop;
 end $$;
 
--- 4. Права по умолчанию для новых объектов владельца postgres
-insert into p2_backup.p2_0042_defaults(objtype, grantee, privilege)
-select a.defaclobjtype, 'anon', x.privilege_type
+-- 4. Права по умолчанию для новых объектов (все владельцы, у кого они есть: postgres, supabase_admin)
+insert into p2_backup.p2_0042_defaults(owner, objtype, grantee, privilege)
+select a.defaclrole::regrole::text, a.defaclobjtype, 'anon', x.privilege_type
   from pg_default_acl a join pg_namespace n on n.oid = a.defaclnamespace
   cross join lateral aclexplode(a.defaclacl) x
- where n.nspname = 'public' and a.defaclrole = 'postgres'::regrole and x.grantee = 'anon'::regrole
-   and a.defaclobjtype in ('r', 'S', 'f');
+ where n.nspname = 'public' and x.grantee = 'anon'::regrole and a.defaclobjtype in ('r', 'S', 'f');
 
-alter default privileges for role postgres in schema public revoke all on tables from anon;
-alter default privileges for role postgres in schema public revoke all on sequences from anon;
-alter default privileges for role postgres in schema public revoke all on functions from anon;
+do $$
+declare r record;
+begin
+  for r in select distinct owner, objtype from p2_backup.p2_0042_defaults loop
+    execute format('alter default privileges for role %I in schema public revoke all on %s from anon', r.owner,
+                   case r.objtype when 'r' then 'tables' when 'S' then 'sequences' else 'functions' end);
+  end loop;
+end $$;
 
 -- Сторож: в public ни одна таблица/последовательность не доступна anon
 do $$

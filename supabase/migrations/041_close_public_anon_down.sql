@@ -27,10 +27,10 @@ begin
                    case when r.qual is not null then ' using (' || r.qual || ')' else '' end,
                    case when r.with_check is not null then ' with check (' || r.with_check || ')' else '' end);
   end loop;
-  for r in select distinct objtype from p2_backup.p2_0042_defaults loop
-    execute format('alter default privileges for role postgres in schema public grant %s on %s to anon',
-                   (select string_agg(privilege, ', ') from p2_backup.p2_0042_defaults d where d.objtype = r.objtype),
-                   case r.objtype when 'r' then 'tables' when 'S' then 'sequences' when 'f' then 'functions' when 'T' then 'types' end);
+  for r in select distinct owner, objtype from p2_backup.p2_0042_defaults loop
+    execute format('alter default privileges for role %I in schema public grant %s on %s to anon', r.owner,
+                   (select string_agg(privilege, ', ') from p2_backup.p2_0042_defaults d where d.owner = r.owner and d.objtype = r.objtype),
+                   case r.objtype when 'r' then 'tables' when 'S' then 'sequences' else 'functions' end);
   end loop;
 end $$;
 

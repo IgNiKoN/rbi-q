@@ -31,6 +31,12 @@ grant execute on function public.get_public_report_by_token(text) to anon, authe
 alter default privileges for role postgres in schema public grant all on tables to anon, authenticated;
 alter default privileges for role postgres in schema public grant all on sequences to anon, authenticated;
 alter default privileges for role postgres in schema public grant all on functions to anon, authenticated;
+-- на сервере объекты public создаёт supabase_admin — его права по умолчанию такие же
+do $$ begin if not exists (select 1 from pg_roles where rolname = 'supabase_admin') then create role supabase_admin nologin; end if; end $$;
+grant create, usage on schema public to supabase_admin;
+alter default privileges for role supabase_admin in schema public grant all on tables to anon, authenticated;
+alter default privileges for role supabase_admin in schema public grant all on sequences to anon, authenticated;
+alter default privileges for role supabase_admin in schema public grant all on functions to anon, authenticated;
 
 insert into public.location_nodes(id) values ('ln-041');
 insert into public.contractors(id) values ('c-041');

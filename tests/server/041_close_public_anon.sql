@@ -61,6 +61,10 @@ begin
               where a.grantee = 'anon'::regrole) then
     fails := fails + 1; res := res || 'FAIL новая функция — anon по умолчанию; ';
   end if;
+  set local role supabase_admin;
+  create table public.p2_0042_probe_sa(id int);
+  reset role;
+  if has_table_privilege('anon', 'public.p2_0042_probe_sa', 'SELECT') then fails := fails + 1; res := res || 'FAIL новая таблица supabase_admin — anon по умолчанию; '; end if;
   -- 7. Данные на месте
   select count(*) into n from public.location_nodes where id = 'ln-041';
   if n <> 1 then fails := fails + 1; res := res || 'FAIL данные location_nodes; '; end if;
