@@ -87,7 +87,9 @@ begin
      and tg.tgname not like '%_set_person'              -- 040b: владелец профиля/рейтинга — по токену
      and tg.tgname <> 'rbi_tasks_zz_set_assignee'        -- 040b: «кому» задачи — по ФИО исполнителя
      and tg.tgname not like '%_construction_counterparty' -- 043: контрагент замечания/приёмки Стройконтроля
-     and tg.tgname <> 'zz_contractor_defect_guard';      -- 043: подрядчик — только «В работу» / «Устранено»
+     and tg.tgname <> 'zz_contractor_defect_guard'       -- 043: подрядчик — только «В работу» / «Устранено»
+     and tg.tgname <> 'location_nodes_place_sync'        -- 044: место узла → core.locations
+     and tg.tgname not like '%_v2_bind_object';          -- 044: объект замечания/приёмки v2 по месту
   res := res || pg_temp.t(n = 0, 'в quality только триггер привязки к компании (лишние: ' || coalesce(s, '—') || ')');
   select count(*), string_agg(p.proname, ', ') into n, s from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'quality' and has_function_privilege('anon', p.oid, 'execute');
