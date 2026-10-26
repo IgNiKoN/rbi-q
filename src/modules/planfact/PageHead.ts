@@ -35,10 +35,13 @@ export const PAGE_HEAD_CSS = `
 .pf-head-pick .pj-input{width:auto;min-width:220px;max-width:min(420px,100%);min-height:40px}
 .pf-head-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto}
 @media (max-width:760px){
-  .pf-pagehead{flex-direction:column;align-items:stretch}
-  .pf-head-pick{flex:1 1 auto}
+  /* телефон: заголовок — строкой, ниже объект и главное действие в одну строку (длинная подпись — переносится ниже) */
+  .pf-pagehead{gap:8px}
+  .pf-pagehead .pf-title{flex:1 1 100%}
+  .pf-pagehead:has(.pf-head-pick:empty) .pf-title{flex:1 1 auto}   /* без выбора объекта — кнопка в строке заголовка */
+  .pf-head-pick{flex:1 1 140px}
   .pf-head-pick .pj-input{flex:1 1 100%;max-width:none;min-width:0}
-  .pf-head-actions{margin-left:0;justify-content:stretch}
-  .pf-head-actions>.pf-btn{flex:1 1 auto}
+  .pf-head-actions{margin-left:auto;flex:0 1 auto}
+  .pf-head-actions>.pf-btn{min-height:44px;white-space:nowrap}
 }
 `;

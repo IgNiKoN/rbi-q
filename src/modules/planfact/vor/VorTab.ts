@@ -18,6 +18,7 @@ import type { ProjectsApi } from '../../../platform/core/projects.service.ts';
 import { VOR_MANAGE } from './vor.service.ts';
 import type { VorApi, VorImport, VorProfile, VorProject } from './vor.service.ts';
 import { initialProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
+import { InHead } from '../PageHead.ts';
 
 const KIND_LABEL: Record<RowKind, string> = { work: 'Работа', material: 'Материал', group: 'Группа', context: 'Место', skip: 'Пропуск' };
 type Filter = 'all' | RowKind;
@@ -255,9 +256,10 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
         : h(VorPositions, { key: projectId, api, projectId })
       : null,
     api && !canManage ? null : h('div', { className: 'pf-card pj-form' },
-      h('label', { className: 'pf-btn vor-file' + (busy ? ' vor-file--busy' : '') },
-        busy ? 'Читаю файл…' : 'Загрузить Excel (.xlsx)',
-        h('input', { type: 'file', accept: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disabled: busy, onChange: pick, 'data-testid': 'vor-file' })),
+      // P2-0041: «Загрузить Excel» — главное действие экрана, в шапке раздела; здесь — лист файла или подсказка
+      h(InHead, { slot: 'actions' }, h('label', { className: 'pf-btn vor-file' + (busy ? ' vor-file--busy' : '') },
+        busy ? 'Читаю файл…' : 'Загрузить ВОР',
+        h('input', { type: 'file', accept: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disabled: busy, onChange: pick, 'data-testid': 'vor-file' }))),
       file
         ? h('label', { className: 'pf-field pj-grow' }, `Лист файла «${file.name}»`,
             h('select', { className: 'pj-input', value: sheet, 'data-testid': 'vor-sheet', onChange: (e: ChangeEvent<HTMLSelectElement>) => { setSheet(e.currentTarget.value); setFilter('all'); } },

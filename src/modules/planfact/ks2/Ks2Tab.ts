@@ -17,6 +17,7 @@ import { todayMoscow } from '../fact/fact.ts';
 import { Ks2Act } from './Ks2Act.ts';
 import { Ks2Template } from './Ks2Template.ts';
 import { initialProjectId, ProjectPicker } from '../ProjectPicker.ts';
+import { InHead } from '../PageHead.ts';
 
 /** me — почта вошедшего (личные виды реестра актов). */
 export function Ks2Tab(props: { api: Ks2Api; vor: VorApi; me?: string }): ReactElement {
@@ -93,7 +94,7 @@ export function Ks2Tab(props: { api: Ks2Api; vor: VorApi; me?: string }): ReactE
     contractCard,
     settings ? h(Ks2Template, { api, projectId, settings, onChanged: () => { void api.settings(projectId).then((r) => { if (r.ok) setSettings(r.value); }); } }) : null,
     settings && canEdit && contract && !creating
-      ? h('div', { className: 'pj-actions' }, h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'k2-new', onClick: () => setCreating(true) }, 'Новый акт'))
+      ? h(InHead, { slot: 'actions' }, h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'k2-new', onClick: () => setCreating(true) }, 'Новый акт'))
       : null,
     creating && settings ? h(NewActForm, { api, projectId, nextNo: settings.next_act_no, onCancel: () => setCreating(false), onCreated: (id) => { setCreating(false); setActId(id); } }) : null,
     acts === null && settings ? h('div', { className: 'pf-muted' }, 'Загрузка…') : null,
