@@ -16,7 +16,7 @@ function y1() {
   function E(C) {
     return C === null || typeof C != "object" ? null : (C = w && C[w] || C["@@iterator"], typeof C == "function" ? C : null);
   }
-  var S = {
+  var N = {
     isMounted: function() {
       return !1;
     },
@@ -26,56 +26,56 @@ function y1() {
     },
     enqueueSetState: function() {
     }
-  }, k = Object.assign, N = {};
-  function O(C, Y, le) {
-    this.props = C, this.context = Y, this.refs = N, this.updater = le || S;
+  }, k = Object.assign, S = {};
+  function O(C, X, le) {
+    this.props = C, this.context = X, this.refs = S, this.updater = le || N;
   }
-  O.prototype.isReactComponent = {}, O.prototype.setState = function(C, Y) {
+  O.prototype.isReactComponent = {}, O.prototype.setState = function(C, X) {
     if (typeof C != "object" && typeof C != "function" && C != null)
       throw Error(
         "takes an object of state variables to update or a function which returns an object of state variables."
       );
-    this.updater.enqueueSetState(this, C, Y, "setState");
+    this.updater.enqueueSetState(this, C, X, "setState");
   }, O.prototype.forceUpdate = function(C) {
     this.updater.enqueueForceUpdate(this, C, "forceUpdate");
   };
   function R() {
   }
   R.prototype = O.prototype;
-  function K(C, Y, le) {
-    this.props = C, this.context = Y, this.refs = N, this.updater = le || S;
+  function Y(C, X, le) {
+    this.props = C, this.context = X, this.refs = S, this.updater = le || N;
   }
-  var A = K.prototype = new R();
-  A.constructor = K, k(A, O.prototype), A.isPureReactComponent = !0;
-  var J = Array.isArray;
+  var A = Y.prototype = new R();
+  A.constructor = Y, k(A, O.prototype), A.isPureReactComponent = !0;
+  var B = Array.isArray;
   function z() {
   }
-  var X = { H: null, A: null, T: null, S: null }, ue = Object.prototype.hasOwnProperty;
-  function B(C, Y, le) {
+  var F = { H: null, A: null, T: null, S: null }, ue = Object.prototype.hasOwnProperty;
+  function I(C, X, le) {
     var se = le.ref;
     return {
       $$typeof: n,
       type: C,
-      key: Y,
+      key: X,
       ref: se !== void 0 ? se : null,
       props: le
     };
   }
-  function j(C, Y) {
-    return B(C.type, Y, C.props);
+  function j(C, X) {
+    return I(C.type, X, C.props);
   }
   function re(C) {
     return typeof C == "object" && C !== null && C.$$typeof === n;
   }
   function W(C) {
-    var Y = { "=": "=0", ":": "=2" };
+    var X = { "=": "=0", ":": "=2" };
     return "$" + C.replace(/[=:]/g, function(le) {
-      return Y[le];
+      return X[le];
     });
   }
   var ae = /\/+/g;
-  function pe(C, Y) {
-    return typeof C == "object" && C !== null && C.key != null ? W("" + C.key) : Y.toString(36);
+  function pe(C, X) {
+    return typeof C == "object" && C !== null && C.key != null ? W("" + C.key) : X.toString(36);
   }
   function ne(C) {
     switch (C.status) {
@@ -85,11 +85,11 @@ function y1() {
         throw C.reason;
       default:
         switch (typeof C.status == "string" ? C.then(z, z) : (C.status = "pending", C.then(
-          function(Y) {
-            C.status === "pending" && (C.status = "fulfilled", C.value = Y);
+          function(X) {
+            C.status === "pending" && (C.status = "fulfilled", C.value = X);
           },
-          function(Y) {
-            C.status === "pending" && (C.status = "rejected", C.reason = Y);
+          function(X) {
+            C.status === "pending" && (C.status = "rejected", C.reason = X);
           }
         )), C.status) {
           case "fulfilled":
@@ -100,7 +100,7 @@ function y1() {
     }
     throw C;
   }
-  function de(C, Y, le, se, be) {
+  function de(C, X, le, se, be) {
     var ke = typeof C;
     (ke === "undefined" || ke === "boolean") && (C = null);
     var Se = !1;
@@ -121,7 +121,7 @@ function y1() {
             case y:
               return Se = C._init, de(
                 Se(C._payload),
-                Y,
+                X,
                 le,
                 se,
                 be
@@ -129,7 +129,7 @@ function y1() {
           }
       }
     if (Se)
-      return be = be(C), Se = se === "" ? "." + pe(C, 0) : se, J(be) ? (le = "", Se != null && (le = Se.replace(ae, "$&/") + "/"), de(be, Y, le, "", function(Ne) {
+      return be = be(C), Se = se === "" ? "." + pe(C, 0) : se, B(be) ? (le = "", Se != null && (le = Se.replace(ae, "$&/") + "/"), de(be, X, le, "", function(Ne) {
         return Ne;
       })) : be != null && (re(be) && (be = j(
         be,
@@ -137,23 +137,23 @@ function y1() {
           ae,
           "$&/"
         ) + "/") + Se
-      )), Y.push(be)), 1;
+      )), X.push(be)), 1;
     Se = 0;
-    var V = se === "" ? "." : se + ":";
-    if (J(C))
+    var K = se === "" ? "." : se + ":";
+    if (B(C))
       for (var he = 0; he < C.length; he++)
-        se = C[he], ke = V + pe(se, he), Se += de(
+        se = C[he], ke = K + pe(se, he), Se += de(
           se,
-          Y,
+          X,
           le,
           ke,
           be
         );
     else if (he = E(C), typeof he == "function")
       for (C = he.call(C), he = 0; !(se = C.next()).done; )
-        se = se.value, ke = V + pe(se, he++), Se += de(
+        se = se.value, ke = K + pe(se, he++), Se += de(
           se,
-          Y,
+          X,
           le,
           ke,
           be
@@ -162,27 +162,27 @@ function y1() {
       if (typeof C.then == "function")
         return de(
           ne(C),
-          Y,
+          X,
           le,
           se,
           be
         );
-      throw Y = String(C), Error(
-        "Objects are not valid as a React child (found: " + (Y === "[object Object]" ? "object with keys {" + Object.keys(C).join(", ") + "}" : Y) + "). If you meant to render a collection of children, use an array instead."
+      throw X = String(C), Error(
+        "Objects are not valid as a React child (found: " + (X === "[object Object]" ? "object with keys {" + Object.keys(C).join(", ") + "}" : X) + "). If you meant to render a collection of children, use an array instead."
       );
     }
     return Se;
   }
-  function me(C, Y, le) {
+  function me(C, X, le) {
     if (C == null) return C;
     var se = [], be = 0;
     return de(C, se, "", "", function(ke) {
-      return Y.call(le, ke, be++);
+      return X.call(le, ke, be++);
     }), se;
   }
   function U(C) {
     if (C._status === -1) {
-      var Y = C._result, le = Y();
+      var X = C._result, le = X();
       le.then(
         function(se) {
           (C._status === 0 || C._status === -1) && (C._status = 1, C._result = se, le.status === void 0 && (le.status = "fulfilled", le.value = se));
@@ -197,13 +197,13 @@ function y1() {
   }
   var L = typeof reportError == "function" ? reportError : function(C) {
     if (typeof window == "object" && typeof window.ErrorEvent == "function") {
-      var Y = new window.ErrorEvent("error", {
+      var X = new window.ErrorEvent("error", {
         bubbles: !0,
         cancelable: !0,
         message: typeof C == "object" && C !== null && typeof C.message == "string" ? String(C.message) : String(C),
         error: C
       });
-      if (!window.dispatchEvent(Y)) return;
+      if (!window.dispatchEvent(X)) return;
     } else if (typeof process == "object" && typeof process.emit == "function") {
       process.emit("uncaughtException", C);
       return;
@@ -211,44 +211,44 @@ function y1() {
     console.error(C);
   };
   function q(C) {
-    var Y = X.T, le = {};
-    le.types = Y !== null ? Y.types : null, X.T = le;
+    var X = F.T, le = {};
+    le.types = X !== null ? X.types : null, F.T = le;
     try {
-      var se = C(), be = X.S;
+      var se = C(), be = F.S;
       be !== null && be(le, se), typeof se == "object" && se !== null && typeof se.then == "function" && se.then(z, L);
     } catch (ke) {
       L(ke);
     } finally {
-      Y !== null && le.types !== null && (Y.types = le.types), X.T = Y;
+      X !== null && le.types !== null && (X.types = le.types), F.T = X;
     }
   }
   function T(C) {
-    var Y = X.T;
-    if (Y !== null) {
-      var le = Y.types;
-      le === null ? Y.types = [C] : le.indexOf(C) === -1 && le.push(C);
+    var X = F.T;
+    if (X !== null) {
+      var le = X.types;
+      le === null ? X.types = [C] : le.indexOf(C) === -1 && le.push(C);
     } else q(T.bind(null, C));
   }
-  var G = {
+  var V = {
     map: me,
-    forEach: function(C, Y, le) {
+    forEach: function(C, X, le) {
       me(
         C,
         function() {
-          Y.apply(this, arguments);
+          X.apply(this, arguments);
         },
         le
       );
     },
     count: function(C) {
-      var Y = 0;
+      var X = 0;
       return me(C, function() {
-        Y++;
-      }), Y;
+        X++;
+      }), X;
     },
     toArray: function(C) {
-      return me(C, function(Y) {
-        return Y;
+      return me(C, function(X) {
+        return X;
       }) || [];
     },
     only: function(C) {
@@ -259,10 +259,10 @@ function y1() {
       return C;
     }
   };
-  return $e.Activity = v, $e.Children = G, $e.Component = O, $e.Fragment = r, $e.Profiler = c, $e.PureComponent = K, $e.StrictMode = s, $e.Suspense = h, $e.ViewTransition = b, $e.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = X, $e.__COMPILER_RUNTIME = {
+  return $e.Activity = v, $e.Children = V, $e.Component = O, $e.Fragment = r, $e.Profiler = c, $e.PureComponent = Y, $e.StrictMode = s, $e.Suspense = h, $e.ViewTransition = b, $e.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = F, $e.__COMPILER_RUNTIME = {
     __proto__: null,
     c: function(C) {
-      return X.H.useMemoCache(C);
+      return F.H.useMemoCache(C);
     }
   }, $e.addTransitionType = T, $e.cache = function(C) {
     return function() {
@@ -270,23 +270,23 @@ function y1() {
     };
   }, $e.cacheSignal = function() {
     return null;
-  }, $e.cloneElement = function(C, Y, le) {
+  }, $e.cloneElement = function(C, X, le) {
     if (C == null)
       throw Error(
         "The argument must be a React element, but you passed " + C + "."
       );
     var se = k({}, C.props), be = C.key;
-    if (Y != null)
-      for (ke in Y.key !== void 0 && (be = "" + Y.key), Y)
-        !ue.call(Y, ke) || ke === "key" || ke === "__self" || ke === "__source" || ke === "ref" && Y.ref === void 0 || (se[ke] = Y[ke]);
+    if (X != null)
+      for (ke in X.key !== void 0 && (be = "" + X.key), X)
+        !ue.call(X, ke) || ke === "key" || ke === "__self" || ke === "__source" || ke === "ref" && X.ref === void 0 || (se[ke] = X[ke]);
     var ke = arguments.length - 2;
     if (ke === 1) se.children = le;
     else if (1 < ke) {
-      for (var Se = Array(ke), V = 0; V < ke; V++)
-        Se[V] = arguments[V + 2];
+      for (var Se = Array(ke), K = 0; K < ke; K++)
+        Se[K] = arguments[K + 2];
       se.children = Se;
     }
-    return B(C.type, be, se);
+    return I(C.type, be, se);
   }, $e.createContext = function(C) {
     return C = {
       $$typeof: d,
@@ -299,22 +299,22 @@ function y1() {
       $$typeof: u,
       _context: C
     }, C;
-  }, $e.createElement = function(C, Y, le) {
+  }, $e.createElement = function(C, X, le) {
     var se, be = {}, ke = null;
-    if (Y != null)
-      for (se in Y.key !== void 0 && (ke = "" + Y.key), Y)
-        ue.call(Y, se) && se !== "key" && se !== "__self" && se !== "__source" && (be[se] = Y[se]);
+    if (X != null)
+      for (se in X.key !== void 0 && (ke = "" + X.key), X)
+        ue.call(X, se) && se !== "key" && se !== "__self" && se !== "__source" && (be[se] = X[se]);
     var Se = arguments.length - 2;
     if (Se === 1) be.children = le;
     else if (1 < Se) {
-      for (var V = Array(Se), he = 0; he < Se; he++)
-        V[he] = arguments[he + 2];
-      be.children = V;
+      for (var K = Array(Se), he = 0; he < Se; he++)
+        K[he] = arguments[he + 2];
+      be.children = K;
     }
     if (C && C.defaultProps)
       for (se in Se = C.defaultProps, Se)
         be[se] === void 0 && (be[se] = Se[se]);
-    return B(C, ke, be);
+    return I(C, ke, be);
   }, $e.createRef = function() {
     return { current: null };
   }, $e.forwardRef = function(C) {
@@ -325,55 +325,55 @@ function y1() {
       _payload: { _status: -1, _result: C },
       _init: U
     };
-  }, $e.memo = function(C, Y) {
+  }, $e.memo = function(C, X) {
     return {
       $$typeof: g,
       type: C,
-      compare: Y === void 0 ? null : Y
+      compare: X === void 0 ? null : X
     };
   }, $e.startTransition = q, $e.unstable_useCacheRefresh = function() {
-    return X.H.useCacheRefresh();
+    return F.H.useCacheRefresh();
   }, $e.use = function(C) {
-    return X.H.use(C);
-  }, $e.useActionState = function(C, Y, le) {
-    return X.H.useActionState(C, Y, le);
-  }, $e.useCallback = function(C, Y) {
-    return X.H.useCallback(C, Y);
+    return F.H.use(C);
+  }, $e.useActionState = function(C, X, le) {
+    return F.H.useActionState(C, X, le);
+  }, $e.useCallback = function(C, X) {
+    return F.H.useCallback(C, X);
   }, $e.useContext = function(C) {
-    return X.H.useContext(C);
+    return F.H.useContext(C);
   }, $e.useDebugValue = function() {
-  }, $e.useDeferredValue = function(C, Y) {
-    return X.H.useDeferredValue(C, Y);
-  }, $e.useEffect = function(C, Y) {
-    return X.H.useEffect(C, Y);
+  }, $e.useDeferredValue = function(C, X) {
+    return F.H.useDeferredValue(C, X);
+  }, $e.useEffect = function(C, X) {
+    return F.H.useEffect(C, X);
   }, $e.useEffectEvent = function(C) {
-    return X.H.useEffectEvent(C);
+    return F.H.useEffectEvent(C);
   }, $e.useId = function() {
-    return X.H.useId();
-  }, $e.useImperativeHandle = function(C, Y, le) {
-    return X.H.useImperativeHandle(C, Y, le);
-  }, $e.useInsertionEffect = function(C, Y) {
-    return X.H.useInsertionEffect(C, Y);
-  }, $e.useLayoutEffect = function(C, Y) {
-    return X.H.useLayoutEffect(C, Y);
-  }, $e.useMemo = function(C, Y) {
-    return X.H.useMemo(C, Y);
-  }, $e.useOptimistic = function(C, Y) {
-    return X.H.useOptimistic(C, Y);
-  }, $e.useReducer = function(C, Y, le) {
-    return X.H.useReducer(C, Y, le);
+    return F.H.useId();
+  }, $e.useImperativeHandle = function(C, X, le) {
+    return F.H.useImperativeHandle(C, X, le);
+  }, $e.useInsertionEffect = function(C, X) {
+    return F.H.useInsertionEffect(C, X);
+  }, $e.useLayoutEffect = function(C, X) {
+    return F.H.useLayoutEffect(C, X);
+  }, $e.useMemo = function(C, X) {
+    return F.H.useMemo(C, X);
+  }, $e.useOptimistic = function(C, X) {
+    return F.H.useOptimistic(C, X);
+  }, $e.useReducer = function(C, X, le) {
+    return F.H.useReducer(C, X, le);
   }, $e.useRef = function(C) {
-    return X.H.useRef(C);
+    return F.H.useRef(C);
   }, $e.useState = function(C) {
-    return X.H.useState(C);
-  }, $e.useSyncExternalStore = function(C, Y, le) {
-    return X.H.useSyncExternalStore(
+    return F.H.useState(C);
+  }, $e.useSyncExternalStore = function(C, X, le) {
+    return F.H.useSyncExternalStore(
       C,
-      Y,
+      X,
       le
     );
   }, $e.useTransition = function() {
-    return X.H.useTransition();
+    return F.H.useTransition();
   }, $e.version = "19.3.1", $e;
 }
 var zy;
@@ -459,19 +459,19 @@ function b1() {
     typeof y == "string" && s.d.D(y);
   }, Ut.preinit = function(y, v) {
     if (typeof y == "string" && v && typeof v.as == "string") {
-      var b = v.as, w = g(b, v.crossOrigin), E = typeof v.integrity == "string" ? v.integrity : void 0, S = typeof v.fetchPriority == "string" ? v.fetchPriority : void 0;
+      var b = v.as, w = g(b, v.crossOrigin), E = typeof v.integrity == "string" ? v.integrity : void 0, N = typeof v.fetchPriority == "string" ? v.fetchPriority : void 0;
       b === "style" ? s.d.S(
         y,
         typeof v.precedence == "string" ? v.precedence : void 0,
         {
           crossOrigin: w,
           integrity: E,
-          fetchPriority: S
+          fetchPriority: N
         }
       ) : b === "script" && s.d.X(y, {
         crossOrigin: w,
         integrity: E,
-        fetchPriority: S,
+        fetchPriority: N,
         nonce: typeof v.nonce == "string" ? v.nonce : void 0
       });
     }
@@ -578,11 +578,11 @@ function w1() {
       if (me !== de) {
         ne[0] = me;
         e: for (var U = 0, L = ne.length, q = L >>> 1; U < q; ) {
-          var T = 2 * (U + 1) - 1, G = ne[T], C = T + 1, Y = ne[C];
-          if (0 > c(G, me))
-            C < L && 0 > c(Y, G) ? (ne[U] = Y, ne[C] = me, U = C) : (ne[U] = G, ne[T] = me, U = T);
-          else if (C < L && 0 > c(Y, me))
-            ne[U] = Y, ne[C] = me, U = C;
+          var T = 2 * (U + 1) - 1, V = ne[T], C = T + 1, X = ne[C];
+          if (0 > c(V, me))
+            C < L && 0 > c(X, V) ? (ne[U] = X, ne[C] = me, U = C) : (ne[U] = V, ne[T] = me, U = T);
+          else if (C < L && 0 > c(X, me))
+            ne[U] = X, ne[C] = me, U = C;
           else break e;
         }
       }
@@ -603,8 +603,8 @@ function w1() {
         return d.now() - m;
       };
     }
-    var h = [], g = [], y = 1, v = null, b = 3, w = !1, E = !1, S = !1, k = !1, N = typeof setTimeout == "function" ? setTimeout : null, O = typeof clearTimeout == "function" ? clearTimeout : null, R = typeof setImmediate < "u" ? setImmediate : null;
-    function K(ne) {
+    var h = [], g = [], y = 1, v = null, b = 3, w = !1, E = !1, N = !1, k = !1, S = typeof setTimeout == "function" ? setTimeout : null, O = typeof clearTimeout == "function" ? clearTimeout : null, R = typeof setImmediate < "u" ? setImmediate : null;
+    function Y(ne) {
       for (var de = r(g); de !== null; ) {
         if (de.callback === null) s(g);
         else if (de.startTime <= ne)
@@ -614,30 +614,30 @@ function w1() {
       }
     }
     function A(ne) {
-      if (S = !1, K(ne), !E)
+      if (N = !1, Y(ne), !E)
         if (r(h) !== null)
-          E = !0, J || (J = !0, re());
+          E = !0, B || (B = !0, re());
         else {
           var de = r(g);
           de !== null && pe(A, de.startTime - ne);
         }
     }
-    var J = !1, z = -1, X = 5, ue = -1;
-    function B() {
-      return k ? !0 : !(n.unstable_now() - ue < X);
+    var B = !1, z = -1, F = 5, ue = -1;
+    function I() {
+      return k ? !0 : !(n.unstable_now() - ue < F);
     }
     function j() {
-      if (k = !1, J) {
+      if (k = !1, B) {
         var ne = n.unstable_now();
         ue = ne;
         var de = !0;
         try {
           e: {
-            E = !1, S && (S = !1, O(z), z = -1), w = !0;
+            E = !1, N && (N = !1, O(z), z = -1), w = !0;
             var me = b;
             try {
               t: {
-                for (K(ne), v = r(h); v !== null && !(v.expirationTime > ne && B()); ) {
+                for (Y(ne), v = r(h); v !== null && !(v.expirationTime > ne && I()); ) {
                   var U = v.callback;
                   if (typeof U == "function") {
                     v.callback = null, b = v.priorityLevel;
@@ -645,10 +645,10 @@ function w1() {
                       v.expirationTime <= ne
                     );
                     if (ne = n.unstable_now(), typeof L == "function") {
-                      v.callback = L, K(ne), de = !0;
+                      v.callback = L, Y(ne), de = !0;
                       break t;
                     }
-                    v === r(h) && s(h), K(ne);
+                    v === r(h) && s(h), Y(ne);
                   } else s(h);
                   v = r(h);
                 }
@@ -668,7 +668,7 @@ function w1() {
             de = void 0;
           }
         } finally {
-          de ? re() : J = !1;
+          de ? re() : B = !1;
         }
       }
     }
@@ -684,10 +684,10 @@ function w1() {
       };
     } else
       re = function() {
-        N(j, 0);
+        S(j, 0);
       };
     function pe(ne, de) {
-      z = N(function() {
+      z = S(function() {
         ne(n.unstable_now());
       }, de);
     }
@@ -696,7 +696,7 @@ function w1() {
     }, n.unstable_forceFrameRate = function(ne) {
       0 > ne || 125 < ne ? console.error(
         "forceFrameRate takes a positive int between 0 and 125, forcing frame rates higher than 125 fps is not supported"
-      ) : X = 0 < ne ? Math.floor(1e3 / ne) : 5;
+      ) : F = 0 < ne ? Math.floor(1e3 / ne) : 5;
     }, n.unstable_getCurrentPriorityLevel = function() {
       return b;
     }, n.unstable_next = function(ne) {
@@ -761,8 +761,8 @@ function w1() {
         startTime: me,
         expirationTime: L,
         sortIndex: -1
-      }, me > U ? (ne.sortIndex = me, t(g, ne), r(h) === null && ne === r(g) && (S ? (O(z), z = -1) : S = !0, pe(A, me - U))) : (ne.sortIndex = L, t(h, ne), E || w || (E = !0, J || (J = !0, re()))), ne;
-    }, n.unstable_shouldYield = B, n.unstable_wrapCallback = function(ne) {
+      }, me > U ? (ne.sortIndex = me, t(g, ne), r(h) === null && ne === r(g) && (N ? (O(z), z = -1) : N = !0, pe(A, me - U))) : (ne.sortIndex = L, t(h, ne), E || w || (E = !0, B || (B = !0, re()))), ne;
+    }, n.unstable_shouldYield = I, n.unstable_wrapCallback = function(ne) {
       var de = b;
       return function() {
         var me = b;
@@ -927,20 +927,20 @@ function x1() {
   }
   function E(e) {
     var a = [null, null], l = b(e);
-    return l === null || S(
+    return l === null || N(
       a,
       e,
       l.child,
       { foundSelf: !1 }
     ), a;
   }
-  function S(e, a, l, o) {
+  function N(e, a, l, o) {
     for (; l !== null; ) {
       if (l === a) o.foundSelf = !0;
       else if (l.tag === 5 || l.tag === 27 || l.tag === 6) {
         if (o.foundSelf) return e[1] = l, !0;
         e[0] = l;
-      } else if ((l.tag !== 22 || l.memoizedState === null) && S(
+      } else if ((l.tag !== 22 || l.memoizedState === null) && N(
         e,
         a,
         l.child,
@@ -963,12 +963,12 @@ function x1() {
         throw Error(s(559));
     }
   }
-  var N = null, O = null;
+  var S = null, O = null;
   function R(e, a, l) {
-    return e === l ? !0 : e === a ? (N = e, !0) : !1;
+    return e === l ? !0 : e === a ? (S = e, !0) : !1;
   }
-  function K(e, a, l) {
-    return e === l ? (O = e, !1) : e === a ? (O !== null && (N = e), !0) : !1;
+  function Y(e, a, l) {
+    return e === l ? (O = e, !1) : e === a ? (O !== null && (S = e), !0) : !1;
   }
   function A(e) {
     if (e === null) return null;
@@ -977,7 +977,7 @@ function x1() {
     while (e && e.tag !== 5 && e.tag !== 27 && e.tag !== 3);
     return e || null;
   }
-  function J(e, a, l) {
+  function B(e, a, l) {
     for (var o = 0, f = e; f; f = l(f)) o++;
     f = 0;
     for (var p = a; p; p = l(p)) f++;
@@ -990,7 +990,7 @@ function x1() {
     }
     return null;
   }
-  var z = Object.assign, X = Symbol.for("react.element"), ue = Symbol.for("react.transitional.element"), B = Symbol.for("react.portal"), j = Symbol.for("react.fragment"), re = Symbol.for("react.strict_mode"), W = Symbol.for("react.profiler"), ae = Symbol.for("react.consumer"), pe = Symbol.for("react.context"), ne = Symbol.for("react.forward_ref"), de = Symbol.for("react.suspense"), me = Symbol.for("react.suspense_list"), U = Symbol.for("react.memo"), L = Symbol.for("react.lazy"), q = Symbol.for("react.activity"), T = Symbol.for("react.legacy_hidden"), G = Symbol.for("react.memo_cache_sentinel"), C = Symbol.for("react.view_transition"), Y = Symbol.for("react.recoverable"), le = Symbol.iterator;
+  var z = Object.assign, F = Symbol.for("react.element"), ue = Symbol.for("react.transitional.element"), I = Symbol.for("react.portal"), j = Symbol.for("react.fragment"), re = Symbol.for("react.strict_mode"), W = Symbol.for("react.profiler"), ae = Symbol.for("react.consumer"), pe = Symbol.for("react.context"), ne = Symbol.for("react.forward_ref"), de = Symbol.for("react.suspense"), me = Symbol.for("react.suspense_list"), U = Symbol.for("react.memo"), L = Symbol.for("react.lazy"), q = Symbol.for("react.activity"), T = Symbol.for("react.legacy_hidden"), V = Symbol.for("react.memo_cache_sentinel"), C = Symbol.for("react.view_transition"), X = Symbol.for("react.recoverable"), le = Symbol.iterator;
   function se(e) {
     return e === null || typeof e != "object" ? null : (e = le && e[le] || e["@@iterator"], typeof e == "function" ? e : null);
   }
@@ -1018,7 +1018,7 @@ function x1() {
     }
     if (typeof e == "object")
       switch (e.$$typeof) {
-        case B:
+        case I:
           return "Portal";
         case pe:
           return e.displayName || "Context";
@@ -1038,7 +1038,7 @@ function x1() {
       }
     return null;
   }
-  var Se = Array.isArray, V = t.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, he = r.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, Ne = {
+  var Se = Array.isArray, K = t.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, he = r.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, Ne = {
     pending: !1,
     data: null,
     method: null,
@@ -1050,12 +1050,12 @@ function x1() {
   function $(e) {
     0 > Oe || (e.current = Te[Oe], Te[Oe] = null, Oe--);
   }
-  function F(e, a) {
+  function J(e, a) {
     Oe++, Te[Oe] = e.current, e.current = a;
   }
   var ee = fe(null), ge = fe(null), ie = fe(null), ze = fe(null);
   function Ve(e, a) {
-    switch (F(ie, a), F(ge, e), F(ee, null), a.nodeType) {
+    switch (J(ie, a), J(ge, e), J(ee, null), a.nodeType) {
       case 9:
       case 11:
         e = (e = a.documentElement) && (e = e.namespaceURI) ? Pv(e) : 0;
@@ -1075,16 +1075,16 @@ function x1() {
               e = 0;
           }
     }
-    $(ee), F(ee, e);
+    $(ee), J(ee, e);
   }
   function at() {
     $(ee), $(ge), $(ie);
   }
   function mt(e) {
     var a = e.memoizedState;
-    a !== null && (Ul._currentValue = a.memoizedState, F(ze, e)), a = ee.current;
+    a !== null && (Ul._currentValue = a.memoizedState, J(ze, e)), a = ee.current;
     var l = Gv(a, e.type);
-    a !== l && (F(ge, e), F(ee, l));
+    a !== l && (J(ge, e), J(ee, l));
   }
   function ht(e) {
     ge.current === e && ($(ee), $(ge)), ze.current === e && ($(ze), Ul._currentValue = Ne);
@@ -1124,14 +1124,14 @@ function x1() {
                 try {
                   Reflect.construct(ce, []);
                 } catch (ye) {
-                  var I = ye;
+                  var H = ye;
                 }
                 Reflect.construct(e, [], ce);
               } else {
                 try {
                   ce.call();
                 } catch (ye) {
-                  I = ye;
+                  H = ye;
                 }
                 ce = !1;
                 try {
@@ -1153,14 +1153,14 @@ function x1() {
               try {
                 throw Error();
               } catch (ye) {
-                I = ye;
+                H = ye;
               }
               (ce = e()) && typeof ce.catch == "function" && ce.catch(function() {
               });
             }
           } catch (ye) {
-            if (ye && I && typeof ye.stack == "string")
-              return [ye.stack, I.stack];
+            if (ye && H && typeof ye.stack == "string")
+              return [ye.stack, H.stack];
           }
           return [null, null];
         }
@@ -1178,22 +1178,22 @@ function x1() {
       var p = o.DetermineComponentFrameRoot(), _ = p[0], x = p[1];
       if (_ && x) {
         var D = _.split(`
-`), P = x.split(`
+`), G = x.split(`
 `);
         for (f = o = 0; o < D.length && !D[o].includes("DetermineComponentFrameRoot"); )
           o++;
-        for (; f < P.length && !P[f].includes(
+        for (; f < G.length && !G[f].includes(
           "DetermineComponentFrameRoot"
         ); )
           f++;
-        if (o === D.length || f === P.length)
-          for (o = D.length - 1, f = P.length - 1; 1 <= o && 0 <= f && D[o] !== P[f]; )
+        if (o === D.length || f === G.length)
+          for (o = D.length - 1, f = G.length - 1; 1 <= o && 0 <= f && D[o] !== G[f]; )
             f--;
         for (; 1 <= o && 0 <= f; o--, f--)
-          if (D[o] !== P[f]) {
+          if (D[o] !== G[f]) {
             if (o !== 1 || f !== 1)
               do
-                if (o--, f--, 0 > f || D[o] !== P[f]) {
+                if (o--, f--, 0 > f || D[o] !== G[f]) {
                   var te = `
 ` + D[o].replace(" at new ", " at ");
                   return e.displayName && te.includes("<anonymous>") && (te = te.replace("<anonymous>", e.displayName)), te;
@@ -1391,14 +1391,14 @@ Error generating stack: ` + o.message + `
   function $w(e, a, l, o, f, p) {
     var _ = e.pendingLanes;
     e.pendingLanes = l, e.suspendedLanes = 0, e.pingedLanes = 0, e.warmLanes = 0, e.expiredLanes &= l, e.entangledLanes &= l, e.errorRecoveryDisabledLanes &= l, e.shellSuspendCounter = 0;
-    var x = e.entanglements, D = e.expirationTimes, P = e.hiddenUpdates;
+    var x = e.entanglements, D = e.expirationTimes, G = e.hiddenUpdates;
     for (l = _ & ~l; 0 < l; ) {
       var te = 31 - ra(l), ce = 1 << te;
       x[te] = 0, D[te] = -1;
-      var I = P[te];
-      if (I !== null)
-        for (P[te] = null, te = 0; te < I.length; te++) {
-          var Z = I[te];
+      var H = G[te];
+      if (H !== null)
+        for (G[te] = null, te = 0; te < H.length; te++) {
+          var Z = H[te];
           Z !== null && (Z.lane &= -536870913);
         }
       l &= ~ce;
@@ -2749,7 +2749,7 @@ Error generating stack: ` + o.message + `
   }
   var Hu = fe(null), kr = null, hn = null;
   function Bn(e, a, l) {
-    F(Hu, a._currentValue), a._currentValue = l;
+    J(Hu, a._currentValue), a._currentValue = l;
   }
   function gn(e) {
     e._currentValue = Hu.current, $(Hu);
@@ -2950,8 +2950,8 @@ Error generating stack: ` + o.message + `
       }
     ), o;
   }
-  var kh = V.S;
-  V.S = function(e, a) {
+  var kh = K.S;
+  K.S = function(e, a) {
     if (gv = aa(), typeof a == "object" && a !== null && typeof a.then == "function" && UE(e, a), Es !== null)
       for (var l = Ol; l !== null; )
         Eh(l, Es), l = l.next;
@@ -2974,7 +2974,7 @@ Error generating stack: ` + o.message + `
     return e !== null ? e : tt.pooledCache;
   }
   function no(e, a) {
-    a === null ? F(Cr, Cr.current) : F(Cr, a.pool);
+    a === null ? J(Cr, Cr.current) : J(Cr, a.pool);
   }
   function Sh() {
     var e = Ku();
@@ -3047,7 +3047,7 @@ Error generating stack: ` + o.message + `
     a = a.props.ref, e.ref = a !== void 0 ? a : null;
   }
   function io(e, a) {
-    throw a.$$typeof === X ? Error(s(525)) : (e = Object.prototype.toString.call(a), Error(
+    throw a.$$typeof === F ? Error(s(525)) : (e = Object.prototype.toString.call(a), Error(
       s(
         31,
         e === "[object Object]" ? "object with keys {" + Object.keys(a).join(", ") + "}" : e
@@ -3055,70 +3055,70 @@ Error generating stack: ` + o.message + `
     ));
   }
   function Oh(e) {
-    function a(H, M) {
+    function a(P, M) {
       if (e) {
-        var Q = H.deletions;
-        Q === null ? (H.deletions = [M], H.flags |= 16) : Q.push(M);
+        var Q = P.deletions;
+        Q === null ? (P.deletions = [M], P.flags |= 16) : Q.push(M);
       }
     }
-    function l(H, M) {
+    function l(P, M) {
       if (!e) return null;
       for (; M !== null; )
-        a(H, M), M = M.sibling;
+        a(P, M), M = M.sibling;
       return null;
     }
-    function o(H) {
-      for (var M = /* @__PURE__ */ new Map(); H !== null; )
-        H.key === null ? M.set(H.index, H) : M.set(H.key, H), H = H.sibling;
+    function o(P) {
+      for (var M = /* @__PURE__ */ new Map(); P !== null; )
+        P.key === null ? M.set(P.index, P) : M.set(P.key, P), P = P.sibling;
       return M;
     }
-    function f(H, M) {
-      return H = pn(H, M), H.index = 0, H.sibling = null, H;
+    function f(P, M) {
+      return P = pn(P, M), P.index = 0, P.sibling = null, P;
     }
-    function p(H, M, Q) {
-      return H.index = Q, e ? (Q = H.alternate, Q !== null ? (Q = Q.index, Q < M ? (H.flags |= 2, M) : Q) : (H.flags |= 134217730, M)) : (H.flags |= 1048576, M);
+    function p(P, M, Q) {
+      return P.index = Q, e ? (Q = P.alternate, Q !== null ? (Q = Q.index, Q < M ? (P.flags |= 2, M) : Q) : (P.flags |= 134217730, M)) : (P.flags |= 1048576, M);
     }
-    function _(H) {
-      return e && H.alternate === null && (H.flags |= 134217730), H;
+    function _(P) {
+      return e && P.alternate === null && (P.flags |= 134217730), P;
     }
-    function x(H, M, Q, oe) {
-      return M === null || M.tag !== 6 ? (M = Mu(Q, H.mode, oe), M.return = H, M) : (M = f(M, Q), M.return = H, M);
+    function x(P, M, Q, oe) {
+      return M === null || M.tag !== 6 ? (M = Mu(Q, P.mode, oe), M.return = P, M) : (M = f(M, Q), M.return = P, M);
     }
-    function D(H, M, Q, oe) {
+    function D(P, M, Q, oe) {
       var we = Q.type;
-      return we === j ? (H = te(
-        H,
+      return we === j ? (P = te(
+        P,
         M,
         Q.props.children,
         oe,
         Q.key
-      ), In(H, Q), H) : M !== null && (M.elementType === we || typeof we == "object" && we !== null && we.$$typeof === L && Ar(we) === M.type) ? (M = f(M, Q.props), In(M, Q), M.return = H, M) : (M = Ji(
+      ), In(P, Q), P) : M !== null && (M.elementType === we || typeof we == "object" && we !== null && we.$$typeof === L && Ar(we) === M.type) ? (M = f(M, Q.props), In(M, Q), M.return = P, M) : (M = Ji(
         Q.type,
         Q.key,
         Q.props,
         null,
-        H.mode,
+        P.mode,
         oe
-      ), In(M, Q), M.return = H, M);
+      ), In(M, Q), M.return = P, M);
     }
-    function P(H, M, Q, oe) {
-      return M === null || M.tag !== 4 || M.stateNode.containerInfo !== Q.containerInfo || M.stateNode.implementation !== Q.implementation ? (M = Lu(Q, H.mode, oe), M.return = H, M) : (M = f(M, Q.children || []), M.return = H, M);
+    function G(P, M, Q, oe) {
+      return M === null || M.tag !== 4 || M.stateNode.containerInfo !== Q.containerInfo || M.stateNode.implementation !== Q.implementation ? (M = Lu(Q, P.mode, oe), M.return = P, M) : (M = f(M, Q.children || []), M.return = P, M);
     }
-    function te(H, M, Q, oe, we) {
+    function te(P, M, Q, oe, we) {
       return M === null || M.tag !== 7 ? (M = Er(
         Q,
-        H.mode,
+        P.mode,
         oe,
         we
-      ), M.return = H, M) : (M = f(M, Q), M.return = H, M);
+      ), M.return = P, M) : (M = f(M, Q), M.return = P, M);
     }
-    function ce(H, M, Q) {
+    function ce(P, M, Q) {
       if (typeof M == "string" && M !== "" || typeof M == "number" || typeof M == "bigint")
         return M = Mu(
           "" + M,
-          H.mode,
+          P.mode,
           Q
-        ), M.return = H, M;
+        ), M.return = P, M;
       if (typeof M == "object" && M !== null) {
         switch (M.$$typeof) {
           case ue:
@@ -3127,86 +3127,86 @@ Error generating stack: ` + o.message + `
               M.key,
               M.props,
               null,
-              H.mode,
+              P.mode,
               Q
-            ), In(Q, M), Q.return = H, Q;
-          case B:
+            ), In(Q, M), Q.return = P, Q;
+          case I:
             return M = Lu(
               M,
-              H.mode,
+              P.mode,
               Q
-            ), M.return = H, M;
+            ), M.return = P, M;
           case L:
-            return M = Ar(M), ce(H, M, Q);
+            return M = Ar(M), ce(P, M, Q);
         }
         if (Se(M) || se(M))
           return M = Er(
             M,
-            H.mode,
+            P.mode,
             Q,
             null
-          ), M.return = H, M;
+          ), M.return = P, M;
         if (typeof M.then == "function")
-          return ce(H, so(M), Q);
+          return ce(P, so(M), Q);
         if (M.$$typeof === pe)
           return ce(
-            H,
-            ao(H, M),
+            P,
+            ao(P, M),
             Q
           );
-        io(H, M);
+        io(P, M);
       }
       return null;
     }
-    function I(H, M, Q, oe) {
+    function H(P, M, Q, oe) {
       var we = M !== null ? M.key : null;
       if (typeof Q == "string" && Q !== "" || typeof Q == "number" || typeof Q == "bigint")
-        return we !== null ? null : x(H, M, "" + Q, oe);
+        return we !== null ? null : x(P, M, "" + Q, oe);
       if (typeof Q == "object" && Q !== null) {
         switch (Q.$$typeof) {
           case ue:
-            return Q.key === we ? D(H, M, Q, oe) : null;
-          case B:
-            return Q.key === we ? P(H, M, Q, oe) : null;
+            return Q.key === we ? D(P, M, Q, oe) : null;
+          case I:
+            return Q.key === we ? G(P, M, Q, oe) : null;
           case L:
-            return Q = Ar(Q), I(H, M, Q, oe);
+            return Q = Ar(Q), H(P, M, Q, oe);
         }
         if (Se(Q) || se(Q))
-          return we !== null ? null : te(H, M, Q, oe, null);
+          return we !== null ? null : te(P, M, Q, oe, null);
         if (typeof Q.then == "function")
-          return I(
-            H,
+          return H(
+            P,
             M,
             so(Q),
             oe
           );
         if (Q.$$typeof === pe)
-          return I(
-            H,
+          return H(
+            P,
             M,
-            ao(H, Q),
+            ao(P, Q),
             oe
           );
-        io(H, Q);
+        io(P, Q);
       }
       return null;
     }
-    function Z(H, M, Q, oe, we) {
+    function Z(P, M, Q, oe, we) {
       if (typeof oe == "string" && oe !== "" || typeof oe == "number" || typeof oe == "bigint")
-        return H = H.get(Q) || null, x(M, H, "" + oe, we);
+        return P = P.get(Q) || null, x(M, P, "" + oe, we);
       if (typeof oe == "object" && oe !== null) {
         switch (oe.$$typeof) {
           case ue:
-            return H = H.get(
+            return P = P.get(
               oe.key === null ? Q : oe.key
-            ) || null, D(M, H, oe, we);
-          case B:
-            return H = H.get(
+            ) || null, D(M, P, oe, we);
+          case I:
+            return P = P.get(
               oe.key === null ? Q : oe.key
-            ) || null, P(M, H, oe, we);
+            ) || null, G(M, P, oe, we);
           case L:
             return oe = Ar(oe), Z(
-              H,
+              P,
               M,
               Q,
               oe,
@@ -3214,10 +3214,10 @@ Error generating stack: ` + o.message + `
             );
         }
         if (Se(oe) || se(oe))
-          return H = H.get(Q) || null, te(M, H, oe, we, null);
+          return P = P.get(Q) || null, te(M, P, oe, we, null);
         if (typeof oe.then == "function")
           return Z(
-            H,
+            P,
             M,
             Q,
             so(oe),
@@ -3225,7 +3225,7 @@ Error generating stack: ` + o.message + `
           );
         if (oe.$$typeof === pe)
           return Z(
-            H,
+            P,
             M,
             Q,
             ao(M, oe),
@@ -3235,11 +3235,11 @@ Error generating stack: ` + o.message + `
       }
       return null;
     }
-    function ye(H, M, Q, oe) {
+    function ye(P, M, Q, oe) {
       for (var we = null, He = null, Ce = M, je = M = 0, bt = null; Ce !== null && je < Q.length; je++) {
         Ce.index > je ? (bt = Ce, Ce = null) : bt = Ce.sibling;
-        var Ge = I(
-          H,
+        var Ge = H(
+          P,
           Ce,
           Q[je],
           oe
@@ -3248,23 +3248,23 @@ Error generating stack: ` + o.message + `
           Ce === null && (Ce = bt);
           break;
         }
-        e && Ce && Ge.alternate === null && a(H, Ce), M = p(Ge, M, je), He === null ? we = Ge : He.sibling = Ge, He = Ge, Ce = bt;
+        e && Ce && Ge.alternate === null && a(P, Ce), M = p(Ge, M, je), He === null ? we = Ge : He.sibling = Ge, He = Ge, Ce = bt;
       }
       if (je === Q.length)
-        return l(H, Ce), Le && mn(H, je), we;
+        return l(P, Ce), Le && mn(P, je), we;
       if (Ce === null) {
         for (; je < Q.length; je++)
-          Ce = ce(H, Q[je], oe), Ce !== null && (M = p(
+          Ce = ce(P, Q[je], oe), Ce !== null && (M = p(
             Ce,
             M,
             je
           ), He === null ? we = Ce : He.sibling = Ce, He = Ce);
-        return Le && mn(H, je), we;
+        return Le && mn(P, je), we;
       }
       for (Ce = o(Ce); je < Q.length; je++)
         bt = Z(
           Ce,
-          H,
+          P,
           je,
           Q[je],
           oe
@@ -3274,36 +3274,36 @@ Error generating stack: ` + o.message + `
           je
         ), He === null ? we = bt : He.sibling = bt, He = bt);
       return e && Ce.forEach(function(sr) {
-        return a(H, sr);
-      }), Le && mn(H, je), we;
+        return a(P, sr);
+      }), Le && mn(P, je), we;
     }
-    function xe(H, M, Q, oe) {
+    function xe(P, M, Q, oe) {
       if (Q == null) throw Error(s(151));
       for (var we = null, He = null, Ce = M, je = M = 0, bt = null, Ge = Q.next(); Ce !== null && !Ge.done; je++, Ge = Q.next()) {
         Ce.index > je ? (bt = Ce, Ce = null) : bt = Ce.sibling;
-        var sr = I(H, Ce, Ge.value, oe);
+        var sr = H(P, Ce, Ge.value, oe);
         if (sr === null) {
           Ce === null && (Ce = bt);
           break;
         }
-        e && Ce && sr.alternate === null && a(H, Ce), M = p(sr, M, je), He === null ? we = sr : He.sibling = sr, He = sr, Ce = bt;
+        e && Ce && sr.alternate === null && a(P, Ce), M = p(sr, M, je), He === null ? we = sr : He.sibling = sr, He = sr, Ce = bt;
       }
       if (Ge.done)
-        return l(H, Ce), Le && mn(H, je), we;
+        return l(P, Ce), Le && mn(P, je), we;
       if (Ce === null) {
         for (; !Ge.done; je++, Ge = Q.next())
-          Ge = ce(H, Ge.value, oe), Ge !== null && (M = p(Ge, M, je), He === null ? we = Ge : He.sibling = Ge, He = Ge);
-        return Le && mn(H, je), we;
+          Ge = ce(P, Ge.value, oe), Ge !== null && (M = p(Ge, M, je), He === null ? we = Ge : He.sibling = Ge, He = Ge);
+        return Le && mn(P, je), we;
       }
       for (Ce = o(Ce); !Ge.done; je++, Ge = Q.next())
-        Ge = Z(Ce, H, je, Ge.value, oe), Ge !== null && (e && (bt = Ge.alternate, bt !== null && Ce.delete(
+        Ge = Z(Ce, P, je, Ge.value, oe), Ge !== null && (e && (bt = Ge.alternate, bt !== null && Ce.delete(
           bt.key === null ? je : bt.key
         )), M = p(Ge, M, je), He === null ? we = Ge : He.sibling = Ge, He = Ge);
       return e && Ce.forEach(function(v1) {
-        return a(H, v1);
-      }), Le && mn(H, je), we;
+        return a(P, v1);
+      }), Le && mn(P, je), we;
     }
-    function Me(H, M, Q, oe) {
+    function Me(P, M, Q, oe) {
       if (typeof Q == "object" && Q !== null && Q.type === j && Q.key === null && Q.props.ref === void 0 && (Q = Q.props.children), typeof Q == "object" && Q !== null) {
         switch (Q.$$typeof) {
           case ue:
@@ -3313,64 +3313,64 @@ Error generating stack: ` + o.message + `
                   if (we = Q.type, we === j) {
                     if (M.tag === 7) {
                       l(
-                        H,
+                        P,
                         M.sibling
                       ), oe = f(
                         M,
                         Q.props.children
-                      ), In(oe, Q), oe.return = H, H = oe;
+                      ), In(oe, Q), oe.return = P, P = oe;
                       break e;
                     }
                   } else if (M.elementType === we || typeof we == "object" && we !== null && we.$$typeof === L && Ar(we) === M.type) {
                     l(
-                      H,
+                      P,
                       M.sibling
-                    ), oe = f(M, Q.props), In(oe, Q), oe.return = H, H = oe;
+                    ), oe = f(M, Q.props), In(oe, Q), oe.return = P, P = oe;
                     break e;
                   }
-                  l(H, M);
+                  l(P, M);
                   break;
-                } else a(H, M);
+                } else a(P, M);
                 M = M.sibling;
               }
               Q.type === j ? (oe = Er(
                 Q.props.children,
-                H.mode,
+                P.mode,
                 oe,
                 Q.key
-              ), In(oe, Q), oe.return = H, H = oe) : (oe = Ji(
+              ), In(oe, Q), oe.return = P, P = oe) : (oe = Ji(
                 Q.type,
                 Q.key,
                 Q.props,
                 null,
-                H.mode,
+                P.mode,
                 oe
-              ), In(oe, Q), oe.return = H, H = oe);
+              ), In(oe, Q), oe.return = P, P = oe);
             }
-            return _(H);
-          case B:
+            return _(P);
+          case I:
             e: {
               for (we = Q.key; M !== null; ) {
                 if (M.key === we)
                   if (M.tag === 4 && M.stateNode.containerInfo === Q.containerInfo && M.stateNode.implementation === Q.implementation) {
                     l(
-                      H,
+                      P,
                       M.sibling
-                    ), oe = f(M, Q.children || []), oe.return = H, H = oe;
+                    ), oe = f(M, Q.children || []), oe.return = P, P = oe;
                     break e;
                   } else {
-                    l(H, M);
+                    l(P, M);
                     break;
                   }
-                else a(H, M);
+                else a(P, M);
                 M = M.sibling;
               }
-              oe = Lu(Q, H.mode, oe), oe.return = H, H = oe;
+              oe = Lu(Q, P.mode, oe), oe.return = P, P = oe;
             }
-            return _(H);
+            return _(P);
           case L:
             return Q = Ar(Q), Me(
-              H,
+              P,
               M,
               Q,
               oe
@@ -3378,7 +3378,7 @@ Error generating stack: ` + o.message + `
         }
         if (Se(Q))
           return ye(
-            H,
+            P,
             M,
             Q,
             oe
@@ -3386,7 +3386,7 @@ Error generating stack: ` + o.message + `
         if (se(Q)) {
           if (we = se(Q), typeof we != "function") throw Error(s(150));
           return Q = we.call(Q), xe(
-            H,
+            P,
             M,
             Q,
             oe
@@ -3394,27 +3394,27 @@ Error generating stack: ` + o.message + `
         }
         if (typeof Q.then == "function")
           return Me(
-            H,
+            P,
             M,
             so(Q),
             oe
           );
         if (Q.$$typeof === pe)
           return Me(
-            H,
+            P,
             M,
-            ao(H, Q),
+            ao(P, Q),
             oe
           );
-        io(H, Q);
+        io(P, Q);
       }
-      return typeof Q == "string" && Q !== "" || typeof Q == "number" || typeof Q == "bigint" ? (Q = "" + Q, M !== null && M.tag === 6 ? (l(H, M.sibling), oe = f(M, Q), oe.return = H, H = oe) : (l(H, M), oe = Mu(Q, H.mode, oe), oe.return = H, H = oe), _(H)) : l(H, M);
+      return typeof Q == "string" && Q !== "" || typeof Q == "number" || typeof Q == "bigint" ? (Q = "" + Q, M !== null && M.tag === 6 ? (l(P, M.sibling), oe = f(M, Q), oe.return = P, P = oe) : (l(P, M), oe = Mu(Q, P.mode, oe), oe.return = P, P = oe), _(P)) : l(P, M);
     }
-    return function(H, M, Q, oe) {
+    return function(P, M, Q, oe) {
       try {
         ks = 0;
         var we = Me(
-          H,
+          P,
           M,
           Q,
           oe
@@ -3422,8 +3422,8 @@ Error generating stack: ` + o.message + `
         return ml = null, we;
       } catch (Ce) {
         if (Ce === pl || Ce === ro) throw Ce;
-        var He = Yt(29, Ce, null, H.mode);
-        return He.lanes = oe, He.return = H, He;
+        var He = Yt(29, Ce, null, P.mode);
+        return He.lanes = oe, He.return = P, He;
       } finally {
       }
     };
@@ -3507,18 +3507,18 @@ Error generating stack: ` + o.message + `
     var p = f.firstBaseUpdate, _ = f.lastBaseUpdate, x = f.shared.pending;
     if (x !== null) {
       f.shared.pending = null;
-      var D = x, P = D.next;
-      D.next = null, _ === null ? p = P : _.next = P, _ = D;
+      var D = x, G = D.next;
+      D.next = null, _ === null ? p = G : _.next = G, _ = D;
       var te = e.alternate;
-      te !== null && (te = te.updateQueue, x = te.lastBaseUpdate, x !== _ && (x === null ? te.firstBaseUpdate = P : x.next = P, te.lastBaseUpdate = D));
+      te !== null && (te = te.updateQueue, x = te.lastBaseUpdate, x !== _ && (x === null ? te.firstBaseUpdate = G : x.next = G, te.lastBaseUpdate = D));
     }
     if (p !== null) {
       var ce = f.baseState;
-      _ = 0, te = P = D = null, x = p;
+      _ = 0, te = G = D = null, x = p;
       do {
-        var I = x.lane & -536870913, Z = I !== x.lane;
-        if (Z ? (Ie & I) === I : (o & I) === I) {
-          I !== 0 && I === Tr && (Fu = !0), te !== null && (te = te.next = {
+        var H = x.lane & -536870913, Z = H !== x.lane;
+        if (Z ? (Ie & H) === H : (o & H) === H) {
+          H !== 0 && H === Tr && (Fu = !0), te !== null && (te = te.next = {
             lane: 0,
             tag: x.tag,
             payload: x.payload,
@@ -3527,12 +3527,12 @@ Error generating stack: ` + o.message + `
           });
           e: {
             var ye = e, xe = x;
-            I = a;
+            H = a;
             var Me = l;
             switch (xe.tag) {
               case 1:
                 if (ye = xe.payload, typeof ye == "function") {
-                  ce = ye.call(Me, ce, I);
+                  ce = ye.call(Me, ce, H);
                   break e;
                 }
                 ce = ye;
@@ -3540,29 +3540,29 @@ Error generating stack: ` + o.message + `
               case 3:
                 ye.flags = ye.flags & -65537 | 128;
               case 0:
-                if (ye = xe.payload, I = typeof ye == "function" ? ye.call(Me, ce, I) : ye, I == null) break e;
-                ce = z({}, ce, I);
+                if (ye = xe.payload, H = typeof ye == "function" ? ye.call(Me, ce, H) : ye, H == null) break e;
+                ce = z({}, ce, H);
                 break e;
               case 2:
                 Hn = !0;
             }
           }
-          I = x.callback, I !== null && (e.flags |= 64, Z && (e.flags |= 8192), Z = f.callbacks, Z === null ? f.callbacks = [I] : Z.push(I));
+          H = x.callback, H !== null && (e.flags |= 64, Z && (e.flags |= 8192), Z = f.callbacks, Z === null ? f.callbacks = [H] : Z.push(H));
         } else
           Z = {
-            lane: I,
+            lane: H,
             tag: x.tag,
             payload: x.payload,
             callback: x.callback,
             next: null
-          }, te === null ? (P = te = Z, D = ce) : te = te.next = Z, _ |= I;
+          }, te === null ? (G = te = Z, D = ce) : te = te.next = Z, _ |= H;
         if (x = x.next, x === null) {
           if (x = f.shared.pending, x === null)
             break;
           Z = x, x = Z.next, Z.next = null, f.lastBaseUpdate = Z, f.shared.pending = null;
         }
       } while (!0);
-      te === null && (D = ce), f.baseState = D, f.firstBaseUpdate = P, f.lastBaseUpdate = te, p === null && (f.shared.lanes = 0), Fn |= _, e.lanes = _, e.memoizedState = ce;
+      te === null && (D = ce), f.baseState = D, f.firstBaseUpdate = G, f.lastBaseUpdate = te, p === null && (f.shared.lanes = 0), Fn |= _, e.lanes = _, e.memoizedState = ce;
     }
   }
   function jh(e, a) {
@@ -3578,10 +3578,10 @@ Error generating stack: ` + o.message + `
   }
   var Vn = fe(null), oo = fe(0);
   function Dh(e, a) {
-    e = wn, F(oo, e), F(Vn, a), wn = e | a.baseLanes;
+    e = wn, J(oo, e), J(Vn, a), wn = e | a.baseLanes;
   }
   function Zu() {
-    F(oo, wn), F(Vn, Vn.current);
+    J(oo, wn), J(Vn, Vn.current);
   }
   function Wu() {
     wn = oo.current, $(Vn), $(oo);
@@ -3589,23 +3589,23 @@ Error generating stack: ` + o.message + `
   var jt = fe(null), Lt = null;
   function Kn(e) {
     var a = e.alternate;
-    F($t, $t.current & 1), F(jt, e), Lt === null && (a === null || Vn.current !== null || a.memoizedState !== null) && (Lt = e);
+    J($t, $t.current & 1), J(jt, e), Lt === null && (a === null || Vn.current !== null || a.memoizedState !== null) && (Lt = e);
   }
   function ed(e) {
-    F($t, $t.current), F(jt, e), Lt === null && (Lt = e);
+    J($t, $t.current), J(jt, e), Lt === null && (Lt = e);
   }
   function zh(e) {
-    e.tag === 22 ? (F($t, $t.current), F(jt, e), Lt === null && (Lt = e)) : Yn();
+    e.tag === 22 ? (J($t, $t.current), J(jt, e), Lt === null && (Lt = e)) : Yn();
   }
   function Yn() {
-    F($t, $t.current), F(jt, jt.current);
+    J($t, $t.current), J(jt, jt.current);
   }
   function ia(e) {
     $(jt), Lt === e && (Lt = null), $($t);
   }
   var $t = fe(0);
   function Cs(e, a) {
-    F(jt, jt.current), F($t, a);
+    J(jt, jt.current), J($t, a);
   }
   function td(e) {
     $($t), $(jt), Lt === e && (Lt = null);
@@ -3642,7 +3642,7 @@ Error generating stack: ` + o.message + `
     return !0;
   }
   function nd(e, a, l, o, f, p) {
-    return vn = p, Ue = a, a.memoizedState = null, a.updateQueue = null, a.lanes = 0, V.H = e === null || e.memoizedState === null ? yg : bg, jr = !1, p = l(o, f), jr = !1, hl && (p = Mh(
+    return vn = p, Ue = a, a.memoizedState = null, a.updateQueue = null, a.lanes = 0, K.H = e === null || e.memoizedState === null ? yg : bg, jr = !1, p = l(o, f), jr = !1, hl && (p = Mh(
       a,
       l,
       o,
@@ -3650,7 +3650,7 @@ Error generating stack: ` + o.message + `
     )), Uh(e), p;
   }
   function Uh(e) {
-    V.H = bo;
+    K.H = bo;
     var a = et !== null && et.next !== null;
     if (vn = 0, vt = et = Ue = null, uo = !1, As = 0, gl = null, a) throw Error(s(300));
     e === null || yt || (e = e.dependencies, e !== null && to(e) && (yt = !0));
@@ -3664,12 +3664,12 @@ Error generating stack: ` + o.message + `
         var p = e.updateQueue;
         p.lastEffect = null, p.events = null, p.stores = null, p.memoCache != null && (p.memoCache.index = 0);
       }
-      V.H = KE, p = a(l, o);
+      K.H = KE, p = a(l, o);
     } while (hl);
     return p;
   }
   function qE() {
-    var e = V.H, a = e.useState()[0];
+    var e = K.H, a = e.useState()[0];
     return a = typeof a.then == "function" ? Os(a) : a, e = e.useState()[0], (et !== null ? et.memoizedState : null) !== e && (Ue.flags |= 1024), a;
   }
   function rd() {
@@ -3725,12 +3725,12 @@ Error generating stack: ` + o.message + `
   }
   function Os(e) {
     var a = As;
-    return As += 1, gl === null && (gl = []), e = Th(gl, e, a), a = Ue, (vt === null ? a.memoizedState : vt.next) === null && (a = a.alternate, V.H = a === null || a.memoizedState === null ? yg : bg), e;
+    return As += 1, gl === null && (gl = []), e = Th(gl, e, a), a = Ue, (vt === null ? a.memoizedState : vt.next) === null && (a = a.alternate, K.H = a === null || a.memoizedState === null ? yg : bg), e;
   }
   function mo(e) {
     if (e !== null && typeof e == "object") {
       if (typeof e.then == "function") return Os(e);
-      if (e.$$typeof === Y) return;
+      if (e.$$typeof === X) return;
       if (e.$$typeof === pe) return Rt(e);
     }
     throw Error(s(438, String(e)));
@@ -3748,7 +3748,7 @@ Error generating stack: ` + o.message + `
     }
     if (a == null && (a = { data: [], index: 0 }), l === null && (l = po(), Ue.updateQueue = l), l.memoCache = a, l = a.data[a.index], l === void 0)
       for (l = a.data[a.index] = Array(e), o = 0; o < e; o++)
-        l[o] = G;
+        l[o] = V;
     return a.index++, l;
   }
   function yn(e, a) {
@@ -3773,47 +3773,47 @@ Error generating stack: ` + o.message + `
     if (p = e.baseState, f === null) e.memoizedState = p;
     else {
       a = f.next;
-      var x = _ = null, D = null, P = a, te = !1;
+      var x = _ = null, D = null, G = a, te = !1;
       do {
-        var ce = P.lane & -536870913;
-        if (ce !== P.lane ? (Ie & ce) === ce : (vn & ce) === ce) {
-          var I = P.revertLane;
-          if (I === 0)
+        var ce = G.lane & -536870913;
+        if (ce !== G.lane ? (Ie & ce) === ce : (vn & ce) === ce) {
+          var H = G.revertLane;
+          if (H === 0)
             D !== null && (D = D.next = {
               lane: 0,
               revertLane: 0,
               gesture: null,
-              action: P.action,
-              hasEagerState: P.hasEagerState,
-              eagerState: P.eagerState,
+              action: G.action,
+              hasEagerState: G.hasEagerState,
+              eagerState: G.eagerState,
               next: null
             }), ce === Tr && (te = !0);
-          else if ((vn & I) === I) {
-            P = P.next, I === Tr && (te = !0);
+          else if ((vn & H) === H) {
+            G = G.next, H === Tr && (te = !0);
             continue;
           } else
             ce = {
               lane: 0,
-              revertLane: P.revertLane,
+              revertLane: G.revertLane,
               gesture: null,
-              action: P.action,
-              hasEagerState: P.hasEagerState,
-              eagerState: P.eagerState,
+              action: G.action,
+              hasEagerState: G.hasEagerState,
+              eagerState: G.eagerState,
               next: null
-            }, D === null ? (x = D = ce, _ = p) : D = D.next = ce, Ue.lanes |= I, Fn |= I;
-          ce = P.action, jr && l(p, ce), p = P.hasEagerState ? P.eagerState : l(p, ce);
+            }, D === null ? (x = D = ce, _ = p) : D = D.next = ce, Ue.lanes |= H, Fn |= H;
+          ce = G.action, jr && l(p, ce), p = G.hasEagerState ? G.eagerState : l(p, ce);
         } else
-          I = {
+          H = {
             lane: ce,
-            revertLane: P.revertLane,
-            gesture: P.gesture,
-            action: P.action,
-            hasEagerState: P.hasEagerState,
-            eagerState: P.eagerState,
+            revertLane: G.revertLane,
+            gesture: G.gesture,
+            action: G.action,
+            hasEagerState: G.hasEagerState,
+            eagerState: G.eagerState,
             next: null
-          }, D === null ? (x = D = I, _ = p) : D = D.next = I, Ue.lanes |= ce, Fn |= ce;
-        P = P.next;
-      } while (P !== null && P !== a);
+          }, D === null ? (x = D = H, _ = p) : D = D.next = H, Ue.lanes |= ce, Fn |= ce;
+        G = G.next;
+      } while (G !== null && G !== a);
       if (D === null ? _ = p : D.next = x, !sa(p, e.memoizedState) && (yt = !0, te && (l = fl, l !== null)))
         throw l;
       e.memoizedState = p, e.baseState = _, e.baseQueue = D, o.lastRenderedState = p;
@@ -3927,27 +3927,27 @@ Error generating stack: ` + o.message + `
           p.listeners.push(_);
         }
       };
-      V.T !== null ? l(!0) : p.isTransition = !1, o(p), l = a.pending, l === null ? (p.next = a.pending = p, Vh(a, p)) : (p.next = l.next, a.pending = l.next = p);
+      K.T !== null ? l(!0) : p.isTransition = !1, o(p), l = a.pending, l === null ? (p.next = a.pending = p, Vh(a, p)) : (p.next = l.next, a.pending = l.next = p);
     }
   }
   function Vh(e, a) {
     var l = a.action, o = a.payload, f = e.state;
     if (a.isTransition) {
-      var p = V.T, _ = {};
-      _.types = p !== null ? p.types : null, V.T = _;
+      var p = K.T, _ = {};
+      _.types = p !== null ? p.types : null, K.T = _;
       try {
-        var x = l(f, o), D = V.S;
+        var x = l(f, o), D = K.S;
         D !== null && D(_, x), Kh(e, a, x);
-      } catch (P) {
-        dd(e, a, P);
+      } catch (G) {
+        dd(e, a, G);
       } finally {
-        p !== null && _.types !== null && (p.types = _.types), V.T = p;
+        p !== null && _.types !== null && (p.types = _.types), K.T = p;
       }
     } else
       try {
         p = l(f, o), Kh(e, a, p);
-      } catch (P) {
-        dd(e, a, P);
+      } catch (G) {
+        dd(e, a, G);
       }
   }
   function Kh(e, a, l) {
@@ -4185,11 +4185,11 @@ Error generating stack: ` + o.message + `
   function ug(e, a, l, o, f) {
     var p = he.p;
     he.p = p !== 0 && 8 > p ? p : 8;
-    var _ = V.T, x = {};
-    x.types = _ !== null ? _.types : null, V.T = x, vd(e, !1, a, l);
+    var _ = K.T, x = {};
+    x.types = _ !== null ? _.types : null, K.T = x, vd(e, !1, a, l);
     try {
-      var D = f(), P = V.S;
-      if (P !== null && P(x, D), D !== null && typeof D == "object" && typeof D.then == "function") {
+      var D = f(), G = K.S;
+      if (G !== null && G(x, D), D !== null && typeof D == "object" && typeof D.then == "function") {
         var te = ME(
           D,
           o
@@ -4216,7 +4216,7 @@ Error generating stack: ` + o.message + `
         da()
       );
     } finally {
-      he.p = p, _ !== null && x.types !== null && (_.types = x.types), V.T = _;
+      he.p = p, _ !== null && x.types !== null && (_.types = x.types), K.T = _;
     }
   }
   function PE() {
@@ -5028,39 +5028,39 @@ Error generating stack: ` + o.message + `
       p = a.stateNode;
       var x = a.memoizedProps, D = $r(l, x);
       p.props = D;
-      var P = p.context, te = l.contextType;
+      var G = p.context, te = l.contextType;
       _ = ol, typeof te == "object" && te !== null && (_ = Rt(te));
       var ce = l.getDerivedStateFromProps;
-      te = typeof ce == "function" || typeof p.getSnapshotBeforeUpdate == "function", x = a.pendingProps !== x, te || typeof p.UNSAFE_componentWillReceiveProps != "function" && typeof p.componentWillReceiveProps != "function" || (x || P !== _) && wg(
+      te = typeof ce == "function" || typeof p.getSnapshotBeforeUpdate == "function", x = a.pendingProps !== x, te || typeof p.UNSAFE_componentWillReceiveProps != "function" && typeof p.componentWillReceiveProps != "function" || (x || G !== _) && wg(
         a,
         p,
         o,
         _
       ), Hn = !1;
-      var I = a.memoizedState;
-      p.state = I, Ts(a, o, p, f), Ns(), P = a.memoizedState, x || I !== P || Hn ? (typeof ce == "function" && (yd(
+      var H = a.memoizedState;
+      p.state = H, Ts(a, o, p, f), Ns(), G = a.memoizedState, x || H !== G || Hn ? (typeof ce == "function" && (yd(
         a,
         l,
         ce,
         o
-      ), P = a.memoizedState), (D = Hn || _g(
+      ), G = a.memoizedState), (D = Hn || _g(
         a,
         l,
         D,
         o,
-        I,
-        P,
+        H,
+        G,
         _
-      )) ? (te || typeof p.UNSAFE_componentWillMount != "function" && typeof p.componentWillMount != "function" || (typeof p.componentWillMount == "function" && p.componentWillMount(), typeof p.UNSAFE_componentWillMount == "function" && p.UNSAFE_componentWillMount()), typeof p.componentDidMount == "function" && (a.flags |= 4194308)) : (typeof p.componentDidMount == "function" && (a.flags |= 4194308), a.memoizedProps = o, a.memoizedState = P), p.props = o, p.state = P, p.context = _, o = D) : (typeof p.componentDidMount == "function" && (a.flags |= 4194308), o = !1);
+      )) ? (te || typeof p.UNSAFE_componentWillMount != "function" && typeof p.componentWillMount != "function" || (typeof p.componentWillMount == "function" && p.componentWillMount(), typeof p.UNSAFE_componentWillMount == "function" && p.UNSAFE_componentWillMount()), typeof p.componentDidMount == "function" && (a.flags |= 4194308)) : (typeof p.componentDidMount == "function" && (a.flags |= 4194308), a.memoizedProps = o, a.memoizedState = G), p.props = o, p.state = G, p.context = _, o = D) : (typeof p.componentDidMount == "function" && (a.flags |= 4194308), o = !1);
     } else {
-      p = a.stateNode, Qu(e, a), _ = a.memoizedProps, te = $r(l, _), p.props = te, ce = a.pendingProps, I = p.context, P = l.contextType, D = ol, typeof P == "object" && P !== null && (D = Rt(P)), x = l.getDerivedStateFromProps, (P = typeof x == "function" || typeof p.getSnapshotBeforeUpdate == "function") || typeof p.UNSAFE_componentWillReceiveProps != "function" && typeof p.componentWillReceiveProps != "function" || (_ !== ce || I !== D) && wg(
+      p = a.stateNode, Qu(e, a), _ = a.memoizedProps, te = $r(l, _), p.props = te, ce = a.pendingProps, H = p.context, G = l.contextType, D = ol, typeof G == "object" && G !== null && (D = Rt(G)), x = l.getDerivedStateFromProps, (G = typeof x == "function" || typeof p.getSnapshotBeforeUpdate == "function") || typeof p.UNSAFE_componentWillReceiveProps != "function" && typeof p.componentWillReceiveProps != "function" || (_ !== ce || H !== D) && wg(
         a,
         p,
         o,
         D
-      ), Hn = !1, I = a.memoizedState, p.state = I, Ts(a, o, p, f), Ns();
+      ), Hn = !1, H = a.memoizedState, p.state = H, Ts(a, o, p, f), Ns();
       var Z = a.memoizedState;
-      _ !== ce || I !== Z || Hn || e !== null && e.dependencies !== null && to(e.dependencies) ? (typeof x == "function" && (yd(
+      _ !== ce || H !== Z || Hn || e !== null && e.dependencies !== null && to(e.dependencies) ? (typeof x == "function" && (yd(
         a,
         l,
         x,
@@ -5070,14 +5070,14 @@ Error generating stack: ` + o.message + `
         l,
         te,
         o,
-        I,
+        H,
         Z,
         D
-      ) || e !== null && e.dependencies !== null && to(e.dependencies)) ? (P || typeof p.UNSAFE_componentWillUpdate != "function" && typeof p.componentWillUpdate != "function" || (typeof p.componentWillUpdate == "function" && p.componentWillUpdate(o, Z, D), typeof p.UNSAFE_componentWillUpdate == "function" && p.UNSAFE_componentWillUpdate(
+      ) || e !== null && e.dependencies !== null && to(e.dependencies)) ? (G || typeof p.UNSAFE_componentWillUpdate != "function" && typeof p.componentWillUpdate != "function" || (typeof p.componentWillUpdate == "function" && p.componentWillUpdate(o, Z, D), typeof p.UNSAFE_componentWillUpdate == "function" && p.UNSAFE_componentWillUpdate(
         o,
         Z,
         D
-      )), typeof p.componentDidUpdate == "function" && (a.flags |= 4), typeof p.getSnapshotBeforeUpdate == "function" && (a.flags |= 1024)) : (typeof p.componentDidUpdate != "function" || _ === e.memoizedProps && I === e.memoizedState || (a.flags |= 4), typeof p.getSnapshotBeforeUpdate != "function" || _ === e.memoizedProps && I === e.memoizedState || (a.flags |= 1024), a.memoizedProps = o, a.memoizedState = Z), p.props = o, p.state = Z, p.context = D, o = te) : (typeof p.componentDidUpdate != "function" || _ === e.memoizedProps && I === e.memoizedState || (a.flags |= 4), typeof p.getSnapshotBeforeUpdate != "function" || _ === e.memoizedProps && I === e.memoizedState || (a.flags |= 1024), o = !1);
+      )), typeof p.componentDidUpdate == "function" && (a.flags |= 4), typeof p.getSnapshotBeforeUpdate == "function" && (a.flags |= 1024)) : (typeof p.componentDidUpdate != "function" || _ === e.memoizedProps && H === e.memoizedState || (a.flags |= 4), typeof p.getSnapshotBeforeUpdate != "function" || _ === e.memoizedProps && H === e.memoizedState || (a.flags |= 1024), a.memoizedProps = o, a.memoizedState = Z), p.props = o, p.state = Z, p.context = D, o = te) : (typeof p.componentDidUpdate != "function" || _ === e.memoizedProps && H === e.memoizedState || (a.flags |= 4), typeof p.getSnapshotBeforeUpdate != "function" || _ === e.memoizedProps && H === e.memoizedState || (a.flags |= 1024), o = !1);
     }
     return p = o, yl(e, a), o = (a.flags & 128) !== 0, p || o ? (p = a.stateNode, l = o && typeof l.getDerivedStateFromError != "function" ? null : p.render(), a.flags |= 1, e !== null && o ? (a.child = Rr(
       a,
@@ -6035,7 +6035,7 @@ Error generating stack: ` + o.message + `
             }
             l = !0;
           }
-          return o.rendering = e, o.tail = e.sibling, o.renderingStartTime = aa(), e.sibling = null, p = $t.current, p = f ? p & 1 | 2 : p & 1, o.tailMode === "visible" || o.tailMode === "collapsed" || !l || Le ? Cs(a, p) : (l = p, F(jt, a), F($t, l), Lt === null && (Lt = a)), Le && mn(a, o.treeForkCount), e;
+          return o.rendering = e, o.tail = e.sibling, o.renderingStartTime = aa(), e.sibling = null, p = $t.current, p = f ? p & 1 | 2 : p & 1, o.tailMode === "visible" || o.tailMode === "collapsed" || !l || Le ? Cs(a, p) : (l = p, J(jt, a), J($t, l), Lt === null && (Lt = a)), Le && mn(a, o.treeForkCount), e;
         }
         return rt(a), null;
       case 22:
@@ -6154,9 +6154,9 @@ Error generating stack: ` + o.message + `
             var _ = o.inst, x = _.destroy;
             if (x !== void 0) {
               _.destroy = void 0, f = a;
-              var D = l, P = x;
+              var D = l, G = x;
               try {
-                P();
+                G();
               } catch (te) {
                 Ze(
                   f,
@@ -6532,17 +6532,17 @@ Error generating stack: ` + o.message + `
       if (a.tag === 5) {
         var D = a.stateNode;
         if (p !== null && Xt < p.length) {
-          var P = p[Xt], te = _f(D);
-          (P.view || te.view) && (x = !0);
+          var G = p[Xt], te = _f(D);
+          (G.view || te.view) && (x = !0);
           var ce;
           if (ce = (e.flags & 4) === 0)
             if (te.clip) ce = !0;
             else {
-              ce = P.rect;
-              var I = te.rect;
-              ce = ce.y !== I.y || ce.x !== I.x || ce.height !== I.height || ce.width !== I.width;
+              ce = G.rect;
+              var H = te.rect;
+              ce = ce.y !== H.y || ce.x !== H.x || ce.height !== H.height || ce.width !== H.width;
             }
-          ce && (e.flags |= 4), te.abs ? te = !P.abs : (P = P.rect, te = te.rect, te = P.height !== te.height || P.width !== te.width), te && (e.flags |= 32);
+          ce && (e.flags |= 4), te.abs ? te = !G.abs : (G = G.rect, te = te.rect, te = G.height !== te.height || G.width !== te.width), te && (e.flags |= 32);
         } else e.flags |= 32;
         (e.flags & 4) !== 0 && Jv(
           D,
@@ -6608,18 +6608,18 @@ Error generating stack: ` + o.message + `
               o = null;
               break e;
             }
-            var x = 0, D = -1, P = -1, te = 0, ce = 0, I = e, Z = null;
+            var x = 0, D = -1, G = -1, te = 0, ce = 0, H = e, Z = null;
             t: for (; ; ) {
-              for (var ye; I !== o || p !== 0 && I.nodeType !== 3 || (D = x + p), I !== _ || f !== 0 && I.nodeType !== 3 || (P = x + f), I.nodeType === 3 && (x += I.nodeValue.length), (ye = I.firstChild) !== null; )
-                Z = I, I = ye;
+              for (var ye; H !== o || p !== 0 && H.nodeType !== 3 || (D = x + p), H !== _ || f !== 0 && H.nodeType !== 3 || (G = x + f), H.nodeType === 3 && (x += H.nodeValue.length), (ye = H.firstChild) !== null; )
+                Z = H, H = ye;
               for (; ; ) {
-                if (I === e) break t;
-                if (Z === o && ++te === p && (D = x), Z === _ && ++ce === f && (P = x), (ye = I.nextSibling) !== null) break;
-                I = Z, Z = I.parentNode;
+                if (H === e) break t;
+                if (Z === o && ++te === p && (D = x), Z === _ && ++ce === f && (G = x), (ye = H.nextSibling) !== null) break;
+                H = Z, Z = H.parentNode;
               }
-              I = ye;
+              H = ye;
             }
-            o = D === -1 || P === -1 ? null : { start: D, end: P };
+            o = D === -1 || G === -1 ? null : { start: D, end: G };
           } else o = null;
         }
       o = o || { start: 0, end: 0 };
@@ -7228,8 +7228,8 @@ Error generating stack: ` + o.message + `
         break;
       case 22:
         p = e.memoizedState !== null, _ = o !== null && o.memoizedState !== null;
-        var x = St, D = Je, P = Ka;
-        St = x || p, Ka = P || p, Je = D || _, Ht(a, e, l), Je = D, Ka = P, St = x, Pt(e), f & 8192 && (a = e.stateNode, a._visibility = p ? a._visibility & -2 : a._visibility | 1, !p || o === null || _ || St || Je || (a = _ || Je, l = St, o = Je, St = p || St, Je = a, Qn(e, 2), St = l, Je = o), !p && Ka || Gd(e, p)), f & 4 && (a = e.updateQueue, a !== null && (l = a.retryQueue, l !== null && (a.retryQueue = null, $o(e, l))));
+        var x = St, D = Je, G = Ka;
+        St = x || p, Ka = G || p, Je = D || _, Ht(a, e, l), Je = D, Ka = G, St = x, Pt(e), f & 8192 && (a = e.stateNode, a._visibility = p ? a._visibility & -2 : a._visibility | 1, !p || o === null || _ || St || Je || (a = _ || Je, l = St, o = Je, St = p || St, Je = a, Qn(e, 2), St = l, Je = o), !p && Ka || Gd(e, p)), f & 4 && (a = e.updateQueue, a !== null && (l = a.retryQueue, l !== null && (a.retryQueue = null, $o(e, l))));
         break;
       case 19:
         Ht(a, e, l), Pt(e), f & 4 && (a = e.updateQueue, a !== null && (e.updateQueue = null, $o(e, a)));
@@ -7281,22 +7281,22 @@ Error generating stack: ` + o.message + `
             );
             break;
           case 5:
-            var P = l.stateNode;
-            l.flags & 32 && (tl(P, ""), l.flags &= -33);
+            var G = l.stateNode;
+            l.flags & 32 && (tl(G, ""), l.flags &= -33);
             var te = zd(e);
             To(
               e,
               te,
-              P,
+              G,
               _
             );
             break;
           case 3:
           case 4:
-            var ce = l.stateNode.containerInfo, I = zd(e);
+            var ce = l.stateNode.containerInfo, H = zd(e);
             Ud(
               e,
-              I,
+              H,
               ce,
               _
             );
@@ -7494,10 +7494,10 @@ Error generating stack: ` + o.message + `
           if (o = p, f = o.updateQueue, f !== null) {
             var D = o.stateNode;
             try {
-              var P = f.shared.hiddenCallbacks;
-              if (P !== null)
-                for (f.shared.hiddenCallbacks = null, f = 0; f < P.length; f++)
-                  jh(P[f], D);
+              var G = f.shared.hiddenCallbacks;
+              if (G !== null)
+                for (f.shared.hiddenCallbacks = null, f = 0; f < G.length; f++)
+                  jh(G[f], D);
             } catch (te) {
               Ze(o, o.return, te);
             }
@@ -7640,8 +7640,8 @@ Error generating stack: ` + o.message + `
               p.passiveEffectDuration,
               -0
             );
-          } catch (P) {
-            Ze(a, a.return, P);
+          } catch (G) {
+            Ze(a, a.return, G);
           }
         } else
           Ea(
@@ -7718,7 +7718,7 @@ Error generating stack: ` + o.message + `
   }
   function wl(e, a, l, o, f) {
     for (f = f && ((a.subtreeFlags & 10256) !== 0 || !1), a = a.child; a !== null; ) {
-      var p = e, _ = a, x = l, D = o, P = _.flags;
+      var p = e, _ = a, x = l, D = o, G = _.flags;
       switch (_.tag) {
         case 0:
         case 11:
@@ -7750,7 +7750,7 @@ Error generating stack: ` + o.message + `
             x,
             D,
             f
-          )), f && P & 2048 && Kd(
+          )), f && G & 2048 && Kd(
             _.alternate,
             _
           );
@@ -7762,7 +7762,7 @@ Error generating stack: ` + o.message + `
             x,
             D,
             f
-          ), f && P & 2048 && Yd(_.alternate, _);
+          ), f && G & 2048 && Yd(_.alternate, _);
           break;
         default:
           wl(
@@ -7988,7 +7988,7 @@ Error generating stack: ` + o.message + `
     }
   }, ax = typeof WeakMap == "function" ? WeakMap : Map, Ye = 0, tt = null, qe = null, Ie = 0, Fe = 0, ca = null, Jn = !1, El = !1, Xd = !1, wn = 0, ct = 0, Fn = 0, Ur = 0, zo = 0, ua = 0, xl = 0, qs = null, Jt = null, Qd = !1, Uo = 0, gv = 0, Mo = 1 / 0, Lo = null, Zn = null, it = 0, $a = null, Mr = null, Qa = 0, Jd = 0, Fd = null, vv = null, kl = null, Sl = null, Nl = null, Bs = 0, qo = null;
   function da() {
-    return (Ye & 2) !== 0 && Ie !== 0 ? Ie & -Ie : V.T !== null ? of() : _m();
+    return (Ye & 2) !== 0 && Ie !== 0 ? Ie & -Ie : K.T !== null ? of() : _m();
   }
   function yv() {
     if (ua === 0)
@@ -8141,7 +8141,7 @@ Error generating stack: ` + o.message + `
     } while (!0);
     Ja(e);
   }
-  function _v(e, a, l, o, f, p, _, x, D, P, te, ce, I, Z) {
+  function _v(e, a, l, o, f, p, _, x, D, G, te, ce, H, Z) {
     e.timeoutHandle = -1;
     var ye = a.subtreeFlags, xe = (p & 335544064) === p;
     if (ce = null, (xe || ye & 8192 || (ye & 16785408) === 16785408) && (ce = {
@@ -8173,14 +8173,14 @@ Error generating stack: ` + o.message + `
           _,
           x,
           D,
-          P,
+          G,
           te,
           ce,
           null,
-          I,
+          H,
           Z
         )
-      ), Wn(e, p, _, !P);
+      ), Wn(e, p, _, !G);
       return;
     }
     Cv(
@@ -8193,7 +8193,7 @@ Error generating stack: ` + o.message + `
       _,
       x,
       D,
-      P,
+      G,
       te,
       ce
     );
@@ -8251,7 +8251,7 @@ Error generating stack: ` + o.message + `
     return l !== -1 && (e.timeoutHandle = -1, Tx(l)), l = e.cancelPendingCommit, l !== null && (e.cancelPendingCommit = null, l()), Qa = 0, Zd(), tt = e, qe = l = pn(e.current, null), Ie = a, Fe = 0, ca = null, Jn = !1, El = ss(e, a), Xd = !1, xl = ua = zo = Ur = Fn = ct = 0, Jt = qs = null, Qd = !1, wn = hm(e, a), Yi(), l;
   }
   function wv(e, a) {
-    Ue = null, V.H = bo, a === pl || a === ro ? (a = Ch(), Fe = 3) : a === Yu ? (a = Ch(), Fe = 4) : Fe = a === wd ? 8 : a !== null && typeof a == "object" && typeof a.then == "function" ? 6 : 1, ca = a, qe === null && (ct = 1, _o(
+    Ue = null, K.H = bo, a === pl || a === ro ? (a = Ch(), Fe = 3) : a === Yu ? (a = Ch(), Fe = 4) : Fe = a === wd ? 8 : a !== null && typeof a == "object" && typeof a.then == "function" ? 6 : 1, ca = a, qe === null && (ct = 1, _o(
       e,
       ya(a, e.current)
     ));
@@ -8261,12 +8261,12 @@ Error generating stack: ` + o.message + `
     return e === null ? !0 : (Ie & 4194048) === Ie ? Lt === null : (Ie & 62914560) === Ie || (Ie & 536870912) !== 0 ? e === Lt : !1;
   }
   function xv() {
-    var e = V.H;
-    return V.H = bo, e === null ? bo : e;
+    var e = K.H;
+    return K.H = bo, e === null ? bo : e;
   }
   function kv() {
-    var e = V.A;
-    return V.A = tx, e;
+    var e = K.A;
+    return K.A = tx, e;
   }
   function Io() {
     ct = 4, Jn || (Ie & 4194048) !== Ie && jt.current !== null || (El = !0), (Fn & 134217727) === 0 && (Ur & 134217727) === 0 || tt === null || Wn(
@@ -8295,14 +8295,14 @@ Error generating stack: ` + o.message + `
             case 9:
             case 6:
               jt.current === null && (a = !0);
-              var P = Fe;
-              if (Fe = 0, ca = null, Al(e, x, D, P), l && El) {
+              var G = Fe;
+              if (Fe = 0, ca = null, Al(e, x, D, G), l && El) {
                 _ = 0;
                 break e;
               }
               break;
             default:
-              P = Fe, Fe = 0, ca = null, Al(e, x, D, P);
+              G = Fe, Fe = 0, ca = null, Al(e, x, D, G);
           }
         }
         rx(), _ = ct;
@@ -8311,7 +8311,7 @@ Error generating stack: ` + o.message + `
         wv(e, te);
       }
     while (!0);
-    return a && e.shellSuspendCounter++, hn = kr = null, Ye = o, V.H = f, V.A = p, qe === null && (tt = null, Ie = 0, Yi()), _;
+    return a && e.shellSuspendCounter++, hn = kr = null, Ye = o, K.H = f, K.A = p, qe === null && (tt = null, Ie = 0, Yi()), _;
   }
   function rx() {
     for (; qe !== null; ) Sv(qe);
@@ -8365,8 +8365,8 @@ Error generating stack: ` + o.message + `
                     var D = x.sibling;
                     if (D !== null) qe = D;
                     else {
-                      var P = x.return;
-                      P !== null ? (qe = P, Ho(P)) : qe = null;
+                      var G = x.return;
+                      G !== null ? (qe = G, Ho(G)) : qe = null;
                     }
                     break t;
                   }
@@ -8389,7 +8389,7 @@ Error generating stack: ` + o.message + `
         wv(e, te);
       }
     while (!0);
-    return hn = kr = null, V.H = o, V.A = f, Ye = l, qe !== null ? 0 : (tt = null, Ie = 0, Yi(), ct);
+    return hn = kr = null, K.H = o, K.A = f, Ye = l, qe !== null ? 0 : (tt = null, Ie = 0, Yi(), ct);
   }
   function sx() {
     for (; qe !== null && !xw(); )
@@ -8502,7 +8502,7 @@ Error generating stack: ` + o.message + `
     } while (e !== null);
     ct = 6, qe = null;
   }
-  function Cv(e, a, l, o, f, p, _, x, D, P, te, ce) {
+  function Cv(e, a, l, o, f, p, _, x, D, G, te, ce) {
     e.cancelPendingCommit = null;
     do
       Po();
@@ -8533,11 +8533,11 @@ Error generating stack: ` + o.message + `
     ), Sl = null, (l & 335544064) === l ? (Nl = zE(e), o = 10262) : (Nl = null, o = 10256), (a.subtreeFlags & o) !== 0 || (a.flags & o) !== 0 ? (e.callbackNode = null, e.callbackPriority = 0, px(Oi, function() {
       return nf(), null;
     })) : (e.callbackNode = null, e.callbackPriority = 0), Co = !1, o = (a.flags & 13878) !== 0, (a.subtreeFlags & 13878) !== 0 || o) {
-      o = V.T, V.T = null, f = he.p, he.p = 2, p = Ye, Ye |= 4;
+      o = K.T, K.T = null, f = he.p, he.p = 2, p = Ye, Ye |= 4;
       try {
         WE(e, a, l);
       } finally {
-        Ye = p, he.p = f, V.T = o;
+        Ye = p, he.p = f, K.T = o;
       }
     }
     it = 1, Co ? kl = $x(
@@ -8566,7 +8566,7 @@ Error generating stack: ` + o.message + `
       it = 0;
       var e = $a, a = Mr, l = Qa, o = (a.flags & 13878) !== 0;
       if ((a.subtreeFlags & 13878) !== 0 || o) {
-        o = V.T, V.T = null;
+        o = K.T, K.T = null;
         var f = he.p;
         he.p = 2;
         var p = Ye;
@@ -8579,27 +8579,27 @@ Error generating stack: ` + o.message + `
             x
           )) {
             if (D !== null && Au(x)) {
-              var P = D.start, te = D.end;
-              if (te === void 0 && (te = P), "selectionStart" in x)
-                x.selectionStart = P, x.selectionEnd = Math.min(
+              var G = D.start, te = D.end;
+              if (te === void 0 && (te = G), "selectionStart" in x)
+                x.selectionStart = G, x.selectionEnd = Math.min(
                   te,
                   x.value.length
                 );
               else {
-                var ce = x.ownerDocument || document, I = ce && ce.defaultView || window;
-                if (I.getSelection) {
-                  var Z = I.getSelection(), ye = x.textContent.length, xe = Math.min(D.start, ye), Me = D.end === void 0 ? xe : Math.min(D.end, ye);
+                var ce = x.ownerDocument || document, H = ce && ce.defaultView || window;
+                if (H.getSelection) {
+                  var Z = H.getSelection(), ye = x.textContent.length, xe = Math.min(D.start, ye), Me = D.end === void 0 ? xe : Math.min(D.end, ye);
                   !Z.extend && xe > Me && (_ = Me, Me = xe, xe = _);
-                  var H = nh(
+                  var P = nh(
                     x,
                     xe
                   ), M = nh(
                     x,
                     Me
                   );
-                  if (H && M && (Z.rangeCount !== 1 || Z.anchorNode !== H.node || Z.anchorOffset !== H.offset || Z.focusNode !== M.node || Z.focusOffset !== M.offset)) {
+                  if (P && M && (Z.rangeCount !== 1 || Z.anchorNode !== P.node || Z.anchorOffset !== P.offset || Z.focusNode !== M.node || Z.focusOffset !== M.offset)) {
                     var Q = ce.createRange();
-                    Q.setStart(H.node, H.offset), Z.removeAllRanges(), xe > Me ? (Z.addRange(Q), Z.extend(M.node, M.offset)) : (Q.setEnd(M.node, M.offset), Z.addRange(Q));
+                    Q.setStart(P.node, P.offset), Z.removeAllRanges(), xe > Me ? (Z.addRange(Q), Z.extend(M.node, M.offset)) : (Q.setEnd(M.node, M.offset), Z.addRange(Q));
                   }
                 }
               }
@@ -8617,7 +8617,7 @@ Error generating stack: ` + o.message + `
           }
           Ml = !!hf, gf = hf = null;
         } finally {
-          Ye = p, he.p = f, V.T = o;
+          Ye = p, he.p = f, K.T = o;
         }
       }
       e.current = a, it = 2;
@@ -8628,7 +8628,7 @@ Error generating stack: ` + o.message + `
       it = 0;
       var e = $a, a = Mr, l = (a.flags & 8772) !== 0;
       if ((a.subtreeFlags & 8772) !== 0 || l) {
-        l = V.T, V.T = null;
+        l = K.T, K.T = null;
         var o = he.p;
         he.p = 2;
         var f = Ye;
@@ -8636,7 +8636,7 @@ Error generating stack: ` + o.message + `
         try {
           av(e, a.alternate, a);
         } finally {
-          Ye = f, he.p = o, V.T = l;
+          Ye = f, he.p = o, K.T = l;
         }
       }
       it = 3;
@@ -8659,7 +8659,7 @@ Error generating stack: ` + o.message + `
         } catch {
         }
       if (f !== null) {
-        l = V.T, p = he.p, he.p = 2, V.T = null;
+        l = K.T, p = he.p, he.p = 2, K.T = null;
         try {
           for (var _ = a.onRecoverableError, x = 0; x < f.length; x++) {
             var D = f[x];
@@ -8668,7 +8668,7 @@ Error generating stack: ` + o.message + `
             });
           }
         } finally {
-          V.T = l, he.p = p;
+          K.T = l, he.p = p;
         }
       }
       if (f = Sl, _ = Nl, Nl = null, f !== null && (Sl = null, _ === null && (_ = []), e !== null))
@@ -8689,9 +8689,9 @@ Error generating stack: ` + o.message + `
     if (it !== 5) return !1;
     var e = $a, a = Jd;
     Jd = 0;
-    var l = du(Qa), o = V.T, f = he.p;
+    var l = du(Qa), o = K.T, f = he.p;
     try {
-      he.p = 32 > l ? 32 : l, V.T = null, l = Fd, Fd = null;
+      he.p = 32 > l ? 32 : l, K.T = null, l = Fd, Fd = null;
       var p = $a, _ = Qa;
       if (it = 0, Mr = $a = null, Qa = 0, (Ye & 6) !== 0) throw Error(s(331));
       var x = Ye;
@@ -8707,7 +8707,7 @@ Error generating stack: ` + o.message + `
         }
       return !0;
     } finally {
-      he.p = f, V.T = o, Av(e, a);
+      he.p = f, K.T = o, Av(e, a);
     }
   }
   function Ov(e, a, l) {
@@ -8988,10 +8988,10 @@ Error generating stack: ` + o.message + `
         var p = void 0;
         if (a)
           for (var _ = o.length - 1; 0 <= _; _--) {
-            var x = o[_], D = x.instance, P = x.currentTarget;
+            var x = o[_], D = x.instance, G = x.currentTarget;
             if (x = x.listener, D !== p && f.isPropagationStopped())
               break e;
-            p = x, f.currentTarget = P;
+            p = x, f.currentTarget = G;
             try {
               p(f);
             } catch (te) {
@@ -9001,9 +9001,9 @@ Error generating stack: ` + o.message + `
           }
         else
           for (_ = 0; _ < o.length; _++) {
-            if (x = o[_], D = x.instance, P = x.currentTarget, x = x.listener, D !== p && f.isPropagationStopped())
+            if (x = o[_], D = x.instance, G = x.currentTarget, x = x.listener, D !== p && f.isPropagationStopped())
               break e;
-            p = x, f.currentTarget = P;
+            p = x, f.currentTarget = G;
             try {
               p(f);
             } catch (te) {
@@ -9090,10 +9090,10 @@ Error generating stack: ` + o.message + `
         o = o.return;
       }
     Lm(function() {
-      var P = p, te = vu(l), ce = [];
+      var G = p, te = vu(l), ce = [];
       e: {
-        var I = fh.get(e);
-        if (I !== void 0) {
+        var H = fh.get(e);
+        if (H !== void 0) {
           var Z = Pi, ye = e;
           switch (e) {
             case "keypress":
@@ -9177,48 +9177,48 @@ Error generating stack: ` + o.message + `
             case "beforetoggle":
               Z = mE;
           }
-          var xe = (a & 4) !== 0, Me = !xe && (e === "scroll" || e === "scrollend"), H = xe ? I !== null ? I + "Capture" : null : I;
+          var xe = (a & 4) !== 0, Me = !xe && (e === "scroll" || e === "scrollend"), P = xe ? H !== null ? H + "Capture" : null : H;
           xe = [];
-          for (var M = P, Q; M !== null; ) {
+          for (var M = G, Q; M !== null; ) {
             var oe = M;
-            if (Q = oe.stateNode, oe = oe.tag, oe !== 5 && oe !== 26 && oe !== 27 || Q === null || H === null || (oe = us(M, H), oe != null && xe.push(
+            if (Q = oe.stateNode, oe = oe.tag, oe !== 5 && oe !== 26 && oe !== 27 || Q === null || P === null || (oe = us(M, P), oe != null && xe.push(
               Ps(M, oe, Q)
             )), Me) break;
             M = M.return;
           }
-          0 < xe.length && (I = new Z(
-            I,
+          0 < xe.length && (H = new Z(
+            H,
             ye,
             null,
             l,
             te
-          ), ce.push({ event: I, listeners: xe }));
+          ), ce.push({ event: H, listeners: xe }));
         }
       }
       if ((a & 7) === 0) {
         e: {
-          if (Z = e === "mouseover" || e === "pointerover", I = e === "mouseout" || e === "pointerout", Z && l !== gu && (ye = l.relatedTarget || l.fromElement) && (vr(ye) || ye[Jr]))
+          if (Z = e === "mouseover" || e === "pointerover", H = e === "mouseout" || e === "pointerout", Z && l !== gu && (ye = l.relatedTarget || l.fromElement) && (vr(ye) || ye[Jr]))
             break e;
-          (I || Z) && (ye = te.window === te ? te : (Z = te.ownerDocument) ? Z.defaultView || Z.parentWindow : window, I ? (Z = l.relatedTarget || l.toElement, I = P, Z = Z ? vr(Z) : null, Z !== null && (Me = u(Z), xe = Z.tag, Z !== Me || xe !== 5 && xe !== 27 && xe !== 6) && (Z = null)) : (I = null, Z = P), I !== Z && (xe = Im, oe = "onMouseLeave", H = "onMouseEnter", M = "mouse", (e === "pointerout" || e === "pointerover") && (xe = Pm, oe = "onPointerLeave", H = "onPointerEnter", M = "pointer"), Me = I == null ? ye : cs(I), Q = Z == null ? ye : cs(Z), ye = new xe(
+          (H || Z) && (ye = te.window === te ? te : (Z = te.ownerDocument) ? Z.defaultView || Z.parentWindow : window, H ? (Z = l.relatedTarget || l.toElement, H = G, Z = Z ? vr(Z) : null, Z !== null && (Me = u(Z), xe = Z.tag, Z !== Me || xe !== 5 && xe !== 27 && xe !== 6) && (Z = null)) : (H = null, Z = G), H !== Z && (xe = Im, oe = "onMouseLeave", P = "onMouseEnter", M = "mouse", (e === "pointerout" || e === "pointerover") && (xe = Pm, oe = "onPointerLeave", P = "onPointerEnter", M = "pointer"), Me = H == null ? ye : cs(H), Q = Z == null ? ye : cs(Z), ye = new xe(
             oe,
             M + "leave",
-            I,
+            H,
             l,
             te
-          ), ye.target = Me, ye.relatedTarget = Q, oe = null, vr(te) === P && (xe = new xe(
-            H,
+          ), ye.target = Me, ye.relatedTarget = Q, oe = null, vr(te) === G && (xe = new xe(
+            P,
             M + "enter",
             Z,
             l,
             te
-          ), xe.target = Q, xe.relatedTarget = Me, oe = xe), Me = oe, xe = I && Z ? J(
-            I,
+          ), xe.target = Q, xe.relatedTarget = Me, oe = xe), Me = oe, xe = H && Z ? B(
+            H,
             Z,
             _x
-          ) : null, I !== null && qv(
+          ) : null, H !== null && qv(
             ce,
             ye,
-            I,
+            H,
             xe,
             !1
           ), Z !== null && Me !== null && qv(
@@ -9230,9 +9230,9 @@ Error generating stack: ` + o.message + `
           )));
         }
         e: {
-          if (I = P ? cs(P) : window, Z = I.nodeName && I.nodeName.toLowerCase(), Z === "select" || Z === "input" && I.type === "file")
+          if (H = G ? cs(G) : window, Z = H.nodeName && H.nodeName.toLowerCase(), Z === "select" || Z === "input" && H.type === "file")
             var we = Fm;
-          else if (Qm(I))
+          else if (Qm(H))
             if (Zm)
               we = kE;
             else {
@@ -9240,8 +9240,8 @@ Error generating stack: ` + o.message + `
               var He = wE;
             }
           else
-            Z = I.nodeName, !Z || Z.toLowerCase() !== "input" || I.type !== "checkbox" && I.type !== "radio" ? P && hu(P.elementType) && (we = Fm) : we = xE;
-          if (we && (we = we(e, P))) {
+            Z = H.nodeName, !Z || Z.toLowerCase() !== "input" || H.type !== "checkbox" && H.type !== "radio" ? G && hu(G.elementType) && (we = Fm) : we = xE;
+          if (we && (we = we(e, G))) {
             Jm(
               ce,
               we,
@@ -9250,11 +9250,11 @@ Error generating stack: ` + o.message + `
             );
             break e;
           }
-          He && He(e, I, P);
+          He && He(e, H, G);
         }
-        switch (He = P ? cs(P) : window, e) {
+        switch (He = G ? cs(G) : window, e) {
           case "focusin":
-            (Qm(He) || He.contentEditable === "true") && (ll = He, Ou = P, ys = null);
+            (Qm(He) || He.contentEditable === "true") && (ll = He, Ou = G, ys = null);
             break;
           case "focusout":
             ys = Ou = ll = null;
@@ -9291,13 +9291,13 @@ Error generating stack: ` + o.message + `
           }
         else
           rl ? Ym(e, l) && (je = "onCompositionEnd") : e === "keydown" && l.keyCode === 229 && (je = "onCompositionStart");
-        je && (Gm && l.locale !== "ko" && (rl || je !== "onCompositionStart" ? je === "onCompositionEnd" && rl && (Ce = qm()) : (zn = te, _u = "value" in zn ? zn.value : zn.textContent, rl = !0)), He = Ko(P, je), 0 < He.length && (je = new Hm(
+        je && (Gm && l.locale !== "ko" && (rl || je !== "onCompositionStart" ? je === "onCompositionEnd" && rl && (Ce = qm()) : (zn = te, _u = "value" in zn ? zn.value : zn.textContent, rl = !0)), He = Ko(G, je), 0 < He.length && (je = new Hm(
           je,
           e,
           null,
           l,
           te
-        ), ce.push({ event: je, listeners: He }), Ce ? je.data = Ce : (Ce = Xm(l), Ce !== null && (je.data = Ce)))), (Ce = gE ? vE(e, l) : yE(e, l)) && (je = Ko(P, "onBeforeInput"), 0 < je.length && (He = new Hm(
+        ), ce.push({ event: je, listeners: He }), Ce ? je.data = Ce : (Ce = Xm(l), Ce !== null && (je.data = Ce)))), (Ce = gE ? vE(e, l) : yE(e, l)) && (je = Ko(G, "onBeforeInput"), 0 < je.length && (He = new Hm(
           "onBeforeInput",
           "beforeinput",
           null,
@@ -9309,7 +9309,7 @@ Error generating stack: ` + o.message + `
         }), He.data = Ce)), gx(
           ce,
           e,
-          P,
+          G,
           l,
           te
         );
@@ -9345,12 +9345,12 @@ Error generating stack: ` + o.message + `
   }
   function qv(e, a, l, o, f) {
     for (var p = a._reactName, _ = []; l !== null && l !== o; ) {
-      var x = l, D = x.alternate, P = x.stateNode;
+      var x = l, D = x.alternate, G = x.stateNode;
       if (x = x.tag, D !== null && D === o) break;
-      x !== 5 && x !== 26 && x !== 27 || P === null || (D = P, f ? (P = us(l, p), P != null && _.unshift(
-        Ps(l, P, D)
-      )) : f || (P = us(l, p), P != null && _.push(
-        Ps(l, P, D)
+      x !== 5 && x !== 26 && x !== 27 || G === null || (D = G, f ? (G = us(l, p), G != null && _.unshift(
+        Ps(l, G, D)
+      )) : f || (G = us(l, p), G != null && _.push(
+        Ps(l, G, D)
       ))), l = l.return;
     }
     _.length !== 0 && e.push({ event: a, listeners: _ });
@@ -9712,7 +9712,7 @@ Error generating stack: ` + o.message + `
         return;
       case "input":
         Be("invalid", e);
-        var x = p = _ = f = null, D = null, P = null;
+        var x = p = _ = f = null, D = null, G = null;
         for (o in l)
           if (l.hasOwnProperty(o)) {
             var te = l[o];
@@ -9728,7 +9728,7 @@ Error generating stack: ` + o.message + `
                   D = te;
                   break;
                 case "defaultChecked":
-                  P = te;
+                  G = te;
                   break;
                 case "value":
                   p = te;
@@ -9750,7 +9750,7 @@ Error generating stack: ` + o.message + `
           p,
           x,
           D,
-          P,
+          G,
           _,
           f,
           !1
@@ -9840,14 +9840,14 @@ Error generating stack: ` + o.message + `
       case "track":
       case "wbr":
       case "menuitem":
-        for (P in l)
-          if (l.hasOwnProperty(P) && (o = l[P], o != null))
-            switch (P) {
+        for (G in l)
+          if (l.hasOwnProperty(G) && (o = l[G], o != null))
+            switch (G) {
               case "children":
               case "dangerouslySetInnerHTML":
                 throw Error(s(137, a));
               default:
-                We(e, a, P, o, l, null);
+                We(e, a, G, o, l, null);
             }
         return;
       default:
@@ -9880,7 +9880,7 @@ Error generating stack: ` + o.message + `
       case "li":
         break;
       case "input":
-        var f = null, p = null, _ = null, x = null, D = null, P = null, te = null;
+        var f = null, p = null, _ = null, x = null, D = null, G = null, te = null;
         for (Z in l) {
           var ce = l[Z];
           if (l.hasOwnProperty(Z) && ce != null)
@@ -9895,10 +9895,10 @@ Error generating stack: ` + o.message + `
                 o.hasOwnProperty(Z) || We(e, a, Z, null, o, ce);
             }
         }
-        for (var I in o) {
-          var Z = o[I];
-          if (ce = l[I], o.hasOwnProperty(I) && (Z != null || ce != null))
-            switch (I) {
+        for (var H in o) {
+          var Z = o[H];
+          if (ce = l[H], o.hasOwnProperty(H) && (Z != null || ce != null))
+            switch (H) {
               case "type":
                 Z !== ce && (Ke = !0), p = Z;
                 break;
@@ -9906,7 +9906,7 @@ Error generating stack: ` + o.message + `
                 Z !== ce && (Ke = !0), f = Z;
                 break;
               case "checked":
-                Z !== ce && (Ke = !0), P = Z;
+                Z !== ce && (Ke = !0), G = Z;
                 break;
               case "defaultChecked":
                 Z !== ce && (Ke = !0), te = Z;
@@ -9926,7 +9926,7 @@ Error generating stack: ` + o.message + `
                 Z !== ce && We(
                   e,
                   a,
-                  I,
+                  H,
                   Z,
                   o,
                   ce
@@ -9938,14 +9938,14 @@ Error generating stack: ` + o.message + `
           _,
           x,
           D,
-          P,
+          G,
           te,
           p,
           f
         );
         return;
       case "select":
-        Z = _ = x = I = null;
+        Z = _ = x = H = null;
         for (p in l)
           if (D = l[p], l.hasOwnProperty(p) && D != null)
             switch (p) {
@@ -9967,7 +9967,7 @@ Error generating stack: ` + o.message + `
           if (p = o[f], D = l[f], o.hasOwnProperty(f) && (p != null || D != null))
             switch (f) {
               case "value":
-                p !== D && (Ke = !0), I = p;
+                p !== D && (Ke = !0), H = p;
                 break;
               case "defaultValue":
                 p !== D && (Ke = !0), x = p;
@@ -9984,10 +9984,10 @@ Error generating stack: ` + o.message + `
                   D
                 );
             }
-        a = x, l = _, o = Z, I != null ? el(e, !!l, I, !1) : !!o != !!l && (a != null ? el(e, !!l, a, !0) : el(e, !!l, l ? [] : "", !1));
+        a = x, l = _, o = Z, H != null ? el(e, !!l, H, !1) : !!o != !!l && (a != null ? el(e, !!l, a, !0) : el(e, !!l, l ? [] : "", !1));
         return;
       case "textarea":
-        Z = I = null;
+        Z = H = null;
         for (x in l)
           if (f = l[x], l.hasOwnProperty(x) && f != null && !o.hasOwnProperty(x))
             switch (x) {
@@ -10002,7 +10002,7 @@ Error generating stack: ` + o.message + `
           if (f = o[_], p = l[_], o.hasOwnProperty(_) && (f != null || p != null))
             switch (_) {
               case "value":
-                f !== p && (Ke = !0), I = f;
+                f !== p && (Ke = !0), H = f;
                 break;
               case "defaultValue":
                 f !== p && (Ke = !0), Z = f;
@@ -10015,11 +10015,11 @@ Error generating stack: ` + o.message + `
               default:
                 f !== p && We(e, a, _, f, o, p);
             }
-        $m(e, I, Z);
+        $m(e, H, Z);
         return;
       case "option":
         for (var ye in l)
-          if (I = l[ye], l.hasOwnProperty(ye) && I != null && !o.hasOwnProperty(ye))
+          if (H = l[ye], l.hasOwnProperty(ye) && H != null && !o.hasOwnProperty(ye))
             switch (ye) {
               case "selected":
                 e.selected = !1;
@@ -10031,21 +10031,21 @@ Error generating stack: ` + o.message + `
                   ye,
                   null,
                   o,
-                  I
+                  H
                 );
             }
         for (D in o)
-          if (I = o[D], Z = l[D], o.hasOwnProperty(D) && I !== Z && (I != null || Z != null))
+          if (H = o[D], Z = l[D], o.hasOwnProperty(D) && H !== Z && (H != null || Z != null))
             switch (D) {
               case "selected":
-                I !== Z && (Ke = !0), e.selected = I && typeof I != "function" && typeof I != "symbol";
+                H !== Z && (Ke = !0), e.selected = H && typeof H != "function" && typeof H != "symbol";
                 break;
               default:
                 We(
                   e,
                   a,
                   D,
-                  I,
+                  H,
                   o,
                   Z
                 );
@@ -10067,21 +10067,21 @@ Error generating stack: ` + o.message + `
       case "wbr":
       case "menuitem":
         for (var xe in l)
-          I = l[xe], l.hasOwnProperty(xe) && I != null && !o.hasOwnProperty(xe) && We(e, a, xe, null, o, I);
-        for (P in o)
-          if (I = o[P], Z = l[P], o.hasOwnProperty(P) && I !== Z && (I != null || Z != null))
-            switch (P) {
+          H = l[xe], l.hasOwnProperty(xe) && H != null && !o.hasOwnProperty(xe) && We(e, a, xe, null, o, H);
+        for (G in o)
+          if (H = o[G], Z = l[G], o.hasOwnProperty(G) && H !== Z && (H != null || Z != null))
+            switch (G) {
               case "children":
               case "dangerouslySetInnerHTML":
-                if (I != null)
+                if (H != null)
                   throw Error(s(137, a));
                 break;
               default:
                 We(
                   e,
                   a,
-                  P,
-                  I,
+                  G,
+                  H,
                   o,
                   Z
                 );
@@ -10090,30 +10090,30 @@ Error generating stack: ` + o.message + `
       default:
         if (hu(a)) {
           for (var Me in l)
-            I = l[Me], l.hasOwnProperty(Me) && I !== void 0 && !o.hasOwnProperty(Me) && mf(
+            H = l[Me], l.hasOwnProperty(Me) && H !== void 0 && !o.hasOwnProperty(Me) && mf(
               e,
               a,
               Me,
               void 0,
               o,
-              I
+              H
             );
           for (te in o)
-            I = o[te], Z = l[te], !o.hasOwnProperty(te) || I === Z || I === void 0 && Z === void 0 || mf(
+            H = o[te], Z = l[te], !o.hasOwnProperty(te) || H === Z || H === void 0 && Z === void 0 || mf(
               e,
               a,
               te,
-              I,
+              H,
               o,
               Z
             );
           return;
         }
     }
-    for (var H in l)
-      I = l[H], l.hasOwnProperty(H) && I != null && !o.hasOwnProperty(H) && We(e, a, H, null, o, I);
+    for (var P in l)
+      H = l[P], l.hasOwnProperty(P) && H != null && !o.hasOwnProperty(P) && We(e, a, P, null, o, H);
     for (ce in o)
-      I = o[ce], Z = l[ce], !o.hasOwnProperty(ce) || I === Z || I == null && Z == null || We(e, a, ce, I, o, Z);
+      H = o[ce], Z = l[ce], !o.hasOwnProperty(ce) || H === Z || H == null && Z == null || We(e, a, ce, H, o, Z);
   }
   function Hv(e) {
     switch (e) {
@@ -10135,10 +10135,10 @@ Error generating stack: ` + o.message + `
         var f = l[o], p = f.transferSize, _ = f.initiatorType, x = f.duration;
         if (p && x && Hv(_)) {
           for (_ = 0, x = f.responseEnd, o += 1; o < l.length; o++) {
-            var D = l[o], P = D.startTime;
-            if (P > x) break;
+            var D = l[o], G = D.startTime;
+            if (G > x) break;
             var te = D.transferSize, ce = D.initiatorType;
-            te && Hv(ce) && (D = D.responseEnd, _ += te * (D < x ? 1 : (x - P) / (D - P)));
+            te && Hv(ce) && (D = D.responseEnd, _ += te * (D < x ? 1 : (x - G) / (D - G)));
           }
           if (--o, a += 8 * (p + _) / (f.duration / 1e3), e++, 10 < e) break;
         }
@@ -10275,20 +10275,20 @@ Error generating stack: ` + o.message + `
     this.addEventListener("load", e), this.addEventListener("error", e);
   }
   function $x(e, a, l, o, f, p, _, x, D) {
-    var P = a.nodeType === 9 ? a : a.ownerDocument;
+    var G = a.nodeType === 9 ? a : a.ownerDocument;
     try {
-      var te = P.startViewTransition({
+      var te = G.startViewTransition({
         update: function() {
-          var I = P.defaultView, Z = I.navigation && I.navigation.transition, ye = P.fonts.status;
+          var H = G.defaultView, Z = H.navigation && H.navigation.transition, ye = G.fonts.status;
           o();
           var xe = [];
-          if (ye === "loaded" && (Rx(P), P.fonts.status === "loading" && xe.push(P.fonts.ready)), ye = xe.length, e !== null)
-            for (var Me = e.suspenseyImages, H = 0, M = 0; M < Me.length; M++) {
+          if (ye === "loaded" && (Rx(G), G.fonts.status === "loading" && xe.push(G.fonts.ready)), ye = xe.length, e !== null)
+            for (var Me = e.suspenseyImages, P = 0, M = 0; M < Me.length; M++) {
               var Q = Me[M];
               if (!Q.complete) {
                 var oe = Q.getBoundingClientRect();
-                if (0 < oe.bottom && 0 < oe.right && oe.top < I.innerHeight && oe.left < I.innerWidth) {
-                  if (H += yy(Q), H > Qo) {
+                if (0 < oe.bottom && 0 < oe.right && oe.top < H.innerHeight && oe.left < H.innerWidth) {
+                  if (P += yy(Q), P > Qo) {
                     xe.length = ye;
                     break;
                   }
@@ -10299,12 +10299,12 @@ Error generating stack: ` + o.message + `
               }
             }
           if (0 < xe.length)
-            return I = Promise.race([
+            return H = Promise.race([
               Promise.all(xe),
               new Promise(function(we) {
                 return setTimeout(we, 500);
               })
-            ]).then(f, f), (Z ? Promise.allSettled([Z.finished, I]) : I).then(p, p);
+            ]).then(f, f), (Z ? Promise.allSettled([Z.finished, H]) : H).then(p, p);
           if (f(), Z)
             return Z.finished.then(
               p,
@@ -10314,55 +10314,55 @@ Error generating stack: ` + o.message + `
         },
         types: l
       });
-      P.__reactViewTransition = te;
+      G.__reactViewTransition = te;
       var ce = [];
       return te.ready.then(
         function() {
-          for (var I = P.documentElement.getAnimations({
+          for (var H = G.documentElement.getAnimations({
             subtree: !0
-          }), Z = 0; Z < I.length; Z++) {
-            var ye = I[Z], xe = ye.effect, Me = xe.pseudoElement;
+          }), Z = 0; Z < H.length; Z++) {
+            var ye = H[Z], xe = ye.effect, Me = xe.pseudoElement;
             if (Me != null && Me.startsWith("::view-transition")) {
               ce.push(ye), ye = xe.getKeyframes();
-              for (var H = Me = void 0, M = !0, Q = 0; Q < ye.length; Q++) {
+              for (var P = Me = void 0, M = !0, Q = 0; Q < ye.length; Q++) {
                 var oe = ye[Q], we = oe.width;
                 if (Me === void 0) Me = we;
                 else if (Me !== we) {
                   M = !1;
                   break;
                 }
-                if (we = oe.height, H === void 0) H = we;
-                else if (H !== we) {
+                if (we = oe.height, P === void 0) P = we;
+                else if (P !== we) {
                   M = !1;
                   break;
                 }
                 delete oe.width, delete oe.height, oe.transform === "none" && delete oe.transform;
               }
-              M && Me !== void 0 && H !== void 0 && (xe.setKeyframes(ye), M = getComputedStyle(
+              M && Me !== void 0 && P !== void 0 && (xe.setKeyframes(ye), M = getComputedStyle(
                 xe.target,
                 xe.pseudoElement
-              ), M.width !== Me || M.height !== H) && (M = ye[0], M.width = Me, M.height = H, M = ye[ye.length - 1], M.width = Me, M.height = H, xe.setKeyframes(ye));
+              ), M.width !== Me || M.height !== P) && (M = ye[0], M.width = Me, M.height = P, M = ye[ye.length - 1], M.width = Me, M.height = P, xe.setKeyframes(ye));
             }
           }
           _();
         },
-        function(I) {
-          P.__reactViewTransition === te && (P.__reactViewTransition = null);
+        function(H) {
+          G.__reactViewTransition === te && (G.__reactViewTransition = null);
           try {
-            if (typeof I == "object" && I !== null)
-              switch (I.name) {
+            if (typeof H == "object" && H !== null)
+              switch (H.name) {
                 case "InvalidStateError":
-                  (I.message === "View transition was skipped because document visibility state is hidden." || I.message === "Skipping view transition because document visibility state has become hidden." || I.message === "Skipping view transition because viewport size changed." || I.message === "Transition was aborted because of invalid state") && (I = null);
+                  (H.message === "View transition was skipped because document visibility state is hidden." || H.message === "Skipping view transition because document visibility state has become hidden." || H.message === "Skipping view transition because viewport size changed." || H.message === "Transition was aborted because of invalid state") && (H = null);
               }
-            I !== null && D(I);
+            H !== null && D(H);
           } finally {
             o(), f(), _();
           }
         }
       ), te.finished.finally(function() {
-        for (var I = 0; I < ce.length; I++)
-          ce[I].cancel();
-        P.__reactViewTransition === te && (P.__reactViewTransition = null), x();
+        for (var H = 0; H < ce.length; H++)
+          ce[H].cancel();
+        G.__reactViewTransition === te && (G.__reactViewTransition = null), x();
       }), te;
     } catch {
       return o(), f(), _(), null;
@@ -10710,7 +10710,7 @@ Error generating stack: ` + o.message + `
       }
       return p;
     }
-    return e & Node.DOCUMENT_POSITION_PRECEDING ? ((a = !!p) && !(a = p === l) && (a = J(
+    return e & Node.DOCUMENT_POSITION_PRECEDING ? ((a = !!p) && !(a = p === l) && (a = B(
       l,
       p,
       A
@@ -10720,17 +10720,17 @@ Error generating stack: ` + o.message + `
       R,
       p,
       l
-    ), p = N, N = null, a = p !== null)), a) : e & Node.DOCUMENT_POSITION_FOLLOWING ? ((a = !!p) && !(a = p === o) && (a = J(
+    ), p = S, S = null, a = p !== null)), a) : e & Node.DOCUMENT_POSITION_FOLLOWING ? ((a = !!p) && !(a = p === o) && (a = B(
       o,
       p,
       A
     ), a === null ? a = !1 : (v(
       a,
       !0,
-      K,
+      Y,
       p,
       o
-    ), p = N, O = N = null, a = p !== null)), a) : !1;
+    ), p = S, O = S = null, a = p !== null)), a) : !1;
   }
   function ay(e, a) {
     var l = e.ownerDocument.createRange();
@@ -11115,8 +11115,8 @@ Error generating stack: ` + o.message + `
             l
           ), (l = ka.get(p)) && Cf(e, l);
           var D = _ = o.createElement("link");
-          xt(D), zt(D, "link", e), D._p = new Promise(function(P, te) {
-            D.onload = P, D.onerror = te;
+          xt(D), zt(D, "link", e), D._p = new Promise(function(G, te) {
+            D.onload = G, D.onerror = te;
           }), D.addEventListener("load", function() {
             x.loading |= 1;
           }), D.addEventListener("error", function() {
@@ -11466,14 +11466,14 @@ Error generating stack: ` + o.message + `
   function u1(e, a, l, o, f, p, _, x, D) {
     this.tag = 1, this.containerInfo = e, this.pingCache = this.current = this.pendingChildren = null, this.timeoutHandle = -1, this.callbackNode = this.next = this.pendingContext = this.context = this.cancelPendingCommit = null, this.callbackPriority = 0, this.expirationTimes = cu(-1), this.entangledLanes = this.shellSuspendCounter = this.errorRecoveryDisabledLanes = this.expiredLanes = this.warmLanes = this.pingedLanes = this.suspendedLanes = this.pendingLanes = 0, this.entanglements = cu(0), this.hiddenUpdates = cu(null), this.identifierPrefix = o, this.onUncaughtError = f, this.onCaughtError = p, this.onRecoverableError = _, this.pooledCache = null, this.pooledCacheLanes = 0, this.formState = D, this.transitionTypes = null, this.incompleteTransitions = /* @__PURE__ */ new Map();
   }
-  function wy(e, a, l, o, f, p, _, x, D, P, te, ce) {
+  function wy(e, a, l, o, f, p, _, x, D, G, te, ce) {
     return e = new u1(
       e,
       a,
       l,
       _,
       D,
-      P,
+      G,
       te,
       ce,
       x
@@ -11514,23 +11514,23 @@ Error generating stack: ` + o.message + `
   }
   var Ml = !0;
   function d1(e, a, l, o) {
-    var f = V.T;
-    V.T = null;
+    var f = K.T;
+    K.T = null;
     var p = he.p;
     try {
       he.p = 2, jf(e, a, l, o);
     } finally {
-      he.p = p, V.T = f;
+      he.p = p, K.T = f;
     }
   }
   function f1(e, a, l, o) {
-    var f = V.T;
-    V.T = null;
+    var f = K.T;
+    K.T = null;
     var p = he.p;
     try {
       he.p = 8, jf(e, a, l, o);
     } finally {
-      he.p = p, V.T = f;
+      he.p = p, K.T = f;
     }
   }
   function jf(e, a, l, o) {
@@ -11995,7 +11995,7 @@ Error generating stack: ` + o.message + `
     bundleType: 0,
     version: "19.3.1",
     rendererPackageName: "react-dom",
-    currentDispatcherRef: V,
+    currentDispatcherRef: K,
     reconcilerVersion: "19.3.1"
   };
   if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u") {
@@ -12362,50 +12362,50 @@ function ii(n, t) {
   const m = Math.max(c.labels.length, ...s.slice(c.dataStart, c.dataStart + 50).map((z) => (z || []).length)), h = U1(s, c.dataStart, m);
   let g = t || q1(c.labels, h);
   if (g && t) {
-    const z = [g.number, g.name, g.unit, g.qty, g.norm, ...g.prices.map((ue) => ue.col)], X = h !== null && s.slice(c.dataStart, c.dataStart + 400).some((ue) => op(pt((ue || [])[h])));
-    g.type === null && X && !z.includes(h) && (g = { ...g, type: h }), g.notes || (g = { ...g, notes: H_(c.labels) });
+    const z = [g.number, g.name, g.unit, g.qty, g.norm, ...g.prices.map((ue) => ue.col)], F = h !== null && s.slice(c.dataStart, c.dataStart + 400).some((ue) => op(pt((ue || [])[h])));
+    g.type === null && F && !z.includes(h) && (g = { ...g, type: h }), g.notes || (g = { ...g, notes: H_(c.labels) });
   }
   if (!g) return { ...r, headerRows: c.rows.map((z) => z + 1), labels: c.labels, signature: d, reason: "Не найдена колонка «Наименование»." };
   const y = [];
-  let v = {}, b = null, w = 0, E = 1, S = null, k = !1, N = null;
+  let v = {}, b = null, w = 0, E = 1, N = null, k = !1, S = null;
   for (let z = c.dataStart; z < s.length; z++) {
-    const X = s[z] || [], ue = pt(X[g.name]) || I1(X, g), j = (g.unit !== null ? B1(pt(X[g.unit]), ue) : null) || (g.unitDefault && Hr(X[g.qty]) !== null ? g.unitDefault : null), re = g.qty !== null ? Hr(X[g.qty]) : null, W = g.norm !== null ? Hr(X[g.norm]) : null, ae = g.number !== null && pt(X[g.number]) || null, pe = g.type !== null ? pt(X[g.type]) : "", ne = pe.toUpperCase(), de = pe ? op(pe) : null, me = {};
-    for (const T of g.prices) me[T.label] = Hr(X[T.col]);
-    const U = { rowNo: z + 1, kind: "skip", number: ae, name: ue, unitText: j, qty: re, norm: W, prices: me, context: {}, parentRowNo: null, raw: X.slice(0, m) }, L = Y1(X.filter((T, G) => G !== g.name)), q = !j && re === null ? K1(ue) : null;
+    const F = s[z] || [], ue = pt(F[g.name]) || I1(F, g), j = (g.unit !== null ? B1(pt(F[g.unit]), ue) : null) || (g.unitDefault && Hr(F[g.qty]) !== null ? g.unitDefault : null), re = g.qty !== null ? Hr(F[g.qty]) : null, W = g.norm !== null ? Hr(F[g.norm]) : null, ae = g.number !== null && pt(F[g.number]) || null, pe = g.type !== null ? pt(F[g.type]) : "", ne = pe.toUpperCase(), de = pe ? op(pe) : null, me = {};
+    for (const T of g.prices) me[T.label] = Hr(F[T.col]);
+    const U = { rowNo: z + 1, kind: "skip", number: ae, name: ue, unitText: j, qty: re, norm: W, prices: me, context: {}, parentRowNo: null, raw: F.slice(0, m) }, L = Y1(F.filter((T, V) => V !== g.name)), q = !j && re === null ? K1(ue) : null;
     if (!ue) U.kind = "skip";
     else if (H1.test(ue)) {
       U.kind = "skip", U.isTotal = !0;
       const T = ue.match(G1);
       if (T) {
-        for (let G = w; G < y.length; G++) y[G].kind !== "skip" && y[G].context.building === void 0 && (y[G].context = { building: T[1], ...y[G].context });
-        w = y.length + 1, v = {}, S = null;
+        for (let V = w; V < y.length; V++) y[V].kind !== "skip" && y[V].context.building === void 0 && (y[V].context = { building: T[1], ...y[V].context });
+        w = y.length + 1, v = {}, N = null;
       }
     } else if (P1.test(ue)) U.kind = "skip";
     else if (q) {
-      if (U.kind = "context", q.building !== void 0 && (S = null), q.section !== void 0 && q.building === void 0) {
+      if (U.kind = "context", q.building !== void 0 && (N = null), q.section !== void 0 && q.building === void 0) {
         const T = parseInt(q.section, 10);
-        S !== null && Number.isFinite(T) && T <= S && (E++, k = !0), Number.isFinite(T) && (S = T);
+        N !== null && Number.isFinite(T) && T <= N && (E++, k = !0), Number.isFinite(T) && (N = T);
       }
       v = X1(v, q), v.block = E, q.building !== void 0 && (w = y.length), L && (v = { ...v, apartments: L });
     } else de ? U.kind = de : ne === "Г" ? U.kind = "group" : ne === "Р" ? U.kind = "work" : ne === "М" ? U.kind = "material" : g.type !== null && !ne && !j && re === null ? U.kind = "group" : j || re !== null ? U.kind = g.norm !== null && W !== null && b !== null ? "material" : "work" : U.kind = "group";
-    if (U.kind === "group" && L && (v = { ...v, apartments: L }), U.kind === "work" && (b = U.rowNo), U.kind === "material" && (U.parentRowNo = b), U.kind !== "skip" && (U.context = { ...v }), de === "group" && (N = U.rowNo), de === "work") {
-      N !== null && (U.context.kvr = N);
-      const T = Q1(X, g, ue);
+    if (U.kind === "group" && L && (v = { ...v, apartments: L }), U.kind === "work" && (b = U.rowNo), U.kind === "material" && (U.parentRowNo = b), U.kind !== "skip" && (U.context = { ...v }), de === "group" && (S = U.rowNo), de === "work") {
+      S !== null && (U.context.kvr = S);
+      const T = Q1(F, g, ue);
       T && (U.context.note = T);
     }
     y.push(U);
   }
   for (const z of y) z.context.block !== void 0 && (!k || z.context.building !== void 0) && delete z.context.block;
   let O = -1;
-  y.forEach((z, X) => {
-    (z.kind === "work" || z.kind === "material") && (O = X);
+  y.forEach((z, F) => {
+    (z.kind === "work" || z.kind === "material") && (O = F);
   });
   for (let z = O + 1; z < y.length; z++) y[z].kind !== "skip" && (y[z].kind = "skip", y[z].context = {});
-  const R = Z1(y, g), K = F1(y), A = { total: y.length, works: 0, materials: 0, groups: 0, context: 0, worksWithUnit: 0, worksWithQty: 0 };
+  const R = Z1(y, g), Y = F1(y), A = { total: y.length, works: 0, materials: 0, groups: 0, context: 0, worksWithUnit: 0, worksWithQty: 0 };
   for (const z of y)
     z.kind === "work" ? (A.works++, z.unitText && A.worksWithUnit++, z.qty !== null && A.worksWithQty++) : z.kind === "material" ? A.materials++ : z.kind === "group" ? A.groups++ : z.kind === "context" && A.context++;
-  const J = A.works > 0;
-  return { sheet: n.name, isVor: J, reason: J ? null : "В листе не найдено ни одной строки-работы.", headerRows: c.rows.map((z) => z + 1), labels: c.labels, signature: d, columns: g, rows: y, checks: R, kvrChecks: K, stats: A };
+  const B = A.works > 0;
+  return { sheet: n.name, isVor: B, reason: B ? null : "В листе не найдено ни одной строки-работы.", headerRows: c.rows.map((z) => z + 1), labels: c.labels, signature: d, columns: g, rows: y, checks: R, kvrChecks: Y, stats: A };
 }
 function Q1(n, t, r) {
   const s = [];
@@ -12674,7 +12674,7 @@ function hk(n, t, r, s, c, u) {
   const d = G_(t, r), m = Xl(n);
   if (!d) {
     if (!mi(t)) {
-      const w = c.find((S) => S.canon_name === m && S.unit_text === ""), E = w ? s.find((S) => S.id === w.work_type_id && S.unit_id) : void 0;
+      const w = c.find((N) => N.canon_name === m && N.unit_text === ""), E = w ? s.find((N) => N.id === w.work_type_id && N.unit_id) : void 0;
       if (E) return { light: "green", workTypeId: E.id, unitId: E.unit_id, score: 1, reason: "dictionary" };
     }
     return { light: "red", workTypeId: null, unitId: null, score: 0, reason: "unit" };
@@ -12684,8 +12684,8 @@ function hk(n, t, r, s, c, u) {
   let y = null;
   const v = (w, E) => {
     if (pk(n, E)) return;
-    const S = fk(n, E, u);
-    S >= ok && (!y || S > y.score) && (y = { id: w, score: S });
+    const N = fk(n, E, u);
+    N >= ok && (!y || N > y.score) && (y = { id: w, score: N });
   };
   for (const w of s) (!w.unit_id || w.unit_id === d.id) && v(w.id, w.name);
   for (const w of c) w.unit_text === h && s.some((E) => E.id === w.work_type_id) && v(w.work_type_id, w.canon_name);
@@ -12705,69 +12705,69 @@ function vk(n, t, r, s) {
   });
 }
 function yk(n) {
-  const { api: t, projects: r, projectId: s, companyId: c, rows: u, editable: d, canUnits: m, save: h } = n, [g, y] = i.useState(null), [v, b] = i.useState(null), [w, E] = i.useState(null), [S, k] = i.useState("all"), [N, O] = i.useState(""), [R, K] = i.useState(""), [A, J] = i.useState(Hf), [z, X] = i.useState({});
+  const { api: t, projects: r, projectId: s, companyId: c, rows: u, editable: d, canUnits: m, save: h } = n, [g, y] = i.useState(null), [v, b] = i.useState(null), [w, E] = i.useState(null), [N, k] = i.useState("all"), [S, O] = i.useState(""), [R, Y] = i.useState(""), [A, B] = i.useState(Hf), [z, F] = i.useState({});
   async function ue() {
-    const [T, G, C] = await Promise.all([r ? r.listUnits(c) : Promise.resolve([]), t.listWorkTypes(s), t.dictionary(s)]);
-    y(T), b(G), E(C);
+    const [T, V, C] = await Promise.all([r ? r.listUnits(c) : Promise.resolve([]), t.listWorkTypes(s), t.dictionary(s)]);
+    y(T), b(V), E(C);
   }
   i.useEffect(() => {
     ue();
   }, [s]);
-  const B = i.useMemo(() => g && v && w ? vk(u, g, v, w) : null, [u, g, v, w]);
+  const I = i.useMemo(() => g && v && w ? vk(u, g, v, w) : null, [u, g, v, w]);
   i.useEffect(() => {
-    if (!B || !d || N) return;
-    const T = B.filter((G) => G.v.light === "green" && G.row.match !== "green");
-    T.length && (O("Сохраняю 🟢…"), h(T.map((G) => ({ row_no: G.row.row_no, location_id: G.row.location_id, work_type_id: G.v.workTypeId, unit_id: G.v.unitId, match: "green" }))).then(() => O("")));
-  }, [B]);
+    if (!I || !d || S) return;
+    const T = I.filter((V) => V.v.light === "green" && V.row.match !== "green");
+    T.length && (O("Сохраняю 🟢…"), h(T.map((V) => ({ row_no: V.row.row_no, location_id: V.row.location_id, work_type_id: V.v.workTypeId, unit_id: V.v.unitId, match: "green" }))).then(() => O("")));
+  }, [I]);
   async function j(T) {
     if (!T.length) return;
-    K("");
-    const G = await t.learn(s, T.map((Y) => ({ name: Y.row.name, unit_text: mi(Y.row.unit_text), work_type_id: Y.workTypeId })));
-    if (!G.ok) {
-      K(G.message);
+    Y("");
+    const V = await t.learn(s, T.map((X) => ({ name: X.row.name, unit_text: mi(X.row.unit_text), work_type_id: X.workTypeId })));
+    if (!V.ok) {
+      Y(V.message);
       return;
     }
-    await h(T.map((Y) => ({ row_no: Y.row.row_no, location_id: Y.row.location_id, work_type_id: Y.workTypeId, unit_id: Y.unitId, match: "green" }))) && E(await t.dictionary(s));
+    await h(T.map((X) => ({ row_no: X.row.row_no, location_id: X.row.location_id, work_type_id: X.workTypeId, unit_id: X.unitId, match: "green" }))) && E(await t.dictionary(s));
   }
   async function re() {
-    !B || N || (O("Подтверждаю 🟡…"), await j(B.filter((T) => T.v.light === "yellow" && T.v.workTypeId && T.v.unitId).map((T) => ({ row: T.row, workTypeId: z[T.row.row_no] || T.v.workTypeId, unitId: T.v.unitId }))), O(""));
+    !I || S || (O("Подтверждаю 🟡…"), await j(I.filter((T) => T.v.light === "yellow" && T.v.workTypeId && T.v.unitId).map((T) => ({ row: T.row, workTypeId: z[T.row.row_no] || T.v.workTypeId, unitId: T.v.unitId }))), O(""));
   }
   async function W(T) {
-    if (!B || N) return;
-    const G = T ? [T] : B.filter((se) => se.v.light === "red" && se.v.unitId && !z[se.row.row_no]);
-    if (!G.length) return;
-    O(T ? "Создаю вид работ…" : `Создаю виды работ: ${G.length}…`), K("");
+    if (!I || S) return;
+    const V = T ? [T] : I.filter((se) => se.v.light === "red" && se.v.unitId && !z[se.row.row_no]);
+    if (!V.length) return;
+    O(T ? "Создаю вид работ…" : `Создаю виды работ: ${V.length}…`), Y("");
     const C = /* @__PURE__ */ new Map();
-    for (const se of G) {
+    for (const se of V) {
       const be = Qy(se.row.name), ke = Xl(be) + "|" + se.v.unitId;
       C.has(ke) || C.set(ke, { name: be, unit_id: se.v.unitId });
     }
-    const Y = await t.addWorkTypes(s, Array.from(C.values()));
-    if (!Y.ok) {
-      O(""), K(Y.message);
+    const X = await t.addWorkTypes(s, Array.from(C.values()));
+    if (!X.ok) {
+      O(""), Y(X.message);
       return;
     }
-    const le = new Map(Y.value.map((se) => [Xl(se.name) + "|" + se.unit_id, se.id]));
-    b(await t.listWorkTypes(s)), await j(G.map((se) => ({ row: se.row, workTypeId: le.get(Xl(Qy(se.row.name)) + "|" + se.v.unitId), unitId: se.v.unitId }))), O("");
+    const le = new Map(X.value.map((se) => [Xl(se.name) + "|" + se.unit_id, se.id]));
+    b(await t.listWorkTypes(s)), await j(V.map((se) => ({ row: se.row, workTypeId: le.get(Xl(Qy(se.row.name)) + "|" + se.v.unitId), unitId: se.v.unitId }))), O("");
   }
   async function ae(T) {
-    const G = z[T.row.row_no] || T.v.workTypeId;
-    !G || !T.v.unitId || N || (O("Сохраняю…"), await j([{ row: T.row, workTypeId: G, unitId: T.v.unitId }]), O(""));
+    const V = z[T.row.row_no] || T.v.workTypeId;
+    !V || !T.v.unitId || S || (O("Сохраняю…"), await j([{ row: T.row, workTypeId: V, unitId: T.v.unitId }]), O(""));
   }
-  async function pe(T, G) {
-    N || !G || (O("Сохраняю ЕИ…"), await h([{ row_no: T.row.row_no, location_id: T.row.location_id, work_type_id: T.row.work_type_id, unit_id: G, match: null }]), O(""));
+  async function pe(T, V) {
+    S || !V || (O("Сохраняю ЕИ…"), await h([{ row_no: T.row.row_no, location_id: T.row.location_id, work_type_id: T.row.work_type_id, unit_id: V, match: null }]), O(""));
   }
   async function ne(T) {
-    if (!r || N) return;
-    O("Добавляю ЕИ…"), K("");
-    const G = String(T || "").trim(), C = await r.addUnit(c, G, G);
-    C.ok || K(C.message), y(await r.listUnits(c)), O("");
+    if (!r || S) return;
+    O("Добавляю ЕИ…"), Y("");
+    const V = String(T || "").trim(), C = await r.addUnit(c, V, V);
+    C.ok || Y(C.message), y(await r.listUnits(c)), O("");
   }
-  if (!B || !v) return i.createElement("div", { className: "pf-muted" }, "Загрузка видов работ…");
-  const de = (T) => B.filter((G) => G.v.light === T).length, me = B.filter((T) => S === "all" || T.v.light === S), U = (T) => {
-    var G;
-    return T && ((G = v.find((C) => C.id === T)) == null ? void 0 : G.name) || "";
-  }, L = B.filter((T) => T.v.light === "red" && T.v.unitId).length, q = Array.from(new Set(B.filter((T) => T.v.reason === "unit").map((T) => (T.row.unit_text || "").trim())));
+  if (!I || !v) return i.createElement("div", { className: "pf-muted" }, "Загрузка видов работ…");
+  const de = (T) => I.filter((V) => V.v.light === T).length, me = I.filter((T) => N === "all" || T.v.light === N), U = (T) => {
+    var V;
+    return T && ((V = v.find((C) => C.id === T)) == null ? void 0 : V.name) || "";
+  }, L = I.filter((T) => T.v.light === "red" && T.v.unitId).length, q = Array.from(new Set(I.filter((T) => T.v.reason === "unit").map((T) => (T.row.unit_text || "").trim())));
   return i.createElement(
     "div",
     { className: "pj-tab", "data-testid": "vor-works" },
@@ -12776,36 +12776,36 @@ function yk(n) {
     i.createElement(
       "div",
       { className: "pf-seg vor-filter vor-lights", role: "tablist", "data-testid": "vor-lights" },
-      [["all", `Все ${B.length}`], ["green", `🟢 ${de("green")}`], ["yellow", `🟡 ${de("yellow")}`], ["red", `🔴 ${de("red")}`]].map(([T, G]) => i.createElement("button", {
+      [["all", `Все ${I.length}`], ["green", `🟢 ${de("green")}`], ["yellow", `🟡 ${de("yellow")}`], ["red", `🔴 ${de("red")}`]].map(([T, V]) => i.createElement("button", {
         key: T,
         type: "button",
         role: "tab",
         "data-light": T,
-        "aria-selected": S === T,
-        className: "pf-seg-btn" + (S === T ? " pf-seg-btn--active" : ""),
+        "aria-selected": N === T,
+        className: "pf-seg-btn" + (N === T ? " pf-seg-btn--active" : ""),
         onClick: () => {
-          k(T), J(Hf);
+          k(T), B(Hf);
         }
-      }, G))
+      }, V))
     ),
     d ? i.createElement(
       "div",
       { className: "pj-actions vor-works-actions" },
       de("yellow") ? i.createElement(
         "button",
-        { type: "button", className: "pf-btn", disabled: !!N, "data-testid": "vor-confirm-yellow", onClick: () => {
+        { type: "button", className: "pf-btn", disabled: !!S, "data-testid": "vor-confirm-yellow", onClick: () => {
           re();
         } },
         `Подтвердить все 🟡 (${de("yellow")})`
       ) : null,
       L ? i.createElement(
         "button",
-        { type: "button", className: "pf-btn pf-btn--ghost", disabled: !!N, "data-testid": "vor-create-red", onClick: () => {
+        { type: "button", className: "pf-btn pf-btn--ghost", disabled: !!S, "data-testid": "vor-create-red", onClick: () => {
           W();
         } },
         `Создать виды работ для 🔴 (${L})`
       ) : null,
-      N ? i.createElement("span", { className: "pf-muted" }, N) : null
+      S ? i.createElement("span", { className: "pf-muted" }, S) : null
     ) : null,
     q.length ? i.createElement(
       "div",
@@ -12815,7 +12815,7 @@ function yk(n) {
         key: T,
         type: "button",
         className: "pf-btn pf-btn--ghost",
-        disabled: !!N,
+        disabled: !!S,
         "data-testid": "vor-add-unit",
         onClick: () => {
           ne(T);
@@ -12847,15 +12847,15 @@ function yk(n) {
               className: "pj-input",
               value: z[T.row.row_no] || T.v.workTypeId || "",
               "data-testid": "vor-wt-select",
-              onChange: (G) => X({ ...z, [T.row.row_no]: G.currentTarget.value })
+              onChange: (V) => F({ ...z, [T.row.row_no]: V.currentTarget.value })
             },
             i.createElement("option", { value: "" }, "— выбрать вид работ —"),
-            v.filter((G) => !G.unit_id || G.unit_id === T.v.unitId).map((G) => i.createElement("option", { key: G.id, value: G.id }, G.name))
+            v.filter((V) => !V.unit_id || V.unit_id === T.v.unitId).map((V) => i.createElement("option", { key: V.id, value: V.id }, V.name))
           ),
           i.createElement("button", {
             type: "button",
             className: "pf-btn",
-            disabled: !!N || !(z[T.row.row_no] || T.v.workTypeId),
+            disabled: !!S || !(z[T.row.row_no] || T.v.workTypeId),
             "data-testid": "vor-wt-apply",
             onClick: () => {
               ae(T);
@@ -12864,7 +12864,7 @@ function yk(n) {
           T.v.light === "red" ? i.createElement("button", {
             type: "button",
             className: "pf-btn pf-btn--ghost",
-            disabled: !!N,
+            disabled: !!S,
             "data-testid": "vor-wt-create",
             onClick: () => {
               W(T);
@@ -12879,16 +12879,16 @@ function yk(n) {
               className: "pj-input",
               value: "",
               "data-testid": "vor-unit-select",
-              onChange: (G) => {
-                pe(T, G.currentTarget.value);
+              onChange: (V) => {
+                pe(T, V.currentTarget.value);
               }
             },
             i.createElement("option", { value: "" }, "— ЕИ в файле пустая: выбрать —"),
-            g.map((G) => i.createElement("option", { key: G.id, value: G.id }, G.code))
+            g.map((V) => i.createElement("option", { key: V.id, value: V.id }, V.code))
           )
         ) : null
       )),
-      me.length > A ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost vor-more", onClick: () => J(A + Hf) }, `Показать ещё (${me.length - A})`) : null,
+      me.length > A ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost vor-more", onClick: () => B(A + Hf) }, `Показать ещё (${me.length - A})`) : null,
       me.length ? null : i.createElement("div", { className: "pj-empty pf-muted" }, "Нет строк этого цвета.")
     )
   );
@@ -12923,8 +12923,8 @@ function fp(n) {
   const { api: t, projectId: r, importId: s, rows: c } = n, [u, d] = i.useState(null), [m, h] = i.useState(""), [g, y] = i.useState(null);
   i.useEffect(() => {
     t.positions(r, null).then((E) => {
-      const S = Jy(s ? E.filter((k) => k.import_id === s) : E);
-      d(S), y(S);
+      const N = Jy(s ? E.filter((k) => k.import_id === s) : E);
+      d(N), y(N);
     });
   }, [r, s]);
   async function v(E) {
@@ -12933,11 +12933,11 @@ function fp(n) {
       return;
     }
     y(null);
-    const S = await t.positions(r, E);
-    y(Jy(s ? S.filter((k) => k.import_id === s) : S));
+    const N = await t.positions(r, E);
+    y(Jy(s ? N.filter((k) => k.import_id === s) : N));
   }
   if (u === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка позиций…");
-  const b = Array.from(new Map(u.map((E) => [E.location_id, E.location_path])).entries()).sort((E, S) => dp(E[1], S[1])), w = c ? _k(c, u) : null;
+  const b = Array.from(new Map(u.map((E) => [E.location_id, E.location_path])).entries()).sort((E, N) => dp(E[1], N[1])), w = c ? _k(c, u) : null;
   return i.createElement(
     "div",
     { className: "pj-tab", "data-testid": "vor-positions" },
@@ -12957,7 +12957,7 @@ function fp(n) {
           v(E.currentTarget.value);
         } },
         i.createElement("option", { value: "" }, `Все места (${u.length} позиций)`),
-        b.map(([E, S]) => i.createElement("option", { key: E, value: E }, S))
+        b.map(([E, N]) => i.createElement("option", { key: E, value: E }, N))
       )
     ) : null,
     g === null ? i.createElement("div", { className: "pf-muted" }, "Загрузка…") : i.createElement(
@@ -12986,23 +12986,23 @@ function xk(n, t) {
   return { row_no: n.row_no, location_id: t, work_type_id: n.work_type_id, unit_id: n.unit_id, match: n.match };
 }
 function kk(n) {
-  const { api: t, projects: r, projectId: s, companyId: c, imp: u, canManage: d, canProjects: m, canUnits: h, onBack: g, onChanged: y } = n, v = d && u.status === "draft", [b, w] = i.useState(null), [E, S] = i.useState(null), [k, N] = i.useState(""), [O, R] = i.useState(""), [K, A] = i.useState(""), [J, z] = i.useState({}), [X, ue] = i.useState(null), [B, j] = i.useState([]), [re, W] = i.useState(!1), ae = (b || []).filter((V) => V.kind === "work");
-  async function pe(V) {
-    return r ? (await r.listLocations(s, V)).map((he) => ({ id: he.id, parent_id: he.parent_id, node_type: he.node_type, name: he.name, path: he.path })) : [];
+  const { api: t, projects: r, projectId: s, companyId: c, imp: u, canManage: d, canProjects: m, canUnits: h, onBack: g, onChanged: y } = n, v = d && u.status === "draft", [b, w] = i.useState(null), [E, N] = i.useState(null), [k, S] = i.useState(""), [O, R] = i.useState(""), [Y, A] = i.useState(""), [B, z] = i.useState({}), [F, ue] = i.useState(null), [I, j] = i.useState([]), [re, W] = i.useState(!1), ae = (b || []).filter((K) => K.kind === "work");
+  async function pe(K) {
+    return r ? (await r.listLocations(s, K)).map((he) => ({ id: he.id, parent_id: he.parent_id, node_type: he.node_type, name: he.name, path: he.path })) : [];
   }
-  async function ne(V, he = J, Ne = X) {
-    let Te = V;
+  async function ne(K, he = B, Ne = F) {
+    let Te = K;
     const Oe = /* @__PURE__ */ new Map();
-    for (const F of Te) if (F.kind === "work") {
-      const ee = Ky(F.context || {}, he, Ne), ge = Oe.get(ee.key);
+    for (const J of Te) if (J.kind === "work") {
+      const ee = Ky(J.context || {}, he, Ne), ge = Oe.get(ee.key);
       ge ? ge.rows++ : Oe.set(ee.key, { place: ee, rows: 1, binding: null });
     }
-    const fe = Array.from(Oe.values()), $ = await lk(fe.map((F) => F.place), pe);
-    if (fe.forEach((F, ee) => {
-      F.binding = $[ee];
+    const fe = Array.from(Oe.values()), $ = await lk(fe.map((J) => J.place), pe);
+    if (fe.forEach((J, ee) => {
+      J.binding = $[ee];
     }), v) {
-      const F = new Map($.map((ge) => [ge.key, ge])), ee = Te.filter((ge) => ge.kind === "work").map((ge) => {
-        const ie = F.get(Ky(ge.context || {}, he, Ne).key);
+      const J = new Map($.map((ge) => [ge.key, ge])), ee = Te.filter((ge) => ge.kind === "work").map((ge) => {
+        const ie = J.get(Ky(ge.context || {}, he, Ne).key);
         return { r: ge, loc: ie && ie.pendingBlock ? ge.location_id : ie ? ie.nodeId : null };
       }).filter((ge) => ge.r.location_id !== ge.loc);
       if (ee.length) {
@@ -13013,68 +13013,68 @@ function kk(n) {
         }) : R(ge.message);
       }
     }
-    w(Te), S(fe), j((await pe(null)).filter((F) => F.node_type === "building"));
+    w(Te), N(fe), j((await pe(null)).filter((J) => J.node_type === "building"));
   }
-  function de(V) {
-    const he = V ? { value: cp(V) || V, name: V } : null;
-    ue(he), b && ne(b, J, he);
+  function de(K) {
+    const he = K ? { value: cp(K) || K, name: K } : null;
+    ue(he), b && ne(b, B, he);
   }
-  function me(V, he) {
-    const Ne = B.find((Oe) => Oe.id === he), Te = { ...J };
-    Ne ? Te[V] = { value: (Ne.name.match(/(\d+[\p{L}]?)/u) || [Ne.name])[0], name: Ne.name } : he.trim() ? Te[V] = { value: he.trim(), name: `Корпус ${he.trim()}` } : delete Te[V], z(Te), b && ne(b, Te);
+  function me(K, he) {
+    const Ne = I.find((Oe) => Oe.id === he), Te = { ...B };
+    Ne ? Te[K] = { value: (Ne.name.match(/(\d+[\p{L}]?)/u) || [Ne.name])[0], name: Ne.name } : he.trim() ? Te[K] = { value: he.trim(), name: `Корпус ${he.trim()}` } : delete Te[K], z(Te), b && ne(b, Te);
   }
-  async function U(V) {
-    const he = await t.resolveRows(u.id, V);
+  async function U(K) {
+    const he = await t.resolveRows(u.id, K);
     if (!he.ok)
       return R(he.message), !1;
-    const Ne = new Map(V.map((Te) => [Te.row_no, Te]));
+    const Ne = new Map(K.map((Te) => [Te.row_no, Te]));
     return w((Te) => Te && Te.map((Oe) => {
       const fe = Ne.get(Oe.row_no);
       return fe ? { ...Oe, location_id: fe.location_id, work_type_id: fe.work_type_id, unit_id: fe.unit_id, match: fe.match } : Oe;
     })), !0;
   }
   async function L() {
-    const V = await t.importRows(u.id), he = (Oe) => {
+    const K = await t.importRows(u.id), he = (Oe) => {
       const fe = Oe.context || {};
       return !fe.building && !fe.block && !fe.section && !fe.floor;
-    }, Ne = V.find((Oe) => Oe.kind === "work" && he(Oe) && Oe.location_id);
+    }, Ne = K.find((Oe) => Oe.kind === "work" && he(Oe) && Oe.location_id);
     let Te = rk(u.sheet_name);
     if (Ne) {
       const Oe = (await pe(null)).find((fe) => fe.id === Ne.location_id && fe.node_type === "building");
       Te = Oe ? { value: cp(Oe.name) || Oe.name, name: Oe.name } : null;
     }
-    ue(Te), await ne(V, J, Te);
+    ue(Te), await ne(K, B, Te);
   }
   i.useEffect(() => {
     L();
   }, [u.id]);
   async function q() {
     if (!(!r || !E || k)) {
-      N("Создаю узлы…"), R(""), A("");
+      S("Создаю узлы…"), R(""), A("");
       try {
-        const V = await ik(E.map((he) => he.binding), E.map((he) => he.place), async (he, Ne, Te) => {
+        const K = await ik(E.map((he) => he.binding), E.map((he) => he.place), async (he, Ne, Te) => {
           const Oe = await r.addLocation(s, he, Ne, Te);
           if (!Oe.ok) throw new Error(Oe.message);
           return Oe.value;
         });
-        A(`Создано узлов: ${V}`);
-      } catch (V) {
-        R(V instanceof Error ? V.message : "Не удалось создать узлы");
+        A(`Создано узлов: ${K}`);
+      } catch (K) {
+        R(K instanceof Error ? K.message : "Не удалось создать узлы");
       }
-      N(""), b && await ne(b), y();
+      S(""), b && await ne(b), y();
     }
   }
   async function T() {
     if (k) return;
-    N("Подтверждаю ВОР…"), R(""), A("");
-    const V = await t.confirm(u.id);
-    if (N(""), !V.ok) {
-      R(V.message);
+    S("Подтверждаю ВОР…"), R(""), A("");
+    const K = await t.confirm(u.id);
+    if (S(""), !K.ok) {
+      R(K.message);
       return;
     }
-    A(`ВОР подтверждён: создано позиций — ${V.value}. Дальше загрузка не меняется.`), y();
+    A(`ВОР подтверждён: создано позиций — ${K.value}. Дальше загрузка не меняется.`), y();
   }
-  const G = i.createElement(
+  const V = i.createElement(
     "div",
     { className: "vor-draft-head" },
     i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", onClick: g, "data-testid": "vor-back" }, "← Загрузки"),
@@ -13090,8 +13090,8 @@ function kk(n) {
     return i.createElement(
       "div",
       { className: "pj-tab vor-draft", "data-testid": "vor-draft" },
-      G,
-      K ? i.createElement("div", { className: "pj-notice", role: "status" }, K) : null,
+      V,
+      Y ? i.createElement("div", { className: "pj-notice", role: "status" }, Y) : null,
       i.createElement(
         "div",
         { className: "pf-muted", "data-testid": "vor-confirmed" },
@@ -13100,25 +13100,25 @@ function kk(n) {
       b ? i.createElement(fp, { api: t, projectId: s, importId: u.id, rows: b }) : i.createElement("div", { className: "pf-muted" }, "Загрузка…")
     );
   if (b === null || E === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка черновика…");
-  const C = sk(E.map((V) => V.binding), E.map((V) => V.place)), Y = ae.filter((V) => V.context && V.context.block && !V.context.building), le = Array.from(new Set(Y.map((V) => V.context.block))).sort((V, he) => V - he).map((V) => {
-    const he = Y.filter((Te) => Te.context.block === V), Ne = Array.from(new Set(he.map((Te) => Te.context.section).filter(Boolean)));
-    return { block: V, rows: he.length, label: Ne.length ? "секции " + Ne.join(", ") : "без секций" };
-  }), se = ae.filter((V) => V.location_id).length, be = {
-    places: ae.filter((V) => V.location_id).length,
-    types: ae.filter((V) => V.match === "green" && V.work_type_id).length,
-    units: ae.filter((V) => V.unit_id).length,
-    qty: ae.filter((V) => V.qty !== null).length
-  }, ke = v && ae.length > 0 && Object.values(be).every((V) => V === ae.length), Se = i.createElement(
+  const C = sk(E.map((K) => K.binding), E.map((K) => K.place)), X = ae.filter((K) => K.context && K.context.block && !K.context.building), le = Array.from(new Set(X.map((K) => K.context.block))).sort((K, he) => K - he).map((K) => {
+    const he = X.filter((Te) => Te.context.block === K), Ne = Array.from(new Set(he.map((Te) => Te.context.section).filter(Boolean)));
+    return { block: K, rows: he.length, label: Ne.length ? "секции " + Ne.join(", ") : "без секций" };
+  }), se = ae.filter((K) => K.location_id).length, be = {
+    places: ae.filter((K) => K.location_id).length,
+    types: ae.filter((K) => K.match === "green" && K.work_type_id).length,
+    units: ae.filter((K) => K.unit_id).length,
+    qty: ae.filter((K) => K.qty !== null).length
+  }, ke = v && ae.length > 0 && Object.values(be).every((K) => K === ae.length), Se = i.createElement(
     "div",
     { className: "pf-card vor-missing", "data-testid": "vor-confirm-block" },
     i.createElement("h3", { className: "pf-title un-title" }, "Подтверждение"),
     i.createElement(
       "ul",
       { className: "vor-ready" },
-      [["places", "Места привязаны"], ["types", "Виды работ подтверждены (🟢)"], ["units", "ЕИ распознаны"], ["qty", "Объём указан"]].map(([V, he]) => i.createElement(
+      [["places", "Места привязаны"], ["types", "Виды работ подтверждены (🟢)"], ["units", "ЕИ распознаны"], ["qty", "Объём указан"]].map(([K, he]) => i.createElement(
         "li",
-        { key: V, className: be[V] === ae.length ? "vor-stat--ok" : "vor-stat--bad", "data-ready": V },
-        `${be[V] === ae.length ? "✓" : "✗"} ${he}: ${be[V]} из ${ae.length}`
+        { key: K, className: be[K] === ae.length ? "vor-stat--ok" : "vor-stat--bad", "data-ready": K },
+        `${be[K] === ae.length ? "✓" : "✗"} ${he}: ${be[K]} из ${ae.length}`
       ))
     ),
     v ? i.createElement(
@@ -13133,9 +13133,9 @@ function kk(n) {
   return i.createElement(
     "div",
     { className: "pj-tab vor-draft", "data-testid": "vor-draft" },
-    G,
+    V,
     O ? i.createElement("div", { className: "pf-error", role: "alert" }, O) : null,
-    K ? i.createElement("div", { className: "pj-notice", role: "status" }, K) : null,
+    Y ? i.createElement("div", { className: "pj-notice", role: "status" }, Y) : null,
     i.createElement("h3", { className: "pf-title un-title" }, "Места"),
     i.createElement(
       "div",
@@ -13155,13 +13155,13 @@ function kk(n) {
         {
           className: "pj-input",
           "data-testid": "vor-sheet-building",
-          value: X ? X.name : "",
+          value: F ? F.name : "",
           disabled: !!k,
-          onChange: (V) => de(V.currentTarget.value)
+          onChange: (K) => de(K.currentTarget.value)
         },
         i.createElement("option", { value: "" }, `— без корпуса: «${P_}» —`),
-        B.map((V) => i.createElement("option", { key: V.id, value: V.name }, V.name)),
-        X && !B.some((V) => V.name === X.name) ? i.createElement("option", { value: X.name }, `${X.name} (нет в дереве — создать ниже)`) : null
+        I.map((K) => i.createElement("option", { key: K.id, value: K.name }, K.name)),
+        F && !I.some((K) => K.name === F.name) ? i.createElement("option", { value: F.name }, `${F.name} (нет в дереве — создать ниже)`) : null
       )
     ) : null,
     se === ae.length && !re && !le.length ? i.createElement(
@@ -13171,23 +13171,23 @@ function kk(n) {
     ) : i.createElement(
       "div",
       { className: "pf-card pj-list", "data-testid": "vor-places" },
-      E.map((V) => i.createElement(
+      E.map((K) => i.createElement(
         "div",
-        { key: V.place.key, className: "pj-row vor-place-row", "data-place": V.place.key },
-        i.createElement("div", { className: "pj-name" }, i.createElement("b", null, V.place.label), i.createElement("span", { className: "pf-muted" }, `${V.rows} строк`)),
-        V.binding && V.binding.nodeId ? i.createElement("span", { className: "vor-stat--ok" }, "→ " + V.binding.path) : V.place.pendingBlock ? i.createElement("span", { className: "vor-stat--bad" }, "выберите корпус блока") : i.createElement("span", { className: "vor-stat--bad" }, "нет в дереве объекта")
+        { key: K.place.key, className: "pj-row vor-place-row", "data-place": K.place.key },
+        i.createElement("div", { className: "pj-name" }, i.createElement("b", null, K.place.label), i.createElement("span", { className: "pf-muted" }, `${K.rows} строк`)),
+        K.binding && K.binding.nodeId ? i.createElement("span", { className: "vor-stat--ok" }, "→ " + K.binding.path) : K.place.pendingBlock ? i.createElement("span", { className: "vor-stat--bad" }, "выберите корпус блока") : i.createElement("span", { className: "vor-stat--bad" }, "нет в дереве объекта")
       ))
     ),
     le.length ? i.createElement(
       "div",
       { className: "pf-card vor-missing", "data-testid": "vor-blocks" },
       i.createElement("b", null, "Корпус в файле не указан, а номера секций начинаются заново — это разные корпуса. Выберите корпус для каждого блока (если в дереве корпуса нет — впишите номер, затем «Создать недостающие»):"),
-      le.map((V) => {
+      le.map((K) => {
         var he;
         return i.createElement(
           "label",
-          { key: V.block, className: "pf-field" },
-          `Блок ${V.block} (${V.label}, ${V.rows} строк)`,
+          { key: K.block, className: "pf-field" },
+          `Блок ${K.block} (${K.label}, ${K.rows} строк)`,
           v ? i.createElement(
             "span",
             { className: "vor-block-pick" },
@@ -13196,12 +13196,12 @@ function kk(n) {
               {
                 className: "pj-input",
                 "data-testid": "vor-block-select",
-                "data-block": V.block,
-                value: ((he = B.find((Ne) => J[V.block] && Ne.name === J[V.block].name)) == null ? void 0 : he.id) || "",
-                onChange: (Ne) => me(V.block, Ne.currentTarget.value)
+                "data-block": K.block,
+                value: ((he = I.find((Ne) => B[K.block] && Ne.name === B[K.block].name)) == null ? void 0 : he.id) || "",
+                onChange: (Ne) => me(K.block, Ne.currentTarget.value)
               },
               i.createElement("option", { value: "" }, "— корпус из дерева объекта —"),
-              B.map((Ne) => i.createElement("option", { key: Ne.id, value: Ne.id }, Ne.name))
+              I.map((Ne) => i.createElement("option", { key: Ne.id, value: Ne.id }, Ne.name))
             ),
             i.createElement("input", {
               type: "text",
@@ -13210,10 +13210,10 @@ function kk(n) {
               maxLength: 20,
               "data-testid": "vor-block-new",
               onKeyDown: (Ne) => {
-                Ne.key === "Enter" && me(V.block, Ne.currentTarget.value);
+                Ne.key === "Enter" && me(K.block, Ne.currentTarget.value);
               },
               onBlur: (Ne) => {
-                Ne.currentTarget.value.trim() && me(V.block, Ne.currentTarget.value);
+                Ne.currentTarget.value.trim() && me(K.block, Ne.currentTarget.value);
               }
             })
           ) : null
@@ -13224,7 +13224,7 @@ function kk(n) {
       "div",
       { className: "pf-card vor-missing", "data-testid": "vor-missing" },
       i.createElement("div", null, i.createElement("b", null, `Не хватает узлов в дереве объекта (${C.length}):`)),
-      i.createElement("ul", null, C.map((V) => i.createElement("li", { key: V }, V))),
+      i.createElement("ul", null, C.map((K) => i.createElement("li", { key: K }, K))),
       v && m && r ? i.createElement(
         "button",
         { type: "button", className: "pf-btn", disabled: !!k, "data-testid": "vor-create-missing", onClick: () => {
@@ -13242,7 +13242,7 @@ function kk(n) {
       { className: "pf-muted vor-rule" },
       "Правила: «Этажи 4–12» — позиция на секции с пометкой «эт. 4–12»; «кв. 3, 16…» — позиция на ближайшем узле с пометкой квартир; строки без корпуса — на корпус листа, а без него — на узел «Весь объект»."
     ),
-    ae.some((V) => Yy(V.context || {})) ? i.createElement("div", { className: "pf-muted" }, `Строк с пометкой (диапазон этажей / квартиры): ${ae.filter((V) => Yy(V.context || {})).length}`) : null,
+    ae.some((K) => Yy(K.context || {})) ? i.createElement("div", { className: "pf-muted" }, `Строк с пометкой (диапазон этажей / квартиры): ${ae.filter((K) => Yy(K.context || {})).length}`) : null,
     i.createElement(yk, { api: t, projects: r, projectId: s, companyId: c, rows: b, editable: v, canUnits: h, save: U }),
     Se
   );
@@ -13564,12 +13564,12 @@ function J_(n) {
   return i.createElement("div", { className: "p2-chart__tip", "aria-live": "polite", "data-testid": "p2-chart-tip" }, n.text);
 }
 function zk(n) {
-  const { ariaLabel: t, start: r, end: s, today: c, series: u, yFormat: d, hoverX: m, tipAt: h, defaultTip: g } = n, [y, v] = i.useState(null), [b, w] = Y_(), E = K_(w), { W: S, L: k, PW: N } = E, O = Math.max(1, xc(r, s)), R = (W) => k + N * Math.max(0, Math.min(1, xc(r, W) / O)), K = Math.max(0, ...u.flatMap((W) => W.points.map((ae) => ae.y))), { yMax: A, ticks: J } = X_(K, d), z = (W) => Ta + cr * (1 - W / A), X = [], ue = new Date(Date.UTC(+r.slice(0, 4), +r.slice(5, 7) - 1, 1));
+  const { ariaLabel: t, start: r, end: s, today: c, series: u, yFormat: d, hoverX: m, tipAt: h, defaultTip: g } = n, [y, v] = i.useState(null), [b, w] = Y_(), E = K_(w), { W: N, L: k, PW: S } = E, O = Math.max(1, xc(r, s)), R = (W) => k + S * Math.max(0, Math.min(1, xc(r, W) / O)), Y = Math.max(0, ...u.flatMap((W) => W.points.map((ae) => ae.y))), { yMax: A, ticks: B } = X_(Y, d), z = (W) => Ta + cr * (1 - W / A), F = [], ue = new Date(Date.UTC(+r.slice(0, 4), +r.slice(5, 7) - 1, 1));
   for (let W = ue; W.toISOString().slice(0, 10) <= s; W = new Date(Date.UTC(W.getUTCFullYear(), W.getUTCMonth() + 1, 1))) {
     const ae = W.toISOString().slice(0, 10);
-    ae >= r && X.push(ae);
+    ae >= r && F.push(ae);
   }
-  const B = Math.max(1, Math.ceil(X.length / Math.max(2, Math.floor(N / 64)))), j = [...m].sort(), re = (W) => W < j.length - 1 ? (R(j[W + 1]) - R(j[W])) / 2 : 10;
+  const I = Math.max(1, Math.ceil(F.length / Math.max(2, Math.floor(S / 64)))), j = [...m].sort(), re = (W) => W < j.length - 1 ? (R(j[W + 1]) - R(j[W])) / 2 : 10;
   return i.createElement(
     "div",
     null,
@@ -13578,14 +13578,14 @@ function zk(n) {
       { className: "p2-chart__body", ref: b },
       i.createElement(
         "svg",
-        { className: "p2-chart__svg", viewBox: `0 0 ${S} ${Xr}`, width: S, height: Xr, role: "img", "aria-label": t, "data-testid": "p2-line" },
-        Q_(E, J),
-        X.filter((W, ae) => ae % B === 0).map((W) => i.createElement("text", { key: W, x: R(W), y: Xr - 8, textAnchor: "middle" }, jk(W))),
+        { className: "p2-chart__svg", viewBox: `0 0 ${N} ${Xr}`, width: N, height: Xr, role: "img", "aria-label": t, "data-testid": "p2-line" },
+        Q_(E, B),
+        F.filter((W, ae) => ae % I === 0).map((W) => i.createElement("text", { key: W, x: R(W), y: Xr - 8, textAnchor: "middle" }, jk(W))),
         c && c >= r && c <= s ? i.createElement(
           "g",
           { "data-testid": "p2-line-today" },
           i.createElement("line", { x1: R(c), x2: R(c), y1: Ta, y2: Ta + cr, stroke: "var(--p2-chart-reference)", strokeWidth: 1, strokeDasharray: "2 3" }),
-          i.createElement("text", { x: R(c) > S - 90 ? R(c) - 6 : R(c) + 6, y: Ta + 10, textAnchor: R(c) > S - 90 ? "end" : "start", className: "p2-chart__strong" }, `сегодня ${V_(c)}`)
+          i.createElement("text", { x: R(c) > N - 90 ? R(c) - 6 : R(c) + 6, y: Ta + 10, textAnchor: R(c) > N - 90 ? "end" : "start", className: "p2-chart__strong" }, `сегодня ${V_(c)}`)
         ) : null,
         u.map((W) => i.createElement("polyline", {
           key: W.id,
@@ -13624,41 +13624,41 @@ function zk(n) {
   );
 }
 function Uk(n) {
-  const { ariaLabel: t, bars: r, yFormat: s, reference: c, trend: u, defaultTip: d } = n, [m, h] = i.useState(null), [g, y] = Y_(), v = K_(y), { W: b, L: w, PW: E } = v, S = Math.max(0, c ? c.value : 0, ...r.map((B) => B.value)), { yMax: k, ticks: N } = X_(S, s), O = (B) => Ta + cr * (1 - Math.max(0, B) / k), R = E / Math.max(1, r.length), K = Math.min(44, R * 0.62), A = R < 40 ? Math.ceil(40 / R) : 1, J = (B) => w + R * (B + 0.5);
+  const { ariaLabel: t, bars: r, yFormat: s, reference: c, trend: u, defaultTip: d } = n, [m, h] = i.useState(null), [g, y] = Y_(), v = K_(y), { W: b, L: w, PW: E } = v, N = Math.max(0, c ? c.value : 0, ...r.map((I) => I.value)), { yMax: k, ticks: S } = X_(N, s), O = (I) => Ta + cr * (1 - Math.max(0, I) / k), R = E / Math.max(1, r.length), Y = Math.min(44, R * 0.62), A = R < 40 ? Math.ceil(40 / R) : 1, B = (I) => w + R * (I + 0.5);
   let z = null;
   if (u && r.length >= 3) {
-    const B = r.length, j = (B - 1) / 2, re = r.reduce((ne, de) => ne + de.value, 0) / B;
+    const I = r.length, j = (I - 1) / 2, re = r.reduce((ne, de) => ne + de.value, 0) / I;
     let W = 0, ae = 0;
     r.forEach((ne, de) => {
       W += (de - j) * (ne.value - re), ae += (de - j) * (de - j);
     });
     const pe = ae ? W / ae : 0;
-    z = { y1: O(re - pe * j), y2: O(re + pe * (B - 1 - j)) };
+    z = { y1: O(re - pe * j), y2: O(re + pe * (I - 1 - j)) };
   }
-  const X = (B, j) => {
-    const re = J(j) - K / 2, W = O(B.value), ae = Ta + cr, pe = Math.min(4, K / 2, Math.max(0, ae - W)), ne = ae - W < 0.5 ? "" : `M${re},${ae} V${W + pe} Q${re},${W} ${re + pe},${W} H${re + K - pe} Q${re + K},${W} ${re + K},${W + pe} V${ae} Z`;
+  const F = (I, j) => {
+    const re = B(j) - Y / 2, W = O(I.value), ae = Ta + cr, pe = Math.min(4, Y / 2, Math.max(0, ae - W)), ne = ae - W < 0.5 ? "" : `M${re},${ae} V${W + pe} Q${re},${W} ${re + pe},${W} H${re + Y - pe} Q${re + Y},${W} ${re + Y},${W + pe} V${ae} Z`;
     return i.createElement(
       "g",
-      { key: B.key },
-      ne ? i.createElement("path", { d: ne, fill: m && m !== B.key ? "var(--p2-chart-muted)" : "var(--p2-chart-fact)", "data-bar": B.key }) : null,
-      (r.length - 1 - j) % A === 0 ? i.createElement("text", { x: J(j), y: Xr - 8, textAnchor: "middle" }, B.label) : null,
+      { key: I.key },
+      ne ? i.createElement("path", { d: ne, fill: m && m !== I.key ? "var(--p2-chart-muted)" : "var(--p2-chart-fact)", "data-bar": I.key }) : null,
+      (r.length - 1 - j) % A === 0 ? i.createElement("text", { x: B(j), y: Xr - 8, textAnchor: "middle" }, I.label) : null,
       i.createElement("rect", {
         className: "p2-chart__hit",
-        x: J(j) - R / 2,
+        x: B(j) - R / 2,
         y: Ta,
         width: R,
         height: cr,
         tabIndex: 0,
-        "aria-label": B.tip,
-        "data-hit": B.key,
-        onMouseEnter: () => h(B.key),
-        onFocus: () => h(B.key),
-        onClick: () => h(B.key),
+        "aria-label": I.tip,
+        "data-hit": I.key,
+        onMouseEnter: () => h(I.key),
+        onFocus: () => h(I.key),
+        onClick: () => h(I.key),
         onMouseLeave: () => h(null),
         onBlur: () => h(null)
       })
     );
-  }, ue = r.find((B) => B.key === m);
+  }, ue = r.find((I) => I.key === m);
   return i.createElement(
     "div",
     null,
@@ -13668,8 +13668,8 @@ function Uk(n) {
       i.createElement(
         "svg",
         { className: "p2-chart__svg", viewBox: `0 0 ${b} ${Xr}`, width: b, height: Xr, role: "img", "aria-label": t, "data-testid": "p2-bars" },
-        Q_(v, N),
-        r.map(X),
+        Q_(v, S),
+        r.map(F),
         c && c.value > 0 ? i.createElement(
           "g",
           { "data-testid": "p2-bars-reference" },
@@ -13678,8 +13678,8 @@ function Uk(n) {
         ) : null,
         z ? i.createElement("line", {
           "data-testid": "p2-bars-trend",
-          x1: J(0),
-          x2: J(r.length - 1),
+          x1: B(0),
+          x2: B(r.length - 1),
           y1: z.y1,
           y2: z.y2,
           stroke: "var(--p2-chart-reference)",
@@ -13909,42 +13909,42 @@ async function Qk(n) {
   }
 }
 function Pc(n) {
-  const { rows: t, rowKey: r, columns: s, filters: c, state: u, onState: d, selected: m, onSelect: h } = n, [g, y] = i.useState(null), [v, b] = i.useState(!1), [w, E] = i.useState(!1), [S, k] = i.useState(!1), N = i.useRef(null), O = S || v || w;
+  const { rows: t, rowKey: r, columns: s, filters: c, state: u, onState: d, selected: m, onSelect: h } = n, [g, y] = i.useState(null), [v, b] = i.useState(!1), [w, E] = i.useState(!1), [N, k] = i.useState(!1), S = i.useRef(null), O = N || v || w;
   i.useEffect(() => {
     if (!O) return;
-    const $ = (F) => {
-      (F instanceof KeyboardEvent ? F.key !== "Escape" : N.current && N.current.contains(F.target)) || (k(!1), b(!1), E(!1));
+    const $ = (J) => {
+      (J instanceof KeyboardEvent ? J.key !== "Escape" : S.current && S.current.contains(J.target)) || (k(!1), b(!1), E(!1));
     };
     return document.addEventListener("pointerdown", $), document.addEventListener("keydown", $), () => {
       document.removeEventListener("pointerdown", $), document.removeEventListener("keydown", $);
     };
   }, [O]);
-  const [R, K] = i.useState(""), [A, J] = i.useState({}), [z, X] = i.useState(""), [ue, B] = i.useState(""), [, j] = i.useState(0), re = Gk(s, u), W = i.useMemo(() => e0(W_(t, c, u, n.isOverdue), s, u.sort), [t, c, u, n.isOverdue, s]), ae = n.groupBy && u.group ? t0(W, n.groupBy.key) : null, pe = ae ? ae.flatMap(($) => $.rows) : W, ne = Pk(u, c), de = Object.values(u.f).reduce(($, F) => $ + F.length, 0), me = pe.filter(($) => m.has(r($))), U = pe.length > 0 && me.length === pe.length, L = n.views ? Pp(n.views) : [], q = ($) => {
-    const F = u.sort && u.sort.id === $ ? u.sort.dir : null;
-    d({ ...u, sort: F === "asc" ? { id: $, dir: "desc" } : F === "desc" ? null : { id: $, dir: "asc" } });
+  const [R, Y] = i.useState(""), [A, B] = i.useState({}), [z, F] = i.useState(""), [ue, I] = i.useState(""), [, j] = i.useState(0), re = Gk(s, u), W = i.useMemo(() => e0(W_(t, c, u, n.isOverdue), s, u.sort), [t, c, u, n.isOverdue, s]), ae = n.groupBy && u.group ? t0(W, n.groupBy.key) : null, pe = ae ? ae.flatMap(($) => $.rows) : W, ne = Pk(u, c), de = Object.values(u.f).reduce(($, J) => $ + J.length, 0), me = pe.filter(($) => m.has(r($))), U = pe.length > 0 && me.length === pe.length, L = n.views ? Pp(n.views) : [], q = ($) => {
+    const J = u.sort && u.sort.id === $ ? u.sort.dir : null;
+    d({ ...u, sort: J === "asc" ? { id: $, dir: "desc" } : J === "desc" ? null : { id: $, dir: "asc" } });
   }, T = ($) => {
-    const F = new Set(m);
-    F.has($) ? F.delete($) : F.add($), h(F);
-  }, G = () => h(U ? /* @__PURE__ */ new Set() : new Set(pe.map(r))), C = ($) => {
-    const F = re.filter((ge) => !ge.fixed).map((ge) => ge.id), ee = F.includes($) ? F.filter((ge) => ge !== $) : [...F, $];
+    const J = new Set(m);
+    J.has($) ? J.delete($) : J.add($), h(J);
+  }, V = () => h(U ? /* @__PURE__ */ new Set() : new Set(pe.map(r))), C = ($) => {
+    const J = re.filter((ge) => !ge.fixed).map((ge) => ge.id), ee = J.includes($) ? J.filter((ge) => ge !== $) : [...J, $];
     d({ ...u, cols: s.filter((ge) => !ge.fixed && ee.includes(ge.id)).map((ge) => ge.id) });
   };
-  async function Y() {
-    const F = `${window.location.origin}${window.location.pathname}` + hp(n.linkBase || "", u), ee = await (n.copy || Qk)(F);
-    B(ee ? "" : F), X(ee ? "Ссылка на этот вид скопирована" : "Скопируйте ссылку вручную");
+  async function X() {
+    const J = `${window.location.origin}${window.location.pathname}` + hp(n.linkBase || "", u), ee = await (n.copy || Qk)(J);
+    I(ee ? "" : J), F(ee ? "Ссылка на этот вид скопирована" : "Скопируйте ссылку вручную");
   }
-  const le = ($, F) => $.render ? $.render(F) : (() => {
-    const ee = $.value(F);
+  const le = ($, J) => $.render ? $.render(J) : (() => {
+    const ee = $.value(J);
     return ee === null ? "—" : typeof ee == "number" ? ee.toLocaleString("ru-RU", { maximumFractionDigits: 3 }) : ee;
   })(), se = ($) => {
-    const F = r($);
+    const J = r($);
     return i.createElement(
       "tr",
-      { key: F, className: "p2-reg__row" + (m.has(F) ? " p2-reg__row--sel" : "") + (n.openKey === F ? " p2-reg__row--open" : ""), "data-row": F },
+      { key: J, className: "p2-reg__row" + (m.has(J) ? " p2-reg__row--sel" : "") + (n.openKey === J ? " p2-reg__row--open" : ""), "data-row": J },
       i.createElement(
         "td",
         { className: "p2-reg__check" },
-        i.createElement("input", { type: "checkbox", checked: m.has(F), "aria-label": "Выбрать строку", "data-testid": "p2-reg-select", onChange: () => T(F) })
+        i.createElement("input", { type: "checkbox", checked: m.has(J), "aria-label": "Выбрать строку", "data-testid": "p2-reg-select", onChange: () => T(J) })
       ),
       re.map((ee, ge) => i.createElement(
         "td",
@@ -13955,29 +13955,29 @@ function Pc(n) {
   }, be = i.createElement("thead", null, i.createElement(
     "tr",
     null,
-    i.createElement("th", { className: "p2-reg__check" }, i.createElement("input", { type: "checkbox", checked: U, "aria-label": "Выбрать все строки списка", "data-testid": "p2-reg-select-all", onChange: G, disabled: !pe.length })),
+    i.createElement("th", { className: "p2-reg__check" }, i.createElement("input", { type: "checkbox", checked: U, "aria-label": "Выбрать все строки списка", "data-testid": "p2-reg-select-all", onChange: V, disabled: !pe.length })),
     re.map(($) => {
-      const F = u.sort && u.sort.id === $.id ? u.sort.dir : null;
+      const J = u.sort && u.sort.id === $.id ? u.sort.dir : null;
       return i.createElement(
         "th",
-        { key: $.id, className: $.align === "right" ? "p2-reg__r" : "", "aria-sort": F === "asc" ? "ascending" : F === "desc" ? "descending" : "none" },
+        { key: $.id, className: $.align === "right" ? "p2-reg__r" : "", "aria-sort": J === "asc" ? "ascending" : J === "desc" ? "descending" : "none" },
         i.createElement(
           "button",
           { type: "button", className: "p2-reg__sort", "data-testid": "p2-reg-sort", "data-col": $.id, onClick: () => q($.id) },
           $.label,
-          F ? i.createElement("span", { "aria-hidden": "true" }, F === "asc" ? " ↑" : " ↓") : null
+          J ? i.createElement("span", { "aria-hidden": "true" }, J === "asc" ? " ↑" : " ↓") : null
         )
       );
     })
   )), ke = ($) => {
     if (!n.toneOf) return null;
-    const F = Ik($, n.toneOf);
-    return i.createElement("span", { className: "p2-reg__counts" }, Xk.filter((ee) => F[ee]).map((ee) => {
+    const J = Ik($, n.toneOf);
+    return i.createElement("span", { className: "p2-reg__counts" }, Xk.filter((ee) => J[ee]).map((ee) => {
       var ge;
-      return i.createElement(At, { key: ee, status: ee, label: String(F[ee]), title: (ge = n.toneLabel) == null ? void 0 : ge[ee], testId: "p2-reg-count" });
+      return i.createElement(At, { key: ee, status: ee, label: String(J[ee]), title: (ge = n.toneLabel) == null ? void 0 : ge[ee], testId: "p2-reg-count" });
     }));
   }, Se = ae ? ae.map(($) => {
-    const F = !A[$.key];
+    const J = !A[$.key];
     return i.createElement(
       "tbody",
       { key: $.key, "data-group": $.key },
@@ -13986,16 +13986,16 @@ function Pc(n) {
         { colSpan: re.length + 1 },
         i.createElement(
           "button",
-          { type: "button", className: "p2-reg__gbtn", "aria-expanded": F, "data-testid": "p2-reg-group", onClick: () => J({ ...A, [$.key]: F }) },
-          i.createElement("span", { "aria-hidden": "true", className: "p2-reg__chev" }, F ? "▾" : "▸"),
+          { type: "button", className: "p2-reg__gbtn", "aria-expanded": J, "data-testid": "p2-reg-group", onClick: () => B({ ...A, [$.key]: J }) },
+          i.createElement("span", { "aria-hidden": "true", className: "p2-reg__chev" }, J ? "▾" : "▸"),
           i.createElement("b", null, $.key),
           i.createElement("span", { className: "p2-reg__total" }, `Всего: ${$.rows.length}`)
         ),
         ke($.rows)
       )),
-      F ? $.rows.map(se) : null
+      J ? $.rows.map(se) : null
     );
-  }) : i.createElement("tbody", null, W.map(se)), V = g || u, he = !!n.isOverdue || n.overdueHint !== void 0, Ne = () => {
+  }) : i.createElement("tbody", null, W.map(se)), K = g || u, he = !!n.isOverdue || n.overdueHint !== void 0, Ne = () => {
     b(!1), E(!1), k(!1);
   }, Te = g ? i.createElement(
     "div",
@@ -14024,7 +14024,7 @@ function Pc(n) {
             title: n.overdueHint || "",
             onClick: () => {
               const $ = { ...u, overdue: !u.overdue };
-              d($), y({ ...V, overdue: $.overdue });
+              d($), y({ ...K, overdue: $.overdue });
             }
           }, "Только просроченные"),
           n.overdueHint ? i.createElement("div", { className: "p2-reg__muted", "data-testid": "p2-reg-overdue-hint" }, n.overdueHint) : null
@@ -14033,27 +14033,27 @@ function Pc(n) {
           "fieldset",
           { key: $.id, className: "p2-reg__fs", "data-filter": $.id },
           i.createElement("legend", null, $.label),
-          Hk(t, $).map((F) => i.createElement(
+          Hk(t, $).map((J) => i.createElement(
             "label",
-            { key: F.value, className: "p2-reg__opt" },
+            { key: J.value, className: "p2-reg__opt" },
             i.createElement("input", {
               type: "checkbox",
-              checked: (V.f[$.id] || []).includes(F.value),
+              checked: (K.f[$.id] || []).includes(J.value),
               "data-testid": "p2-reg-opt",
-              "data-value": F.value,
-              onChange: () => y(Wy(V, $.id, F.value))
+              "data-value": J.value,
+              onChange: () => y(Wy(K, $.id, J.value))
             }),
-            i.createElement("span", null, F.label),
-            i.createElement("span", { className: "p2-num p2-reg__muted" }, String(F.count))
+            i.createElement("span", null, J.label),
+            i.createElement("span", { className: "p2-num p2-reg__muted" }, String(J.count))
           ))
         ))
       ),
       i.createElement(
         "div",
         { className: "p2-reg__panel-foot" },
-        i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "p2-reg-panel-reset", onClick: () => y({ ...V, f: {} }) }, "Сбросить"),
+        i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "p2-reg-panel-reset", onClick: () => y({ ...K, f: {} }) }, "Сбросить"),
         i.createElement("button", { type: "button", className: "pf-btn", "data-testid": "p2-reg-panel-apply", onClick: () => {
-          d(V), y(null);
+          d(K), y(null);
         } }, "Применить")
       )
     )
@@ -14063,7 +14063,7 @@ function Pc(n) {
     s.filter(($) => !$.fixed).map(($) => i.createElement(
       "label",
       { key: $.id, className: "p2-reg__opt" },
-      i.createElement("input", { type: "checkbox", checked: re.some((F) => F.id === $.id), "data-col": $.id, onChange: () => C($.id) }),
+      i.createElement("input", { type: "checkbox", checked: re.some((J) => J.id === $.id), "data-col": $.id, onChange: () => C($.id) }),
       i.createElement("span", null, $.label)
     )),
     i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", onClick: () => d({ ...u, cols: null }) }, "Как было")
@@ -14074,16 +14074,16 @@ function Pc(n) {
       "div",
       { key: $.name, className: "p2-reg__view" },
       i.createElement("button", { type: "button", className: "p2-reg__open", "data-testid": "p2-reg-view", onClick: () => {
-        d(Yk($)), E(!1), X(`Вид «${$.name}»`);
+        d(Yk($)), E(!1), F(`Вид «${$.name}»`);
       } }, $.name),
       i.createElement("button", { type: "button", className: "p2-reg__x", "aria-label": `Удалить вид ${$.name}`, onClick: () => {
-        Kk(n.views, $.name), j((F) => F + 1);
+        Kk(n.views, $.name), j((J) => J + 1);
       } }, "×")
     )) : i.createElement("div", { className: "p2-reg__muted" }, "Сохранённых видов пока нет"),
     i.createElement(
       "div",
       { className: "p2-reg__view-save" },
-      i.createElement("input", { type: "text", className: "pj-input", maxLength: 60, placeholder: "Название вида", value: R, "data-testid": "p2-reg-view-name", onChange: ($) => K($.target.value) }),
+      i.createElement("input", { type: "text", className: "pj-input", maxLength: 60, placeholder: "Название вида", value: R, "data-testid": "p2-reg-view-name", onChange: ($) => Y($.target.value) }),
       i.createElement("button", {
         type: "button",
         className: "pf-btn",
@@ -14091,7 +14091,7 @@ function Pc(n) {
         disabled: !R.trim(),
         onClick: () => {
           const $ = Vk(n.views, R, u);
-          X($ ? `Вид «${R.trim()}» сохранён на этом устройстве` : "Не удалось сохранить вид на этом устройстве"), K(""), j((F) => F + 1);
+          F($ ? `Вид «${R.trim()}» сохранён на этом устройстве` : "Не удалось сохранить вид на этом устройстве"), Y(""), j((J) => J + 1);
         }
       }, "Сохранить")
     )
@@ -14118,7 +14118,7 @@ function Pc(n) {
         n.tools || null,
         i.createElement(
           "span",
-          { className: "p2-reg__wrap", ref: N },
+          { className: "p2-reg__wrap", ref: S },
           i.createElement("button", {
             type: "button",
             className: "pf-btn pf-btn--ghost p2-reg__more",
@@ -14133,7 +14133,7 @@ function Pc(n) {
           // Пункты меню всегда в разметке (скрыты, пока меню закрыто) — так «Колонки» / «Виды» открывают своё окно на том же месте.
           i.createElement(
             "div",
-            { className: "p2-reg__pop p2-reg__pop--right", "data-testid": "p2-reg-menu", hidden: !S },
+            { className: "p2-reg__pop p2-reg__pop--right", "data-testid": "p2-reg-menu", hidden: !N },
             n.groupBy ? i.createElement("label", { className: "p2-reg__opt p2-reg__groupby" }, i.createElement("input", { type: "checkbox", checked: u.group, "data-testid": "p2-reg-groupby", onChange: () => d({ ...u, group: !u.group }) }), `Группировать: ${n.groupBy.label.toLowerCase()}`) : null,
             i.createElement("button", { type: "button", className: "p2-reg__item", "aria-expanded": v, "data-testid": "p2-reg-cols-open", onClick: () => {
               k(!1), E(!1), b(!v);
@@ -14142,7 +14142,7 @@ function Pc(n) {
               k(!1), b(!1), E(!w);
             } }, "Виды…") : null,
             n.linkBase !== void 0 ? i.createElement("button", { type: "button", className: "p2-reg__item", "data-testid": "p2-reg-share", onClick: () => {
-              k(!1), Y();
+              k(!1), X();
             } }, "Скопировать ссылку") : null
           ),
           Oe,
@@ -14388,14 +14388,14 @@ function Vc(n, t, r) {
     const E = s.get(b);
     if (u.has(b)) throw new Error(`Строки надбавок ссылаются друг на друга по кругу (в т. ч. через свой раздел) — проверьте базу строки «${E.name}»`);
     u.add(b);
-    const S = E.params || {};
+    const N = E.params || {};
     let k = 0;
-    if (E.method === "percent_of") k = m(E) * (S.percent ?? 0) / 100;
-    else if (E.method === "qty_rate") k = (S.factors || []).reduce((N, O) => N * O, (S.factors || []).length ? 1 : 0);
-    else if (E.method === "fixed") k = S.amount ?? 0;
+    if (E.method === "percent_of") k = m(E) * (N.percent ?? 0) / 100;
+    else if (E.method === "qty_rate") k = (N.factors || []).reduce((S, O) => S * O, (N.factors || []).length ? 1 : 0);
+    else if (E.method === "fixed") k = N.amount ?? 0;
     else if (E.method === "gross_up") {
-      const N = m(E);
-      k = S.share ? N / S.share * 100 - N : 0;
+      const S = m(E);
+      k = N.share ? S / N.share * 100 - S : 0;
     }
     return u.delete(b), c.set(b, k), k;
   }
@@ -14446,34 +14446,34 @@ async function oS(n) {
     pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: !0, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } }
   });
   u.columns = [{ width: 7 }, { width: 10 }, { width: 58 }, { width: 11 }, { width: 10 }, { width: 13 }, { width: 15 }, { width: 17 }];
-  const d = { name: "Arial", size: 9 }, m = (k, N, O = {}) => {
+  const d = { name: "Arial", size: 9 }, m = (k, S, O = {}) => {
     const R = u.getCell(k);
-    return R.value = N, R.font = { ...d, ...O.font ?? {} }, O.align && (R.alignment = O.align), O.border && (R.border = O.border), O.numFmt && (R.numFmt = O.numFmt), R;
+    return R.value = S, R.font = { ...d, ...O.font ?? {} }, O.align && (R.alignment = O.align), O.border && (R.border = O.border), O.numFmt && (R.numFmt = O.numFmt), R;
   }, h = { horizontal: "right", vertical: "middle" }, g = { horizontal: "center", vertical: "middle", wrapText: !0 }, y = { bottom: ai };
   m("H1", "Унифицированная форма № КС-2", { align: h, font: { size: 8 } }), m("H2", "Утверждена постановлением Госкомстата России от 11.11.99 № 100", { align: h, font: { size: 8 } }), m("H4", "Код", { align: g, border: Xe }), m("G5", "Форма по ОКУД", { align: h }), m("H5", "0322005", { align: g, border: Xe });
-  const v = (k, N, O, R = "по ОКПО") => {
-    u.mergeCells(`A${k}:B${k}`), m(`A${k}`, N, { align: { vertical: "middle", wrapText: !0 } }), N.length > 16 && (u.getRow(k).height = 24), u.mergeCells(`C${k}:F${k}`), m(`C${k}`, O, { border: y, align: { vertical: "middle", wrapText: !0 } }), R && m(`G${k}`, R, { align: h }), m(`H${k}`, "", { border: Xe });
+  const v = (k, S, O, R = "по ОКПО") => {
+    u.mergeCells(`A${k}:B${k}`), m(`A${k}`, S, { align: { vertical: "middle", wrapText: !0 } }), S.length > 16 && (u.getRow(k).height = 24), u.mergeCells(`C${k}:F${k}`), m(`C${k}`, O, { border: y, align: { vertical: "middle", wrapText: !0 } }), R && m(`G${k}`, R, { align: h }), m(`H${k}`, "", { border: Xe });
   };
   v(6, "Инвестор", r.investor), v(7, "Заказчик (Генподрядчик)", r.customer), v(8, "Подрядчик (Субподрядчик)", r.contractor), v(9, "Стройка", r.construction, ""), v(10, "Объект", r.object, ""), m("G11", "Вид деятельности по ОКДП", { align: h }), m("H11", "", { border: Xe }), m("F12", "Договор подряда (контракт)", { align: h }), m("G12", "номер", { align: h }), m("H12", r.contract_no, { align: g, border: Xe }), m("G13", "дата", { align: h }), m("H13", Pe(r.contract_date), { align: g, border: Xe }), m("G14", "Вид операции", { align: h }), m("H14", "", { border: Xe }), u.mergeCells("E16:E17"), m("E16", "Номер документа", { align: g, border: Xe }), u.mergeCells("F16:F17"), m("F16", "Дата составления", { align: g, border: Xe }), u.mergeCells("G16:H16"), m("G16", "Отчётный период", { align: g, border: Xe }), m("G17", "с", { align: g, border: Xe }), m("H17", "по", { align: g, border: Xe }), m("E18", r.act_no, { align: g, border: Xe, font: { bold: !0 } }), m("F18", Pe(r.act_date), { align: g, border: Xe }), m("G18", Pe(r.period_from), { align: g, border: Xe }), m("H18", Pe(r.period_to), { align: g, border: Xe }), m("D18", "АКТ", { align: { horizontal: "right", vertical: "middle" }, font: { bold: !0, size: 12 } }), u.mergeCells("A19:H19"), m("A19", "О ПРИЁМКЕ ВЫПОЛНЕННЫХ РАБОТ", { align: { horizontal: "center" }, font: { bold: !0, size: 12 } });
   const b = Zp(n);
   m("A21", "Сметная (договорная) стоимость в соответствии с договором подряда (субподряда)"), m("G21", b, { numFmt: lc, border: y, align: h }), m("H21", "руб.");
   const w = 23;
   u.mergeCells(`A${w}:B${w}`), m(`A${w}`, "Номер", { align: g, border: Xe }), u.mergeCells(`F${w}:H${w}`), m(`F${w}`, "Выполнено работ", { align: g, border: Xe });
-  for (const [k, N] of [["C", "Наименование работ"], ["D", "Номер единичной расценки"], ["E", "Единица измерения"]])
-    u.mergeCells(`${k}${w}:${k}${w + 1}`), m(`${k}${w}`, N, { align: g, border: Xe });
-  for (const [k, N] of [["A", "по порядку"], ["B", "позиции по смете"], ["F", "количество"], ["G", "цена за единицу, руб."], ["H", "стоимость, руб."]])
-    m(`${k}${w + 1}`, N, { align: g, border: Xe });
-  u.getRow(w + 1).height = 30, "ABCDEFGH".split("").forEach((k, N) => m(`${k}${w + 2}`, N + 1, { align: g, border: Xe }));
+  for (const [k, S] of [["C", "Наименование работ"], ["D", "Номер единичной расценки"], ["E", "Единица измерения"]])
+    u.mergeCells(`${k}${w}:${k}${w + 1}`), m(`${k}${w}`, S, { align: g, border: Xe });
+  for (const [k, S] of [["A", "по порядку"], ["B", "позиции по смете"], ["F", "количество"], ["G", "цена за единицу, руб."], ["H", "стоимость, руб."]])
+    m(`${k}${w + 1}`, S, { align: g, border: Xe });
+  u.getRow(w + 1).height = 30, "ABCDEFGH".split("").forEach((k, S) => m(`${k}${w + 2}`, S + 1, { align: g, border: Xe }));
   let E = w + 3;
-  t.forEach((k, N) => {
-    m(`A${E}`, N + 1, { align: g, border: Xe }), m(`B${E}`, k.number || String(k.row_no), { align: g, border: Xe }), m(`C${E}`, k.name, { align: { vertical: "top", wrapText: !0 }, border: Xe }), m(`D${E}`, "", { border: Xe }), m(`E${E}`, k.unit, { align: g, border: Xe }), m(`F${E}`, k.qty, { numFmt: iS(k.qty), align: h, border: Xe }), m(`G${E}`, ut(k.price ?? 0), { numFmt: lc, align: h, border: Xe }), m(`H${E}`, Yc(k), { numFmt: lc, align: h, border: Xe });
+  t.forEach((k, S) => {
+    m(`A${E}`, S + 1, { align: g, border: Xe }), m(`B${E}`, k.number || String(k.row_no), { align: g, border: Xe }), m(`C${E}`, k.name, { align: { vertical: "top", wrapText: !0 }, border: Xe }), m(`D${E}`, "", { border: Xe }), m(`E${E}`, k.unit, { align: g, border: Xe }), m(`F${E}`, k.qty, { numFmt: iS(k.qty), align: h, border: Xe }), m(`G${E}`, ut(k.price ?? 0), { numFmt: lc, align: h, border: Xe }), m(`H${E}`, Yc(k), { numFmt: lc, align: h, border: Xe });
     const O = Math.max(1, Math.ceil(k.name.length / 62));
     O > 1 && (u.getRow(E).height = Math.min(409, 12 * O + 2)), E++;
   }), u.mergeCells(`A${E}:G${E}`), m(`A${E}`, "Итого", { align: { horizontal: "right" }, font: { bold: !0 }, border: Xe }), m(`H${E}`, b, { numFmt: lc, align: h, border: Xe, font: { bold: !0 } }), E += 3;
-  const S = (k, N, O) => {
-    m(`A${k}`, N, { font: { bold: !0 } }), u.mergeCells(`B${k}:C${k}`), m(`B${k}`, O, { border: y }), m(`D${k}`, "", { border: y }), u.mergeCells(`E${k}:G${k}`), m(`E${k}`, "", { border: y }), m(`B${k + 1}`, "(должность)", { align: { horizontal: "center" }, font: { size: 7 } }), m(`D${k + 1}`, "(подпись)", { align: { horizontal: "center" }, font: { size: 7 } }), m(`E${k + 1}`, "(расшифровка подписи)", { font: { size: 7 } });
+  const N = (k, S, O) => {
+    m(`A${k}`, S, { font: { bold: !0 } }), u.mergeCells(`B${k}:C${k}`), m(`B${k}`, O, { border: y }), m(`D${k}`, "", { border: y }), u.mergeCells(`E${k}:G${k}`), m(`E${k}`, "", { border: y }), m(`B${k + 1}`, "(должность)", { align: { horizontal: "center" }, font: { size: 7 } }), m(`D${k + 1}`, "(подпись)", { align: { horizontal: "center" }, font: { size: 7 } }), m(`E${k + 1}`, "(расшифровка подписи)", { font: { size: 7 } });
   };
-  return S(E, "Сдал", r.contractor_signer), m(`H${E + 2}`, "М. П."), S(E + 4, "Принял", r.customer_signer), m(`H${E + 6}`, "М. П."), u.pageSetup.printArea = `A1:H${E + 6}`, u.pageSetup.printTitlesRow = `${w}:${w + 2}`, new Uint8Array(await c.xlsx.writeBuffer());
+  return N(E, "Сдал", r.contractor_signer), m(`H${E + 2}`, "М. П."), N(E + 4, "Принял", r.customer_signer), m(`H${E + 6}`, "М. П."), u.pageSetup.printArea = `A1:H${E + 6}`, u.pageSetup.printTitlesRow = `${w}:${w + 2}`, new Uint8Array(await c.xlsx.writeBuffer());
 }
 const qa = {
   accepted: { label: "Принято", tone: "green" },
@@ -14613,7 +14613,7 @@ async function wS(n, t, r, s) {
   if (!c.ok) return { ok: !1, message: c.message };
   const m = new Map((u.ok ? u.value : []).map((b) => [b.position_id, b])), h = d.ok ? d.value.find((b) => b.project_id === r) : void 0, g = (h == null ? void 0 : h.planned_finish) || null, y = { yellow: h ? h.light_yellow_pp : 3, red: h ? h.light_red_pp : 10 };
   return { ok: !0, rows: c.value.map((b) => {
-    const w = m.get(b.position_id), E = w ? w.pending_count : 0, S = w ? w.last_rejected_note : null;
+    const w = m.get(b.position_id), E = w ? w.pending_count : 0, N = w ? w.last_rejected_note : null;
     return {
       id: b.position_id,
       corp: tm(b.location_path),
@@ -14628,13 +14628,13 @@ async function wS(n, t, r, s) {
       fact14: b.fact14,
       pendingQty: b.pending_qty,
       pendingCount: E,
-      rejectedNote: S,
+      rejectedNote: N,
       forecast: b.forecast_finish,
       deltaDays: b.delta_days,
       planPctToday: b.plan_pct_today,
       devPp: b.dev_pp,
       th: y,
-      st: yS({ plan_qty: b.plan_qty, fact_qty: b.fact_qty, fact14: b.fact14, pending_qty: b.pending_qty, pending_count: E, last_rejected_note: S }, { today: s, plannedFinish: g })
+      st: yS({ plan_qty: b.plan_qty, fact_qty: b.fact_qty, fact14: b.fact14, pending_qty: b.pending_qty, pending_count: E, last_rejected_note: N }, { today: s, plannedFinish: g })
     };
   }), finish: g };
 }
@@ -14738,7 +14738,7 @@ function SS(n) {
   );
 }
 function NS(n) {
-  const { fact: t, summary: r, projectId: s, companyId: c, user: u } = n, d = n.today || ha(), [m, h] = i.useState(null), [g, y] = i.useState(null), [v, b] = i.useState(""), [w, E] = i.useState(() => Ni(Bc(window.location.hash))), [S, k] = i.useState(/* @__PURE__ */ new Set()), [N, O] = i.useState(""), [R, K] = i.useState("");
+  const { fact: t, summary: r, projectId: s, companyId: c, user: u } = n, d = n.today || ha(), [m, h] = i.useState(null), [g, y] = i.useState(null), [v, b] = i.useState(""), [w, E] = i.useState(() => Ni(Bc(window.location.hash))), [N, k] = i.useState(/* @__PURE__ */ new Set()), [S, O] = i.useState(""), [R, Y] = i.useState("");
   async function A() {
     var re, W;
     const j = await wS(r, t, s, d);
@@ -14751,11 +14751,11 @@ function NS(n) {
   i.useEffect(() => {
     h(null), k(/* @__PURE__ */ new Set()), O(""), A();
   }, [s]);
-  const J = (j) => {
+  const B = (j) => {
     E(j), Ic(ob, j);
   }, z = i.useMemo(() => Hc(m || [], { filters: cb, columns: Pf, state: w, isOverdue: (j) => j.st.overdue, groupBy: { label: "Корпус", key: (j) => j.corp } }), [m, w]);
   if (m === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка позиций…");
-  const X = N ? z.findIndex((j) => j.id === N) : -1, ue = X >= 0 ? z[X] : null, B = Pf.filter((j) => j.fixed || (w.cols ? w.cols.includes(j.id) : !j.hidden));
+  const F = S ? z.findIndex((j) => j.id === S) : -1, ue = F >= 0 ? z[F] : null, I = Pf.filter((j) => j.fixed || (w.cols ? w.cols.includes(j.id) : !j.hidden));
   return i.createElement(
     "div",
     { className: "pj-tab vr-tab", "data-testid": "vor-registry" },
@@ -14768,18 +14768,18 @@ function NS(n) {
       columns: Pf,
       filters: cb,
       state: w,
-      onState: J,
+      onState: B,
       isOverdue: (j) => j.st.overdue,
       overdueHint: g ? void 0 : "Нет срока объекта: укажите плановое окончание в «Сводке» — тогда «Только просроченные» заработает.",
       groupBy: { label: "Корпус", key: (j) => j.corp },
       toneOf: (j) => j.st.tone,
       toneLabel: xS,
-      selected: S,
+      selected: N,
       onSelect: k,
       onOpen: (j) => O(j.id),
-      openKey: N,
-      actions: n.actions ? (j) => n.actions(j, { reload: A, clear: () => k(/* @__PURE__ */ new Set()), notify: K, columns: B }) : void 0,
-      tools: n.tools ? n.tools({ rows: z, columns: B }) : void 0,
+      openKey: S,
+      actions: n.actions ? (j) => n.actions(j, { reload: A, clear: () => k(/* @__PURE__ */ new Set()), notify: Y, columns: I }) : void 0,
+      tools: n.tools ? n.tools({ rows: z, columns: I }) : void 0,
       empty: "Позиций пока нет — загрузите и подтвердите ВОР во вкладке «Загрузка».",
       views: { registry: "vor-positions", company: c, user: u },
       linkBase: ob
@@ -14788,10 +14788,10 @@ function NS(n) {
       key: ue.id,
       fact: t,
       row: ue,
-      index: X,
+      index: F,
       total: z.length,
-      onPrev: () => O(z[Math.max(0, X - 1)].id),
-      onNext: () => O(z[Math.min(z.length - 1, X + 1)].id),
+      onPrev: () => O(z[Math.max(0, F - 1)].id),
+      onNext: () => O(z[Math.min(z.length - 1, F + 1)].id),
       onClose: () => O("")
     }) : null
   );
@@ -15052,33 +15052,33 @@ class $S {
       let d, m, h;
       try {
         const { headers: g, method: y, body: v, signal: b, timeout: w } = s;
-        let E = {}, { region: S } = s;
-        S || (S = this.region);
+        let E = {}, { region: N } = s;
+        N || (N = this.region);
         const k = new URL(`${this.url}/${r}`);
-        S && S !== "any" && (E["x-region"] = S, k.searchParams.set("forceFunctionRegion", S));
-        let N;
-        const O = !!g && Object.keys(g).some((X) => X.toLowerCase() === "content-type");
-        v && !O ? typeof Blob < "u" && v instanceof Blob || v instanceof ArrayBuffer ? (E["Content-Type"] = v.type || "application/octet-stream", N = v) : typeof v == "string" ? (E["Content-Type"] = "text/plain", N = v) : typeof FormData < "u" && v instanceof FormData ? N = v : (E["Content-Type"] = "application/json", N = JSON.stringify(v)) : v && typeof v != "string" && !(typeof Blob < "u" && v instanceof Blob) && !(v instanceof ArrayBuffer) && !(typeof FormData < "u" && v instanceof FormData) ? N = JSON.stringify(v) : N = v;
+        N && N !== "any" && (E["x-region"] = N, k.searchParams.set("forceFunctionRegion", N));
+        let S;
+        const O = !!g && Object.keys(g).some((F) => F.toLowerCase() === "content-type");
+        v && !O ? typeof Blob < "u" && v instanceof Blob || v instanceof ArrayBuffer ? (E["Content-Type"] = v.type || "application/octet-stream", S = v) : typeof v == "string" ? (E["Content-Type"] = "text/plain", S = v) : typeof FormData < "u" && v instanceof FormData ? S = v : (E["Content-Type"] = "application/json", S = JSON.stringify(v)) : v && typeof v != "string" && !(typeof Blob < "u" && v instanceof Blob) && !(v instanceof ArrayBuffer) && !(typeof FormData < "u" && v instanceof FormData) ? S = JSON.stringify(v) : S = v;
         let R = b;
         w && (m = new AbortController(), d = setTimeout(() => m.abort(), w), b ? (R = m.signal, h = () => m.abort(), b.addEventListener("abort", h)) : R = m.signal);
-        const K = yield this.fetch(k.toString(), {
+        const Y = yield this.fetch(k.toString(), {
           method: y || "POST",
           // headers priority is (high to low):
           // 1. invoke-level headers
           // 2. client-level headers
           // 3. default Content-Type header
           headers: Object.assign(Object.assign(Object.assign({}, E), this.headers), g),
-          body: N,
+          body: S,
           signal: R
-        }).catch((X) => {
-          throw new jS(X);
-        }), A = K.headers.get("x-relay-error");
+        }).catch((F) => {
+          throw new jS(F);
+        }), A = Y.headers.get("x-relay-error");
         if (A && A === "true")
-          throw new ub(K);
-        if (!K.ok)
-          throw new db(K);
-        let J = ((c = K.headers.get("Content-Type")) !== null && c !== void 0 ? c : "text/plain").split(";")[0].trim().toLowerCase(), z;
-        return J === "application/json" ? z = yield K.json() : J === "application/octet-stream" || J === "application/pdf" ? z = yield K.blob() : J === "text/event-stream" ? z = K : J === "multipart/form-data" ? z = yield K.formData() : z = yield K.text(), { data: z, error: null, response: K };
+          throw new ub(Y);
+        if (!Y.ok)
+          throw new db(Y);
+        let B = ((c = Y.headers.get("Content-Type")) !== null && c !== void 0 ? c : "text/plain").split(";")[0].trim().toLowerCase(), z;
+        return B === "application/json" ? z = yield Y.json() : B === "application/octet-stream" || B === "application/pdf" ? z = yield Y.blob() : B === "text/event-stream" ? z = Y : B === "multipart/form-data" ? z = yield Y.formData() : z = yield Y.text(), { data: z, error: null, response: Y };
       } catch (g) {
         return {
           data: null,
@@ -15386,18 +15386,18 @@ var qS = class {
       let h = "", g = "", y = "";
       const v = d == null ? void 0 : d.cause;
       if (v) {
-        var b, w, E, S;
+        var b, w, E, N;
         const O = (b = v == null ? void 0 : v.message) !== null && b !== void 0 ? b : "", R = (w = v == null ? void 0 : v.code) !== null && w !== void 0 ? w : "";
         h = `${(E = d == null ? void 0 : d.name) !== null && E !== void 0 ? E : "FetchError"}: ${d == null ? void 0 : d.message}`, h += `
 
-Caused by: ${(S = v == null ? void 0 : v.name) !== null && S !== void 0 ? S : "Error"}: ${O}`, R && (h += ` (${R})`), v != null && v.stack && (h += `
+Caused by: ${(N = v == null ? void 0 : v.name) !== null && N !== void 0 ? N : "Error"}: ${O}`, R && (h += ` (${R})`), v != null && v.stack && (h += `
 ${v.stack}`);
       } else {
         var k;
         h = (k = d == null ? void 0 : d.stack) !== null && k !== void 0 ? k : "";
       }
-      const N = this.url.toString().length;
-      return (d == null ? void 0 : d.name) === "AbortError" || (d == null ? void 0 : d.code) === "ABORT_ERR" ? (y = "", g = "Request was aborted (timeout or manual cancellation)", N > this.urlLengthLimit && (g += `. Note: Your request URL is ${N} characters, which may exceed server limits. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [many IDs])), consider using an RPC function to pass values server-side.`)) : ((v == null ? void 0 : v.name) === "HeadersOverflowError" || (v == null ? void 0 : v.code) === "UND_ERR_HEADERS_OVERFLOW") && (y = "", g = "HTTP headers exceeded server limits (typically 16KB)", N > this.urlLengthLimit && (g += `. Your request URL is ${N} characters. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [200+ IDs])), consider using an RPC function instead.`)), {
+      const S = this.url.toString().length;
+      return (d == null ? void 0 : d.name) === "AbortError" || (d == null ? void 0 : d.code) === "ABORT_ERR" ? (y = "", g = "Request was aborted (timeout or manual cancellation)", S > this.urlLengthLimit && (g += `. Note: Your request URL is ${S} characters, which may exceed server limits. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [many IDs])), consider using an RPC function to pass values server-side.`)) : ((v == null ? void 0 : v.name) === "HeadersOverflowError" || (v == null ? void 0 : v.code) === "UND_ERR_HEADERS_OVERFLOW") && (y = "", g = "HTTP headers exceeded server limits (typically 16KB)", S > this.urlLengthLimit && (g += `. Your request URL is ${S} characters. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [200+ IDs])), consider using an RPC function instead.`)), {
         success: !1,
         error: {
           message: `${(m = d == null ? void 0 : d.name) !== null && m !== void 0 ? m : "FetchError"}: ${d == null ? void 0 : d.message}`,
@@ -18929,9 +18929,9 @@ class WS {
       throw new Error(`userEvent length ${y.length} exceeds maximum of 255`);
     if (b.length > 255)
       throw new Error(`metadata length ${b.length} exceeds maximum of 255`);
-    const w = this.USER_BROADCAST_PUSH_META_LENGTH + g.length + h.length + m.length + y.length + b.length, E = new ArrayBuffer(this.HEADER_LENGTH + w), S = new DataView(E), k = new Uint8Array(E);
-    let N = 0;
-    S.setUint8(N++, this.KINDS.userBroadcastPush), S.setUint8(N++, g.length), S.setUint8(N++, h.length), S.setUint8(N++, m.length), S.setUint8(N++, y.length), S.setUint8(N++, b.length), S.setUint8(N++, r), k.set(g, N), N += g.length, k.set(h, N), N += h.length, k.set(m, N), N += m.length, k.set(y, N), N += y.length, k.set(b, N), N += b.length;
+    const w = this.USER_BROADCAST_PUSH_META_LENGTH + g.length + h.length + m.length + y.length + b.length, E = new ArrayBuffer(this.HEADER_LENGTH + w), N = new DataView(E), k = new Uint8Array(E);
+    let S = 0;
+    N.setUint8(S++, this.KINDS.userBroadcastPush), N.setUint8(S++, g.length), N.setUint8(S++, h.length), N.setUint8(S++, m.length), N.setUint8(S++, y.length), N.setUint8(S++, b.length), N.setUint8(S++, r), k.set(g, S), S += g.length, k.set(h, S), S += h.length, k.set(m, S), S += m.length, k.set(y, S), S += y.length, k.set(b, S), S += b.length;
     var O = new Uint8Array(E.byteLength + s.byteLength);
     return O.set(new Uint8Array(E), 0), O.set(new Uint8Array(s), E.byteLength), O.buffer;
   }
@@ -19676,7 +19676,7 @@ var Fl = (n) => typeof n == "function" ? (
     }), this.map(r, (h, g) => {
       let y = u[h];
       if (y) {
-        let v = g.metas.map((S) => S.phx_ref), b = y.metas.map((S) => S.phx_ref), w = g.metas.filter((S) => b.indexOf(S.phx_ref) < 0), E = y.metas.filter((S) => v.indexOf(S.phx_ref) < 0);
+        let v = g.metas.map((N) => N.phx_ref), b = y.metas.map((N) => N.phx_ref), w = g.metas.filter((N) => b.indexOf(N.phx_ref) < 0), E = y.metas.filter((N) => v.indexOf(N.phx_ref) < 0);
         w.length > 0 && (d[h] = g, d[h].metas = w), E.length > 0 && (m[h] = this.clone(y), m[h].metas = E);
       } else
         d[h] = g;
@@ -19797,8 +19797,8 @@ var Fl = (n) => typeof n == "function" ? (
   binaryEncode(n) {
     let { join_ref: t, ref: r, event: s, topic: c, payload: u } = n, d = new TextEncoder(), m = d.encode(t), h = d.encode(r), g = d.encode(c), y = d.encode(s);
     this.assertFieldSize(m.byteLength, "join_ref"), this.assertFieldSize(h.byteLength, "ref"), this.assertFieldSize(g.byteLength, "topic"), this.assertFieldSize(y.byteLength, "event");
-    let v = this.META_LENGTH + m.byteLength + h.byteLength + g.byteLength + y.byteLength, b = new ArrayBuffer(this.HEADER_LENGTH + v), w = new Uint8Array(b), E = new DataView(b), S = 0;
-    E.setUint8(S++, this.KINDS.push), E.setUint8(S++, m.byteLength), E.setUint8(S++, h.byteLength), E.setUint8(S++, g.byteLength), E.setUint8(S++, y.byteLength), w.set(m, S), S += m.byteLength, w.set(h, S), S += h.byteLength, w.set(g, S), S += g.byteLength, w.set(y, S), S += y.byteLength;
+    let v = this.META_LENGTH + m.byteLength + h.byteLength + g.byteLength + y.byteLength, b = new ArrayBuffer(this.HEADER_LENGTH + v), w = new Uint8Array(b), E = new DataView(b), N = 0;
+    E.setUint8(N++, this.KINDS.push), E.setUint8(N++, m.byteLength), E.setUint8(N++, h.byteLength), E.setUint8(N++, g.byteLength), E.setUint8(N++, y.byteLength), w.set(m, N), N += m.byteLength, w.set(h, N), N += h.byteLength, w.set(g, N), N += g.byteLength, w.set(y, N), N += y.byteLength;
     var k = new Uint8Array(b.byteLength + u.byteLength);
     return k.set(w, 0), k.set(new Uint8Array(u), b.byteLength), k.buffer;
   },
@@ -20712,8 +20712,8 @@ class Cn {
       this.socket.accessTokenValue && (w.access_token = this.socket.accessTokenValue), this._onError((k) => {
         t == null || t(Tn.CHANNEL_ERROR, bN(k));
       }), this._onClose(() => t == null ? void 0 : t(Tn.CLOSED)), this.updateJoinPayload(Object.assign({ config: E }, w)), this._updateFilterMessage();
-      const S = y != null && y.wait && v.length > 0 ? Math.max(r, ((d = y.timeout) !== null && d !== void 0 ? d : JS) + FS) : r;
-      this.channelAdapter.subscribe(S).receive("ok", async ({ postgres_changes: k }) => {
+      const N = y != null && y.wait && v.length > 0 ? Math.max(r, ((d = y.timeout) !== null && d !== void 0 ? d : JS) + FS) : r;
+      this.channelAdapter.subscribe(N).receive("ok", async ({ postgres_changes: k }) => {
         if (this.socket._isManualToken() || this.socket.setAuth(), k === void 0) {
           t == null || t(Tn.SUBSCRIBED);
           return;
@@ -20721,8 +20721,8 @@ class Cn {
         this._updatePostgresBindings(k, t);
       }).receive("error", (k) => {
         this.state = ir.errored;
-        const N = Object.values(k).join(", ") || "error";
-        t == null || t(Tn.CHANNEL_ERROR, new Error(N, { cause: k }));
+        const S = Object.values(k).join(", ") || "error";
+        t == null || t(Tn.CHANNEL_ERROR, new Error(S, { cause: k }));
       }).receive("timeout", () => {
         t == null || t(Tn.TIMED_OUT);
       });
@@ -21817,19 +21817,19 @@ class DN {
     this.worker = (r = t == null ? void 0 : t.worker) !== null && r !== void 0 ? r : !1, this.accessToken = (s = t == null ? void 0 : t.accessToken) !== null && s !== void 0 ? s : null;
     const E = {};
     E.timeout = (c = t == null ? void 0 : t.timeout) !== null && c !== void 0 ? c : QS, E.heartbeatIntervalMs = (u = t == null ? void 0 : t.heartbeatIntervalMs) !== null && u !== void 0 ? u : Eb.HEARTBEAT_INTERVAL, this._disconnectOnEmptyChannelsAfterMs = (d = t == null ? void 0 : t.disconnectOnEmptyChannelsAfterMs) !== null && d !== void 0 ? d : 2 * ((m = t == null ? void 0 : t.heartbeatIntervalMs) !== null && m !== void 0 ? m : Eb.HEARTBEAT_INTERVAL), E.transport = (h = t == null ? void 0 : t.transport) !== null && h !== void 0 ? h : GS.getWebSocketConstructor(), E.params = t == null ? void 0 : t.params, E.logger = t == null ? void 0 : t.logger, E.heartbeatCallback = this._wrapHeartbeatCallback(t == null ? void 0 : t.heartbeatCallback), E.sessionStorage = (g = t == null ? void 0 : t.sessionStorage) !== null && g !== void 0 ? g : jN(), E.reconnectAfterMs = (y = t == null ? void 0 : t.reconnectAfterMs) !== null && y !== void 0 ? y : ((O) => AN[O - 1] || ON);
-    let S, k;
-    const N = (v = t == null ? void 0 : t.vsn) !== null && v !== void 0 ? v : XS;
-    switch (N) {
+    let N, k;
+    const S = (v = t == null ? void 0 : t.vsn) !== null && v !== void 0 ? v : XS;
+    switch (S) {
       case YS:
-        S = (O, R) => R(JSON.stringify(O)), k = (O, R) => R(JSON.parse(O));
+        N = (O, R) => R(JSON.stringify(O)), k = (O, R) => R(JSON.parse(O));
         break;
       case m0:
-        S = this.serializer.encode.bind(this.serializer), k = this.serializer.decode.bind(this.serializer);
+        N = this.serializer.encode.bind(this.serializer), k = this.serializer.decode.bind(this.serializer);
         break;
       default:
         throw new Error(`Unsupported serializer version: ${E.vsn}`);
     }
-    if (E.vsn = N, E.encode = (b = t == null ? void 0 : t.encode) !== null && b !== void 0 ? b : S, E.decode = (w = t == null ? void 0 : t.decode) !== null && w !== void 0 ? w : k, E.beforeReconnect = this._reconnectAuth.bind(this), (t != null && t.logLevel || t != null && t.log_level) && (this.logLevel = t.logLevel || t.log_level, E.params = Object.assign(Object.assign({}, E.params), { log_level: this.logLevel })), this.worker) {
+    if (E.vsn = S, E.encode = (b = t == null ? void 0 : t.encode) !== null && b !== void 0 ? b : N, E.decode = (w = t == null ? void 0 : t.decode) !== null && w !== void 0 ? w : k, E.beforeReconnect = this._reconnectAuth.bind(this), (t != null && t.logLevel || t != null && t.log_level) && (this.logLevel = t.logLevel || t.log_level, E.params = Object.assign(Object.assign({}, E.params), { log_level: this.logLevel })), this.worker) {
       if (typeof window < "u" && !window.Worker)
         throw new Error("Web Worker is not supported");
       this.workerUrl = t == null ? void 0 : t.workerUrl, E.autoSendHeartbeat = !this.worker;
@@ -26155,8 +26155,8 @@ class F2 {
         throw y.error;
       const v = await y.json(), b = (d = y.headers.get("x-total-count")) !== null && d !== void 0 ? d : 0, w = (h = (m = y.headers.get("link")) === null || m === void 0 ? void 0 : m.split(",")) !== null && h !== void 0 ? h : [];
       return w.length > 0 && (w.forEach((E) => {
-        const S = parseInt(E.split(";")[0].split("=")[1].substring(0, 1)), k = JSON.parse(E.split(";")[1].split("=")[1]);
-        g[`${k}Page`] = S;
+        const N = parseInt(E.split(";")[0].split("=")[1].substring(0, 1)), k = JSON.parse(E.split(";")[1].split("=")[1]);
+        g[`${k}Page`] = N;
       }), g.total = parseInt(b)), { data: Object.assign(Object.assign({}, v), g), error: null };
     } catch (g) {
       if (ve(g))
@@ -26493,8 +26493,8 @@ class F2 {
         throw y.error;
       const v = await y.json(), b = (d = y.headers.get("x-total-count")) !== null && d !== void 0 ? d : 0, w = (h = (m = y.headers.get("link")) === null || m === void 0 ? void 0 : m.split(",")) !== null && h !== void 0 ? h : [];
       return w.length > 0 && (w.forEach((E) => {
-        const S = parseInt(E.split(";")[0].split("=")[1].substring(0, 1)), k = JSON.parse(E.split(";")[1].split("=")[1]);
-        g[`${k}Page`] = S;
+        const N = parseInt(E.split(";")[0].split("=")[1].substring(0, 1)), k = JSON.parse(E.split(";")[1].split("=")[1]);
+        g[`${k}Page`] = N;
       }), g.total = parseInt(b)), { data: Object.assign(Object.assign({}, v), g), error: null };
     } catch (g) {
       if (ve(g))
@@ -26788,19 +26788,19 @@ function aT(n) {
 `))
       throw new Error(`@supabase/auth-js: Invalid SIWE message field "statement". Statement must not include '\\n'. Provided value: ${n.statement}`);
   }
-  const w = O0(n.address), E = y ? `${y}://${s}` : s, S = n.statement ? `${n.statement}
+  const w = O0(n.address), E = y ? `${y}://${s}` : s, N = n.statement ? `${n.statement}
 ` : "", k = `${E} wants you to sign in with your Ethereum account:
 ${w}
 
-${S}`;
-  let N = `URI: ${v}
+${N}`;
+  let S = `URI: ${v}
 Version: ${b}
 Chain ID: ${r}${d ? `
 Nonce: ${d}` : ""}
 Issued At: ${u.toISOString()}`;
-  if (c && (N += `
-Expiration Time: ${c.toISOString()}`), m && (N += `
-Not Before: ${m.toISOString()}`), h && (N += `
+  if (c && (S += `
+Expiration Time: ${c.toISOString()}`), m && (S += `
+Not Before: ${m.toISOString()}`), h && (S += `
 Request ID: ${h}`), g) {
     let O = `
 Resources:`;
@@ -26810,10 +26810,10 @@ Resources:`;
       O += `
 - ${R}`;
     }
-    N += O;
+    S += O;
   }
   return `${k}
-${N}`;
+${S}`;
 }
 class _t extends Error {
   constructor({ message: t, code: r, cause: s, name: c }) {
@@ -27900,8 +27900,8 @@ class Ei {
       let d;
       if ("email" in t) {
         const { email: v, password: b, options: w } = t;
-        let E = null, S = null;
-        this.flowType === "pkce" && ([E, S, u] = await this._getCodeChallengeAndMethod()), d = await _e(this.fetch, "POST", `${this.url}/signup`, {
+        let E = null, N = null;
+        this.flowType === "pkce" && ([E, N, u] = await this._getCodeChallengeAndMethod()), d = await _e(this.fetch, "POST", `${this.url}/signup`, {
           headers: this.headers,
           redirectTo: this._maybeAppendFlowIdToRedirect(w == null ? void 0 : w.emailRedirectTo, u),
           body: {
@@ -27910,7 +27910,7 @@ class Ei {
             data: (r = w == null ? void 0 : w.data) !== null && r !== void 0 ? r : {},
             gotrue_meta_security: { captcha_token: w == null ? void 0 : w.captchaToken },
             code_challenge: E,
-            code_challenge_method: S
+            code_challenge_method: N
           },
           xform: Na
         });
@@ -28500,7 +28500,7 @@ class Ei {
     if ("message" in t)
       w = t.message, E = t.signature;
     else {
-      const { chain: S, wallet: k, statement: N, options: O } = t;
+      const { chain: N, wallet: k, statement: S, options: O } = t;
       let R;
       if (Mt())
         if (typeof k == "object")
@@ -28517,14 +28517,14 @@ class Ei {
           throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
         R = k;
       }
-      const K = new URL((r = O == null ? void 0 : O.url) !== null && r !== void 0 ? r : window.location.href), A = await R.request({
+      const Y = new URL((r = O == null ? void 0 : O.url) !== null && r !== void 0 ? r : window.location.href), A = await R.request({
         method: "eth_requestAccounts"
       }).then((ue) => ue).catch(() => {
         throw new Error("@supabase/auth-js: Wallet method eth_requestAccounts is missing or invalid");
       });
       if (!A || A.length === 0)
         throw new Error("@supabase/auth-js: No accounts available. Please ensure the wallet is connected.");
-      const J = O0(A[0]);
+      const B = O0(A[0]);
       let z = (s = O == null ? void 0 : O.signInWithEthereum) === null || s === void 0 ? void 0 : s.chainId;
       if (!z) {
         const ue = await R.request({
@@ -28532,11 +28532,11 @@ class Ei {
         });
         z = eT(ue);
       }
-      const X = {
-        domain: K.host,
-        address: J,
-        statement: N,
-        uri: K.href,
+      const F = {
+        domain: Y.host,
+        address: B,
+        statement: S,
+        uri: Y.href,
         version: "1",
         chainId: z,
         nonce: (c = O == null ? void 0 : O.signInWithEthereum) === null || c === void 0 ? void 0 : c.nonce,
@@ -28546,13 +28546,13 @@ class Ei {
         requestId: (g = O == null ? void 0 : O.signInWithEthereum) === null || g === void 0 ? void 0 : g.requestId,
         resources: (y = O == null ? void 0 : O.signInWithEthereum) === null || y === void 0 ? void 0 : y.resources
       };
-      w = aT(X), E = await R.request({
+      w = aT(F), E = await R.request({
         method: "personal_sign",
-        params: [tT(w), J]
+        params: [tT(w), B]
       });
     }
     try {
-      const { data: S, error: k } = await _e(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
+      const { data: N, error: k } = await _e(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
         headers: this.headers,
         body: Object.assign({
           chain: "ethereum",
@@ -28563,65 +28563,65 @@ class Ei {
       });
       if (k)
         throw k;
-      if (!S || !S.session || !S.user) {
-        const N = new Il();
-        return this._returnResult({ data: { user: null, session: null }, error: N });
-      }
-      return S.session && (await this._saveSession(S.session), await this._notifyAllSubscribers("SIGNED_IN", S.session)), this._returnResult({ data: Object.assign({}, S), error: k });
-    } catch (S) {
-      if (ve(S))
+      if (!N || !N.session || !N.user) {
+        const S = new Il();
         return this._returnResult({ data: { user: null, session: null }, error: S });
-      throw S;
+      }
+      return N.session && (await this._saveSession(N.session), await this._notifyAllSubscribers("SIGNED_IN", N.session)), this._returnResult({ data: Object.assign({}, N), error: k });
+    } catch (N) {
+      if (ve(N))
+        return this._returnResult({ data: { user: null, session: null }, error: N });
+      throw N;
     }
   }
   async signInWithSolana(t) {
     var r, s, c, u, d, m, h, g, y, v, b, w;
-    let E, S;
+    let E, N;
     if ("message" in t)
-      E = t.message, S = t.signature;
+      E = t.message, N = t.signature;
     else {
-      const { chain: k, wallet: N, statement: O, options: R } = t;
-      let K;
+      const { chain: k, wallet: S, statement: O, options: R } = t;
+      let Y;
       if (Mt())
-        if (typeof N == "object")
-          K = N;
+        if (typeof S == "object")
+          Y = S;
         else {
-          const J = window;
-          if ("solana" in J && typeof J.solana == "object" && ("signIn" in J.solana && typeof J.solana.signIn == "function" || "signMessage" in J.solana && typeof J.solana.signMessage == "function"))
-            K = J.solana;
+          const B = window;
+          if ("solana" in B && typeof B.solana == "object" && ("signIn" in B.solana && typeof B.solana.signIn == "function" || "signMessage" in B.solana && typeof B.solana.signMessage == "function"))
+            Y = B.solana;
           else
             throw new Error("@supabase/auth-js: No compatible Solana wallet interface on the window object (window.solana) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'solana', wallet: resolvedUserWallet }) instead.");
         }
       else {
-        if (typeof N != "object" || !(R != null && R.url))
+        if (typeof S != "object" || !(R != null && R.url))
           throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
-        K = N;
+        Y = S;
       }
       const A = new URL((r = R == null ? void 0 : R.url) !== null && r !== void 0 ? r : window.location.href);
-      if ("signIn" in K && K.signIn) {
-        const J = await K.signIn(Object.assign(Object.assign(Object.assign({ issuedAt: (/* @__PURE__ */ new Date()).toISOString() }, R == null ? void 0 : R.signInWithSolana), {
+      if ("signIn" in Y && Y.signIn) {
+        const B = await Y.signIn(Object.assign(Object.assign(Object.assign({ issuedAt: (/* @__PURE__ */ new Date()).toISOString() }, R == null ? void 0 : R.signInWithSolana), {
           // non-overridable properties
           version: "1",
           domain: A.host,
           uri: A.href
         }), O ? { statement: O } : null));
         let z;
-        if (Array.isArray(J) && J[0] && typeof J[0] == "object")
-          z = J[0];
-        else if (J && typeof J == "object" && "signedMessage" in J && "signature" in J)
-          z = J;
+        if (Array.isArray(B) && B[0] && typeof B[0] == "object")
+          z = B[0];
+        else if (B && typeof B == "object" && "signedMessage" in B && "signature" in B)
+          z = B;
         else
           throw new Error("@supabase/auth-js: Wallet method signIn() returned unrecognized value");
         if ("signedMessage" in z && "signature" in z && (typeof z.signedMessage == "string" || z.signedMessage instanceof Uint8Array) && z.signature instanceof Uint8Array)
-          E = typeof z.signedMessage == "string" ? z.signedMessage : new TextDecoder().decode(z.signedMessage), S = z.signature;
+          E = typeof z.signedMessage == "string" ? z.signedMessage : new TextDecoder().decode(z.signedMessage), N = z.signature;
         else
           throw new Error("@supabase/auth-js: Wallet method signIn() API returned object without signedMessage and signature fields");
       } else {
-        if (!("signMessage" in K) || typeof K.signMessage != "function" || !("publicKey" in K) || typeof K != "object" || !K.publicKey || !("toBase58" in K.publicKey) || typeof K.publicKey.toBase58 != "function")
+        if (!("signMessage" in Y) || typeof Y.signMessage != "function" || !("publicKey" in Y) || typeof Y != "object" || !Y.publicKey || !("toBase58" in Y.publicKey) || typeof Y.publicKey.toBase58 != "function")
           throw new Error("@supabase/auth-js: Wallet does not have a compatible signMessage() and publicKey.toBase58() API");
         E = [
           `${A.host} wants you to sign in with your Solana account:`,
-          K.publicKey.toBase58(),
+          Y.publicKey.toBase58(),
           ...O ? ["", O, ""] : [""],
           "Version: 1",
           `URI: ${A.href}`,
@@ -28637,25 +28637,25 @@ class Ei {
           ] : []
         ].join(`
 `);
-        const J = await K.signMessage(new TextEncoder().encode(E), "utf8");
-        if (!J || !(J instanceof Uint8Array))
+        const B = await Y.signMessage(new TextEncoder().encode(E), "utf8");
+        if (!B || !(B instanceof Uint8Array))
           throw new Error("@supabase/auth-js: Wallet signMessage() API returned an recognized value");
-        S = J;
+        N = B;
       }
     }
     try {
-      const { data: k, error: N } = await _e(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
+      const { data: k, error: S } = await _e(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
         headers: this.headers,
-        body: Object.assign({ chain: "solana", message: E, signature: Vr(S) }, !((b = t.options) === null || b === void 0) && b.captchaToken ? { gotrue_meta_security: { captcha_token: (w = t.options) === null || w === void 0 ? void 0 : w.captchaToken } } : null),
+        body: Object.assign({ chain: "solana", message: E, signature: Vr(N) }, !((b = t.options) === null || b === void 0) && b.captchaToken ? { gotrue_meta_security: { captcha_token: (w = t.options) === null || w === void 0 ? void 0 : w.captchaToken } } : null),
         xform: Na
       });
-      if (N)
-        throw N;
+      if (S)
+        throw S;
       if (!k || !k.session || !k.user) {
         const O = new Il();
         return this._returnResult({ data: { user: null, session: null }, error: O });
       }
-      return k.session && (await this._saveSession(k.session), await this._notifyAllSubscribers("SIGNED_IN", k.session)), this._returnResult({ data: Object.assign({}, k), error: N });
+      return k.session && (await this._saveSession(k.session), await this._notifyAllSubscribers("SIGNED_IN", k.session)), this._returnResult({ data: Object.assign({}, k), error: S });
     } catch (k) {
       if (ve(k))
         return this._returnResult({ data: { user: null, session: null }, error: k });
@@ -30072,11 +30072,11 @@ class Ei {
       if (r === "pkce") {
         if (this._debug("#_initialize()", "begin", "is PKCE flow", !0), !t.code)
           throw new Tb("No code detected.");
-        const { data: R, error: K } = await this._exchangeCodeForSession(t.code, {
+        const { data: R, error: Y } = await this._exchangeCodeForSession(t.code, {
           flowId: t[Gr]
         });
-        if (K)
-          throw K;
+        if (Y)
+          throw Y;
         const A = new URL(window.location.href);
         return A.searchParams.delete("code"), A.searchParams.delete(Gr), window.history.replaceState(window.history.state, "", A.toString()), {
           data: { session: R.session, redirectType: (s = R.redirectType) !== null && s !== void 0 ? s : null },
@@ -30091,11 +30091,11 @@ class Ei {
       g && (w = parseInt(g));
       const E = w - v;
       E * 1e3 <= An && console.warn(`@supabase/gotrue-js: Session as retrieved from URL expires in ${E}s, should have been closer to ${b}s`);
-      const S = w - b;
-      v - S >= 120 ? console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued over 120s ago, URL could be stale", S, w, v) : v - S < 0 && console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued in the future? Check the device clock for skew", S, w, v);
-      const { data: k, error: N } = await this._getUser(d);
-      if (N)
-        throw N;
+      const N = w - b;
+      v - N >= 120 ? console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued over 120s ago, URL could be stale", N, w, v) : v - N < 0 && console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued in the future? Check the device clock for skew", N, w, v);
+      const { data: k, error: S } = await this._getUser(d);
+      if (S)
+        throw S;
       const O = {
         provider_token: c,
         provider_refresh_token: u,
@@ -30580,13 +30580,13 @@ class Ei {
         const { data: b, error: w } = d;
         if (w)
           throw w;
-        const { url: E, flowId: S } = await this._getUrlForProvider(`${this.url}/user/identities/authorize`, t.provider, {
+        const { url: E, flowId: N } = await this._getUrlForProvider(`${this.url}/user/identities/authorize`, t.provider, {
           redirectTo: (m = t.options) === null || m === void 0 ? void 0 : m.redirectTo,
           scopes: (h = t.options) === null || h === void 0 ? void 0 : h.scopes,
           queryParams: (g = t.options) === null || g === void 0 ? void 0 : g.queryParams,
           skipBrowserRedirect: !0
         });
-        return s = S, await _e(this.fetch, "GET", E, {
+        return s = N, await _e(this.fetch, "GET", E, {
           headers: this.headers,
           jwt: (v = (y = b.session) === null || y === void 0 ? void 0 : y.access_token) !== null && v !== void 0 ? v : void 0
         });
@@ -31310,13 +31310,13 @@ class Ei {
         const { payload: w } = pc(t);
         let E = null;
         w.aal && (E = w.aal);
-        let S = E;
-        const { data: { user: k }, error: N } = await this.getUser(t);
-        if (N)
-          return this._returnResult({ data: null, error: N });
-        ((s = (r = k == null ? void 0 : k.factors) === null || r === void 0 ? void 0 : r.filter((K) => K.status === "verified")) !== null && s !== void 0 ? s : []).length > 0 && (S = "aal2");
+        let N = E;
+        const { data: { user: k }, error: S } = await this.getUser(t);
+        if (S)
+          return this._returnResult({ data: null, error: S });
+        ((s = (r = k == null ? void 0 : k.factors) === null || r === void 0 ? void 0 : r.filter((Y) => Y.status === "verified")) !== null && s !== void 0 ? s : []).length > 0 && (N = "aal2");
         const R = w.amr || [];
-        return { data: { currentLevel: E, nextLevel: S, currentAuthenticationMethods: R }, error: null };
+        return { data: { currentLevel: E, nextLevel: N, currentAuthenticationMethods: R }, error: null };
       } catch (w) {
         if (ve(w))
           return this._returnResult({ data: null, error: w });
@@ -32122,16 +32122,16 @@ const TT = (n) => n ? (...t) => n(...t) : (...t) => fetch(...t), CT = () => Head
   const d = TT(s), m = CT(), h = (c == null ? void 0 : c.enabled) === !0, g = (c == null ? void 0 : c.respectSamplingDecision) !== !1, y = h ? xT(t) : null, v = !(u != null && u.omitApiKeyAsBearer && z0(n));
   return async (b, w) => {
     const E = await r();
-    let S = new m(w == null ? void 0 : w.headers);
-    if (S.has("apikey") || S.set("apikey", n), !S.has("Authorization")) {
+    let N = new m(w == null ? void 0 : w.headers);
+    if (N.has("apikey") || N.set("apikey", n), !N.has("Authorization")) {
       const k = E ?? (v ? n : null);
-      k && S.set("Authorization", `Bearer ${k}`);
+      k && N.set("Authorization", `Bearer ${k}`);
     }
     if (y) {
       const k = RT(b, y, g);
-      k && (k.traceparent && !S.has("traceparent") && S.set("traceparent", k.traceparent), k.tracestate && !S.has("tracestate") && S.set("tracestate", k.tracestate), k.baggage && !S.has("baggage") && S.set("baggage", k.baggage));
+      k && (k.traceparent && !N.has("traceparent") && N.set("traceparent", k.traceparent), k.tracestate && !N.has("tracestate") && N.set("tracestate", k.tracestate), k.baggage && !N.has("baggage") && N.set("baggage", k.baggage));
     }
-    return d(b, dt(dt({}, w), {}, { headers: S }));
+    return d(b, dt(dt({}, w), {}, { headers: N }));
   };
 };
 let Qb = !1, Jb = !1;
@@ -32168,15 +32168,15 @@ function $T(n) {
 }
 function DT(n, t) {
   var r, s, c, u, d, m;
-  const { db: h, auth: g, realtime: y, global: v } = n, { db: b, auth: w, realtime: E, global: S } = t, k = Fb(n.tracePropagation), N = Fb(t.tracePropagation), O = {
+  const { db: h, auth: g, realtime: y, global: v } = n, { db: b, auth: w, realtime: E, global: N } = t, k = Fb(n.tracePropagation), S = Fb(t.tracePropagation), O = {
     db: dt(dt({}, b), h),
     auth: dt(dt({}, w), g),
     realtime: dt(dt({}, E), y),
     storage: {},
-    global: dt(dt(dt({}, S), v), {}, { headers: dt(dt({}, (r = S == null ? void 0 : S.headers) !== null && r !== void 0 ? r : {}), (s = v == null ? void 0 : v.headers) !== null && s !== void 0 ? s : {}) }),
+    global: dt(dt(dt({}, N), v), {}, { headers: dt(dt({}, (r = N == null ? void 0 : N.headers) !== null && r !== void 0 ? r : {}), (s = v == null ? void 0 : v.headers) !== null && s !== void 0 ? s : {}) }),
     tracePropagation: {
-      enabled: (c = (u = k == null ? void 0 : k.enabled) !== null && u !== void 0 ? u : N == null ? void 0 : N.enabled) !== null && c !== void 0 ? c : !1,
-      respectSamplingDecision: (d = (m = k == null ? void 0 : k.respectSamplingDecision) !== null && m !== void 0 ? m : N == null ? void 0 : N.respectSamplingDecision) !== null && d !== void 0 ? d : !0
+      enabled: (c = (u = k == null ? void 0 : k.enabled) !== null && u !== void 0 ? u : S == null ? void 0 : S.enabled) !== null && c !== void 0 ? c : !1,
+      respectSamplingDecision: (d = (m = k == null ? void 0 : k.respectSamplingDecision) !== null && m !== void 0 ? m : S == null ? void 0 : S.respectSamplingDecision) !== null && d !== void 0 ? d : !0
     },
     accessToken: async () => ""
   };
@@ -32594,13 +32594,13 @@ var UT = class extends fT {
     return (t = await n._getSessionToken()) !== null && t !== void 0 ? t : n.supabaseKey;
   }
   _initSupabaseAuthClient({ autoRefreshToken: n, persistSession: t, detectSessionInUrl: r, storage: s, userStorage: c, storageKey: u, flowType: d, lock: m, debug: h, throwOnError: g, experimental: y, lockAcquireTimeout: v, skipAutoInitialize: b }, w, E) {
-    const S = {
+    const N = {
       Authorization: `Bearer ${this.supabaseKey}`,
       apikey: `${this.supabaseKey}`
     };
     return new UT({
       url: this.authUrl.href,
-      headers: dt(dt({}, S), w),
+      headers: dt(dt({}, N), w),
       storageKey: u,
       autoRefreshToken: n,
       persistSession: t,
@@ -32871,18 +32871,18 @@ function JT() {
 }
 const a_ = 500;
 function rm(n) {
-  const { api: t, projectId: r, place: s, positions: c, brigades: u, lastBrigade: d, onBrigade: m, onClose: h, onDone: g, requireApproval: y } = n, [v, b] = i.useState("remainder"), [w, E] = i.useState("50"), [S, k] = i.useState({}), [N, O] = i.useState({}), [R, K] = i.useState(u.some((T) => T.id === d) ? d : ""), [A, J] = i.useState(ha()), [z, X] = i.useState(""), [ue, B] = i.useState(""), [j, re] = i.useState(""), [W, ae] = i.useState(!1), pe = i.useMemo(() => c.map((T) => ({ id: T.position_id, unit: T.unit_code, plan: T.plan_qty, fact: T.fact_qty })), [c]), ne = dr(w);
-  function de(T, G) {
-    const C = Zk(pe, T === "remainder" ? { kind: "remainder" } : { kind: "percent", pct: G ?? 0 }), Y = {};
-    for (const le of pe) Y[le.id] = C[le.id] ? String(C[le.id]).replace(".", ",") : "";
-    k(Y);
+  const { api: t, projectId: r, place: s, positions: c, brigades: u, lastBrigade: d, onBrigade: m, onClose: h, onDone: g, requireApproval: y } = n, [v, b] = i.useState("remainder"), [w, E] = i.useState("50"), [N, k] = i.useState({}), [S, O] = i.useState({}), [R, Y] = i.useState(u.some((T) => T.id === d) ? d : ""), [A, B] = i.useState(ha()), [z, F] = i.useState(""), [ue, I] = i.useState(""), [j, re] = i.useState(""), [W, ae] = i.useState(!1), pe = i.useMemo(() => c.map((T) => ({ id: T.position_id, unit: T.unit_code, plan: T.plan_qty, fact: T.fact_qty })), [c]), ne = dr(w);
+  function de(T, V) {
+    const C = Zk(pe, T === "remainder" ? { kind: "remainder" } : { kind: "percent", pct: V ?? 0 }), X = {};
+    for (const le of pe) X[le.id] = C[le.id] ? String(C[le.id]).replace(".", ",") : "";
+    k(X);
   }
   i.useEffect(() => {
     de("remainder", null);
   }, [pe]);
   const me = c.map((T) => {
-    const G = S[T.position_id] ?? "", C = dr(G);
-    return { p: T, raw: G, qty: C, on: !N[T.position_id], rem: mr(T.plan_qty, T.fact_qty) };
+    const V = N[T.position_id] ?? "", C = dr(V);
+    return { p: T, raw: V, qty: C, on: !S[T.position_id], rem: mr(T.plan_qty, T.fact_qty) };
   }), U = me.filter((T) => T.on && T.qty !== null && T.qty > 0), L = Wk(U.map((T) => ({ unit: T.p.unit_code, qty: T.qty })));
   async function q() {
     if (W) return;
@@ -32903,23 +32903,23 @@ function rm(n) {
       re("Нет строк для отправки: все объёмы нулевые или сняты");
       return;
     }
-    const G = z.trim() === "" ? null : Number(z);
-    if (G !== null && (!Number.isInteger(G) || G < 0)) {
+    const V = z.trim() === "" ? null : Number(z);
+    if (V !== null && (!Number.isInteger(V) || V < 0)) {
       re("Людей — целое число");
       return;
     }
     ae(!0), re(""), m(R);
     const C = U.map((se) => ({ position_id: se.p.position_id, qty: se.qty }));
-    let Y = 0, le = 0;
+    let X = 0, le = 0;
     for (let se = 0; se < C.length; se += a_) {
-      const be = await t.addBatch({ projectId: r, brigadeId: R, date: A, workers: G, note: ue.trim(), items: C.slice(se, se + a_), ...y ? { requireApproval: !0 } : {} });
+      const be = await t.addBatch({ projectId: r, brigadeId: R, date: A, workers: V, note: ue.trim(), items: C.slice(se, se + a_), ...y ? { requireApproval: !0 } : {} });
       if (!be.ok) {
-        ae(!1), re(se ? `Записано строк: ${Y + le} из ${C.length}; остальные не записаны: ${be.message}` : be.message), se && g(`Записано строк: ${Y + le} из ${C.length} (часть не записана — см. ошибку)`, !0);
+        ae(!1), re(se ? `Записано строк: ${X + le} из ${C.length}; остальные не записаны: ${be.message}` : be.message), se && g(`Записано строк: ${X + le} из ${C.length} (часть не записана — см. ошибку)`, !0);
         return;
       }
-      Y += be.value.accepted, le += be.value.pending;
+      X += be.value.accepted, le += be.value.pending;
     }
-    ae(!1), g(`Записано строк: ${Y + le}` + (le ? `, из них ждут подтверждения РП: ${le}` : ""));
+    ae(!1), g(`Записано строк: ${X + le}` + (le ? `, из них ждут подтверждения РП: ${le}` : ""));
   }
   return i.createElement(
     "div",
@@ -32951,8 +32951,8 @@ function rm(n) {
           "aria-label": "Процент от плана",
           "data-testid": "ft-pct",
           onChange: (T) => {
-            const G = T.target.value;
-            E(G), b("percent"), de("percent", dr(G));
+            const V = T.target.value;
+            E(V), b("percent"), de("percent", dr(V));
           }
         }),
         i.createElement("span", { className: "pf-muted" }, "% от плана")
@@ -32967,14 +32967,14 @@ function rm(n) {
         "Бригада",
         i.createElement(
           "select",
-          { className: "pj-input", value: R, "data-testid": "ft-close-brigade", onChange: (T) => K(T.target.value) },
+          { className: "pj-input", value: R, "data-testid": "ft-close-brigade", onChange: (T) => Y(T.target.value) },
           i.createElement("option", { value: "" }, "— выберите —"),
           u.map((T) => i.createElement("option", { key: T.id, value: T.id }, T.name))
         )
       ),
-      i.createElement("label", { className: "pf-field" }, "Дата", i.createElement("input", { type: "date", className: "pj-input", value: A, max: ha(), "data-testid": "ft-close-date", onChange: (T) => J(T.target.value) })),
-      i.createElement("label", { className: "pf-field" }, "Людей", i.createElement("input", { type: "number", min: 0, className: "pj-input pf-num", value: z, onChange: (T) => X(T.target.value) })),
-      i.createElement("label", { className: "pf-field pj-grow" }, "Примечание", i.createElement("input", { type: "text", className: "pj-input", maxLength: 300, value: ue, onChange: (T) => B(T.target.value) }))
+      i.createElement("label", { className: "pf-field" }, "Дата", i.createElement("input", { type: "date", className: "pj-input", value: A, max: ha(), "data-testid": "ft-close-date", onChange: (T) => B(T.target.value) })),
+      i.createElement("label", { className: "pf-field" }, "Людей", i.createElement("input", { type: "number", min: 0, className: "pj-input pf-num", value: z, onChange: (T) => F(T.target.value) })),
+      i.createElement("label", { className: "pf-field pj-grow" }, "Примечание", i.createElement("input", { type: "text", className: "pj-input", maxLength: 300, value: ue, onChange: (T) => I(T.target.value) }))
     ),
     i.createElement(
       "div",
@@ -32985,7 +32985,7 @@ function rm(n) {
         i.createElement(
           "label",
           { className: "pr-check ft-close-name" },
-          i.createElement("input", { type: "checkbox", checked: T.on, "data-testid": "ft-close-on", onChange: () => O({ ...N, [T.p.position_id]: T.on }) }),
+          i.createElement("input", { type: "checkbox", checked: T.on, "data-testid": "ft-close-on", onChange: () => O({ ...S, [T.p.position_id]: T.on }) }),
           i.createElement("span", null, i.createElement("b", null, T.p.work_name), i.createElement("span", { className: "pf-muted ft-place" }, ` ${T.p.location_path}`))
         ),
         i.createElement("span", { className: "pf-muted ft-close-nums" }, `факт ${Ee(T.p.fact_qty)} из ${Ee(T.p.plan_qty)} ${T.p.unit_code} · остаток ${Ee(T.rem)}`),
@@ -33000,7 +33000,7 @@ function rm(n) {
             disabled: !T.on,
             "aria-label": `Объём: ${T.p.work_name}`,
             "data-testid": "ft-close-qty",
-            onChange: (G) => k({ ...S, [T.p.position_id]: G.target.value })
+            onChange: (V) => k({ ...N, [T.p.position_id]: V.target.value })
           }),
           i.createElement("span", { className: "pf-muted" }, T.p.unit_code),
           T.on && T.qty !== null && T.p.fact_qty + T.qty > T.p.plan_qty + 1e-9 ? i.createElement("span", { className: "ft-warn" }, "сверх плана") : null
@@ -33012,7 +33012,7 @@ function rm(n) {
       { className: "ft-total", "data-testid": "ft-close-total" },
       "К отправке: ",
       `${U.length} из ${me.length} строк`,
-      Object.keys(L).length ? " · " + Object.entries(L).map(([T, G]) => `${Ee(G)} ${T}`).join(", ") : ""
+      Object.keys(L).length ? " · " + Object.entries(L).map(([T, V]) => `${Ee(V)} ${T}`).join(", ") : ""
     ),
     j ? i.createElement("div", { className: "pf-error", role: "alert" }, j) : null,
     i.createElement(
@@ -33039,7 +33039,7 @@ const FT = { accepted: "Принято", pending_approval: "Ждёт РП", reje
   }
 };
 function lm(n) {
-  const { api: t, pos: r, me: s, canApprove: c, canCreate: u, onClose: d, onChanged: m } = n, [h, g] = i.useState(null), [y, v] = i.useState(""), [b, w] = i.useState(""), [E, S] = i.useState(!1), [k, N] = i.useState("");
+  const { api: t, pos: r, me: s, canApprove: c, canCreate: u, onClose: d, onChanged: m } = n, [h, g] = i.useState(null), [y, v] = i.useState(""), [b, w] = i.useState(""), [E, N] = i.useState(!1), [k, S] = i.useState("");
   async function O() {
     const A = await t.history(r.position_id);
     A.ok ? g(A.value) : (g([]), w(A.message));
@@ -33047,11 +33047,11 @@ function lm(n) {
   i.useEffect(() => {
     O();
   }, [r.position_id]);
-  const R = (A) => (A.status === "accepted" || A.status === "pending_approval") && !(h || []).some((J) => J.corrects_id === A.id && (J.status === "accepted" || J.status === "pending_approval")) && (c || u && A.created_by_email === s);
-  async function K(A, J, z) {
+  const R = (A) => (A.status === "accepted" || A.status === "pending_approval") && !(h || []).some((B) => B.corrects_id === A.id && (B.status === "accepted" || B.status === "pending_approval")) && (c || u && A.created_by_email === s);
+  async function Y(A, B, z) {
     if (A.preventDefault(), E) return;
-    const X = A.currentTarget.closest("form"), ue = X.elements.namedItem("reason").value.trim(), B = z ? 0 : dr(X.elements.namedItem("qty").value);
-    if (B === null || !z && B <= 0) {
+    const F = A.currentTarget.closest("form"), ue = F.elements.namedItem("reason").value.trim(), I = z ? 0 : dr(F.elements.namedItem("qty").value);
+    if (I === null || !z && I <= 0) {
       w("Введите объём больше нуля или нажмите «Отменить запись»");
       return;
     }
@@ -33059,13 +33059,13 @@ function lm(n) {
       w("Укажите причину исправления");
       return;
     }
-    S(!0), w(""), N("");
-    const j = await t.correct(J.id, B, ue);
-    if (S(!1), !j.ok) {
+    N(!0), w(""), S("");
+    const j = await t.correct(B.id, I, ue);
+    if (N(!1), !j.ok) {
       w(j.message);
       return;
     }
-    v(""), N(z ? "Запись отменена, она осталась в истории" : j.value.status === "pending_approval" ? "Исправление больше допуска — ждёт подтверждения РП" : "Исправлено, прежняя запись осталась в истории"), await O(), m();
+    v(""), S(z ? "Запись отменена, она осталась в истории" : j.value.status === "pending_approval" ? "Исправление больше допуска — ждёт подтверждения РП" : "Исправлено, прежняя запись осталась в истории"), await O(), m();
   }
   return i.createElement(
     "div",
@@ -33100,8 +33100,8 @@ function lm(n) {
       A.status === "rejected" ? i.createElement("div", { className: "ft-hmeta ft-bad" }, `Отклонено${A.decided_by_email ? ` (${A.decided_by_email})` : ""}: ${A.decision_note || ""}`) : null,
       R(A) ? y === A.id ? i.createElement(
         "form",
-        { className: "ft-edit", onSubmit: (J) => {
-          K(J, A, !1);
+        { className: "ft-edit", onSubmit: (B) => {
+          Y(B, A, !1);
         }, "data-testid": "ft-correct-form" },
         i.createElement("label", { className: "pf-field" }, "Новый объём", i.createElement("input", { name: "qty", type: "text", inputMode: "decimal", className: "pj-input pf-num", defaultValue: String(A.qty).replace(".", ",") })),
         i.createElement("label", { className: "pf-field pj-grow" }, "Причина", i.createElement("input", { name: "reason", type: "text", className: "pj-input", maxLength: 300 })),
@@ -33109,8 +33109,8 @@ function lm(n) {
           "span",
           { className: "pj-actions" },
           i.createElement("button", { type: "submit", className: "pf-btn", disabled: E, "data-testid": "ft-correct-save" }, "Исправить"),
-          i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: E, "data-testid": "ft-correct-cancel", onClick: (J) => {
-            K(J, A, !0);
+          i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: E, "data-testid": "ft-correct-cancel", onClick: (B) => {
+            Y(B, A, !0);
           } }, "Отменить запись"),
           i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", onClick: () => v("") }, "Назад")
         )
@@ -33310,26 +33310,26 @@ function nC(n) {
 }
 function rC(n) {
   const { api: t, projectId: r } = n, [s, c] = i.useState(null), [u, d] = i.useState(""), [m, h] = i.useState(() => Ni(Bc(window.location.hash))), [g, y] = i.useState(/* @__PURE__ */ new Set()), [v, b] = i.useState(""), [w, E] = i.useState(null);
-  async function S() {
+  async function N() {
     const A = await t.pending(r);
     if (!A.ok) {
       c([]), d(A.message);
       return;
     }
-    const J = A.value.map(eC);
-    d(""), c(J), y((z) => new Set(J.filter((X) => z.has(X.id)).map((X) => X.id)));
+    const B = A.value.map(eC);
+    d(""), c(B), y((z) => new Set(B.filter((F) => z.has(F.id)).map((F) => F.id)));
   }
   i.useEffect(() => {
-    c(null), y(/* @__PURE__ */ new Set()), b(""), E(null), S();
+    c(null), y(/* @__PURE__ */ new Set()), b(""), E(null), N();
   }, [r]);
   const k = (A) => {
     h(A), Ic(n_, A);
-  }, N = async (A, J) => {
+  }, S = async (A, B) => {
     var z;
-    E({ text: A, bad: J }), J || y(/* @__PURE__ */ new Set()), await S(), (z = n.onChanged) == null || z.call(n);
+    E({ text: A, bad: B }), B || y(/* @__PURE__ */ new Set()), await N(), (z = n.onChanged) == null || z.call(n);
   }, O = i.useMemo(() => Hc(s || [], { filters: l_, columns: r_, state: m, groupBy: s_ }), [s, m]);
   if (s === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка очереди…");
-  const R = v ? O.findIndex((A) => A.id === v) : -1, K = R >= 0 ? O[R] : null;
+  const R = v ? O.findIndex((A) => A.id === v) : -1, Y = R >= 0 ? O[R] : null;
   return i.createElement(
     "div",
     { className: "pj-tab vr-tab fp-registry", "data-testid": "fp-registry" },
@@ -33348,24 +33348,24 @@ function rC(n) {
       onSelect: y,
       onOpen: (A) => b(A.id),
       openKey: v,
-      actions: (A) => i.createElement(aC, { api: t, projectId: r, rows: A, onDone: (J, z) => {
-        N(J, z);
+      actions: (A) => i.createElement(aC, { api: t, projectId: r, rows: A, onDone: (B, z) => {
+        S(B, z);
       } }),
       empty: "Нет записей, ожидающих подтверждения.",
       views: { registry: "fact-pending", company: n.companyId, user: n.user },
       linkBase: n_
     }),
-    K ? i.createElement(nC, {
-      key: K.id,
+    Y ? i.createElement(nC, {
+      key: Y.id,
       api: t,
-      row: K,
+      row: Y,
       index: R,
       total: O.length,
       onPrev: () => b(O[Math.max(0, R - 1)].id),
       onNext: () => b(O[Math.min(O.length - 1, R + 1)].id),
       onClose: () => b(""),
       onDecided: (A) => {
-        b(""), N(A, !1);
+        b(""), S(A, !1);
       }
     }) : null
   );
@@ -33527,16 +33527,16 @@ function uC(n) {
 }
 function dC(n) {
   const { api: t, projectId: r } = n, s = n.save || Qp, c = n.today || ha(), [u, d] = i.useState(() => {
-    const B = o_(c, -29), j = Si(window.location.hash, "from");
-    return /^\d{4}-\d{2}-\d{2}$/.test(j) && j < B ? j : B;
-  }), [m, h] = i.useState(c), [g, y] = i.useState(null), [v, b] = i.useState(""), [w, E] = i.useState(() => Ni(Bc(window.location.hash))), [S, k] = i.useState(/* @__PURE__ */ new Set()), [N, O] = i.useState("");
-  async function R(B, j) {
-    if (B && j && B > j) {
+    const I = o_(c, -29), j = Si(window.location.hash, "from");
+    return /^\d{4}-\d{2}-\d{2}$/.test(j) && j < I ? j : I;
+  }), [m, h] = i.useState(c), [g, y] = i.useState(null), [v, b] = i.useState(""), [w, E] = i.useState(() => Ni(Bc(window.location.hash))), [N, k] = i.useState(/* @__PURE__ */ new Set()), [S, O] = i.useState("");
+  async function R(I, j) {
+    if (I && j && I > j) {
       b("Начало периода позже конца");
       return;
     }
     y(null), b("");
-    const re = await t.journal(r, B || null, j || null, Ff);
+    const re = await t.journal(r, I || null, j || null, Ff);
     if (!re.ok) {
       y([]), b(re.message);
       return;
@@ -33547,10 +33547,10 @@ function dC(n) {
   i.useEffect(() => {
     k(/* @__PURE__ */ new Set()), O(""), R(u, m);
   }, [r]);
-  const K = (B) => {
-    E(B), Ic(i_, B);
-  }, A = i.useMemo(() => Hc(g || [], { filters: u_, columns: Zf, state: w, groupBy: d_ }), [g, w]), J = Zf.filter((B) => B.fixed || (w.cols ? w.cols.includes(B.id) : !B.hidden)), z = N ? A.findIndex((B) => B.id === N) : -1, X = z >= 0 ? A[z] : null, ue = (B) => {
-    const j = o_(c, -(B - 1));
+  const Y = (I) => {
+    E(I), Ic(i_, I);
+  }, A = i.useMemo(() => Hc(g || [], { filters: u_, columns: Zf, state: w, groupBy: d_ }), [g, w]), B = Zf.filter((I) => I.fixed || (w.cols ? w.cols.includes(I.id) : !I.hidden)), z = S ? A.findIndex((I) => I.id === S) : -1, F = z >= 0 ? A[z] : null, ue = (I) => {
+    const j = o_(c, -(I - 1));
     d(j), h(c), R(j, c);
   };
   return i.createElement(
@@ -33560,12 +33560,12 @@ function dC(n) {
       "div",
       { className: "fj-period", role: "group", "aria-label": "Период по дате работ", "data-testid": "fj-period" },
       // P2-0041: период применяется сразу (кнопки «Показать» нет)
-      i.createElement("label", { className: "pf-field" }, "С", i.createElement("input", { type: "date", className: "pj-input", value: u, max: m || void 0, "data-testid": "fj-from", onChange: (B) => {
-        const j = B.target.value;
+      i.createElement("label", { className: "pf-field" }, "С", i.createElement("input", { type: "date", className: "pj-input", value: u, max: m || void 0, "data-testid": "fj-from", onChange: (I) => {
+        const j = I.target.value;
         d(j), R(j, m);
       } })),
-      i.createElement("label", { className: "pf-field" }, "По", i.createElement("input", { type: "date", className: "pj-input", value: m, min: u || void 0, "data-testid": "fj-to", onChange: (B) => {
-        const j = B.target.value;
+      i.createElement("label", { className: "pf-field" }, "По", i.createElement("input", { type: "date", className: "pj-input", value: m, min: u || void 0, "data-testid": "fj-to", onChange: (I) => {
+        const j = I.target.value;
         h(j), R(u, j);
       } })),
       i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "fj-7", onClick: () => ue(7) }, "7 дней"),
@@ -33575,33 +33575,33 @@ function dC(n) {
     g && g.length >= Ff ? i.createElement("div", { className: "pj-notice", role: "status", "data-testid": "fj-limit" }, `Показаны последние ${Ff.toLocaleString("ru-RU")} записей периода — сузьте период, чтобы увидеть остальные.`) : null,
     g === null ? i.createElement("div", { className: "pf-muted" }, "Загрузка журнала…") : i.createElement(Pc, {
       tools: i.createElement(Gp, { testId: "fj-export-all", count: A.length, onClick: () => {
-        f_(J, A, s);
+        f_(B, A, s);
       } }),
       testId: "fj-table",
       rows: g,
-      rowKey: (B) => B.id,
+      rowKey: (I) => I.id,
       columns: Zf,
       filters: u_,
       state: w,
-      onState: K,
+      onState: Y,
       groupBy: d_,
-      toneOf: (B) => qa[B.status].tone,
+      toneOf: (I) => qa[I.status].tone,
       toneLabel: cC,
-      selected: S,
+      selected: N,
       onSelect: k,
-      onOpen: (B) => O(B.id),
-      openKey: N,
-      actions: (B) => i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "fj-export-selected", onClick: () => {
-        f_(J, B, s);
+      onOpen: (I) => O(I.id),
+      openKey: S,
+      actions: (I) => i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "fj-export-selected", onClick: () => {
+        f_(B, I, s);
       } }, "Выгрузить в Excel"),
       empty: "За выбранный период записей факта нет.",
       views: { registry: "fact-journal", company: n.companyId, user: n.user },
       linkBase: i_
     }),
-    X ? i.createElement(uC, {
-      key: X.id,
+    F ? i.createElement(uC, {
+      key: F.id,
       api: t,
-      row: X,
+      row: F,
       index: z,
       total: A.length,
       onPrev: () => O(A[Math.max(0, z - 1)].id),
@@ -33617,9 +33617,9 @@ const fC = `
 @media (max-width:760px){.fj-period .pf-field{flex:1 1 calc(50% - 8px);min-width:0}.fj-period .pf-btn{flex:1 1 auto}}
 `, pC = [25, 50, 75, 100], mC = (n, t, r) => mr(Vt(n * r / 100), t), hC = (n) => n > 0 && n < 10 ? 0.1 : 1;
 function I0(n) {
-  const { api: t, pos: r, brigades: s, lastBrigade: c, onBrigade: u, onCancel: d, onSaved: m, quick: h } = n, [g, y] = i.useState(""), [v, b] = i.useState(s.some((j) => j.id === c) ? c : ""), [w, E] = i.useState(""), [S, k] = i.useState(!1), [N, O] = i.useState(!1), R = dr(g), K = R !== null && R > 0 ? as(r.fact_qty + R, r.plan_qty) : null, A = R !== null && r.fact_qty + R > r.plan_qty + 1e-9, J = (j) => y(j > 0 ? String(Vt(j)).replace(".", ",") : "");
+  const { api: t, pos: r, brigades: s, lastBrigade: c, onBrigade: u, onCancel: d, onSaved: m, quick: h } = n, [g, y] = i.useState(""), [v, b] = i.useState(s.some((j) => j.id === c) ? c : ""), [w, E] = i.useState(""), [N, k] = i.useState(!1), [S, O] = i.useState(!1), R = dr(g), Y = R !== null && R > 0 ? as(r.fact_qty + R, r.plan_qty) : null, A = R !== null && r.fact_qty + R > r.plan_qty + 1e-9, B = (j) => y(j > 0 ? String(Vt(j)).replace(".", ",") : "");
   async function z(j) {
-    if (j.preventDefault(), S) return;
+    if (j.preventDefault(), N) return;
     const re = j.currentTarget, W = (U) => re.elements.namedItem(U).value.trim();
     if (R === null || R <= 0) {
       E("Введите объём больше нуля");
@@ -33629,8 +33629,8 @@ function I0(n) {
       E("Выберите бригаду");
       return;
     }
-    const ae = W("date"), pe = N ? W("date_from") : "";
-    if (N) {
+    const ae = W("date"), pe = S ? W("date_from") : "";
+    if (S) {
       const U = tS(pe, ae);
       if (U) {
         E(U);
@@ -33655,14 +33655,14 @@ function I0(n) {
       return;
     }
     k(!0), E(""), u(v);
-    const me = await t.add(r.position_id, { brigadeId: v, date: ae, qty: R, workers: ne, manHours: de, note: W("note"), ...N ? { periodFrom: pe } : {} });
+    const me = await t.add(r.position_id, { brigadeId: v, date: ae, qty: R, workers: ne, manHours: de, note: W("note"), ...S ? { periodFrom: pe } : {} });
     if (k(!1), !me.ok) {
       E(me.message);
       return;
     }
-    m(me.value.status === "pending_approval" ? "Записано, но объём выше допуска плана — ждёт подтверждения РП (в итог пока не входит)" : `Записано: ${Ee(R)} ${r.unit_code}${N ? " " + Gc(pe, ae) : ""}`);
+    m(me.value.status === "pending_approval" ? "Записано, но объём выше допуска плана — ждёт подтверждения РП (в итог пока не входит)" : `Записано: ${Ee(R)} ${r.unit_code}${S ? " " + Gc(pe, ae) : ""}`);
   }
-  const X = hC(r.plan_qty), ue = i.createElement("input", { name: "qty", type: "text", inputMode: "decimal", autoComplete: "off", className: "pj-input pf-num", value: g, "data-testid": "ft-qty", onChange: (j) => y(j.target.value) }), B = ha();
+  const F = hC(r.plan_qty), ue = i.createElement("input", { name: "qty", type: "text", inputMode: "decimal", autoComplete: "off", className: "pj-input pf-num", value: g, "data-testid": "ft-qty", onChange: (j) => y(j.target.value) }), I = ha();
   return i.createElement(
     "form",
     { className: "ft-form" + (h ? " ft-form--quick" : ""), onSubmit: (j) => {
@@ -33675,8 +33675,8 @@ function I0(n) {
         key: j,
         type: "button",
         role: "tab",
-        "aria-selected": j === "period" === N,
-        className: "pf-seg-btn" + (j === "period" === N ? " pf-seg-btn--active" : ""),
+        "aria-selected": j === "period" === S,
+        className: "pf-seg-btn" + (j === "period" === S ? " pf-seg-btn--active" : ""),
         "data-testid": `ft-mode-${j}`,
         onClick: () => {
           O(j === "period"), E("");
@@ -33693,7 +33693,7 @@ function I0(n) {
       const re = mC(r.plan_qty, r.fact_qty, j);
       return i.createElement(
         "button",
-        { key: j, type: "button", className: "ft-step", disabled: !(re > 0), "data-pct": j, onClick: () => J(re), title: `Довести до ${j} % плана` },
+        { key: j, type: "button", className: "ft-step", disabled: !(re > 0), "data-pct": j, onClick: () => B(re), title: `Довести до ${j} % плана` },
         i.createElement("b", null, `до ${j} %`),
         i.createElement("span", null, re > 0 ? `+${Ee(re)} ${r.unit_code}` : "уже")
       );
@@ -33708,13 +33708,13 @@ function I0(n) {
         i.createElement(
           "div",
           { className: "ft-pm" },
-          i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost ft-pm-btn", "aria-label": "Меньше", "data-testid": "ft-minus", onClick: () => J(Math.max(0, (R || 0) - X)) }, "−"),
+          i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost ft-pm-btn", "aria-label": "Меньше", "data-testid": "ft-minus", onClick: () => B(Math.max(0, (R || 0) - F)) }, "−"),
           ue,
-          i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost ft-pm-btn", "aria-label": "Больше", "data-testid": "ft-plus", onClick: () => J((R || 0) + X) }, "+")
+          i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost ft-pm-btn", "aria-label": "Больше", "data-testid": "ft-plus", onClick: () => B((R || 0) + F) }, "+")
         )
       ) : i.createElement("label", { className: "pf-field" }, `Объём, ${r.unit_code}`, ue),
-      N ? i.createElement("label", { className: "pf-field" }, "С", i.createElement("input", { name: "date_from", type: "date", className: "pj-input", max: B, "data-testid": "ft-date-from" })) : null,
-      i.createElement("label", { className: "pf-field" }, N ? "По" : "Дата", i.createElement("input", { name: "date", type: "date", className: "pj-input", defaultValue: B, max: B, "data-testid": "ft-date" })),
+      S ? i.createElement("label", { className: "pf-field" }, "С", i.createElement("input", { name: "date_from", type: "date", className: "pj-input", max: I, "data-testid": "ft-date-from" })) : null,
+      i.createElement("label", { className: "pf-field" }, S ? "По" : "Дата", i.createElement("input", { name: "date", type: "date", className: "pj-input", defaultValue: I, max: I, "data-testid": "ft-date" })),
       i.createElement(
         "label",
         { className: "pf-field" },
@@ -33731,12 +33731,12 @@ function I0(n) {
       i.createElement("label", { className: "pf-field pj-grow" }, "Примечание", i.createElement("input", { name: "note", type: "text", className: "pj-input", maxLength: 300 }))
     ),
     s.length ? null : i.createElement("div", { className: "pf-error" }, "Нет бригад. Попросите ПТО или руководителя добавить их в «Справочники → Бригады»."),
-    K !== null ? i.createElement("div", { className: A ? "ft-warn" : "pf-muted", "data-testid": "ft-after" }, A ? `После записи: ${ea(K)} — больше плана; если выше допуска, потребуется подтверждение РП` : `После записи: ${ea(K)}`) : null,
+    Y !== null ? i.createElement("div", { className: A ? "ft-warn" : "pf-muted", "data-testid": "ft-after" }, A ? `После записи: ${ea(Y)} — больше плана; если выше допуска, потребуется подтверждение РП` : `После записи: ${ea(Y)}`) : null,
     w ? i.createElement("div", { className: "pf-error", role: "alert" }, w) : null,
     i.createElement(
       "div",
       { className: "pj-actions" },
-      i.createElement("button", { type: "submit", className: "pf-btn", disabled: S, "data-testid": "ft-save" }, h ? "Внести" : "Записать"),
+      i.createElement("button", { type: "submit", className: "pf-btn", disabled: N, "data-testid": "ft-save" }, h ? "Внести" : "Записать"),
       i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", onClick: d }, "Отмена"),
       h ? i.createElement(
         "button",
@@ -33864,14 +33864,14 @@ function xC(n, t, r, s) {
     if (Ap(h, Rn(b.floor.key, b.pos.work_type_id), b.pos), !b.apartment) continue;
     const w = `${b.floor.key}/${b.apartment.id}`;
     Ap(h, Rn(w, b.pos.work_type_id), b.pos);
-    const E = m && b.floor.section ? `${b.floor.section.name}${zc}${b.apartment.name}` : b.apartment.name, S = g.get(b.floor.key) || /* @__PURE__ */ new Map();
-    S.set(w, E), g.set(b.floor.key, S);
+    const E = m && b.floor.section ? `${b.floor.section.name}${zc}${b.apartment.name}` : b.apartment.name, N = g.get(b.floor.key) || /* @__PURE__ */ new Map();
+    N.set(w, E), g.set(b.floor.key, N);
   }
   const y = [];
   for (const b of c) {
-    const w = [...(g.get(b.key) || /* @__PURE__ */ new Map()).entries()].sort((E, S) => E[1].localeCompare(S[1], "ru", { numeric: !0 }));
+    const w = [...(g.get(b.key) || /* @__PURE__ */ new Map()).entries()].sort((E, N) => E[1].localeCompare(N[1], "ru", { numeric: !0 }));
     y.push({ ...b, childCount: w.length });
-    for (const [E, S] of w) y.push({ key: E, label: S, parent: b.key });
+    for (const [E, N] of w) y.push({ key: E, label: N, parent: b.key });
   }
   const v = /* @__PURE__ */ new Map();
   for (const b of y) for (const w of d) v.set(Rn(b.key, w.id), P0(h.get(Rn(b.key, w.id)) || [], !0));
@@ -33969,11 +33969,11 @@ function RC(n) {
 }
 const jC = (n) => n.location_type === "apartment" ? n.location_path.split(" · ").slice(1).filter((t) => !/^эт\.|этаж/i.test(t)).join(" · ") : "на этаже";
 function $C(n) {
-  const { ctx: t, title: r, v: s, list: c, floor: u, onClose: d, onChanged: m } = n, [h, g] = i.useState(""), [y, v] = i.useState(""), [b, w] = i.useState(null), [E, S] = i.useState(!1), [k, N] = i.useState(""), O = (A) => {
-    g(h === A ? "" : A), v(""), S(!1), N(""), w(null), h !== A && t.api.history(A).then((J) => w(J.ok ? J.value.length : null));
+  const { ctx: t, title: r, v: s, list: c, floor: u, onClose: d, onChanged: m } = n, [h, g] = i.useState(""), [y, v] = i.useState(""), [b, w] = i.useState(null), [E, N] = i.useState(!1), [k, S] = i.useState(""), O = (A) => {
+    g(h === A ? "" : A), v(""), N(!1), S(""), w(null), h !== A && t.api.history(A).then((B) => w(B.ok ? B.value.length : null));
   }, R = (A) => {
-    g(""), S(!1), N(A), m(A);
-  }, K = y ? c.find((A) => A.position_id === y) : void 0;
+    g(""), N(!1), S(A), m(A);
+  }, Y = y ? c.find((A) => A.position_id === y) : void 0;
   return i.createElement(
     "div",
     { className: "cb-panel-wrap" },
@@ -33993,7 +33993,7 @@ function $C(n) {
       ),
       k ? i.createElement("div", { className: "pj-notice", role: "status", "data-testid": "cb-notice" }, k) : null,
       u && t.canCreate && !E && c.some((A) => mr(A.plan_qty, A.fact_qty) > 0) ? i.createElement("div", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "cb-floor-close", onClick: () => {
-        S(!0), g(""), v("");
+        N(!0), g(""), v("");
       } }, "Закрыть этаж")) : null,
       E ? i.createElement(rm, {
         api: t.api,
@@ -34003,12 +34003,12 @@ function $C(n) {
         brigades: t.brigades,
         lastBrigade: t.lastBrigade,
         onBrigade: t.onBrigade,
-        onClose: () => S(!1),
+        onClose: () => N(!1),
         onDone: R
       }) : null,
-      K ? i.createElement(lm, { api: t.api, pos: K, me: t.me, canApprove: t.canApprove, canCreate: t.canCreate, onClose: () => v(""), onChanged: () => m("") }) : null,
+      Y ? i.createElement(lm, { api: t.api, pos: Y, me: t.me, canApprove: t.canApprove, canCreate: t.canCreate, onClose: () => v(""), onChanged: () => m("") }) : null,
       i.createElement("div", { className: "cb-list", "data-testid": "cb-list" }, c.map((A) => {
-        const J = as(A.fact_qty, A.plan_qty);
+        const B = as(A.fact_qty, A.plan_qty);
         return i.createElement(
           "div",
           { key: A.position_id, className: "cb-pos", "data-position-id": A.position_id },
@@ -34016,7 +34016,7 @@ function $C(n) {
             "div",
             { className: "cb-pos-head" },
             i.createElement("div", { className: "cb-pos-name" }, i.createElement("b", null, A.work_name), i.createElement("span", { className: "pf-muted" }, jC(A))),
-            i.createElement("span", { className: "cb-pos-nums" }, `${Ee(A.fact_qty)} из ${Ee(A.plan_qty)} ${A.unit_code}`, i.createElement("b", null, ` ${ea(J)}`))
+            i.createElement("span", { className: "cb-pos-nums" }, `${Ee(A.fact_qty)} из ${Ee(A.plan_qty)} ${A.unit_code}`, i.createElement("b", null, ` ${ea(B)}`))
           ),
           A.pending_count ? i.createElement("div", { className: "ft-pending" }, `Ждёт подтверждения РП: ${Ee(A.pending_qty)} ${A.unit_code}`) : null,
           A.last_rejected_note ? i.createElement("div", { className: "ft-bad" }, `Отклонено РП: ${A.last_rejected_note}`) : null,
@@ -34036,7 +34036,7 @@ function $C(n) {
             { className: "pj-actions" },
             t.canCreate ? i.createElement("button", { type: "button", className: "pf-btn", "data-testid": "cb-enter", onClick: () => O(A.position_id) }, "Внести факт") : null,
             i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "cb-history", onClick: () => {
-              v(y === A.position_id ? "" : A.position_id), g(""), S(!1);
+              v(y === A.position_id ? "" : A.position_id), g(""), N(!1);
             } }, "История")
           )
         );
@@ -34046,34 +34046,34 @@ function $C(n) {
 }
 function DC(n) {
   var L;
-  const { projects: t, ctx: r } = n, { api: s, projectId: c } = r, [u, d] = i.useState(null), [m, h] = i.useState(""), [g, y] = i.useState(null), [v, b] = i.useState(kn), [w, E] = i.useState(null), [S, k] = i.useState(TC), [N, O] = i.useState(kn), [R, K] = i.useState(/* @__PURE__ */ new Set());
+  const { projects: t, ctx: r } = n, { api: s, projectId: c } = r, [u, d] = i.useState(null), [m, h] = i.useState(""), [g, y] = i.useState(null), [v, b] = i.useState(kn), [w, E] = i.useState(null), [N, k] = i.useState(TC), [S, O] = i.useState(kn), [R, Y] = i.useState(/* @__PURE__ */ new Set());
   async function A(q) {
     d(null), h(""), E(null);
     const T = { idx: p_([]), positions: [], pl: { placed: [], unplaced: [] } };
     try {
-      const [G, C] = await Promise.all([NC((le) => t.listLocations(q, le)), s.positions(q, null)]);
+      const [V, C] = await Promise.all([NC((le) => t.listLocations(q, le)), s.positions(q, null)]);
       if (!C.ok) {
         h(C.message), d(T);
         return;
       }
-      const Y = p_(G);
-      d({ idx: Y, positions: C.value, pl: m_(C.value, Y) });
-    } catch (G) {
-      h(G instanceof Error && G.message ? G.message : "Не удалось загрузить места объекта"), d(T);
+      const X = p_(V);
+      d({ idx: X, positions: C.value, pl: m_(C.value, X) });
+    } catch (V) {
+      h(V instanceof Error && V.message ? V.message : "Не удалось загрузить места объекта"), d(T);
     }
   }
-  async function J() {
+  async function B() {
     const q = await s.positions(c, null);
     q.ok && d((T) => T && { idx: T.idx, positions: q.value, pl: m_(q.value, T.idx) });
   }
   i.useEffect(() => {
-    c && (y(null), b(kn), O(kn), K(/* @__PURE__ */ new Set()), A(c));
+    c && (y(null), b(kn), O(kn), Y(/* @__PURE__ */ new Set()), A(c));
   }, [c]);
-  const z = i.useMemo(() => u ? wC(u.idx) : [], [u]), X = g !== null && z.some((q) => q.id === g) ? g : z[0] ? z[0].id : null, ue = i.useMemo(() => u ? K0(u.pl.placed.filter((q) => (q.floor.building ? q.floor.building.id : "") === X).map((q) => q.pos)) : [], [u, X]), B = v && ue.some((q) => q.id === v) ? v : null, j = i.useMemo(() => u && X !== null ? sm(u.idx, X) : [], [u, X]), re = S === "works" && N !== kn && j.some((q) => q.id === N) ? N : null, W = i.useMemo(() => u && X !== null ? S === "works" ? xC(u.idx, u.pl, X, re) : EC(u.idx, u.pl, X, B) : null, [u, X, B, S, re]), ae = u && X !== null ? kC(u.idx, u.pl, X, S === "works" ? null : B) : [], pe = (q) => {
+  const z = i.useMemo(() => u ? wC(u.idx) : [], [u]), F = g !== null && z.some((q) => q.id === g) ? g : z[0] ? z[0].id : null, ue = i.useMemo(() => u ? K0(u.pl.placed.filter((q) => (q.floor.building ? q.floor.building.id : "") === F).map((q) => q.pos)) : [], [u, F]), I = v && ue.some((q) => q.id === v) ? v : null, j = i.useMemo(() => u && F !== null ? sm(u.idx, F) : [], [u, F]), re = N === "works" && S !== kn && j.some((q) => q.id === S) ? S : null, W = i.useMemo(() => u && F !== null ? N === "works" ? xC(u.idx, u.pl, F, re) : EC(u.idx, u.pl, F, I) : null, [u, F, I, N, re]), ae = u && F !== null ? kC(u.idx, u.pl, F, N === "works" ? null : I) : [], pe = (q) => {
     k(q), CC(q), E(null);
   }, ne = (q) => {
     const T = new Set(R);
-    T.has(q) ? T.delete(q) : T.add(q), K(T);
+    T.has(q) ? T.delete(q) : T.add(q), Y(T);
   };
   if (!u) return i.createElement("div", { className: "pf-muted", "data-testid": "cb-loading" }, "Загрузка…");
   if (m) return i.createElement("div", { className: "pf-error", role: "alert" }, m);
@@ -34087,10 +34087,10 @@ function DC(n) {
   }
   const de = (q) => {
     var T;
-    return ((T = W.rows.find((G) => G.key === q)) == null ? void 0 : T.label) || "";
+    return ((T = W.rows.find((V) => V.key === q)) == null ? void 0 : T.label) || "";
   }, me = (q) => {
     var T;
-    return ((T = W.cols.find((G) => G.id === q)) == null ? void 0 : T.name) || "";
+    return ((T = W.cols.find((V) => V.id === q)) == null ? void 0 : T.name) || "";
   }, U = w ? W.cells.get(Rn(w.row, w.col)) : void 0;
   return i.createElement(
     "div",
@@ -34102,9 +34102,9 @@ function DC(n) {
         key: q,
         type: "button",
         role: "tab",
-        "aria-selected": S === q,
+        "aria-selected": N === q,
         "data-view": q,
-        className: "pf-seg-btn" + (S === q ? " pf-seg-btn--active" : ""),
+        className: "pf-seg-btn" + (N === q ? " pf-seg-btn--active" : ""),
         onClick: () => pe(q)
       }, T))
     ),
@@ -34117,19 +34117,19 @@ function DC(n) {
         "Корпус",
         i.createElement(
           "select",
-          { className: "pj-input", value: X || "", "data-testid": "cb-building", onChange: (q) => {
+          { className: "pj-input", value: F || "", "data-testid": "cb-building", onChange: (q) => {
             y(q.target.value), E(null);
           } },
           z.map((q) => i.createElement("option", { key: q.id, value: q.id }, q.name))
         )
       ) : null,
-      S === "sections" ? i.createElement(
+      N === "sections" ? i.createElement(
         "label",
         { className: "pf-field" },
         "Вид работ",
         i.createElement(
           "select",
-          { className: "pj-input", value: B || kn, "data-testid": "cb-work", onChange: (q) => {
+          { className: "pj-input", value: I || kn, "data-testid": "cb-work", onChange: (q) => {
             b(q.target.value), E(null);
           } },
           i.createElement("option", { value: kn }, "Все виды работ"),
@@ -34142,7 +34142,7 @@ function DC(n) {
         i.createElement(
           "select",
           { className: "pj-input", value: re || kn, "data-testid": "cb-section", onChange: (q) => {
-            O(q.target.value), E(null), K(/* @__PURE__ */ new Set());
+            O(q.target.value), E(null), Y(/* @__PURE__ */ new Set());
           } },
           i.createElement("option", { value: kn }, "Все секции"),
           j.map((q) => i.createElement("option", { key: q.id, value: q.id }, q.name))
@@ -34152,7 +34152,7 @@ function DC(n) {
     i.createElement(
       "div",
       { className: "pf-muted cb-mode", "data-testid": "cb-mode" },
-      S === "works" ? "В ячейке — % выполнения вида работ по объёму; если у вида разные единицы — «закрыто позиций X из Y». Нажмите на этаж, чтобы увидеть квартиры." : B ? "В ячейке — % выполнения по объёму; если у вида работ разные единицы — «закрыто позиций X из Y»." : "В ячейке — «закрыто позиций X из Y» по всем видам работ."
+      N === "works" ? "В ячейке — % выполнения вида работ по объёму; если у вида разные единицы — «закрыто позиций X из Y». Нажмите на этаж, чтобы увидеть квартиры." : I ? "В ячейке — % выполнения по объёму; если у вида работ разные единицы — «закрыто позиций X из Y»." : "В ячейке — «закрыто позиций X из Y» по всем видам работ."
     ),
     i.createElement(qk, null),
     ae.length ? i.createElement("div", { className: "pf-muted cb-loose", "data-testid": "cb-loose" }, `Не разнесено по этажам: ${ae.length} поз. (на корпусе или секции) — в шахматку не входят, факт по ним — во вкладке «Ввод».`) : null,
@@ -34161,12 +34161,12 @@ function DC(n) {
       { className: "cb-layout" + (U ? " cb-layout--side" : "") },
       i.createElement(RC, {
         grid: W,
-        corner: S === "works" ? "Этаж / квартира" : "Этаж",
+        corner: N === "works" ? "Этаж / квартира" : "Этаж",
         sel: w,
         onPick: (q) => E(w && w.row === q.row && w.col === q.col ? null : q),
         testId: "cb-grid",
-        open: S === "works" ? R : void 0,
-        onToggle: S === "works" ? ne : void 0
+        open: N === "works" ? R : void 0,
+        onToggle: N === "works" ? ne : void 0
       }),
       U && w ? i.createElement($C, {
         key: `${w.row}|${w.col}`,
@@ -34177,7 +34177,7 @@ function DC(n) {
         floor: !((L = W.rows.find((q) => q.key === w.row)) != null && L.parent),
         onClose: () => E(null),
         onChanged: () => {
-          J();
+          B();
         }
       }) : null
     )
@@ -34262,50 +34262,50 @@ function F0(n, t) {
   }
 }
 function qC(n) {
-  const { api: t, vor: r, projects: s, me: c } = n, u = n.mode || "entry", [d, m] = i.useState(null), [h, g] = i.useState({}), [y, v] = i.useState(""), [b, w] = i.useState([]), [E, S] = i.useState([]), [k, N] = i.useState(null), [O, R] = i.useState(/* @__PURE__ */ new Map()), [K, A] = i.useState([]), [J, z] = i.useState(""), [X, ue] = i.useState(""), [B, j] = i.useState(""), [re, W] = i.useState(!1), [ae, pe] = i.useState(Wf), [ne, de] = i.useState(""), [me, U] = i.useState(""), L = d == null ? void 0 : d.find((fe) => fe.id === y), q = h[y] || [], T = q.includes(L0) && !tn(L), G = q.includes(t_), C = b.length ? b[b.length - 1] : null;
+  const { api: t, vor: r, projects: s, me: c } = n, u = n.mode || "entry", [d, m] = i.useState(null), [h, g] = i.useState({}), [y, v] = i.useState(""), [b, w] = i.useState([]), [E, N] = i.useState([]), [k, S] = i.useState(null), [O, R] = i.useState(/* @__PURE__ */ new Map()), [Y, A] = i.useState([]), [B, z] = i.useState(""), [F, ue] = i.useState(""), [I, j] = i.useState(""), [re, W] = i.useState(!1), [ae, pe] = i.useState(Wf), [ne, de] = i.useState(""), [me, U] = i.useState(""), L = d == null ? void 0 : d.find((fe) => fe.id === y), q = h[y] || [], T = q.includes(L0) && !tn(L), V = q.includes(t_), C = b.length ? b[b.length - 1] : null;
   i.useEffect(() => {
     (async () => {
-      const fe = await r.listProjects(), $ = [], F = {};
+      const fe = await r.listProjects(), $ = [], J = {};
       for (const ee of fe) {
         const ge = await r.permissions(ee.id);
-        ge.includes(KT) && ($.push(ee), F[ee.id] = ge);
+        ge.includes(KT) && ($.push(ee), J[ee.id] = ge);
       }
-      g(F), m($), $.length && v(eu($, window.location.hash));
+      g(J), m($), $.length && v(eu($, window.location.hash));
     })();
   }, []);
-  async function Y(fe, $) {
+  async function X(fe, $) {
     var ee, ge;
     if (!$) {
       (ee = n.onApprove) == null || ee.call(n, null);
       return;
     }
-    const F = await t.pending(fe);
-    (ge = n.onApprove) == null || ge.call(n, F.ok ? F.value.length : 0);
+    const J = await t.pending(fe);
+    (ge = n.onApprove) == null || ge.call(n, J.ok ? J.value.length : 0);
   }
   async function le(fe, $) {
-    N(null);
-    const F = await t.positions(fe, $ ? $.id : null);
-    F.ok ? (N(F.value), U("")) : (N([]), U(F.message));
+    S(null);
+    const J = await t.positions(fe, $ ? $.id : null);
+    J.ok ? (S(J.value), U("")) : (S([]), U(J.message));
   }
   async function se(fe, $) {
     w($), ue(""), j(""), W(!1), pe(Wf);
-    const F = $.length ? $[$.length - 1] : null;
-    S(await s.listLocations(fe, F ? F.id : null)), F ? await le(fe, F) : N([]);
+    const J = $.length ? $[$.length - 1] : null;
+    N(await s.listLocations(fe, J ? J.id : null)), J ? await le(fe, J) : S([]);
   }
   i.useEffect(() => {
-    !y || !L || (de(""), U(""), se(y, []), z(J0(L.company_id)), t.listBrigades(L.company_id, !1).then(A), Y(y, (h[y] || []).includes(t_)), be(y));
+    !y || !L || (de(""), U(""), se(y, []), z(J0(L.company_id)), t.listBrigades(L.company_id, !1).then(A), X(y, (h[y] || []).includes(t_)), be(y));
   }, [y]);
   async function be(fe) {
     R(/* @__PURE__ */ new Map());
     try {
-      const $ = await r.positions(fe, null), F = /* @__PURE__ */ new Map();
-      for (const ee of Array.from(new Set($.map((ge) => ge.import_id)))) F.set(ee, await r.importRows(ee));
-      R(aS($, F));
+      const $ = await r.positions(fe, null), J = /* @__PURE__ */ new Map();
+      for (const ee of Array.from(new Set($.map((ge) => ge.import_id)))) J.set(ee, await r.importRows(ee));
+      R(aS($, J));
     } catch {
     }
   }
   const ke = async () => {
-    await le(y, C), await Y(y, G);
+    await le(y, C), await X(y, V);
   }, Se = (fe) => {
     z(fe), L && F0(L.company_id, fe);
   };
@@ -34316,8 +34316,8 @@ function qC(n) {
       "div",
       { className: "pj-tab ft-tab ft-tab--wide", "data-testid": "ft-tab" },
       i.createElement(Kr, { list: d, value: y, onChange: v }),
-      !y || !L ? null : G ? i.createElement(rC, { key: y, api: t, projectId: y, companyId: L.company_id, user: c, onChanged: () => {
-        Y(y, !0);
+      !y || !L ? null : V ? i.createElement(rC, { key: y, api: t, projectId: y, companyId: L.company_id, user: c, onChanged: () => {
+        X(y, !0);
       } }) : i.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "ft-noapprove" }, "Подтверждать факт в этом объекте может руководитель проекта (право «Факт: подтверждение»).")
     );
   if (u === "journal")
@@ -34332,11 +34332,11 @@ function qC(n) {
       "div",
       { className: "pj-tab ft-tab ft-tab--wide", "data-testid": "ft-tab" },
       i.createElement(Kr, { list: d, value: y, onChange: v }),
-      y ? i.createElement(DC, { projects: s, ctx: { api: t, projectId: y, me: c, canCreate: T, canApprove: G, brigades: K, lastBrigade: J, onBrigade: Se } }) : null
+      y ? i.createElement(DC, { projects: s, ctx: { api: t, projectId: y, me: c, canCreate: T, canApprove: V, brigades: Y, lastBrigade: B, onBrigade: Se } }) : null
     );
-  const V = (fe) => {
-    const $ = C ? C.path : "", F = fe.location_path;
-    return $ && F.startsWith($) ? F.slice($.length).replace(/^\s*·\s*/, "") : C ? "" : F;
+  const K = (fe) => {
+    const $ = C ? C.path : "", J = fe.location_path;
+    return $ && J.startsWith($) ? J.slice($.length).replace(/^\s*·\s*/, "") : C ? "" : J;
   };
   function he(fe) {
     return i.createElement(UC, {
@@ -34344,12 +34344,12 @@ function qC(n) {
       api: t,
       pos: fe,
       place: fe.location_path,
-      brigades: K,
-      lastBrigade: J,
+      brigades: Y,
+      lastBrigade: B,
       onBrigade: Se,
       me: c,
       canCreate: T,
-      canApprove: G,
+      canApprove: V,
       onClose: () => ue(""),
       onSaved: ($) => {
         ue(""), de($), ke();
@@ -34397,21 +34397,21 @@ function qC(n) {
       projectId: y,
       place: { id: C.id, name: C.name },
       positions: Te,
-      brigades: K,
-      lastBrigade: J,
+      brigades: Y,
+      lastBrigade: B,
       onBrigade: Se,
       onClose: () => W(!1),
       onDone: (fe) => {
         W(!1), de(fe), ke();
       }
     }) : null,
-    B && Te.find((fe) => fe.position_id === B) ? i.createElement(lm, { api: t, pos: Te.find((fe) => fe.position_id === B), me: c, canApprove: G, canCreate: T, onClose: () => j(""), onChanged: () => {
+    I && Te.find((fe) => fe.position_id === I) ? i.createElement(lm, { api: t, pos: Te.find((fe) => fe.position_id === I), me: c, canApprove: V, canCreate: T, onClose: () => j(""), onChanged: () => {
       ke();
     } }) : null,
     C && k === null ? i.createElement("div", { className: "pf-muted" }, "Загрузка…") : null,
     C && k && !Te.length ? i.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "ft-empty" }, "Для этого места нет работ: позиции появляются после подтверждения ВОР.") : null,
     Te.slice(0, ae).map((fe) => {
-      const $ = as(fe.fact_qty, fe.plan_qty), F = V(fe);
+      const $ = as(fe.fact_qty, fe.plan_qty), J = K(fe);
       return i.createElement(
         "div",
         { key: fe.position_id, className: "pf-card ft-card", "data-position-id": fe.position_id },
@@ -34420,7 +34420,7 @@ function qC(n) {
           { className: "ft-name" },
           i.createElement("b", null, fe.work_name),
           O.get(fe.position_id) ? i.createElement("span", { className: "pf-muted ft-vor", "data-testid": "ft-vor" }, O.get(fe.position_id)) : null,
-          F ? i.createElement("span", { className: "pf-muted ft-place" }, F) : null
+          J ? i.createElement("span", { className: "pf-muted ft-place" }, J) : null
         ),
         i.createElement(
           "div",
@@ -34443,12 +34443,12 @@ function qC(n) {
             ue(fe.position_id), j(""), W(!1);
           } }, "Внести факт") : null,
           i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "ft-history-btn", onClick: () => {
-            j(B === fe.position_id ? "" : fe.position_id), W(!1);
+            j(I === fe.position_id ? "" : fe.position_id), W(!1);
           } }, "История")
         )
       );
     }),
-    X && T && Te.find((fe) => fe.position_id === X) ? he(Te.find((fe) => fe.position_id === X)) : null,
+    F && T && Te.find((fe) => fe.position_id === F) ? he(Te.find((fe) => fe.position_id === F)) : null,
     Te.length > ae ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "ft-more", onClick: () => pe(ae + Wf) }, `Показать ещё (${Te.length - ae})`) : null
   );
   return i.createElement(
@@ -34532,7 +34532,7 @@ async function Z0(n, t, r) {
   r(s, Xp("Позиции ВОР", Pe(ha())));
 }
 function HC(n) {
-  const { fact: t, rows: r, columns: s, canClose: c, projectId: u, companyId: d } = n, [m, h] = i.useState(""), [g, y] = i.useState(null), [v, b] = i.useState(J0(d)), [w, E] = i.useState(""), S = r.filter((N) => N.rest > 0);
+  const { fact: t, rows: r, columns: s, canClose: c, projectId: u, companyId: d } = n, [m, h] = i.useState(""), [g, y] = i.useState(null), [v, b] = i.useState(J0(d)), [w, E] = i.useState(""), N = r.filter((S) => S.rest > 0);
   i.useEffect(() => {
     m && g === null && t.listBrigades(d, !1).then(y);
   }, [m]);
@@ -34546,17 +34546,17 @@ function HC(n) {
         api: t,
         projectId: u,
         place: { id: "", name: "" },
-        positions: S.map(IC),
+        positions: N.map(IC),
         brigades: g,
         lastBrigade: v,
-        title: `${m === "pm" ? "Закрыть через РП" : "Закрыть выбранные"}: ${S.length} поз.`,
+        title: `${m === "pm" ? "Закрыть через РП" : "Закрыть выбранные"}: ${N.length} поз.`,
         requireApproval: m === "pm",
-        onBrigade: (N) => {
-          b(N), F0(d, N);
+        onBrigade: (S) => {
+          b(S), F0(d, S);
         },
         onClose: () => h(""),
-        onDone: (N, O) => {
-          O ? E(N) : (n.notify(N), h(""), n.clear()), n.reload();
+        onDone: (S, O) => {
+          O ? E(S) : (n.notify(S), h(""), n.clear()), n.reload();
         }
       }) : i.createElement(
         "div",
@@ -34576,8 +34576,8 @@ function HC(n) {
       type: "button",
       className: "pf-btn",
       "data-testid": "vr-close",
-      disabled: !S.length,
-      title: S.length ? "" : "Выбранные позиции уже выполнены",
+      disabled: !N.length,
+      title: N.length ? "" : "Выбранные позиции уже выполнены",
       onClick: () => {
         E(""), n.notify(""), h("close");
       }
@@ -34586,12 +34586,12 @@ function HC(n) {
       type: "button",
       className: "pf-btn pf-btn--ghost",
       "data-testid": "vr-close-pm",
-      disabled: !S.length,
+      disabled: !N.length,
       onClick: () => {
         E(""), n.notify(""), h("pm");
       }
     }, "Закрыть через РП") : null,
-    c && S.length < r.length ? i.createElement("span", { className: "pf-muted", "data-testid": "vr-done-skip" }, `выполненные (${r.length - S.length}) не закрываются`) : null,
+    c && N.length < r.length ? i.createElement("span", { className: "pf-muted", "data-testid": "vr-done-skip" }, `выполненные (${r.length - N.length}) не закрываются`) : null,
     w ? i.createElement("span", { className: "pj-notice", role: "status", "data-testid": "vr-close-notice" }, w) : null,
     k
   );
@@ -34782,14 +34782,14 @@ function WC(n) {
 }
 function eA(n) {
   var ee, ge;
-  const t = n.load || JC, r = n.api || null, s = !!(r && n.fact && n.summary), c = n.sub || "load", [u, d] = i.useState(""), [m, h] = i.useState(r ? null : []), [g, y] = i.useState(""), [v, b] = i.useState([]), [w, E] = i.useState(null), [S, k] = i.useState(""), [N, O] = i.useState(""), [R, K] = i.useState(null), [A, J] = i.useState(""), [z, X] = i.useState(!1), [ue, B] = i.useState(""), [j, re] = i.useState("all"), [W, ae] = i.useState([]), [pe, ne] = i.useState({}), [de, me] = i.useState({}), U = i.useMemo(() => {
+  const t = n.load || JC, r = n.api || null, s = !!(r && n.fact && n.summary), c = n.sub || "load", [u, d] = i.useState(""), [m, h] = i.useState(r ? null : []), [g, y] = i.useState(""), [v, b] = i.useState([]), [w, E] = i.useState(null), [N, k] = i.useState(""), [S, O] = i.useState(""), [R, Y] = i.useState(null), [A, B] = i.useState(""), [z, F] = i.useState(!1), [ue, I] = i.useState(""), [j, re] = i.useState("all"), [W, ae] = i.useState([]), [pe, ne] = i.useState({}), [de, me] = i.useState({}), U = i.useMemo(() => {
     const ie = {};
     if (R) for (const ze of R.sheets) {
       const Ve = ii(ze), at = Ve.signature && W.find((ht) => ht.signature === Ve.signature) || null, mt = pe[ze.name] || (at ? I_(at.column_map) : null);
       ie[ze.name] = { r: mt ? ii(ze, mt) : Ve, profile: at };
     }
     return ie;
-  }, [R, W, pe]), L = A ? U[A] : null, q = L ? L.r : null, T = v.includes(VC) && !tn((m || []).find((ie) => ie.id === g)), G = v.includes("planfact.projects.manage"), C = u && w && w.find((ie) => ie.id === u) || null, Y = !!(A && pe[A]), le = L && L.profile ? L.profile.name : R ? R.name.replace(/\.xlsx$/i, "") : "", se = A && de[A] !== void 0 ? de[A] : le;
+  }, [R, W, pe]), L = A ? U[A] : null, q = L ? L.r : null, T = v.includes(VC) && !tn((m || []).find((ie) => ie.id === g)), V = v.includes("planfact.projects.manage"), C = u && w && w.find((ie) => ie.id === u) || null, X = !!(A && pe[A]), le = L && L.profile ? L.profile.name : R ? R.name.replace(/\.xlsx$/i, "") : "", se = A && de[A] !== void 0 ? de[A] : le;
   function be(ie, ze) {
     !q || !q.columns || ne({ ...pe, [A]: L1(q.columns, q.labels, ie, ze) });
   }
@@ -34810,14 +34810,14 @@ function eA(n) {
   i.useEffect(() => {
     !r || !g || (b([]), O(""), d(""), r.permissions(g).then(b), r.listProfiles(g).then(ae), Se(g));
   }, [g]);
-  async function V() {
-    if (!r || !R || !q || !q.isVor || S) return;
-    k("Сохраняю…"), B(""), O("");
+  async function K() {
+    if (!r || !R || !q || !q.isVor || N) return;
+    k("Сохраняю…"), I(""), O("");
     let ie = L && L.profile ? L.profile.id : null;
-    if (q.columns && q.signature && (!ie || Y || L && L.profile && L.profile.name !== se.trim())) {
+    if (q.columns && q.signature && (!ie || X || L && L.profile && L.profile.name !== se.trim())) {
       const at = await r.saveProfile(g, se.trim() || le || "Форма ВОР", q.signature, q.columns);
       if (!at.ok) {
-        k(""), B(at.message);
+        k(""), I(at.message);
         return;
       }
       ie = at.value, ae(await r.listProfiles(g));
@@ -34836,17 +34836,17 @@ function eA(n) {
       (at) => k(`Сохраняю… ${at} из ${q.rows.length} строк`)
     );
     if (k(""), !Ve.ok) {
-      B(Ve.message);
+      I(Ve.message);
       return;
     }
     O(`Черновик сохранён: ${q.rows.length} строк листа «${q.sheet}».`), await Se(g), d(Ve.value);
   }
   async function he(ie) {
     if (!r) return;
-    k("Удаляю…"), B(""), O("");
+    k("Удаляю…"), I(""), O("");
     const ze = await r.deleteImport(ie.id);
     if (k(""), !ze.ok) {
-      B(ze.message);
+      I(ze.message);
       return;
     }
     O("Черновик удалён"), await Se(g);
@@ -34854,17 +34854,17 @@ function eA(n) {
   async function Ne(ie) {
     const ze = ie.currentTarget.files && ie.currentTarget.files[0];
     if (ze) {
-      X(!0), B(""), K(null), J(""), re("all"), ne({}), me({});
+      F(!0), I(""), Y(null), B(""), re("all"), ne({}), me({});
       try {
         if (!/\.xlsx$/i.test(ze.name)) throw new Error("Нужен файл Excel .xlsx (старый .xls сохраните как .xlsx).");
         const Ve = await t(ze);
-        K(Ve);
+        Y(Ve);
         const mt = Ve.sheets.map((ht) => ({ s: ht, r: ii(ht) })).filter((ht) => ht.r.isVor).sort((ht, sn) => +!!ht.s.hidden - +!!sn.s.hidden)[0];
-        J(mt ? mt.s.name : Ve.sheets[0] ? Ve.sheets[0].name : "");
+        B(mt ? mt.s.name : Ve.sheets[0] ? Ve.sheets[0].name : "");
       } catch (Ve) {
-        B(Ve instanceof Error ? Ve.message : "Не удалось прочитать файл");
+        I(Ve instanceof Error ? Ve.message : "Не удалось прочитать файл");
       } finally {
-        X(!1), ie.target.value = "";
+        F(!1), ie.target.value = "";
       }
     }
   }
@@ -34885,7 +34885,7 @@ function eA(n) {
       companyId: ie,
       imp: C,
       canManage: T,
-      canProjects: G,
+      canProjects: V,
       canUnits: v.includes("planfact.units.manage"),
       onBack: () => {
         d(""), Se(g);
@@ -34895,7 +34895,7 @@ function eA(n) {
       }
     });
   }
-  const F = r && m ? i.createElement(
+  const J = r && m ? i.createElement(
     i.Fragment,
     null,
     i.createElement(Kr, { list: m, value: g, onChange: y, testId: "vor-project", alwaysSelect: !0 }),
@@ -34906,7 +34906,7 @@ function eA(n) {
     return i.createElement(
       "div",
       { className: "pj-tab vor-tab", "data-testid": "vor-tab" },
-      F,
+      J,
       g ? s ? i.createElement(NS, {
         key: g,
         fact: n.fact,
@@ -34921,9 +34921,9 @@ function eA(n) {
   return i.createElement(
     "div",
     { className: "pj-tab vor-tab", "data-testid": "vor-tab" },
-    F,
+    J,
     r ? i.createElement("h3", { className: "pf-title un-title" }, "Загрузки проекта") : null,
-    r ? i.createElement(ZC, { items: w, canManage: T, busy: !!S, onDelete: (ie) => {
+    r ? i.createElement(ZC, { items: w, canManage: T, busy: !!N, onDelete: (ie) => {
       he(ie);
     }, onOpen: (ie) => d(ie.id) }) : null,
     r && w && w.some((ie) => ie.status === "confirmed") ? s ? i.createElement("div", { className: "pf-muted", "data-testid": "vor-positions-hint" }, "Позиции ВОР — на вкладке «Позиции»: фильтры, просроченные, история факта.") : i.createElement(fp, { key: g, api: r, projectId: g }) : null,
@@ -34943,7 +34943,7 @@ function eA(n) {
         i.createElement(
           "select",
           { className: "pj-input", value: A, "data-testid": "vor-sheet", onChange: (ie) => {
-            J(ie.currentTarget.value), re("all");
+            B(ie.currentTarget.value), re("all");
           } },
           R.sheets.map((ie) => i.createElement(
             "option",
@@ -34952,12 +34952,12 @@ function eA(n) {
           ))
         )
       ) : i.createElement("span", { className: "pf-muted pj-grow" }, r ? "Файл заказчика в его форме: ФКП, себестоимость, ведомость договорной цены. Сначала посмотрите разбор, затем сохраните черновик." : "Файл заказчика в его форме: ФКП, себестоимость, ведомость договорной цены. Демо-режим: только просмотр разбора, без сохранения."),
-      r && T && q && q.isVor ? i.createElement("button", { type: "button", className: "pf-btn", disabled: !!S, "data-testid": "vor-save", onClick: () => {
-        V();
-      } }, S || "Сохранить черновик") : null
+      r && T && q && q.isVor ? i.createElement("button", { type: "button", className: "pf-btn", disabled: !!N, "data-testid": "vor-save", onClick: () => {
+        K();
+      } }, N || "Сохранить черновик") : null
     ),
     ue ? i.createElement("div", { className: "pf-error", role: "alert" }, ue) : null,
-    N ? i.createElement("div", { className: "pj-notice", role: "status", "data-testid": "vor-notice" }, N) : null,
+    S ? i.createElement("div", { className: "pj-notice", role: "status", "data-testid": "vor-notice" }, S) : null,
     q && !q.isVor ? i.createElement("div", { className: "pf-error", role: "alert", "data-testid": "vor-notvor" }, `Лист «${q.sheet}» не похож на ВОР: ${q.reason}`) : null,
     q && q.isVor ? i.createElement(
       "div",
@@ -34995,7 +34995,7 @@ function eA(n) {
       labels: q.labels,
       columns: q.columns,
       profileName: L && L.profile ? L.profile.name : null,
-      edited: Y,
+      edited: X,
       name: se,
       onEdit: be,
       onReset: ke,
@@ -35068,44 +35068,44 @@ const tA = TS + GC + `
 `;
 function aA(n) {
   const { api: t, company: r } = n, [s, c] = i.useState(null), [u, d] = i.useState(!1), [m, h] = i.useState(""), [g, y] = i.useState(""), [v, b] = i.useState(""), [w, E] = i.useState(!1);
-  async function S(A = u) {
+  async function N(A = u) {
     c(await t.listBrigades(r.company_id, A));
   }
   i.useEffect(() => {
-    S();
+    N();
   }, []);
   const k = !!s && s.some((A) => A.can_manage);
-  async function N(A, J) {
+  async function S(A, B) {
     if (A.preventDefault(), w) return;
-    const z = A.currentTarget, X = (B) => z.elements.namedItem(B).value.trim();
-    if (!X("name")) {
+    const z = A.currentTarget, F = (I) => z.elements.namedItem(I).value.trim();
+    if (!F("name")) {
       y("Введите название бригады");
       return;
     }
     E(!0), y(""), b("");
-    const ue = await t.saveBrigade(r.company_id, J, X("name"), X("leader"), X("phone"));
+    const ue = await t.saveBrigade(r.company_id, B, F("name"), F("leader"), F("phone"));
     if (E(!1), !ue.ok) {
       y(ue.message);
       return;
     }
-    J || z.reset(), h(""), b(J ? "Бригада изменена" : "Бригада добавлена"), await S();
+    B || z.reset(), h(""), b(B ? "Бригада изменена" : "Бригада добавлена"), await N();
   }
-  async function O(A, J) {
+  async function O(A, B) {
     if (w) return;
     E(!0), y(""), b("");
-    const z = await t.archiveBrigade(A.id, J);
+    const z = await t.archiveBrigade(A.id, B);
     if (E(!1), !z.ok) {
       y(z.message);
       return;
     }
-    b(J ? "Бригада в архиве" : "Бригада возвращена"), await S();
+    b(B ? "Бригада в архиве" : "Бригада возвращена"), await N();
   }
   async function R() {
     const A = !u;
-    d(A), await S(A);
+    d(A), await N(A);
   }
   if (s === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка…");
-  const K = (A, J, z, X = "") => i.createElement("label", { className: "pf-field " + X }, A, i.createElement("input", { name: J, type: "text", className: "pj-input", maxLength: 120, defaultValue: z }));
+  const Y = (A, B, z, F = "") => i.createElement("label", { className: "pf-field " + F }, A, i.createElement("input", { name: B, type: "text", className: "pj-input", maxLength: 120, defaultValue: z }));
   return i.createElement(
     "div",
     { className: "pj-tab br-tab", "data-testid": "br-tab" },
@@ -35113,11 +35113,11 @@ function aA(n) {
     k || s.length === 0 ? i.createElement(
       "form",
       { className: "pf-card pj-form", onSubmit: (A) => {
-        N(A, null);
+        S(A, null);
       }, "data-testid": "br-add" },
-      K("Название бригады", "name", "", "pj-grow"),
-      K("Бригадир", "leader", "", "pj-grow"),
-      K("Телефон", "phone", "", "pj-grow"),
+      Y("Название бригады", "name", "", "pj-grow"),
+      Y("Бригадир", "leader", "", "pj-grow"),
+      Y("Телефон", "phone", "", "pj-grow"),
       i.createElement("button", { type: "submit", className: "pf-btn", disabled: w }, "Добавить бригаду")
     ) : null,
     g ? i.createElement("div", { className: "pf-error", role: "alert" }, g) : null,
@@ -35130,12 +35130,12 @@ function aA(n) {
       { className: "pf-card pj-list", "data-testid": "br-list" },
       s.length ? s.map((A) => m === A.id ? i.createElement(
         "form",
-        { key: A.id, className: "pj-form br-row", onSubmit: (J) => {
-          N(J, A.id);
+        { key: A.id, className: "pj-form br-row", onSubmit: (B) => {
+          S(B, A.id);
         }, "data-brigade-id": A.id },
-        K("Название", "name", A.name, "pj-grow"),
-        K("Бригадир", "leader", A.leader_name || "", "pj-grow"),
-        K("Телефон", "phone", A.phone || "", "pj-grow"),
+        Y("Название", "name", A.name, "pj-grow"),
+        Y("Бригадир", "leader", A.leader_name || "", "pj-grow"),
+        Y("Телефон", "phone", A.phone || "", "pj-grow"),
         i.createElement(
           "span",
           { className: "pj-actions" },
@@ -35167,7 +35167,7 @@ function aA(n) {
 }
 const nA = (n, t) => (n.labor === null || t.price_labor !== null && Math.abs(n.labor - t.price_labor) < 1e-9) && (n.material === null || t.price_material !== null && Math.abs(n.material - t.price_material) < 1e-9), h_ = { new: "Новая", changed: "Изменится", same: "Без изменений", conflict: "Конфликт" }, tp = (n, t, r) => r === "work" ? `работа ${n === null ? "—" : Re(n)} · мат. ${t === null ? "—" : Re(t)}` : t === null ? "—" : Re(t);
 function rA(n) {
-  const { api: t, vor: r, company: s, current: c, workTypes: u, onDone: d } = n, [m, h] = i.useState(null), [g, y] = i.useState([]), [v, b] = i.useState(null), [w, E] = i.useState({}), [S, k] = i.useState("all"), [N, O] = i.useState(!1), [R, K] = i.useState("");
+  const { api: t, vor: r, company: s, current: c, workTypes: u, onDone: d } = n, [m, h] = i.useState(null), [g, y] = i.useState([]), [v, b] = i.useState(null), [w, E] = i.useState({}), [N, k] = i.useState("all"), [S, O] = i.useState(!1), [R, Y] = i.useState("");
   i.useEffect(() => {
     (async () => {
       const j = (await r.listProjects()).filter((W) => W.company_id === s.company_id), re = [];
@@ -35177,7 +35177,7 @@ function rA(n) {
   }, []);
   async function A() {
     if (!m) return;
-    O(!0), K("");
+    O(!0), Y("");
     const j = [];
     for (const re of g) {
       const W = m.find((ne) => ne.id === re), ae = await r.importRows(re), pe = Array.from(new Set(ae.flatMap((ne) => Object.keys(ne.prices || {}))));
@@ -35185,27 +35185,27 @@ function rA(n) {
     }
     O(!1), b(j), E({});
   }
-  const J = i.useMemo(() => new Map(u.map((j) => [j.id, j.name])), [u]), z = i.useMemo(() => v ? mS(v.map((j) => ({ importId: j.imp.id, label: j.imp.sheet_name, rows: j.rows, columns: j.columns })), c, (j) => J.get(j) || null) : [], [v, c, J]), X = hS(z), ue = (j) => {
+  const B = i.useMemo(() => new Map(u.map((j) => [j.id, j.name])), [u]), z = i.useMemo(() => v ? mS(v.map((j) => ({ importId: j.imp.id, label: j.imp.sheet_name, rows: j.rows, columns: j.columns })), c, (j) => B.get(j) || null) : [], [v, c, B]), F = hS(z), ue = (j) => {
     var re;
     return ((re = v == null ? void 0 : v.find((W) => W.imp.id === j)) == null ? void 0 : re.imp.sheet_name) || "";
   };
-  async function B() {
+  async function I() {
     const j = gS(z, w);
     if (!j.size) {
-      K("Нечего записывать: новых и изменившихся цен нет (или не выбраны цены в конфликтах).");
+      Y("Нечего записывать: новых и изменившихся цен нет (или не выбраны цены в конфликтах).");
       return;
     }
-    O(!0), K("");
+    O(!0), Y("");
     let re = 0, W = 0;
     for (const [ae, pe] of j) {
       const ne = await t.upsertPrices(s.company_id, pe, "import:" + ae);
       if (!ne.ok) {
-        O(!1), K(ne.message);
+        O(!1), Y(ne.message);
         return;
       }
       re += ne.value.created, W += ne.value.updated;
     }
-    O(!1), d(`Цены записаны: новых ${re}, изменено ${W}${X.conflict - Object.keys(w).length > 0 ? `; пропущено конфликтов без выбора: ${X.conflict - Object.keys(w).length}` : ""}.`);
+    O(!1), d(`Цены записаны: новых ${re}, изменено ${W}${F.conflict - Object.keys(w).length > 0 ? `; пропущено конфликтов без выбора: ${F.conflict - Object.keys(w).length}` : ""}.`);
   }
   return m === null ? i.createElement("div", { className: "pf-card pri-box pf-muted" }, "Загрузка списка ВОР…") : i.createElement(
     "div",
@@ -35227,9 +35227,9 @@ function rA(n) {
     i.createElement(
       "div",
       { className: "pj-actions" },
-      i.createElement("button", { type: "button", className: "pf-btn", disabled: N || !g.length, "data-testid": "pri-show", onClick: () => {
+      i.createElement("button", { type: "button", className: "pf-btn", disabled: S || !g.length, "data-testid": "pri-show", onClick: () => {
         A();
-      } }, N && !v ? "Читаю строки…" : "Показать цены")
+      } }, S && !v ? "Читаю строки…" : "Показать цены")
     ),
     v ? i.createElement("div", { className: "pri-step" }, "2. Колонки цены за единицу (угаданы по шапке — проверьте):") : null,
     v ? v.map((j, re) => i.createElement(
@@ -35266,18 +35266,18 @@ function rA(n) {
           key: j,
           type: "button",
           role: "tab",
-          "aria-selected": S === j,
+          "aria-selected": N === j,
           "data-status": j,
-          className: "pf-seg-btn" + (S === j ? " pf-seg-btn--active" : ""),
+          className: "pf-seg-btn" + (N === j ? " pf-seg-btn--active" : ""),
           onClick: () => k(j)
         },
-        j === "all" ? `Все · ${z.length}` : `${h_[j]} · ${X[j]}`
+        j === "all" ? `Все · ${z.length}` : `${h_[j]} · ${F[j]}`
       ))
     ) : null,
     v ? i.createElement(
       "div",
       { className: "pri-list" },
-      z.filter((j) => S === "all" || j.status === S).slice(0, 500).map((j) => i.createElement(
+      z.filter((j) => N === "all" || j.status === N).slice(0, 500).map((j) => i.createElement(
         "div",
         { key: j.key, className: `pri-row pri-row--${j.status}`, "data-status": j.status },
         i.createElement(
@@ -35304,8 +35304,8 @@ function rA(n) {
     v ? i.createElement(
       "div",
       { className: "pj-actions" },
-      i.createElement("button", { type: "button", className: "pf-btn", disabled: N, "data-testid": "pri-apply", onClick: () => {
-        B();
+      i.createElement("button", { type: "button", className: "pf-btn", disabled: S, "data-testid": "pri-apply", onClick: () => {
+        I();
       } }, "Применить")
     ) : null
   );
@@ -35401,7 +35401,7 @@ function oA(n) {
   );
 }
 function cA(n) {
-  const { api: t, vor: r, company: s } = n, [c, u] = i.useState(null), [d, m] = i.useState(""), [h, g] = i.useState([]), [y, v] = i.useState("work"), [b, w] = i.useState(""), [E, S] = i.useState(!1), [k, N] = i.useState(""), [O, R] = i.useState(""), [K, A] = i.useState(!1), [J, z] = i.useState(""), [X, ue] = i.useState(""), [B, j] = i.useState(!1);
+  const { api: t, vor: r, company: s } = n, [c, u] = i.useState(null), [d, m] = i.useState(""), [h, g] = i.useState([]), [y, v] = i.useState("work"), [b, w] = i.useState(""), [E, N] = i.useState(!1), [k, S] = i.useState(""), [O, R] = i.useState(""), [Y, A] = i.useState(!1), [B, z] = i.useState(""), [F, ue] = i.useState(""), [I, j] = i.useState(!1);
   async function re() {
     const T = await t.listPrices(s.company_id);
     if (!T.ok) {
@@ -35412,34 +35412,34 @@ function cA(n) {
   }
   i.useEffect(() => {
     re(), r && r.listProjects().then(async (T) => {
-      const G = T.find((C) => C.company_id === s.company_id);
-      G && g(await r.listWorkTypes(G.id));
+      const V = T.find((C) => C.company_id === s.company_id);
+      V && g(await r.listWorkTypes(V.id));
     });
   }, []);
   const W = i.useMemo(() => {
-    var G;
+    var V;
     if (!c) return [];
     const T = /* @__PURE__ */ new Map();
     for (const C of h) T.set(oi("work", C.id, C.name, null), { key: oi("work", C.id, C.name, null), kind: "work", name: C.name, unit: C.unit_code || "", work_type_id: C.id, item: null });
     for (const C of c) {
-      const Y = oi(C.kind, C.work_type_id, C.name, C.unit_text);
-      T.set(Y, { key: Y, kind: C.kind, name: C.name, unit: C.kind === "work" ? C.unit_code || ((G = T.get(Y)) == null ? void 0 : G.unit) || "" : C.unit_text, work_type_id: C.work_type_id, item: C });
+      const X = oi(C.kind, C.work_type_id, C.name, C.unit_text);
+      T.set(X, { key: X, kind: C.kind, name: C.name, unit: C.kind === "work" ? C.unit_code || ((V = T.get(X)) == null ? void 0 : V.unit) || "" : C.unit_text, work_type_id: C.work_type_id, item: C });
     }
-    return Array.from(T.values()).sort((C, Y) => C.name.localeCompare(Y.name, "ru"));
+    return Array.from(T.values()).sort((C, X) => C.name.localeCompare(X.name, "ru"));
   }, [c, h]);
-  async function ae(T, G) {
-    if (B) return !1;
+  async function ae(T, V) {
+    if (I) return !1;
     j(!0), z(""), ue("");
     const C = await t.upsertPrices(s.company_id, T, "manual");
-    return j(!1), C.ok ? (ue(G), await re(), !0) : (z(C.message), !1);
+    return j(!1), C.ok ? (ue(V), await re(), !0) : (z(C.message), !1);
   }
-  function pe(T, G, C) {
-    const Y = T.kind === "work" ? { kind: "work", work_type_id: T.work_type_id, price_labor: G === "labor" ? C : null, price_material: G === "material" ? C : null } : { kind: "material", name: T.name, unit_text: T.unit, price_material: C };
-    return ae([Y], `Цена «${T.name}» сохранена`);
+  function pe(T, V, C) {
+    const X = T.kind === "work" ? { kind: "work", work_type_id: T.work_type_id, price_labor: V === "labor" ? C : null, price_material: V === "material" ? C : null } : { kind: "material", name: T.name, unit_text: T.unit, price_material: C };
+    return ae([X], `Цена «${T.name}» сохранена`);
   }
   async function ne(T) {
     T.preventDefault();
-    const G = T.currentTarget, C = G.elements.namedItem("name").value.trim(), Y = G.elements.namedItem("unit").value.trim(), le = fr(G.elements.namedItem("price").value);
+    const V = T.currentTarget, C = V.elements.namedItem("name").value.trim(), X = V.elements.namedItem("unit").value.trim(), le = fr(V.elements.namedItem("price").value);
     if (!C) {
       z("Введите наименование материала");
       return;
@@ -35448,20 +35448,20 @@ function cA(n) {
       z("Цена — число от 0");
       return;
     }
-    await ae([{ kind: "material", name: C, unit_text: Y, price_material: le }], "Материал добавлен") && G.reset();
+    await ae([{ kind: "material", name: C, unit_text: X, price_material: le }], "Материал добавлен") && V.reset();
   }
   async function de(T) {
     R(""), j(!0), z(""), ue("");
-    const G = await t.deletePrice(T.id);
-    if (j(!1), !G.ok) {
-      z(G.message);
+    const V = await t.deletePrice(T.id);
+    if (j(!1), !V.ok) {
+      z(V.message);
       return;
     }
     ue("Цена удалена из справочника"), await re();
   }
   if (c === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка…");
   if (d) return i.createElement("div", { className: "pf-muted", "data-testid": "pr-noaccess" }, "Нет права на цены компании: справочник цен доступен ПТО, руководителю проекта и администратору.");
-  const me = b.trim().toLowerCase(), U = W.filter((T) => T.kind === y && (!me || T.name.toLowerCase().includes(me)) && (!E || !T.item || (y === "work" ? T.item.price_labor === null : T.item.price_material === null))), L = (T) => W.filter((G) => G.kind === T).length, q = /* @__PURE__ */ new Date();
+  const me = b.trim().toLowerCase(), U = W.filter((T) => T.kind === y && (!me || T.name.toLowerCase().includes(me)) && (!E || !T.item || (y === "work" ? T.item.price_labor === null : T.item.price_material === null))), L = (T) => W.filter((V) => V.kind === T).length, q = /* @__PURE__ */ new Date();
   return i.createElement(
     "div",
     { className: "pj-tab pr-tab", "data-testid": "pr-prices" },
@@ -35493,14 +35493,14 @@ function cA(n) {
         "aria-label": "Поиск",
         onChange: (T) => w(T.target.value)
       }),
-      i.createElement("label", { className: "pr-check" }, i.createElement("input", { type: "checkbox", checked: E, onChange: () => S(!E) }), "Только без цены"),
+      i.createElement("label", { className: "pr-check" }, i.createElement("input", { type: "checkbox", checked: E, onChange: () => N(!E) }), "Только без цены"),
       i.createElement(
         "button",
-        { type: "button", className: "pf-btn", "data-testid": "pr-import-open", onClick: () => A(!K) },
-        K ? "Скрыть «Взять цены из ВОР»" : "Взять цены из загруженного ВОР"
+        { type: "button", className: "pf-btn", "data-testid": "pr-import-open", onClick: () => A(!Y) },
+        Y ? "Скрыть «Взять цены из ВОР»" : "Взять цены из загруженного ВОР"
       )
     ),
-    K && r ? i.createElement(rA, {
+    Y && r ? i.createElement(rA, {
       api: t,
       vor: r,
       company: s,
@@ -35510,21 +35510,21 @@ function cA(n) {
         A(!1), ue(T), re();
       }
     }) : null,
-    J ? i.createElement("div", { className: "pf-error", role: "alert" }, J) : null,
-    X ? i.createElement("div", { className: "pj-notice", role: "status" }, X) : null,
+    B ? i.createElement("div", { className: "pf-error", role: "alert" }, B) : null,
+    F ? i.createElement("div", { className: "pj-notice", role: "status" }, F) : null,
     y === "material" ? i.createElement(
       "form",
       { className: "pf-card pj-form", onSubmit: ne, "data-testid": "pr-add" },
       i.createElement("label", { className: "pf-field pj-grow" }, "Материал", i.createElement("input", { name: "name", type: "text", className: "pj-input", maxLength: 500 })),
       i.createElement("label", { className: "pf-field pr-unit-in" }, "ЕИ", i.createElement("input", { name: "unit", type: "text", className: "pj-input", maxLength: 50, placeholder: "кг" })),
       i.createElement("label", { className: "pf-field pr-unit-in" }, "Цена, ₽", i.createElement("input", { name: "price", type: "text", inputMode: "decimal", className: "pj-input pf-num" })),
-      i.createElement("button", { type: "submit", className: "pf-btn", disabled: B }, "Добавить материал")
+      i.createElement("button", { type: "submit", className: "pf-btn", disabled: I }, "Добавить материал")
     ) : null,
     i.createElement(
       "div",
       { className: "pf-card pj-list", "data-testid": "pr-list" },
       U.length ? U.map((T) => {
-        var G, C;
+        var V, C;
         return i.createElement(
           "div",
           { key: T.key, className: "pr-row", "data-key": T.key },
@@ -35542,15 +35542,15 @@ function cA(n) {
           i.createElement(
             "div",
             { className: "pr-prices" },
-            T.kind === "work" ? i.createElement(Uc, { value: ((G = T.item) == null ? void 0 : G.price_labor) ?? null, label: "Работа, ₽", disabled: B, testid: "pr-labor", onSave: (Y) => pe(T, "labor", Y) }) : null,
-            i.createElement(Uc, { value: ((C = T.item) == null ? void 0 : C.price_material) ?? null, label: T.kind === "work" ? "Материалы в составе, ₽" : "Цена, ₽", disabled: B, testid: "pr-material", onSave: (Y) => pe(T, "material", Y) }),
+            T.kind === "work" ? i.createElement(Uc, { value: ((V = T.item) == null ? void 0 : V.price_labor) ?? null, label: "Работа, ₽", disabled: I, testid: "pr-labor", onSave: (X) => pe(T, "labor", X) }) : null,
+            i.createElement(Uc, { value: ((C = T.item) == null ? void 0 : C.price_material) ?? null, label: T.kind === "work" ? "Материалы в составе, ₽" : "Цена, ₽", disabled: I, testid: "pr-material", onSave: (X) => pe(T, "material", X) }),
             T.item ? i.createElement(
               "span",
               { className: "pr-acts" },
-              i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "pr-hist-btn", onClick: () => N(k === T.item.id ? "" : T.item.id) }, k === T.item.id ? "Скрыть историю" : "История"),
-              O === T.item.id ? i.createElement("button", { type: "button", className: "pf-btn un-danger", disabled: B, onClick: () => {
+              i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "pr-hist-btn", onClick: () => S(k === T.item.id ? "" : T.item.id) }, k === T.item.id ? "Скрыть историю" : "История"),
+              O === T.item.id ? i.createElement("button", { type: "button", className: "pf-btn un-danger", disabled: I, onClick: () => {
                 de(T.item);
-              } }, "Да, удалить") : i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: B, onClick: () => R(T.item.id) }, "Удалить")
+              } }, "Да, удалить") : i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: I, onClick: () => R(T.item.id) }, "Удалить")
             ) : null
           ),
           T.item && k === T.item.id ? i.createElement(oA, { api: t, item: T.item }) : null
@@ -35686,8 +35686,8 @@ const b_ = (n) => n === null ? "" : n.toLocaleString("ru-RU", { maximumFractionD
   }
 }, Pl = (n, t) => n === null || t === null ? n === t : Math.abs(n - t) < 1e-9;
 function gA(n) {
-  const { api: t, vor: r, estimate: s, imports: c, companyId: u, onBack: d, extra: m } = n, [h, g] = i.useState(null), [y, v] = i.useState(s.name), [b, w] = i.useState(s.area_m2 ? String(s.area_m2).replace(".", ",") : ""), [E, S] = i.useState("all"), [k, N] = i.useState(null), [O, R] = i.useState(""), [K, A] = i.useState(""), [J, z] = i.useState(!1);
-  async function X() {
+  const { api: t, vor: r, estimate: s, imports: c, companyId: u, onBack: d, extra: m } = n, [h, g] = i.useState(null), [y, v] = i.useState(s.name), [b, w] = i.useState(s.area_m2 ? String(s.area_m2).replace(".", ",") : ""), [E, N] = i.useState("all"), [k, S] = i.useState(null), [O, R] = i.useState(""), [Y, A] = i.useState(""), [B, z] = i.useState(!1);
+  async function F() {
     const U = await t.estimateRows(s.id);
     if (!U.ok) {
       R(U.message), g([]);
@@ -35696,34 +35696,34 @@ function gA(n) {
     g(U.value);
   }
   i.useEffect(() => {
-    X();
+    F();
   }, []);
-  const ue = i.useMemo(() => Jp(h || []), [h]), B = i.useMemo(() => r0(h || [], ue), [h, ue]), j = fr(b);
+  const ue = i.useMemo(() => Jp(h || []), [h]), I = i.useMemo(() => r0(h || [], ue), [h, ue]), j = fr(b);
   async function re(U, L, q = !0) {
-    if (J) return !1;
+    if (B) return !1;
     z(!0), R(""), A("");
     const T = await U();
-    return z(!1), T.ok ? (A(L(T.value)), q && await X(), !0) : (R(T.message), !1);
+    return z(!1), T.ok ? (A(L(T.value)), q && await F(), !0) : (R(T.message), !1);
   }
   async function W(U, L, q) {
     const T = {
       source_row_id: U.source_row_id,
       price_labor: U.kind === "work" ? L === "labor" ? q : U.price_labor : null,
       price_material: L === "material" ? q : U.price_material
-    }, G = await re(() => t.setPrices(s.id, [T]), () => `Цена строки ${U.row_no} сохранена (вручную)`, !1);
-    return G && g((h || []).map((C) => C.source_row_id === U.source_row_id ? { ...C, price_labor: T.price_labor ?? null, price_material: T.price_material ?? null, price_source: "manual" } : C)), G;
+    }, V = await re(() => t.setPrices(s.id, [T]), () => `Цена строки ${U.row_no} сохранена (вручную)`, !1);
+    return V && g((h || []).map((C) => C.source_row_id === U.source_row_id ? { ...C, price_labor: T.price_labor ?? null, price_material: T.price_material ?? null, price_source: "manual" } : C)), V;
   }
   async function ae() {
-    if (!h || J) return;
+    if (!h || B) return;
     z(!0), R(""), A("");
     const U = [];
     for (const L of s.import_ids) {
-      const q = await r.importRows(L), T = Array.from(new Set(q.flatMap((le) => Object.keys(le.prices || {})))), G = s0(T), C = pS(T), Y = new Map(q.map((le) => [le.row_no, le]));
+      const q = await r.importRows(L), T = Array.from(new Set(q.flatMap((le) => Object.keys(le.prices || {})))), V = s0(T), C = pS(T), X = new Map(q.map((le) => [le.row_no, le]));
       for (const le of h) {
         if (le.import_id !== L || le.kind !== "work" && le.kind !== "material") continue;
-        const se = Y.get(le.row_no);
+        const se = X.get(le.row_no);
         if (!se) continue;
-        const be = le.kind === "work" ? rb(G.labor ? se.prices[G.labor] : null, C.labor ? se.prices[C.labor] : null, se.qty) : null, ke = rb(G.material ? se.prices[G.material] : null, C.material ? se.prices[C.material] : null, se.qty);
+        const be = le.kind === "work" ? rb(V.labor ? se.prices[V.labor] : null, C.labor ? se.prices[C.labor] : null, se.qty) : null, ke = rb(V.material ? se.prices[V.material] : null, C.material ? se.prices[C.material] : null, se.qty);
         be === null && ke === null || Pl(be, le.price_labor) && Pl(ke, le.price_material) || U.push({ source_row_id: le.source_row_id, price_labor: le.kind === "work" ? be : null, price_material: ke });
       }
     }
@@ -35739,7 +35739,7 @@ function gA(n) {
     await re(
       () => t.upsertPrices(u, U, "estimate:" + s.id),
       (q) => `Записано в справочник: новых ${q.created}, изменено ${q.updated}, без изменений ${q.unchanged}.`
-    ) && N(null);
+    ) && S(null);
   }
   if (h === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка сметы…");
   const ne = h.filter((U) => U.price_source === "manual" && (U.kind === "work" ? !!U.work_type_id : !0)), de = (U) => {
@@ -35768,7 +35768,7 @@ function gA(n) {
       i.createElement("button", {
         type: "button",
         className: "pf-btn",
-        disabled: J,
+        disabled: B,
         "data-testid": "es-save-head",
         onClick: () => {
           const U = fr(b);
@@ -35785,7 +35785,7 @@ function gA(n) {
       { className: "pf-card es-totals", "data-testid": "es-totals" },
       i.createElement("div", { className: "es-trow es-trow--head" }, i.createElement("span", null, "Лист"), i.createElement("span", { className: "pf-num" }, "Работа"), i.createElement("span", { className: "pf-num" }, "Материалы"), i.createElement("span", { className: "pf-num" }, "Всего")),
       s.import_ids.map((U) => {
-        const L = B.byImport.get(U);
+        const L = I.byImport.get(U);
         return i.createElement(
           "div",
           { key: U, className: "es-trow", "data-import": U },
@@ -35799,9 +35799,9 @@ function gA(n) {
         "div",
         { className: "es-trow es-trow--all" },
         i.createElement("span", null, "Прямые затраты по ВОР"),
-        i.createElement("span", { className: "pf-num es-t-l" }, Re(B.all.labor)),
-        i.createElement("span", { className: "pf-num es-t-m" }, Re(B.all.material)),
-        i.createElement("span", { className: "pf-num es-t-t", "data-testid": "es-sum-all" }, Re(B.all.total))
+        i.createElement("span", { className: "pf-num es-t-l" }, Re(I.all.labor)),
+        i.createElement("span", { className: "pf-num es-t-m" }, Re(I.all.material)),
+        i.createElement("span", { className: "pf-num es-t-t", "data-testid": "es-sum-all" }, Re(I.all.total))
       )
     ),
     i.createElement(
@@ -35810,20 +35810,20 @@ function gA(n) {
       i.createElement(
         "div",
         { className: "pf-seg es-filter", role: "tablist" },
-        [["all", "Все строки"], ["unpriced", `Без цены · ${B.all.unpriced}`], ["manual", `Вручную · ${h.filter((U) => U.price_source === "manual").length}`]].map(([U, L]) => i.createElement("button", {
+        [["all", "Все строки"], ["unpriced", `Без цены · ${I.all.unpriced}`], ["manual", `Вручную · ${h.filter((U) => U.price_source === "manual").length}`]].map(([U, L]) => i.createElement("button", {
           key: U,
           type: "button",
           role: "tab",
           "aria-selected": E === U,
           "data-filter": U,
           className: "pf-seg-btn" + (E === U ? " pf-seg-btn--active" : ""),
-          onClick: () => S(U)
+          onClick: () => N(U)
         }, L))
       ),
-      i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: J, "data-testid": "es-refill", onClick: () => {
+      i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: B, "data-testid": "es-refill", onClick: () => {
         re(() => t.refill(s.id), (U) => `Цены справочника подставлены заново: ${U} строк (ручные не тронуты).`);
       } }, "Подставить цены справочника"),
-      i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: J, "data-testid": "es-from-file", onClick: () => {
+      i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: B, "data-testid": "es-from-file", onClick: () => {
         ae();
       } }, "Цены из файла ВОР"),
       i.createElement(
@@ -35831,9 +35831,9 @@ function gA(n) {
         {
           type: "button",
           className: "pf-btn pf-btn--ghost",
-          disabled: J || !ne.length,
+          disabled: B || !ne.length,
           "data-testid": "es-to-ref",
-          onClick: () => N(k ? null : ne.filter((U) => !Pl(U.price_labor, U.ref_labor) || !Pl(U.price_material, U.ref_material)).map((U) => U.source_row_id))
+          onClick: () => S(k ? null : ne.filter((U) => !Pl(U.price_labor, U.ref_labor) || !Pl(U.price_material, U.ref_material)).map((U) => U.source_row_id))
         },
         k ? "Отмена" : "Записать ручные цены в справочник"
       )
@@ -35845,15 +35845,15 @@ function gA(n) {
       i.createElement("div", { className: "pri-list" }, ne.map((U) => i.createElement(
         "label",
         { key: U.source_row_id, className: "pr-check" },
-        i.createElement("input", { type: "checkbox", checked: k.includes(U.source_row_id), onChange: () => N(k.includes(U.source_row_id) ? k.filter((L) => L !== U.source_row_id) : [...k, U.source_row_id]) }),
+        i.createElement("input", { type: "checkbox", checked: k.includes(U.source_row_id), onChange: () => S(k.includes(U.source_row_id) ? k.filter((L) => L !== U.source_row_id) : [...k, U.source_row_id]) }),
         `стр. ${U.row_no} ${U.name.slice(0, 80)} — ${U.kind === "work" ? `работа ${Re(U.price_labor)}${U.price_material !== null ? ` · мат. ${Re(U.price_material)}` : ""}` : Re(U.price_material)}${U.ref_item_id ? ` (в справочнике ${U.kind === "work" ? Re(U.ref_labor) : Re(U.ref_material)})` : " (новая)"}`
       ))),
-      i.createElement("div", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn", disabled: J || !k.length || !u, "data-testid": "es-to-ref-apply", onClick: () => {
+      i.createElement("div", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn", disabled: B || !k.length || !u, "data-testid": "es-to-ref-apply", onClick: () => {
         pe();
       } }, "Записать в справочник"))
     ) : null,
     O ? i.createElement("div", { className: "pf-error", role: "alert" }, O) : null,
-    K ? i.createElement("div", { className: "pj-notice", role: "status" }, K) : null,
+    Y ? i.createElement("div", { className: "pj-notice", role: "status" }, Y) : null,
     i.createElement(
       "div",
       { className: "pf-card es-rows", "data-testid": "es-rows" },
@@ -35873,10 +35873,10 @@ function gA(n) {
         const q = L > 0 ? me[L - 1].import_id : null, T = s.import_ids.length > 1 && U.import_id !== q ? i.createElement("div", { key: "sh" + U.import_id, className: "es-sheet" }, `Лист «${de(U.import_id)}»`) : null;
         if (U.kind === "group" || U.kind === "context")
           return [T, i.createElement("div", { key: U.source_row_id, className: `es-row es-row--${U.kind}` }, i.createElement("span", { className: "es-no" }, String(U.row_no)), i.createElement("span", { className: "es-gname" }, [U.number, U.name].filter(Boolean).join(" ")))];
-        const G = ue.get(U.source_row_id), C = U.price_source === "manual" && U.ref_item_id && (!Pl(U.price_labor, U.ref_labor) || !Pl(U.price_material, U.ref_material)) ? `в справочнике ${U.kind === "work" ? Re(U.ref_labor) + (U.ref_material !== null ? " / " + Re(U.ref_material) : "") : Re(U.ref_material)} от ${hA(U.ref_date)}` : "";
+        const V = ue.get(U.source_row_id), C = U.price_source === "manual" && U.ref_item_id && (!Pl(U.price_labor, U.ref_labor) || !Pl(U.price_material, U.ref_material)) ? `в справочнике ${U.kind === "work" ? Re(U.ref_labor) + (U.ref_material !== null ? " / " + Re(U.ref_material) : "") : Re(U.ref_material)} от ${hA(U.ref_date)}` : "";
         return [T, i.createElement(
           "div",
-          { key: U.source_row_id, className: `es-row es-row--${U.kind}${G && !G.priced ? " es-row--unpriced" : ""}`, "data-row": U.row_no, "data-source": U.price_source || "" },
+          { key: U.source_row_id, className: `es-row es-row--${U.kind}${V && !V.priced ? " es-row--unpriced" : ""}`, "data-row": U.row_no, "data-source": U.price_source || "" },
           i.createElement("span", { className: "es-no" }, String(U.row_no)),
           i.createElement(
             "span",
@@ -35884,19 +35884,19 @@ function gA(n) {
             U.number ? i.createElement("span", { className: "vor-num" }, U.number) : null,
             U.name,
             U.price_source === "manual" ? i.createElement("span", { className: "es-badge", title: C }, "вручную") : null,
-            U.price_source === "none" || G && !G.priced ? i.createElement("span", { className: "es-badge es-badge--none" }, "без цены") : null,
+            U.price_source === "none" || V && !V.priced ? i.createElement("span", { className: "es-badge es-badge--none" }, "без цены") : null,
             C ? i.createElement("span", { className: "es-hint" }, C) : null
           ),
           i.createElement("span", { className: "es-unit pf-unit" }, U.unit_text || ""),
-          i.createElement("span", { className: "pf-num es-qty" }, b_((G == null ? void 0 : G.qty) ?? null), U.norm !== null ? i.createElement("span", { className: "vor-norm" }, `норма ${b_(U.norm)}`) : null),
-          i.createElement("span", { className: "es-price" }, U.kind === "work" ? i.createElement(Uc, { value: U.price_labor, label: "Цена работы", disabled: J, testid: "es-labor", onSave: (Y) => W(U, "labor", Y) }) : null),
-          i.createElement("span", { className: "es-price" }, i.createElement(Uc, { value: U.price_material, label: U.kind === "work" ? "Мат. в составе" : "Цена материала", disabled: J, testid: "es-material", onSave: (Y) => W(U, "material", Y) })),
-          i.createElement("span", { className: "pf-num es-sum es-sum--l" }, G && G.labor ? Re(G.labor) : ""),
-          i.createElement("span", { className: "pf-num es-sum es-sum--m" }, G && G.material ? Re(G.material) : "")
+          i.createElement("span", { className: "pf-num es-qty" }, b_((V == null ? void 0 : V.qty) ?? null), U.norm !== null ? i.createElement("span", { className: "vor-norm" }, `норма ${b_(U.norm)}`) : null),
+          i.createElement("span", { className: "es-price" }, U.kind === "work" ? i.createElement(Uc, { value: U.price_labor, label: "Цена работы", disabled: B, testid: "es-labor", onSave: (X) => W(U, "labor", X) }) : null),
+          i.createElement("span", { className: "es-price" }, i.createElement(Uc, { value: U.price_material, label: U.kind === "work" ? "Мат. в составе" : "Цена материала", disabled: B, testid: "es-material", onSave: (X) => W(U, "material", X) })),
+          i.createElement("span", { className: "pf-num es-sum es-sum--l" }, V && V.labor ? Re(V.labor) : ""),
+          i.createElement("span", { className: "pf-num es-sum es-sum--m" }, V && V.material ? Re(V.material) : "")
         )];
       })
     ),
-    m ? m(h, { labor: B.all.labor, material: B.all.material }, j !== null && !Number.isNaN(j) && j > 0 ? j : null) : null
+    m ? m(h, { labor: I.all.labor, material: I.all.material }, j !== null && !Number.isNaN(j) && j > 0 ? j : null) : null
   );
 }
 const vA = `
@@ -36037,55 +36037,55 @@ function W0(n) {
   const { lines: t, onChange: r, base: s, area: c, editable: u, showValues: d } = n, [m, h] = i.useState(""), g = i.useMemo(() => {
     try {
       return { r: Vc(t, s, c), err: "" };
-    } catch (S) {
-      return { r: null, err: S instanceof Error ? S.message : String(S) };
+    } catch (N) {
+      return { r: null, err: N instanceof Error ? N.message : String(N) };
     }
-  }, [t, s.labor, s.material, c]), y = (S, k) => r(t.map((N) => N.key === S ? { ...N, ...k } : N));
-  function v(S, k) {
-    const N = t.findIndex((A) => A.key === S), O = t[N].section;
-    let R = N + k;
+  }, [t, s.labor, s.material, c]), y = (N, k) => r(t.map((S) => S.key === N ? { ...S, ...k } : S));
+  function v(N, k) {
+    const S = t.findIndex((A) => A.key === N), O = t[S].section;
+    let R = S + k;
     for (; R >= 0 && R < t.length && t[R].section !== O; ) R += k;
     if (R < 0 || R >= t.length) return;
-    const K = t.slice();
-    [K[N], K[R]] = [K[R], K[N]], r(K);
+    const Y = t.slice();
+    [Y[S], Y[R]] = [Y[R], Y[S]], r(Y);
   }
-  function b(S) {
-    r(t.filter((k) => k.key !== S).map((k) => ({ ...k, base: { ...k.base, lines: (k.base.lines || []).filter((N) => N !== S) } })));
+  function b(N) {
+    r(t.filter((k) => k.key !== N).map((k) => ({ ...k, base: { ...k.base, lines: (k.base.lines || []).filter((S) => S !== N) } })));
   }
-  function w(S) {
-    const k = t.map((R) => R.section).lastIndexOf(S), N = { key: wA(), section: S, name: "Новая строка", comment: null, method: "fixed", base: {}, params: { amount: 0 }, in_total: !0 }, O = t.slice();
-    O.splice(k >= 0 ? k + 1 : O.length, 0, N), r(O);
+  function w(N) {
+    const k = t.map((R) => R.section).lastIndexOf(N), S = { key: wA(), section: N, name: "Новая строка", comment: null, method: "fixed", base: {}, params: { amount: 0 }, in_total: !0 }, O = t.slice();
+    O.splice(k >= 0 ? k + 1 : O.length, 0, S), r(O);
   }
-  const E = (S) => g.r && d ? Re(g.r.values.get(S) ?? 0) : "";
+  const E = (N) => g.r && d ? Re(g.r.values.get(N) ?? 0) : "";
   return i.createElement(
     "div",
     { className: "oh-editor", "data-testid": "oh-editor" },
     g.err ? i.createElement("div", { className: "pf-error", role: "alert", "data-testid": "oh-error" }, g.err) : null,
-    Ql.map((S) => {
-      const k = t.filter((N) => N.section === S.id);
+    Ql.map((N) => {
+      const k = t.filter((S) => S.section === N.id);
       return !k.length && !u ? null : i.createElement(
         "div",
-        { key: S.id, className: "oh-sec", "data-section": S.id },
+        { key: N.id, className: "oh-sec", "data-section": N.id },
         i.createElement(
           "div",
           { className: "oh-sec-head" },
-          i.createElement("span", null, S.label),
-          d && g.r ? i.createElement("span", { className: "pf-num", "data-testid": "oh-sec-" + S.id }, Re(g.r.sections[S.id])) : null
+          i.createElement("span", null, N.label),
+          d && g.r ? i.createElement("span", { className: "pf-num", "data-testid": "oh-sec-" + N.id }, Re(g.r.sections[N.id])) : null
         ),
-        k.map((N) => i.createElement(
+        k.map((S) => i.createElement(
           "div",
-          { key: N.key, className: "oh-line" + (N.in_total ? "" : " oh-line--out"), "data-key": N.key },
+          { key: S.key, className: "oh-line" + (S.in_total ? "" : " oh-line--out"), "data-key": S.key },
           i.createElement(
             "div",
             { className: "oh-main" },
-            u ? i.createElement("input", { type: "text", className: "pj-input oh-name", value: N.name, maxLength: 300, "aria-label": "Название", onChange: (O) => y(N.key, { name: O.target.value }) }) : i.createElement("b", { className: "oh-name" }, N.name),
+            u ? i.createElement("input", { type: "text", className: "pj-input oh-name", value: S.name, maxLength: 300, "aria-label": "Название", onChange: (O) => y(S.key, { name: O.target.value }) }) : i.createElement("b", { className: "oh-name" }, S.name),
             i.createElement(
               "label",
               { className: "pr-check oh-intotal", title: "Входит в итог раздела" },
-              i.createElement("input", { type: "checkbox", checked: N.in_total, disabled: !u, "data-testid": "oh-intotal", onChange: () => y(N.key, { in_total: !N.in_total }) }),
+              i.createElement("input", { type: "checkbox", checked: S.in_total, disabled: !u, "data-testid": "oh-intotal", onChange: () => y(S.key, { in_total: !S.in_total }) }),
               "в итог"
             ),
-            i.createElement("span", { className: "pf-num oh-val", "data-testid": "oh-val" }, E(N.key))
+            i.createElement("span", { className: "pf-num oh-val", "data-testid": "oh-val" }, E(S.key))
           ),
           i.createElement(
             "div",
@@ -36094,87 +36094,87 @@ function W0(n) {
               "select",
               {
                 className: "pj-input oh-method",
-                value: N.method,
+                value: S.method,
                 disabled: !u,
                 "aria-label": "Способ расчёта",
                 onChange: (O) => {
                   const R = O.target.value;
-                  y(N.key, { method: R, params: R === "percent_of" ? { percent: 0 } : R === "qty_rate" ? { factors: [0] } : R === "fixed" ? { amount: 0 } : { share: 100 } });
+                  y(S.key, { method: R, params: R === "percent_of" ? { percent: 0 } : R === "qty_rate" ? { factors: [0] } : R === "fixed" ? { amount: 0 } : { share: 100 } });
                 }
               },
               yA.map((O) => i.createElement("option", { key: O.id, value: O.id }, O.label))
             ),
-            N.method === "percent_of" ? i.createElement(hc, {
-              value: mc(N.params.percent),
+            S.method === "percent_of" ? i.createElement(hc, {
+              value: mc(S.params.percent),
               label: "Процент",
               disabled: !u,
               testid: "oh-percent",
               parse: (O) => {
                 const R = fr(O.replace("%", ""));
-                return R === null || Number.isNaN(R) ? !1 : (y(N.key, { params: { percent: R } }), !0);
+                return R === null || Number.isNaN(R) ? !1 : (y(S.key, { params: { percent: R } }), !0);
               }
             }) : null,
-            N.method === "percent_of" ? i.createElement("span", { className: "oh-unit" }, "%") : null,
-            N.method === "gross_up" ? i.createElement(hc, {
-              value: mc(N.params.share),
+            S.method === "percent_of" ? i.createElement("span", { className: "oh-unit" }, "%") : null,
+            S.method === "gross_up" ? i.createElement(hc, {
+              value: mc(S.params.share),
               label: "Доля, %",
               disabled: !u,
               parse: (O) => {
                 const R = fr(O.replace("%", ""));
-                return R === null || Number.isNaN(R) || R <= 0 || R > 100 ? !1 : (y(N.key, { params: { share: R } }), !0);
+                return R === null || Number.isNaN(R) || R <= 0 || R > 100 ? !1 : (y(S.key, { params: { share: R } }), !0);
               }
             }) : null,
-            N.method === "gross_up" ? i.createElement("span", { className: "oh-unit" }, "% доля") : null,
-            N.method === "fixed" ? i.createElement(hc, {
-              value: mc(N.params.amount),
+            S.method === "gross_up" ? i.createElement("span", { className: "oh-unit" }, "% доля") : null,
+            S.method === "fixed" ? i.createElement(hc, {
+              value: mc(S.params.amount),
               label: "Сумма, ₽",
               disabled: !u,
               wide: !0,
               parse: (O) => {
                 const R = fr(O);
-                return R === null || Number.isNaN(R) ? !1 : (y(N.key, { params: { amount: R } }), !0);
+                return R === null || Number.isNaN(R) ? !1 : (y(S.key, { params: { amount: R } }), !0);
               }
             }) : null,
-            N.method === "qty_rate" ? i.createElement(hc, {
-              value: (N.params.factors || []).map((O) => mc(O)).join(" × "),
+            S.method === "qty_rate" ? i.createElement(hc, {
+              value: (S.params.factors || []).map((O) => mc(O)).join(" × "),
               label: "Множители через ×",
               disabled: !u,
               wide: !0,
               testid: "oh-factors",
               parse: (O) => {
                 const R = _A(O);
-                return R ? (y(N.key, { params: { factors: R } }), !0) : !1;
+                return R ? (y(S.key, { params: { factors: R } }), !0) : !1;
               }
             }) : null,
-            N.method === "percent_of" || N.method === "gross_up" ? i.createElement(
+            S.method === "percent_of" || S.method === "gross_up" ? i.createElement(
               "button",
-              { type: "button", className: "pf-btn pf-btn--ghost oh-basebtn", "data-testid": "oh-basebtn", onClick: () => h(m === N.key ? "" : N.key) },
-              "от: " + EA(N, t)
+              { type: "button", className: "pf-btn pf-btn--ghost oh-basebtn", "data-testid": "oh-basebtn", onClick: () => h(m === S.key ? "" : S.key) },
+              "от: " + EA(S, t)
             ) : null
           ),
-          m === N.key && u ? i.createElement(xA, { line: N, lines: t, onChange: (O) => y(N.key, { base: O }) }) : null,
-          u || N.comment ? i.createElement(
+          m === S.key && u ? i.createElement(xA, { line: S, lines: t, onChange: (O) => y(S.key, { base: O }) }) : null,
+          u || S.comment ? i.createElement(
             "div",
             { className: "oh-foot" },
             u ? i.createElement("input", {
               type: "text",
               className: "pj-input oh-comment",
-              value: N.comment || "",
+              value: S.comment || "",
               maxLength: 2e3,
               placeholder: "Комментарий",
               "aria-label": "Комментарий",
-              onChange: (O) => y(N.key, { comment: O.target.value || null })
-            }) : i.createElement("span", { className: "pf-muted" }, N.comment),
+              onChange: (O) => y(S.key, { comment: O.target.value || null })
+            }) : i.createElement("span", { className: "pf-muted" }, S.comment),
             u ? i.createElement(
               "span",
               { className: "oh-acts" },
-              i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "aria-label": "Выше", onClick: () => v(N.key, -1) }, "↑"),
-              i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "aria-label": "Ниже", onClick: () => v(N.key, 1) }, "↓"),
-              i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "aria-label": "Удалить строку", "data-testid": "oh-del", onClick: () => b(N.key) }, "✕")
+              i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "aria-label": "Выше", onClick: () => v(S.key, -1) }, "↑"),
+              i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "aria-label": "Ниже", onClick: () => v(S.key, 1) }, "↓"),
+              i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "aria-label": "Удалить строку", "data-testid": "oh-del", onClick: () => b(S.key) }, "✕")
             ) : null
           ) : null
         )),
-        u ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost oh-add", onClick: () => w(S.id) }, `+ строка в «${S.label}»`) : null
+        u ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost oh-add", onClick: () => w(N.id) }, `+ строка в «${N.label}»`) : null
       );
     }),
     d && g.r ? i.createElement(
@@ -36192,7 +36192,7 @@ function W0(n) {
   );
 }
 function kA(n) {
-  const { api: t, estimateId: r, companyId: s, base: c, area: u } = n, [d, m] = i.useState(null), [h, g] = i.useState(!1), [y, v] = i.useState(""), [b, w] = i.useState(""), [E, S] = i.useState(!1), [k, N] = i.useState(!1);
+  const { api: t, estimateId: r, companyId: s, base: c, area: u } = n, [d, m] = i.useState(null), [h, g] = i.useState(!1), [y, v] = i.useState(""), [b, w] = i.useState(""), [E, N] = i.useState(!1), [k, S] = i.useState(!1);
   async function O() {
     const A = await t.overheads(r);
     if (!A.ok) {
@@ -36211,10 +36211,10 @@ function kA(n) {
       return !1;
     }
   }, [d]);
-  async function K(A, J) {
-    S(!0), v(""), w("");
+  async function Y(A, B) {
+    N(!0), v(""), w("");
     const z = await A();
-    return S(!1), z.ok ? (w(J), !0) : (v(z.message || "Не удалось"), !1);
+    return N(!1), z.ok ? (w(B), !0) : (v(z.message || "Не удалось"), !1);
   }
   return d === null ? i.createElement("div", { className: "pf-muted" }, "Загрузка расчёта…") : i.createElement(
     "div",
@@ -36232,7 +36232,7 @@ function kA(n) {
           disabled: E || !h || !R,
           "data-testid": "oh-save",
           onClick: () => {
-            K(() => t.saveOverheads(r, d), "Расчёт сметы сохранён").then((A) => {
+            Y(() => t.saveOverheads(r, d), "Расчёт сметы сохранён").then((A) => {
               A && g(!1);
             });
           }
@@ -36259,9 +36259,9 @@ function kA(n) {
           disabled: E || !R,
           "data-testid": "oh-to-tpl-yes",
           onClick: () => {
-            N(!1), K(() => t.saveTemplate(s, d), "Шаблон компании заменён строками этой сметы");
+            S(!1), Y(() => t.saveTemplate(s, d), "Шаблон компании заменён строками этой сметы");
           }
-        }, "Да, заменить шаблон компании") : i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: E || !R, "data-testid": "oh-to-tpl", onClick: () => N(!0) }, "Сохранить как шаблон компании")
+        }, "Да, заменить шаблон компании") : i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: E || !R, "data-testid": "oh-to-tpl", onClick: () => S(!0) }, "Сохранить как шаблон компании")
       )
     ),
     y ? i.createElement("div", { className: "pf-error", role: "alert" }, y) : null,
@@ -36273,16 +36273,16 @@ function kA(n) {
 }
 function SA(n) {
   const { api: t, company: r } = n, [s, c] = i.useState(null), [u, d] = i.useState(""), [m, h] = i.useState(!1), [g, y] = i.useState(""), [v, b] = i.useState(""), [w, E] = i.useState(!1);
-  async function S() {
-    const N = await t.template(r.company_id);
-    if (!N.ok) {
-      d(N.message), c([]);
+  async function N() {
+    const S = await t.template(r.company_id);
+    if (!S.ok) {
+      d(S.message), c([]);
       return;
     }
-    c(N.value), h(!1);
+    c(S.value), h(!1);
   }
   i.useEffect(() => {
-    S();
+    N();
   }, []);
   const k = i.useMemo(() => {
     try {
@@ -36306,9 +36306,9 @@ function SA(n) {
         onClick: () => {
           (async () => {
             E(!0), y(""), b("");
-            const N = await t.saveTemplate(r.company_id, s);
-            if (E(!1), !N.ok) {
-              y(N.message);
+            const S = await t.saveTemplate(r.company_id, s);
+            if (E(!1), !S.ok) {
+              y(S.message);
               return;
             }
             b("Шаблон надбавок сохранён"), h(!1);
@@ -36316,13 +36316,13 @@ function SA(n) {
         }
       }, m ? "Сохранить шаблон" : "Сохранено"),
       m ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: w, onClick: () => {
-        S();
+        N();
       } }, "Отменить изменения") : null
     ),
     g ? i.createElement("div", { className: "pf-error", role: "alert" }, g) : null,
     v ? i.createElement("div", { className: "pj-notice", role: "status" }, v) : null,
-    i.createElement("div", { className: "pf-card oh-box" }, i.createElement(W0, { lines: s, onChange: (N) => {
-      c(N), h(!0);
+    i.createElement("div", { className: "pf-card oh-box" }, i.createElement(W0, { lines: s, onChange: (S) => {
+      c(S), h(!0);
     }, base: { labor: 0, material: 0 }, area: null, editable: !w, showValues: !1 }))
   );
 }
@@ -36446,31 +36446,31 @@ function au(n, t) {
 }
 function zA(n) {
   var U;
-  const { api: t, vor: r, estimate: s, imports: c, projectId: u, rows: d } = n, m = n.save || au, [h, g] = i.useState(null), [y, v] = i.useState(null), [b, w] = i.useState(""), [E, S] = i.useState(""), [k, N] = i.useState({ a: "", b: "" }), [O, R] = i.useState(null), [K, A] = i.useState(""), [J, z] = i.useState(""), [X, ue] = i.useState(!1);
-  async function B() {
+  const { api: t, vor: r, estimate: s, imports: c, projectId: u, rows: d } = n, m = n.save || au, [h, g] = i.useState(null), [y, v] = i.useState(null), [b, w] = i.useState(""), [E, N] = i.useState(""), [k, S] = i.useState({ a: "", b: "" }), [O, R] = i.useState(null), [Y, A] = i.useState(""), [B, z] = i.useState(""), [F, ue] = i.useState(!1);
+  async function I() {
     const L = await t.listKp(s.id);
-    g(L), L.length >= 2 && N({ a: L[1].id, b: L[0].id });
+    g(L), L.length >= 2 && S({ a: L[1].id, b: L[0].id });
   }
   i.useEffect(() => {
-    B();
+    I();
   }, []);
   const j = c.filter((L) => s.import_ids.includes(L.id)), re = d.filter((L) => (L.kind === "work" || L.kind === "material") && L.price_labor === null && L.price_material === null).length;
   async function W(L, q, T) {
     ue(!0), A(""), z(""), R(null);
     try {
-      const G = new Uint8Array(await L.arrayBuffer()), { readWorkbook: C, sha256Hex: Y } = await import("./chunks/xlsx-reader-CPcF3VtK.js"), le = await Y(G);
+      const V = new Uint8Array(await L.arrayBuffer()), { readWorkbook: C, sha256Hex: X } = await import("./chunks/xlsx-reader-CPcF3VtK.js"), le = await X(V);
       if (T && le !== T.file_sha256) throw new Error("Это другой файл: он не совпадает с файлом этой редакции КП. Выберите тот же файл заказчика.");
-      const se = await C(G), be = await r.listProfiles(u), ke = [];
+      const se = await C(V), be = await r.listProfiles(u), ke = [];
       for (const Se of j) {
-        const V = se.sheets.find((fe) => fe.name === Se.sheet_name);
-        if (!V) continue;
-        const he = be.find((fe) => fe.id === Se.profile_id) || null, Ne = ii(V, he ? I_(he.column_map) : null), Te = Ne.columns ? Ne.columns.prices : [], Oe = he && he.column_map.kp_columns;
+        const K = se.sheets.find((fe) => fe.name === Se.sheet_name);
+        if (!K) continue;
+        const he = be.find((fe) => fe.id === Se.profile_id) || null, Ne = ii(K, he ? I_(he.column_map) : null), Te = Ne.columns ? Ne.columns.prices : [], Oe = he && he.column_map.kp_columns;
         ke.push({ imp: Se, labels: Te, profile: he, cols: Oe ? { ...Op([]), ...Oe } : Op(Te), fromProfile: !!Oe });
       }
       if (!ke.length) throw new Error("В этом файле нет листов этой сметы (" + j.map((Se) => "«" + Se.sheet_name + "»").join(", ") + "). Выберите исходный файл заказчика.");
-      v({ mode: q, file: L, buf: G, sha: le, sheets: ke, rev: T });
-    } catch (G) {
-      A(G instanceof Error ? G.message : String(G));
+      v({ mode: q, file: L, buf: V, sha: le, sheets: ke, rev: T });
+    } catch (V) {
+      A(V instanceof Error ? V.message : String(V));
     }
     ue(!1);
   }
@@ -36488,23 +36488,23 @@ function zA(n) {
           L = AA({ id: s.id, name: s.name, area_m2: s.area_m2 }, d, le.ok ? le.value : null);
         }
         const { patchXlsx: q } = await import("./chunks/xlsx-writer-C1YpHX_s.js");
-        let T = y.buf, G = 0, C = 0;
+        let T = y.buf, V = 0, C = 0;
         for (const le of y.sheets) {
           if (!Object.values(le.cols).some((be) => be !== null)) throw new Error(`Для листа «${le.imp.sheet_name}» не выбрана ни одна колонка цены.`);
           const se = await q(T, le.imp.sheet_name, OA(L, le.imp.id, le.cols));
-          T = se.bytes, G += se.written.length, C += se.skippedFormula.length;
+          T = se.bytes, V += se.written.length, C += se.skippedFormula.length;
         }
-        let Y;
+        let X;
         if (y.mode === "new") {
           const le = await t.createKp(s.id, y.sha, L, L.totals.total, b.trim() || null);
           if (!le.ok) throw new Error(le.message);
-          Y = le.value.revision_no;
+          X = le.value.revision_no;
           for (const se of y.sheets) {
             const be = se.profile && se.profile.column_map.kp_columns;
             se.profile && JSON.stringify(be) !== JSON.stringify(se.cols) && await r.saveProfile(u, se.profile.name, se.profile.signature, { ...se.profile.column_map, kp_columns: se.cols });
           }
-        } else Y = y.rev.revision_no;
-        m(T, jA(y.file.name, Y)), z(`КП, редакция ${Y}: вписано ${G} ячеек${C ? `, формул заказчика не тронуто ${C}` : ""}${L.totals.unpriced ? `; без цены строк: ${L.totals.unpriced}` : ""}. Файл скачан.`), v(null), w(""), S(""), await B();
+        } else X = y.rev.revision_no;
+        m(T, jA(y.file.name, X)), z(`КП, редакция ${X}: вписано ${V} ячеек${C ? `, формул заказчика не тронуто ${C}` : ""}${L.totals.unpriced ? `; без цены строк: ${L.totals.unpriced}` : ""}. Файл скачан.`), v(null), w(""), N(""), await I();
       } catch (L) {
         A(L instanceof Error ? L.message : String(L));
       }
@@ -36525,14 +36525,14 @@ function zA(n) {
     const T = RA(L.value.snapshot, q.value.snapshot);
     R({ ...T, an: L.value.revision_no, bn: q.value.revision_no });
   }
-  const ne = (L, q, T, G) => i.createElement(
+  const ne = (L, q, T, V) => i.createElement(
     "label",
-    { className: "pf-btn kp-file" + (L === "again" ? " pf-btn--ghost" : ""), "data-testid": G },
+    { className: "pf-btn kp-file" + (L === "again" ? " pf-btn--ghost" : ""), "data-testid": V },
     T,
-    i.createElement("input", { type: "file", accept: ".xlsx", hidden: !0, disabled: X, onChange: (C) => {
+    i.createElement("input", { type: "file", accept: ".xlsx", hidden: !0, disabled: F, onChange: (C) => {
       var le;
-      const Y = (le = C.target.files) == null ? void 0 : le[0];
-      C.target.value = "", Y && W(Y, L, q);
+      const X = (le = C.target.files) == null ? void 0 : le[0];
+      C.target.value = "", X && W(X, L, q);
     } })
   ), de = (L) => {
     var q;
@@ -36566,15 +36566,15 @@ function zA(n) {
             {
               className: "pj-input",
               value: L.cols[T.id] === null ? "" : String(L.cols[T.id]),
-              disabled: X,
+              disabled: F,
               "data-testid": "kp-col-" + T.id,
-              onChange: (G) => {
-                const C = G.target.value, Y = [...y.sheets];
-                Y[q] = { ...L, cols: { ...L.cols, [T.id]: C === "" ? null : Number(C) } }, v({ ...y, sheets: Y });
+              onChange: (V) => {
+                const C = V.target.value, X = [...y.sheets];
+                X[q] = { ...L, cols: { ...L.cols, [T.id]: C === "" ? null : Number(C) } }, v({ ...y, sheets: X });
               }
             },
             i.createElement("option", { value: "" }, "— не заполнять —"),
-            L.labels.map((G) => i.createElement("option", { key: G.col, value: String(G.col) }, `${$A(G.col)}: ${G.label}`))
+            L.labels.map((V) => i.createElement("option", { key: V.col, value: String(V.col) }, `${$A(V.col)}: ${V.label}`))
           )
         )))
       )),
@@ -36587,14 +36587,14 @@ function zA(n) {
       i.createElement(
         "div",
         { className: "pj-actions" },
-        i.createElement("button", { type: "button", className: "pf-btn", disabled: X, "data-testid": "kp-generate", onClick: () => {
+        i.createElement("button", { type: "button", className: "pf-btn", disabled: F, "data-testid": "kp-generate", onClick: () => {
           ae();
         } }, y.mode === "new" ? "Сформировать и скачать" : "Скачать"),
-        i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: X, onClick: () => v(null) }, "Отмена")
+        i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: F, onClick: () => v(null) }, "Отмена")
       )
     ) : null,
-    K ? i.createElement("div", { className: "pf-error", role: "alert" }, K) : null,
-    J ? i.createElement("div", { className: "pj-notice", role: "status" }, J) : null,
+    Y ? i.createElement("div", { className: "pf-error", role: "alert" }, Y) : null,
+    B ? i.createElement("div", { className: "pj-notice", role: "status" }, B) : null,
     i.createElement("div", { className: "pri-step" }, "Редакции КП"),
     h === null ? i.createElement("div", { className: "pf-muted" }, "Загрузка…") : h.length ? i.createElement("div", { className: "pf-card pj-list", "data-testid": "kp-list" }, h.map((L) => i.createElement(
       "div",
@@ -36610,23 +36610,23 @@ function zA(n) {
         "span",
         { className: "pj-actions" },
         ne("again", L, "Выбрать файл заказчика", "kp-again-file"),
-        i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", onClick: () => S("") }, "Отмена")
-      ) : i.createElement("span", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: X, "data-testid": "kp-again", onClick: () => S(L.id) }, "Скачать ещё раз"))
+        i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", onClick: () => N("") }, "Отмена")
+      ) : i.createElement("span", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: F, "data-testid": "kp-again", onClick: () => N(L.id) }, "Скачать ещё раз"))
     ))) : i.createElement("div", { className: "pf-muted", "data-testid": "kp-empty" }, "Редакций КП пока нет."),
     h && h.length >= 2 ? i.createElement(
       "div",
       { className: "kp-cmp" },
       i.createElement("label", { className: "pf-field" }, "Сравнить редакцию", i.createElement(
         "select",
-        { className: "pj-input", value: k.a, "data-testid": "kp-cmp-a", onChange: (L) => N({ ...k, a: L.target.value }) },
+        { className: "pj-input", value: k.a, "data-testid": "kp-cmp-a", onChange: (L) => S({ ...k, a: L.target.value }) },
         h.map((L) => i.createElement("option", { key: L.id, value: L.id }, `ред. ${L.revision_no}`))
       )),
       i.createElement("label", { className: "pf-field" }, "с редакцией", i.createElement(
         "select",
-        { className: "pj-input", value: k.b, "data-testid": "kp-cmp-b", onChange: (L) => N({ ...k, b: L.target.value }) },
+        { className: "pj-input", value: k.b, "data-testid": "kp-cmp-b", onChange: (L) => S({ ...k, b: L.target.value }) },
         h.map((L) => i.createElement("option", { key: L.id, value: L.id }, `ред. ${L.revision_no}`))
       )),
-      i.createElement("button", { type: "button", className: "pf-btn", disabled: X, "data-testid": "kp-compare", onClick: () => {
+      i.createElement("button", { type: "button", className: "pf-btn", disabled: F, "data-testid": "kp-compare", onClick: () => {
         pe();
       } }, "Сравнить")
     ) : null,
@@ -36635,7 +36635,7 @@ function zA(n) {
       { className: "pri-box", "data-testid": "kp-diff" },
       i.createElement("div", { className: "pri-step" }, `Ред. ${O.an} → ред. ${O.bn}: изменилось строк ${O.rows.length}; сумма по ВОР ${O.direct >= 0 ? "+" : ""}${Re(O.direct)} ₽${O.total !== null ? `; итог расчёта ${O.total >= 0 ? "+" : ""}${Re(O.total)} ₽` : ""}`),
       i.createElement("div", { className: "pri-list" }, O.rows.slice(0, 500).map((L) => {
-        var q, T, G, C;
+        var q, T, V, C;
         return i.createElement(
           "div",
           { key: L.key, className: "pri-row" },
@@ -36645,7 +36645,7 @@ function zA(n) {
             { className: "pri-vals" },
             i.createElement("span", { className: "pf-muted" }, "работа / материал: " + me(L.a)),
             i.createElement("span", null, "→ " + me(L.b)),
-            i.createElement("span", { className: "pf-muted" }, `сумма ${Re((((q = L.a) == null ? void 0 : q.labor) || 0) + (((T = L.a) == null ? void 0 : T.material) || 0))} → ${Re((((G = L.b) == null ? void 0 : G.labor) || 0) + (((C = L.b) == null ? void 0 : C.material) || 0))}`)
+            i.createElement("span", { className: "pf-muted" }, `сумма ${Re((((q = L.a) == null ? void 0 : q.labor) || 0) + (((T = L.a) == null ? void 0 : T.material) || 0))} → ${Re((((V = L.b) == null ? void 0 : V.labor) || 0) + (((C = L.b) == null ? void 0 : C.material) || 0))}`)
           )
         );
       }))
@@ -36669,30 +36669,30 @@ const UA = `
 };
 function LA(n) {
   var ue;
-  const { api: t, vor: r } = n, [s, c] = i.useState(null), [u, d] = i.useState(""), [m, h] = i.useState(null), [g, y] = i.useState([]), [v, b] = i.useState(""), [w, E] = i.useState(!1), [S, k] = i.useState([]), [N, O] = i.useState(""), [R, K] = i.useState(!1);
+  const { api: t, vor: r } = n, [s, c] = i.useState(null), [u, d] = i.useState(""), [m, h] = i.useState(null), [g, y] = i.useState([]), [v, b] = i.useState(""), [w, E] = i.useState(!1), [N, k] = i.useState([]), [S, O] = i.useState(""), [R, Y] = i.useState(!1);
   i.useEffect(() => {
     (async () => {
-      const B = await r.listProjects(), j = [];
-      for (const re of B) (await r.permissions(re.id)).includes(dA) && j.push(re);
+      const I = await r.listProjects(), j = [];
+      for (const re of I) (await r.permissions(re.id)).includes(dA) && j.push(re);
       c(j), j.length && d(eu(j, window.location.hash));
     })();
   }, []);
-  async function A(B) {
+  async function A(I) {
     h(null), b(""), E(!1), k([]);
-    const [j, re] = await Promise.all([t.listEstimates(B), r.listImports(B)]);
+    const [j, re] = await Promise.all([t.listEstimates(I), r.listImports(I)]);
     h(j), y(re.filter((W) => W.status === "confirmed"));
   }
   i.useEffect(() => {
     u && A(u);
   }, [u]);
-  async function J(B) {
-    B.preventDefault();
-    const j = B.currentTarget, re = j.elements.namedItem("name").value.trim(), W = fr(j.elements.namedItem("area").value);
+  async function B(I) {
+    I.preventDefault();
+    const j = I.currentTarget, re = j.elements.namedItem("name").value.trim(), W = fr(j.elements.namedItem("area").value);
     if (!re) {
       O("Введите название сметы");
       return;
     }
-    if (!S.length) {
+    if (!N.length) {
       O("Выберите хотя бы одну подтверждённую загрузку ВОР");
       return;
     }
@@ -36700,9 +36700,9 @@ function LA(n) {
       O("Площадь — положительное число");
       return;
     }
-    K(!0), O("");
-    const ae = await t.createEstimate(u, re, S, W);
-    if (K(!1), !ae.ok) {
+    Y(!0), O("");
+    const ae = await t.createEstimate(u, re, N, W);
+    if (Y(!1), !ae.ok) {
       O(ae.message);
       return;
     }
@@ -36710,28 +36710,28 @@ function LA(n) {
   }
   if (s === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка…");
   if (!s.length) return i.createElement("div", { className: "pf-muted", "data-testid": "es-noaccess" }, "Нет права на сметы: раздел доступен ПТО, руководителю проекта и администратору.");
-  const z = (B) => {
-    const j = g.find((re) => re.id === B);
+  const z = (I) => {
+    const j = g.find((re) => re.id === I);
     return j ? `«${j.sheet_name}»` : "загрузка";
-  }, X = m == null ? void 0 : m.find((B) => B.id === v);
+  }, F = m == null ? void 0 : m.find((I) => I.id === v);
   return i.createElement(
     "div",
     { className: "pj-tab es-tab", "data-testid": "es-tab" },
     i.createElement(Kr, { list: s, value: u, onChange: d }),
-    X ? i.createElement(gA, {
-      key: X.id,
+    F ? i.createElement(gA, {
+      key: F.id,
       api: t,
       vor: r,
-      estimate: X,
+      estimate: F,
       imports: g,
-      companyId: ((ue = s.find((B) => B.id === u)) == null ? void 0 : ue.company_id) || "",
-      extra: (B, j, re) => {
+      companyId: ((ue = s.find((I) => I.id === u)) == null ? void 0 : ue.company_id) || "",
+      extra: (I, j, re) => {
         var W;
         return i.createElement(
           "div",
           { className: "pj-tab" },
-          i.createElement(kA, { api: t, estimateId: X.id, companyId: ((W = s.find((ae) => ae.id === u)) == null ? void 0 : W.company_id) || "", base: j, area: re }),
-          i.createElement(zA, { api: t, vor: r, estimate: X, imports: g, projectId: u, rows: B })
+          i.createElement(kA, { api: t, estimateId: F.id, companyId: ((W = s.find((ae) => ae.id === u)) == null ? void 0 : W.company_id) || "", base: j, area: re }),
+          i.createElement(zA, { api: t, vor: r, estimate: F, imports: g, projectId: u, rows: I })
         );
       },
       onBack: () => {
@@ -36747,43 +36747,43 @@ function LA(n) {
       ),
       w ? i.createElement(
         "form",
-        { className: "pf-card pj-form es-new", onSubmit: J, "data-testid": "es-create" },
+        { className: "pf-card pj-form es-new", onSubmit: B, "data-testid": "es-create" },
         i.createElement("label", { className: "pf-field pj-grow" }, "Название", i.createElement("input", { name: "name", type: "text", className: "pj-input", maxLength: 300, defaultValue: "Тендерная смета" })),
         i.createElement("label", { className: "pf-field" }, "S, м² (для ₽/м²)", i.createElement("input", { name: "area", type: "text", inputMode: "decimal", className: "pj-input pf-num" })),
         i.createElement(
           "div",
           { className: "es-imports" },
           i.createElement("div", { className: "pr-field-label" }, "Подтверждённые загрузки ВОР (можно несколько листов)"),
-          g.length ? g.map((B) => i.createElement(
+          g.length ? g.map((I) => i.createElement(
             "label",
-            { key: B.id, className: "pr-check" },
+            { key: I.id, className: "pr-check" },
             i.createElement("input", {
               type: "checkbox",
-              checked: S.includes(B.id),
+              checked: N.includes(I.id),
               "data-testid": "es-import",
-              onChange: () => k(S.includes(B.id) ? S.filter((j) => j !== B.id) : [...S, B.id])
+              onChange: () => k(N.includes(I.id) ? N.filter((j) => j !== I.id) : [...N, I.id])
             }),
-            `${B.file_name} · «${B.sheet_name}» (${B.works} работ)`
+            `${I.file_name} · «${I.sheet_name}» (${I.works} работ)`
           )) : i.createElement("div", { className: "pf-muted" }, "В проекте нет подтверждённых загрузок ВОР — сначала загрузите и подтвердите ВОР.")
         ),
         i.createElement("button", { type: "submit", className: "pf-btn", disabled: R }, "Создать смету")
       ) : null,
-      N ? i.createElement("div", { className: "pf-error", role: "alert" }, N) : null,
+      S ? i.createElement("div", { className: "pf-error", role: "alert" }, S) : null,
       m === null ? i.createElement("div", { className: "pf-muted" }, "Загрузка…") : i.createElement(
         "div",
         { className: "pf-card pj-list", "data-testid": "es-list" },
-        m.length ? m.map((B) => i.createElement(
+        m.length ? m.map((I) => i.createElement(
           "div",
-          { key: B.id, className: "pj-row", "data-estimate-id": B.id },
+          { key: I.id, className: "pj-row", "data-estimate-id": I.id },
           i.createElement(
             "div",
             { className: "pj-name" },
-            i.createElement("b", null, B.name),
-            i.createElement("span", { className: "pf-muted" }, B.import_ids.map(z).join(", ")),
-            B.area_m2 ? i.createElement("span", { className: "pj-badge" }, `S ${B.area_m2.toLocaleString("ru-RU")} м²`) : null,
-            i.createElement("span", { className: "pf-muted" }, `${B.rows} строк${B.unpriced ? ` · без цены ${B.unpriced}` : ""}${B.revisions ? ` · КП ред. ${B.revisions}` : ""} · ${MA(B.created_at)}`)
+            i.createElement("b", null, I.name),
+            i.createElement("span", { className: "pf-muted" }, I.import_ids.map(z).join(", ")),
+            I.area_m2 ? i.createElement("span", { className: "pj-badge" }, `S ${I.area_m2.toLocaleString("ru-RU")} м²`) : null,
+            i.createElement("span", { className: "pf-muted" }, `${I.rows} строк${I.unpriced ? ` · без цены ${I.unpriced}` : ""}${I.revisions ? ` · КП ред. ${I.revisions}` : ""} · ${MA(I.created_at)}`)
           ),
-          i.createElement("span", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn", "data-testid": "es-open", onClick: () => b(B.id) }, "Открыть"))
+          i.createElement("span", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn", "data-testid": "es-open", onClick: () => b(I.id) }, "Открыть"))
         )) : i.createElement("div", { className: "pj-empty pf-muted", "data-testid": "es-empty" }, "Смет в этом проекте пока нет.")
       )
     )
@@ -37032,21 +37032,21 @@ async function fO(n, t) {
     договор: [h.contract_no ? `№ ${h.contract_no}` : "", h.contract_date ? `от ${Pe(h.contract_date)}` : ""].filter(Boolean).join(" "),
     итого: Zp(t)
   }, y = [...u.model.merges || []], v = y.filter((E) => _c(E)[0] > d), b = y.filter((E) => {
-    const [S, k] = _c(E);
-    return S === d && k === d;
+    const [N, k] = _c(E);
+    return N === d && k === d;
   });
   for (const E of [...v, ...b]) u.unMergeCells(E);
   m > 1 && u.duplicateRow(d, m - 1, !0);
   for (const E of v) u.mergeCells(x_(E, m - 1));
-  for (let E = 0; E < m; E++) for (const S of b) u.mergeCells(x_(S, E));
+  for (let E = 0; E < m; E++) for (const N of b) u.mergeCells(x_(N, E));
   const w = u.pageSetup && u.pageSetup.printArea;
   if (typeof w == "string" && /^\$?[A-Z]+\$?\d+:\$?[A-Z]+\$?\d+$/.test(w) && _c(w.replace(/\$/g, ""))[1] >= d) {
-    const [E, S] = w.replace(/\$/g, "").split(":");
-    u.pageSetup.printArea = `${E}:${ow(S, m - 1)}`;
+    const [E, N] = w.replace(/\$/g, "").split(":");
+    u.pageSetup.printArea = `${E}:${ow(N, m - 1)}`;
   }
-  return r.forEach((E, S) => {
+  return r.forEach((E, N) => {
     const k = {
-      "№": S + 1,
+      "№": N + 1,
       номер: E.number || String(E.row_no),
       наименование: E.name,
       ЕИ: E.unit,
@@ -37054,8 +37054,8 @@ async function fO(n, t) {
       цена: ut(E.price ?? 0),
       стоимость: Yc(E)
     };
-    u.getRow(d + S).eachCell({ includeEmpty: !1 }, (N) => k_(N, k));
-  }), c.eachSheet((E) => E.eachRow({ includeEmpty: !1 }, (S) => S.eachCell({ includeEmpty: !1 }, (k) => k_(k, g)))), new Uint8Array(await c.xlsx.writeBuffer());
+    u.getRow(d + N).eachCell({ includeEmpty: !1 }, (S) => k_(S, k));
+  }), c.eachSheet((E) => E.eachRow({ includeEmpty: !1 }, (N) => N.eachCell({ includeEmpty: !1 }, (k) => k_(k, g)))), new Uint8Array(await c.xlsx.writeBuffer());
 }
 function pO(n) {
   let t = "";
@@ -37071,7 +37071,7 @@ const mO = (n, t) => n.replace(/\s+/g, " ").trim() === t.replace(/\s+/g, " ").tr
 function hO(n, t) {
   const r = n.map((m) => ii(m)).filter((m) => m.isVor && m.columns && m.columns.qty !== null), s = /* @__PURE__ */ new Map(), c = /* @__PURE__ */ new Map(), u = [], d = [];
   for (const m of t.rows) {
-    const h = r.filter((R) => R.rows.some((K) => K.rowNo === m.row_no && (K.kind === "work" || K.kind === "material") && mO(K.name, m.name)));
+    const h = r.filter((R) => R.rows.some((Y) => Y.rowNo === m.row_no && (Y.kind === "work" || Y.kind === "material") && mO(Y.name, m.name)));
     if (h.length !== 1) {
       u.push(`стр. ${m.row_no} «${m.name}»${h.length > 1 ? " (на нескольких листах)" : ""}`);
       continue;
@@ -37085,9 +37085,9 @@ function hO(n, t) {
       continue;
     }
     const w = Op(g.columns.prices), E = (R) => {
-      const K = R === null ? void 0 : g.columns.prices.find((A) => A.col === R);
-      return K ? y.prices[K.label] ?? null : null;
-    }, S = E(w.unitTotal), k = E(w.unitLabor), N = E(w.unitMaterial), O = S !== null ? S : k === null && N === null ? null : ut((k || 0) + (N || 0));
+      const Y = R === null ? void 0 : g.columns.prices.find((A) => A.col === R);
+      return Y ? y.prices[Y.label] ?? null : null;
+    }, N = E(w.unitTotal), k = E(w.unitLabor), S = E(w.unitMaterial), O = N !== null ? N : k === null && S === null ? null : ut((k || 0) + (S || 0));
     m.price !== null && (O === null || Math.abs(O - m.price) > 5e-3) && d.push(`стр. ${m.row_no} «${m.name}»`);
   }
   for (const m of r) {
@@ -37117,29 +37117,29 @@ const vO = [
 ], gc = (n) => n === null ? "" : String(n).replace(".", ",");
 function yO(n) {
   var Oe, fe;
-  const { api: t, actId: r, canEdit: s, onBack: c } = n, u = n.save || au, [d, m] = i.useState(null), [h, g] = i.useState([]), [y, v] = i.useState(Fp()), [b, w] = i.useState({}), [E, S] = i.useState(!1), [k, N] = i.useState(!1), [O, R] = i.useState(""), [K, A] = i.useState(""), [J, z] = i.useState(null), [X, ue] = i.useState(""), [B, j] = i.useState(""), [re, W] = i.useState(n.hasTemplate ? "template" : "unified"), [ae, pe] = i.useState(null);
+  const { api: t, actId: r, canEdit: s, onBack: c } = n, u = n.save || au, [d, m] = i.useState(null), [h, g] = i.useState([]), [y, v] = i.useState(Fp()), [b, w] = i.useState({}), [E, N] = i.useState(!1), [k, S] = i.useState(!1), [O, R] = i.useState(""), [Y, A] = i.useState(""), [B, z] = i.useState(null), [F, ue] = i.useState(""), [I, j] = i.useState(""), [re, W] = i.useState(n.hasTemplate ? "template" : "unified"), [ae, pe] = i.useState(null);
   async function ne() {
     const $ = await t.act(r);
     if (!$.ok) {
       A($.message);
       return;
     }
-    const F = KA($.value);
-    m($.value), g(F), v(GA($.value)), S(!1), w(Object.fromEntries(F.map((ee) => [ee.source_row_id, { qty: gc(ee.qty), price: gc(ee.price) }])));
+    const J = KA($.value);
+    m($.value), g(J), v(GA($.value)), N(!1), w(Object.fromEntries(J.map((ee) => [ee.source_row_id, { qty: gc(ee.qty), price: gc(ee.price) }])));
   }
   if (i.useEffect(() => {
     ne();
-  }, [r]), !d) return i.createElement("div", { className: "pj-tab" }, K ? i.createElement("div", { className: "pf-error", role: "alert" }, K) : i.createElement("div", { className: "pf-muted" }, "Загрузка…"));
-  const de = d.act, me = s && de.status === "draft", U = XA(y, h), L = Zp(U), q = rS(U), T = h.filter(ab).length, G = ($, F) => {
-    g(h.map((ee) => ee.source_row_id === $ ? F(ee) : ee)), S(!0), R("");
+  }, [r]), !d) return i.createElement("div", { className: "pj-tab" }, Y ? i.createElement("div", { className: "pf-error", role: "alert" }, Y) : i.createElement("div", { className: "pf-muted" }, "Загрузка…"));
+  const de = d.act, me = s && de.status === "draft", U = XA(y, h), L = Zp(U), q = rS(U), T = h.filter(ab).length, V = ($, J) => {
+    g(h.map((ee) => ee.source_row_id === $ ? J(ee) : ee)), N(!0), R("");
   };
-  function C($, F, ee) {
-    w({ ...b, [$]: { ...b[$], [F]: ee } });
+  function C($, J, ee) {
+    w({ ...b, [$]: { ...b[$], [J]: ee } });
     const ge = ee.trim() === "" ? null : dr(ee);
-    F === "qty" ? G($, (ie) => ({ ...ie, qty: ge === null || ge < 0 ? ie.qty : ge })) : G($, (ie) => ({ ...ie, price: ee.trim() === "" ? null : ge === null || ge < 0 ? ie.price : Math.round(ge * 100) / 100 }));
+    J === "qty" ? V($, (ie) => ({ ...ie, qty: ge === null || ge < 0 ? ie.qty : ge })) : V($, (ie) => ({ ...ie, price: ee.trim() === "" ? null : ge === null || ge < 0 ? ie.price : Math.round(ge * 100) / 100 }));
   }
-  function Y($) {
-    G($.source_row_id, (F) => ({ ...F, qty: F.sys_qty, price: F.sys_price, excluded: !1 })), w({ ...b, [$.source_row_id]: { qty: gc($.sys_qty), price: gc($.sys_price) } });
+  function X($) {
+    V($.source_row_id, (J) => ({ ...J, qty: J.sys_qty, price: J.sys_price, excluded: !1 })), w({ ...b, [$.source_row_id]: { qty: gc($.sys_qty), price: gc($.sys_price) } });
   }
   async function le() {
     if (k) return;
@@ -37151,21 +37151,21 @@ function yO(n) {
       A(`Неверный объём в строке «${$.name}»`);
       return;
     }
-    N(!0), A("");
-    const F = await t.save(r, y, YA(h), "");
-    if (N(!1), !F.ok) {
-      A(F.message);
+    S(!0), A("");
+    const J = await t.save(r, y, YA(h), "");
+    if (S(!1), !J.ok) {
+      A(J.message);
       return;
     }
-    await ne(), R(`Сохранена редакция ${F.value}`);
+    await ne(), R(`Сохранена редакция ${J.value}`);
   }
-  async function se($, F) {
+  async function se($, J) {
     if (!k) {
       if (re === "offer") {
-        pe({ snapshot: $, revisionNo: F }), A(""), R("");
+        pe({ snapshot: $, revisionNo: J }), A(""), R("");
         return;
       }
-      N(!0), A("");
+      S(!0), A("");
       try {
         let ee;
         if (re === "template" && n.hasTemplate) {
@@ -37173,53 +37173,53 @@ function yO(n) {
           if (!ge.ok || !ge.value) throw new Error(ge.ok ? "Бланк проекта не найден — выберите унифицированную форму" : ge.message);
           ee = await fO(cw(ge.value.data), $);
         } else ee = await oS($);
-        u(ee, lS($.header.act_no || de.act_no, F));
+        u(ee, lS($.header.act_no || de.act_no, J));
       } catch (ee) {
         A(ee instanceof Error ? ee.message : "Не удалось сформировать файл");
       }
-      N(!1);
+      S(!1);
     }
   }
   async function be($) {
     if (!(!ae || k)) {
-      N(!0), A(""), R("");
+      S(!0), A(""), R("");
       try {
-        const F = new Uint8Array(await $.arrayBuffer()), { readWorkbook: ee } = await import("./chunks/xlsx-reader-CPcF3VtK.js"), { patchXlsx: ge } = await import("./chunks/xlsx-writer-C1YpHX_s.js"), ie = hO((await ee(F)).sheets, ae.snapshot);
+        const J = new Uint8Array(await $.arrayBuffer()), { readWorkbook: ee } = await import("./chunks/xlsx-reader-CPcF3VtK.js"), { patchXlsx: ge } = await import("./chunks/xlsx-writer-C1YpHX_s.js"), ie = hO((await ee(J)).sheets, ae.snapshot);
         if (ie.missing.length || !ie.sheets.length)
           throw new Error(`Это другой файл: в нём нет строк акта (${ie.missing.length}) — например, ${ie.missing.slice(0, 3).join(", ")}. Выберите файл оферты, из которого загружен ВОР.`);
-        let ze = F, Ve = 0, at = 0, mt = 0;
+        let ze = J, Ve = 0, at = 0, mt = 0;
         for (const ht of ie.sheets) {
           const sn = await ge(ze, ht.sheet, ht.writes);
           ze = sn.bytes, Ve += sn.written.length, at += sn.skippedFormula.length, mt += ht.zero;
         }
         u(ze, gO($.name, ae.snapshot.header.act_no || de.act_no, ae.revisionNo)), R(`КС-2 в файле оферты: объём вписан в ${Ve} строк${mt ? ` (из них ${mt} — 0, нет в акте)` : ""}${at ? `; формул заказчика не тронуто ${at}` : ""}${ie.priceDiff.length ? `; цена в файле отличается от цены акта у ${ie.priceDiff.length} строк — выберите файл с договорным КП` : ""}. Файл скачан.`), pe(null);
-      } catch (F) {
-        A(F instanceof Error ? F.message : "Не удалось записать акт в файл");
+      } catch (J) {
+        A(J instanceof Error ? J.message : "Не удалось записать акт в файл");
       }
-      N(!1);
+      S(!1);
     }
   }
   async function ke($) {
-    const F = await t.revision($);
-    if (!F.ok) {
-      A(F.message);
+    const J = await t.revision($);
+    if (!J.ok) {
+      A(J.message);
       return;
     }
-    await se(F.value.snapshot, F.value.revision_no);
+    await se(J.value.snapshot, J.value.revision_no);
   }
   async function Se() {
-    if (J) {
+    if (B) {
       z(null);
       return;
     }
     const $ = await t.revisions(r);
     $.ok ? z($.value) : A($.message);
   }
-  async function V() {
+  async function K() {
     if (k) return;
-    N(!0), A("");
+    S(!0), A("");
     const $ = await t.issue(r);
-    if (N(!1), ue(""), !$.ok) {
+    if (S(!1), ue(""), !$.ok) {
       A($.message);
       return;
     }
@@ -37227,13 +37227,13 @@ function yO(n) {
   }
   async function he() {
     if (k) return;
-    if (!B.trim()) {
+    if (!I.trim()) {
       A("Укажите причину аннулирования");
       return;
     }
-    N(!0), A("");
-    const $ = await t.annul(r, B.trim());
-    if (N(!1), !$.ok) {
+    S(!0), A("");
+    const $ = await t.annul(r, I.trim());
+    if (S(!1), !$.ok) {
       A($.message);
       return;
     }
@@ -37254,8 +37254,8 @@ function yO(n) {
         disabled: !me,
         maxLength: 500,
         "data-field": $.key,
-        onChange: (F) => {
-          v({ ...y, [$.key]: F.target.value }), S(!0), R("");
+        onChange: (J) => {
+          v({ ...y, [$.key]: J.target.value }), N(!0), R("");
         }
       })
     ))),
@@ -37278,16 +37278,16 @@ function yO(n) {
       i.createElement("span", null)
     ),
     h.map(($) => {
-      const F = ab($), ee = b[$.source_row_id] || { qty: "", price: "" };
+      const J = ab($), ee = b[$.source_row_id] || { qty: "", price: "" };
       return i.createElement(
         "div",
-        { key: $.source_row_id, className: `k2-row k2-row--${$.kind}${F ? " k2-row--edited" : ""}${$.excluded ? " k2-row--excluded" : ""}${$.price === null && !$.excluded && $.qty > 0 ? " k2-row--unpriced" : ""}`, "data-row": $.row_no },
+        { key: $.source_row_id, className: `k2-row k2-row--${$.kind}${J ? " k2-row--edited" : ""}${$.excluded ? " k2-row--excluded" : ""}${$.price === null && !$.excluded && $.qty > 0 ? " k2-row--unpriced" : ""}`, "data-row": $.row_no },
         i.createElement("span", { className: "k2-c-no" }, $.number || String($.row_no)),
         i.createElement(
           "span",
           { className: "k2-c-name" },
           $.name,
-          F ? i.createElement("span", { className: "k2-edited", title: `система: ${Ee($.sys_qty)} × ${$.sys_price === null ? "нет цены" : Re($.sys_price)}`, "data-testid": "k2-edited" }, $.excluded ? "исключена" : "правка ПТО") : null,
+          J ? i.createElement("span", { className: "k2-edited", title: `система: ${Ee($.sys_qty)} × ${$.sys_price === null ? "нет цены" : Re($.sys_price)}`, "data-testid": "k2-edited" }, $.excluded ? "исключена" : "правка ПТО") : null,
           $.price === null && !$.excluded && $.qty > 0 ? i.createElement("span", { className: "es-badge es-badge--none" }, "без цены") : null
         ),
         i.createElement("span", { className: "k2-c-unit pf-unit" }, $.unit),
@@ -37298,8 +37298,8 @@ function yO(n) {
         i.createElement("span", { className: "pf-num k2-c-price" }, me && !$.excluded ? i.createElement("input", { className: "pj-input pf-num k2-in", inputMode: "decimal", value: ee.price, "aria-label": "Цена", "data-testid": "k2-price", onChange: (ge) => C($.source_row_id, "price", ge.target.value) }) : $.price === null ? "—" : Re($.price)),
         i.createElement("span", { className: "pf-num k2-c-sum" }, $.excluded ? "—" : Re(Yc($))),
         i.createElement("span", { className: "k2-c-act" }, me ? [
-          i.createElement("button", { key: "x", type: "button", className: "pf-btn pf-btn--ghost k2-small", "data-testid": "k2-exclude", onClick: () => G($.source_row_id, (ge) => ({ ...ge, excluded: !ge.excluded })) }, $.excluded ? "Вернуть" : "Исключить"),
-          F && !$.excluded ? i.createElement("button", { key: "r", type: "button", className: "pf-btn pf-btn--ghost k2-small", "data-testid": "k2-reset", title: "Вернуть объём и цену системы", onClick: () => Y($) }, "Как система") : null
+          i.createElement("button", { key: "x", type: "button", className: "pf-btn pf-btn--ghost k2-small", "data-testid": "k2-exclude", onClick: () => V($.source_row_id, (ge) => ({ ...ge, excluded: !ge.excluded })) }, $.excluded ? "Вернуть" : "Исключить"),
+          J && !$.excluded ? i.createElement("button", { key: "r", type: "button", className: "pf-btn pf-btn--ghost k2-small", "data-testid": "k2-reset", title: "Вернуть объём и цену системы", onClick: () => X($) }, "Как система") : null
         ] : null)
       );
     }),
@@ -37333,7 +37333,7 @@ function yO(n) {
     Te,
     me && q.length ? i.createElement("div", { className: "ft-warn", "data-testid": "k2-problems" }, q.join(" ")) : null,
     O ? i.createElement("div", { className: "pj-notice", role: "status", "data-testid": "k2-notice" }, O) : null,
-    K ? i.createElement("div", { className: "pf-error", role: "alert" }, K) : null,
+    Y ? i.createElement("div", { className: "pf-error", role: "alert" }, Y) : null,
     d.last_revision ? i.createElement(
       "div",
       { className: "pf-seg k2-form-seg", role: "tablist", "data-testid": "k2-form" },
@@ -37364,8 +37364,8 @@ function yO(n) {
             "data-testid": "k2-offer-file",
             onChange: ($) => {
               var ee;
-              const F = (ee = $.target.files) == null ? void 0 : ee[0];
-              $.target.value = "", F && be(F);
+              const J = (ee = $.target.files) == null ? void 0 : ee[0];
+              $.target.value = "", J && be(J);
             }
           })
         ),
@@ -37390,7 +37390,7 @@ function yO(n) {
       }, "Скачать Excel") : null,
       d.last_revision ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "k2-history-btn", onClick: () => {
         Se();
-      } }, J ? "Скрыть историю" : "История") : null,
+      } }, B ? "Скрыть историю" : "История") : null,
       me && d.last_revision ? i.createElement("button", {
         type: "button",
         className: "pf-btn pf-btn--ghost",
@@ -37407,7 +37407,7 @@ function yO(n) {
     ),
     me && !d.last_revision ? i.createElement("div", { className: "pf-muted" }, "Сохраните редакцию — после этого акт можно скачать и выдать.") : null,
     E && d.last_revision ? i.createElement("div", { className: "pf-muted" }, "Скачать и выдать можно сохранённую редакцию — сначала сохраните изменения.") : null,
-    X === "issue" ? i.createElement(
+    F === "issue" ? i.createElement(
       "div",
       { className: "pf-card k2-confirm", role: "dialog", "data-testid": "k2-issue-confirm" },
       i.createElement("b", null, `Выдать акт № ${de.act_no} (редакция ${(Oe = d.last_revision) == null ? void 0 : Oe.revision_no}) на ${Re(((fe = d.last_revision) == null ? void 0 : fe.total) ?? 0)} ₽?`),
@@ -37416,15 +37416,15 @@ function yO(n) {
         "div",
         { className: "pj-actions" },
         i.createElement("button", { type: "button", className: "pf-btn", disabled: k, "data-testid": "k2-issue-yes", onClick: () => {
-          V();
+          K();
         } }, "Да, выдать"),
         i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", onClick: () => ue("") }, "Отмена")
       )
     ) : null,
-    X === "annul" ? i.createElement(
+    F === "annul" ? i.createElement(
       "div",
       { className: "pf-card k2-confirm", role: "dialog", "data-testid": "k2-annul-confirm" },
-      i.createElement("label", { className: "pf-field" }, "Причина аннулирования", i.createElement("input", { className: "pj-input", value: B, maxLength: 1e3, "data-testid": "k2-annul-reason", onChange: ($) => j($.target.value) })),
+      i.createElement("label", { className: "pf-field" }, "Причина аннулирования", i.createElement("input", { className: "pj-input", value: I, maxLength: 1e3, "data-testid": "k2-annul-reason", onChange: ($) => j($.target.value) })),
       i.createElement(
         "div",
         { className: "pj-actions" },
@@ -37436,10 +37436,10 @@ function yO(n) {
         } }, "Отмена")
       )
     ) : null,
-    J ? i.createElement(
+    B ? i.createElement(
       "div",
       { className: "pf-card k2-history", "data-testid": "k2-history" },
-      J.map(($) => i.createElement(
+      B.map(($) => i.createElement(
         "div",
         { key: $.id, className: "k2-hrow", "data-revision": $.revision_no },
         i.createElement("b", null, `Редакция ${$.revision_no}`, $.issued ? i.createElement("span", { className: "k2-badge k2-badge--issued" }, " выдана") : null),
@@ -37520,47 +37520,47 @@ const bO = `
 }, wO = { "№": "№ по порядку", номер: "№ позиции заказчика", наименование: "наименование", ЕИ: "единица", количество: "объём", цена: "цена за ед.", стоимость: "стоимость" };
 function EO(n) {
   const { api: t, projectId: r, settings: s, onChanged: c } = n, u = n.save || au, [d, m] = i.useState([]), [h, g] = i.useState(""), [y, v] = i.useState(!1), b = s.can_edit;
-  async function w(N) {
-    if (m([]), g(""), !/\.xlsx$/i.test(N.name)) {
+  async function w(S) {
+    if (m([]), g(""), !/\.xlsx$/i.test(S.name)) {
       m(["Бланк должен быть файлом .xlsx."]);
       return;
     }
-    if (N.size > rw) {
+    if (S.size > rw) {
       m(["Бланк больше 2 МБ."]);
       return;
     }
     v(!0);
-    const O = new Uint8Array(await N.arrayBuffer()), R = await cO(O);
+    const O = new Uint8Array(await S.arrayBuffer()), R = await cO(O);
     if (!R.ok) {
       v(!1), m(R.errors);
       return;
     }
-    const K = await t.saveTemplate(r, N.name, pO(O));
-    if (v(!1), !K.ok) {
-      m([K.message]);
+    const Y = await t.saveTemplate(r, S.name, pO(O));
+    if (v(!1), !Y.ok) {
+      m([Y.message]);
       return;
     }
-    g(`Бланк «${N.name}» загружен: лист «${R.sheet}», строка-образец ${R.sampleRow}, метки: ${R.tags.map((A) => `{${A}}`).join(" ")}`), c();
+    g(`Бланк «${S.name}» загружен: лист «${R.sheet}», строка-образец ${R.sampleRow}, метки: ${R.tags.map((A) => `{${A}}`).join(" ")}`), c();
   }
   async function E() {
-    const N = await t.template(r);
-    if (!N.ok || !N.value) {
-      m([N.ok ? "Бланка нет" : N.message]);
+    const S = await t.template(r);
+    if (!S.ok || !S.value) {
+      m([S.ok ? "Бланка нет" : S.message]);
       return;
     }
-    u(cw(N.value.data), N.value.name);
+    u(cw(S.value.data), S.value.name);
   }
-  async function S() {
+  async function N() {
     if (y) return;
     v(!0);
-    const N = await t.saveTemplate(r, null, null);
-    if (v(!1), !N.ok) {
-      m([N.message]);
+    const S = await t.saveTemplate(r, null, null);
+    if (v(!1), !S.ok) {
+      m([S.message]);
       return;
     }
     g("Бланк убран — акты скачиваются по унифицированной форме."), c();
   }
-  const k = (N, O) => i.createElement("ul", { className: "k2-tags" }, N.map((R) => i.createElement("li", { key: R }, i.createElement("code", null, `{${R}}`), ` — ${O[R]}`)));
+  const k = (S, O) => i.createElement("ul", { className: "k2-tags" }, S.map((R) => i.createElement("li", { key: R }, i.createElement("code", null, `{${R}}`), ` — ${O[R]}`)));
   return i.createElement(
     "details",
     { className: "pf-card k2-card k2-tpl", "data-testid": "k2-template" },
@@ -37572,7 +37572,7 @@ function EO(n) {
         E();
       } }, "Скачать бланк"),
       b ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", disabled: y, "data-testid": "k2-tpl-clear", onClick: () => {
-        S();
+        N();
       } }, "Убрать бланк") : null
     ) : null,
     b ? i.createElement(
@@ -37585,15 +37585,15 @@ function EO(n) {
         className: "pj-input",
         disabled: y,
         "data-testid": "k2-tpl-file",
-        onChange: (N) => {
+        onChange: (S) => {
           var R;
-          const O = (R = N.target.files) == null ? void 0 : R[0];
-          N.target.value = "", O && w(O);
+          const O = (R = S.target.files) == null ? void 0 : R[0];
+          S.target.value = "", O && w(O);
         }
       })
     ) : null,
     y ? i.createElement("div", { className: "pf-muted" }, "Проверяю бланк…") : null,
-    d.length ? i.createElement("ul", { className: "pf-error k2-tpl-errors", role: "alert", "data-testid": "k2-tpl-errors" }, d.map((N, O) => i.createElement("li", { key: O }, N))) : null,
+    d.length ? i.createElement("ul", { className: "pf-error k2-tpl-errors", role: "alert", "data-testid": "k2-tpl-errors" }, d.map((S, O) => i.createElement("li", { key: O }, S))) : null,
     h ? i.createElement("div", { className: "pj-notice", role: "status", "data-testid": "k2-tpl-notice" }, h) : null,
     i.createElement(
       "div",
@@ -37615,7 +37615,7 @@ const xO = `
 `, kO = "planfact.money.view";
 function SO(n) {
   var W;
-  const { api: t, vor: r } = n, [s, c] = i.useState(null), [u, d] = i.useState({}), [m, h] = i.useState(""), [g, y] = i.useState(null), [v, b] = i.useState(null), [w, E] = i.useState(""), [S, k] = i.useState(!1), [N, O] = i.useState(""), [R, K] = i.useState(!1);
+  const { api: t, vor: r } = n, [s, c] = i.useState(null), [u, d] = i.useState({}), [m, h] = i.useState(""), [g, y] = i.useState(null), [v, b] = i.useState(null), [w, E] = i.useState(""), [N, k] = i.useState(!1), [S, O] = i.useState(""), [R, Y] = i.useState(!1);
   i.useEffect(() => {
     (async () => {
       const ae = await r.listProjects(), pe = [], ne = {};
@@ -37638,11 +37638,11 @@ function SO(n) {
   i.useEffect(() => {
     m && (E(""), k(!1), A(m));
   }, [m]);
-  async function J(ae) {
+  async function B(ae) {
     if (!ae || R) return;
-    K(!0);
+    Y(!0);
     const pe = await t.setContract(m, ae);
-    if (K(!1), !pe.ok) {
+    if (Y(!1), !pe.ok) {
       O(pe.message);
       return;
     }
@@ -37660,11 +37660,11 @@ function SO(n) {
         E(""), A(m);
       } })
     );
-  const X = !!(g != null && g.can_edit), ue = (g == null ? void 0 : g.kp_revisions.find((ae) => ae.id === g.contract_kp_revision_id)) || null, B = (ae) => `${ae.estimate_name} · ред. ${ae.revision_no} · ${Re(ae.total)} ₽`, j = g ? i.createElement(
+  const F = !!(g != null && g.can_edit), ue = (g == null ? void 0 : g.kp_revisions.find((ae) => ae.id === g.contract_kp_revision_id)) || null, I = (ae) => `${ae.estimate_name} · ред. ${ae.revision_no} · ${Re(ae.total)} ₽`, j = g ? i.createElement(
     "div",
     { className: "pf-card k2-card", "data-testid": "k2-contract" },
     i.createElement("div", { className: "pf-field" }, "Договорная редакция КП (цены акта)"),
-    X && g.kp_revisions.length ? i.createElement(
+    F && g.kp_revisions.length ? i.createElement(
       "select",
       {
         className: "pj-input",
@@ -37672,29 +37672,29 @@ function SO(n) {
         disabled: R,
         "data-testid": "k2-contract-select",
         onChange: (ae) => {
-          J(ae.target.value);
+          B(ae.target.value);
         }
       },
       g.contract_kp_revision_id ? null : i.createElement("option", { value: "" }, "— выберите редакцию КП —"),
-      g.kp_revisions.map((ae) => i.createElement("option", { key: ae.id, value: ae.id }, B(ae)))
-    ) : i.createElement("div", null, ue ? B(ue) : i.createElement("span", { className: "pf-muted" }, "не выбрана")),
+      g.kp_revisions.map((ae) => i.createElement("option", { key: ae.id, value: ae.id }, I(ae)))
+    ) : i.createElement("div", null, ue ? I(ue) : i.createElement("span", { className: "pf-muted" }, "не выбрана")),
     g.kp_revisions.length ? null : i.createElement("div", { className: "pf-muted" }, "В проекте ещё нет ни одной редакции КП — сформируйте КП в разделе «Смета»."),
-    g.kp_revisions.length && !ue && X ? i.createElement("div", { className: "ft-warn", "data-testid": "k2-need-contract" }, "Выберите договорную редакцию КП — без неё акт не создать.") : null
+    g.kp_revisions.length && !ue && F ? i.createElement("div", { className: "ft-warn", "data-testid": "k2-need-contract" }, "Выберите договорную редакцию КП — без неё акт не создать.") : null
   ) : null, re = v || [];
   return i.createElement(
     "div",
     { className: "pj-tab k2-tab", "data-testid": "k2-tab" },
     z,
-    N ? i.createElement("div", { className: "pf-error", role: "alert" }, N) : null,
-    g === null && !N ? i.createElement("div", { className: "pf-muted" }, "Загрузка…") : null,
+    S ? i.createElement("div", { className: "pf-error", role: "alert" }, S) : null,
+    g === null && !S ? i.createElement("div", { className: "pf-muted" }, "Загрузка…") : null,
     j,
     g ? i.createElement(EO, { api: t, projectId: m, settings: g, onChanged: () => {
       t.settings(m).then((ae) => {
         ae.ok && y(ae.value);
       });
     } }) : null,
-    g && X && ue && !S ? i.createElement("div", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn", "data-testid": "k2-new", onClick: () => k(!0) }, "Новый акт")) : null,
-    S && g ? i.createElement(NO, { api: t, projectId: m, nextNo: g.next_act_no, onCancel: () => k(!1), onCreated: (ae) => {
+    g && F && ue && !N ? i.createElement("div", { className: "pj-actions" }, i.createElement("button", { type: "button", className: "pf-btn", "data-testid": "k2-new", onClick: () => k(!0) }, "Новый акт")) : null,
+    N && g ? i.createElement(NO, { api: t, projectId: m, nextNo: g.next_act_no, onCancel: () => k(!1), onCreated: (ae) => {
       k(!1), E(ae);
     } }) : null,
     v === null && g ? i.createElement("div", { className: "pf-muted" }, "Загрузка…") : null,
@@ -37713,12 +37713,12 @@ function NO(n) {
   const { api: t, projectId: r, nextNo: s, onCancel: c, onCreated: u } = n, d = ha(), m = QA(d), [h, g] = i.useState(""), [y, v] = i.useState(!1);
   async function b(w) {
     if (w.preventDefault(), y) return;
-    const E = w.currentTarget, S = (A) => E.elements.namedItem(A).value.trim(), k = S("no"), N = S("date"), O = S("from"), R = S("to");
+    const E = w.currentTarget, N = (A) => E.elements.namedItem(A).value.trim(), k = N("no"), S = N("date"), O = N("from"), R = N("to");
     if (!k) {
       g("Укажите номер акта");
       return;
     }
-    if (!N || !O || !R) {
+    if (!S || !O || !R) {
       g("Укажите дату акта и период");
       return;
     }
@@ -37727,12 +37727,12 @@ function NO(n) {
       return;
     }
     v(!0), g("");
-    const K = await t.createAct(r, k, N, O, R);
-    if (v(!1), !K.ok) {
-      g(K.message);
+    const Y = await t.createAct(r, k, S, O, R);
+    if (v(!1), !Y.ok) {
+      g(Y.message);
       return;
     }
-    u(K.value);
+    u(Y.value);
   }
   return i.createElement(
     "form",
@@ -37782,10 +37782,10 @@ async function OO(n) {
   u.addRow(m).font = Za;
   for (const v of n.workTypes)
     (v.units.length ? v.units : [null]).forEach((w, E) => {
-      const S = [v.work_name, w ? w.unit : "", w ? w.plan : null, w ? w.fact : null, w ? w.pct : null, w ? w.rest : null, w ? w.fact7 : null, w ? w.fact14 : null], k = c ? E === 0 ? [v.plan_money, v.done_money, v.pct_money] : [null, null, null] : [], N = u.addRow([...S, ...k, ...w ? N_(w) : [null, null, null]]);
-      N.getCell(S.length + k.length + 3).numFmt = Fa, [3, 4, 6, 7, 8].forEach((O) => {
-        N.getCell(O).numFmt = ap;
-      }), N.getCell(5).numFmt = Fa, c && (N.getCell(9).numFmt = Sa, N.getCell(10).numFmt = Sa, N.getCell(11).numFmt = Fa);
+      const N = [v.work_name, w ? w.unit : "", w ? w.plan : null, w ? w.fact : null, w ? w.pct : null, w ? w.rest : null, w ? w.fact7 : null, w ? w.fact14 : null], k = c ? E === 0 ? [v.plan_money, v.done_money, v.pct_money] : [null, null, null] : [], S = u.addRow([...N, ...k, ...w ? N_(w) : [null, null, null]]);
+      S.getCell(N.length + k.length + 3).numFmt = Fa, [3, 4, 6, 7, 8].forEach((O) => {
+        S.getCell(O).numFmt = ap;
+      }), S.getCell(5).numFmt = Fa, c && (S.getCell(9).numFmt = Sa, S.getCell(10).numFmt = Sa, S.getCell(11).numFmt = Fa);
     });
   const h = r.addWorksheet("Позиции");
   h.columns = [{ width: 40 }, { width: 30 }, { width: 8 }, { width: 12 }, { width: 12 }, { width: 8 }, { width: 12 }, { width: 14 }, { width: 14 }, { width: 18 }, { width: 18 }, { width: 16 }, { width: 18 }], h.addRow(["Место", "Вид работ", "ЕИ", "План", "Факт", "%", "Остаток", "Факт за 7 дн.", "Факт за 14 дн.", "Ждёт подтверждения", ...S_]).font = Za;
@@ -37835,29 +37835,29 @@ async function OO(n) {
     v.columns = [{ width: 52 }, { width: 16 }, { width: 14 }, { width: 18 }];
     const b = y.counts;
     v.addRow(["Требует внимания", "Количество"].concat(c ? ["₽"] : [])).font = Za;
-    const w = (k, N, O) => {
-      const R = [k, N];
+    const w = (k, S, O) => {
+      const R = [k, S];
       c && O !== void 0 && R.push(O);
-      const K = v.addRow(R);
-      c && (K.getCell(3).numFmt = Sa);
+      const Y = v.addRow(R);
+      c && (Y.getCell(3).numFmt = Sa);
     };
     w("Нет договорной КП", b.no_kp ? "да" : "нет"), w("Не заданы плановые даты", b.no_dates ? "да" : "нет"), w("Сделано, не выставлено в КС-2 (строк)", b.gap_rows, b.gap_money), w("Строк ВОР без цены в договорной КП", b.unpriced_rows), w(`Позиций без факта больше ${y.stale_days} дней`, b.stale_positions), w("Факт ждёт подтверждения (записей)", b.pending_entries), v.addRow([]), v.addRow(["Полнота данных", "%"]).font = Za;
-    const E = (k, N) => {
-      const O = v.addRow([k, N]);
+    const E = (k, S) => {
+      const O = v.addRow([k, S]);
       O.getCell(2).numFmt = Fa;
     };
     E("Строки ВОР с ценой в договорной КП", y.completeness.priced_pct), E("Плановые даты объекта", y.completeness.dates_pct), E("Позиции с местом ниже корпуса", y.completeness.placed_pct);
-    const S = (k, N, O) => {
-      O.length && (v.addRow([]), v.addRow([k]).font = Za, v.addRow(N).font = Za, O.forEach((R) => v.addRow(R)));
+    const N = (k, S, O) => {
+      O.length && (v.addRow([]), v.addRow([k]).font = Za, v.addRow(S).font = Za, O.forEach((R) => v.addRow(R)));
     };
-    S(
+    N(
       "Сделано, не выставлено (первые 20)",
       ["Строка заказчика", "Объём", "ЕИ"].concat(c ? ["₽"] : []),
       y.gap.map((k) => {
-        const N = [`${k.number ? `${k.number} ` : ""}${k.name}`, k.qty, k.unit || ""];
-        return c && N.push(k.money), N;
+        const S = [`${k.number ? `${k.number} ` : ""}${k.name}`, k.qty, k.unit || ""];
+        return c && S.push(k.money), S;
       })
-    ), S("Без цены в договорной КП (первые 20)", ["Строка заказчика", "Объём", "ЕИ"], y.unpriced.map((k) => [`${k.number ? `${k.number} ` : ""}${k.name}`, k.qty, k.unit || ""])), S(
+    ), N("Без цены в договорной КП (первые 20)", ["Строка заказчика", "Объём", "ЕИ"], y.unpriced.map((k) => [`${k.number ? `${k.number} ` : ""}${k.name}`, k.qty, k.unit || ""])), N(
       `Без факта больше ${y.stale_days} дней (первые 20)`,
       ["Позиция · место", "Факт", "План", "Дней без факта"],
       y.stale.map((k) => [`${k.work_name} · ${k.location_path}`, k.fact_qty, k.plan_qty, k.idle_days])
@@ -37871,23 +37871,23 @@ function RO(n) {
     if (!g) {
       y(!0), b("");
       try {
-        const [E, S, k, N] = await Promise.all([t.workTypes(r.project_id), t.positions(r.project_id, null), t.ks2Gap(r.project_id), t.attention(r.project_id)]);
+        const [E, N, k, S] = await Promise.all([t.workTypes(r.project_id), t.positions(r.project_id, null), t.ks2Gap(r.project_id), t.attention(r.project_id)]);
         if (!E.ok) {
           b(E.message);
           return;
         }
-        if (!S.ok) {
-          b(S.message);
+        if (!N.ok) {
+          b(N.message);
           return;
         }
         const O = ha(), R = await OO({
           project: r,
           workTypes: E.value,
-          positions: S.value,
+          positions: N.value,
           gap: k.ok ? k.value : null,
           gapError: k.ok ? "" : k.message,
           today: O,
-          attention: N.ok ? N.value : null
+          attention: S.ok ? S.value : null
         });
         d(R, AO(r, O));
       } catch {
@@ -37913,7 +37913,7 @@ function RO(n) {
     u ? i.createElement(
       "div",
       { className: "pf-seg", role: "tablist", "data-testid": "sm-views" },
-      [["works", "Виды работ"], ["ks2", "Сделано ↔ КС-2"]].map(([E, S]) => i.createElement("button", {
+      [["works", "Виды работ"], ["ks2", "Сделано ↔ КС-2"]].map(([E, N]) => i.createElement("button", {
         key: E,
         type: "button",
         role: "tab",
@@ -37921,7 +37921,7 @@ function RO(n) {
         "data-view": E,
         className: "pf-seg-btn" + (m === E ? " pf-seg-btn--active" : ""),
         onClick: () => h(E)
-      }, S))
+      }, N))
     ) : null,
     m === "ks2" && u ? u(r) : i.createElement(jO, { api: t, p: r })
   );
@@ -38279,17 +38279,17 @@ function HO(n, t, r) {
 }
 const Rp = (n) => n.map((t) => `${Ee(t.qty)} ${t.unit}`).join(", ");
 function PO(n) {
-  const { api: t, p: r, period: s, actions: c, links: u, onDates: d } = n, [m, h] = i.useState(null), [g, y] = i.useState(null), [v, b] = i.useState(null), [w, E] = i.useState(""), S = ha(), k = HO(r, S, s);
+  const { api: t, p: r, period: s, actions: c, links: u, onDates: d } = n, [m, h] = i.useState(null), [g, y] = i.useState(null), [v, b] = i.useState(null), [w, E] = i.useState(""), N = ha(), k = HO(r, N, s);
   i.useEffect(() => {
     let R = !0;
     return (async () => {
-      const [K, A, J] = await Promise.all([t.weekly(r.project_id, k), t.places(r.project_id, null), t.workTypes(r.project_id)]);
-      R && (E(K.ok ? A.ok ? J.ok ? "" : J.message : A.message : K.message), h(K.ok ? K.value : []), y(A.ok ? A.value : []), b(J.ok ? J.value : []));
+      const [Y, A, B] = await Promise.all([t.weekly(r.project_id, k), t.places(r.project_id, null), t.workTypes(r.project_id)]);
+      R && (E(Y.ok ? A.ok ? B.ok ? "" : B.message : A.message : Y.message), h(Y.ok ? Y.value : []), y(A.ok ? A.value : []), b(B.ok ? B.value : []));
     })(), () => {
       R = !1;
     };
   }, [r.project_id, k, r.planned_start, r.planned_finish]);
-  const N = r.can_money, O = i.createElement(At, { status: r.light, label: Xc[r.light], title: gi(r), testId: "sm-light" });
+  const S = r.can_money, O = i.createElement(At, { status: r.light, label: Xc[r.light], title: gi(r), testId: "sm-light" });
   return i.createElement(
     "div",
     { className: "db", "data-testid": "sm-dashboard", "data-project-id": r.project_id },
@@ -38302,15 +38302,15 @@ function PO(n) {
     ),
     i.createElement("div", { className: "pf-muted db-why", "data-testid": "sm-why" }, gi(r)),
     w ? i.createElement("div", { className: "pf-error", role: "alert" }, w) : null,
-    N ? null : i.createElement(
+    S ? null : i.createElement(
       "div",
       { className: "pf-muted sm-note", "data-testid": "sm-nomoney" },
       "Суммы в рублях, общий % и отставание видят РП, ПТО, экономист и руководство. Объёмы — в «Видах работ» ниже."
     ),
     i.createElement(GO, { p: r }),
-    N && m ? i.createElement("div", { className: "db-row" }, i.createElement(VO, { p: r, weeks: m, today: S }), i.createElement(T_, { api: t, p: r, places: g })) : i.createElement(T_, { api: t, p: r, places: g }),
-    N && m ? i.createElement("div", { className: "db-row" }, i.createElement(KO, { p: r, weeks: m.slice(-s) }), i.createElement(XO, { works: v })) : null,
-    !N && m ? i.createElement(YO, { weeks: m.slice(-s) }) : null,
+    S && m ? i.createElement("div", { className: "db-row" }, i.createElement(VO, { p: r, weeks: m, today: N }), i.createElement(T_, { api: t, p: r, places: g })) : i.createElement(T_, { api: t, p: r, places: g }),
+    S && m ? i.createElement("div", { className: "db-row" }, i.createElement(KO, { p: r, weeks: m.slice(-s) }), i.createElement(XO, { works: v })) : null,
+    !S && m ? i.createElement(YO, { weeks: m.slice(-s) }) : null,
     i.createElement(qO, { api: t, p: r, links: u, onDates: d })
   );
 }
@@ -38424,10 +38424,10 @@ function T_(n) {
       return;
     }
     return d(null), h(null), (async () => {
-      const [S, k] = await Promise.all([t.places(r.project_id, v.id), v.here ? t.positions(r.project_id, null) : Promise.resolve(null)]);
+      const [N, k] = await Promise.all([t.places(r.project_id, v.id), v.here ? t.positions(r.project_id, null) : Promise.resolve(null)]);
       if (!E) return;
-      const N = S.ok ? k && !k.ok ? k.message : "" : S.message;
-      N && y(N), d(S.ok ? S.value : []), h(k && k.ok ? k.value.filter((O) => O.location_id === v.id) : null);
+      const S = N.ok ? k && !k.ok ? k.message : "" : N.message;
+      S && y(S), d(N.ok ? N.value : []), h(k && k.ok ? k.value.filter((O) => O.location_id === v.id) : null);
     })(), () => {
       E = !1;
     };
@@ -38441,7 +38441,7 @@ function T_(n) {
       "nav",
       { className: "db-crumbs", "aria-label": "Путь", "data-testid": "sm-crumbs" },
       i.createElement("button", { type: "button", className: "db-crumb", onClick: () => c([]) }, "Все"),
-      s.map((E, S) => i.createElement("span", { key: E.id }, " › ", S === s.length - 1 ? i.createElement("b", null, E.name) : i.createElement("button", { type: "button", className: "db-crumb", onClick: () => c(s.slice(0, S + 1)) }, E.name)))
+      s.map((E, N) => i.createElement("span", { key: E.id }, " › ", N === s.length - 1 ? i.createElement("b", null, E.name) : i.createElement("button", { type: "button", className: "db-crumb", onClick: () => c(s.slice(0, N + 1)) }, E.name)))
     ) : null,
     g ? i.createElement("div", { className: "pf-error", role: "alert" }, g) : null,
     w === null ? i.createElement("div", { className: "pf-muted" }, "Загрузка…") : !w.length && !v ? i.createElement("div", { className: "pf-muted" }, "Мест в проекте нет.") : w.map((E) => i.createElement(
@@ -38454,7 +38454,7 @@ function T_(n) {
         i.createElement("span", { className: "p2-num" }, r.can_money ? rn(E.pct_money) : `${E.positions} поз.`)
       ),
       r.can_money ? i.createElement(qc, { value: E.pct_money, label: `Готовность: ${E.name}` }) : null,
-      i.createElement("span", { className: "pf-muted p2-num db-place-sub" }, r.can_money && E.plan_money !== null ? `${nn(E.done_money)} из ${nn(E.plan_money)} · ${E.positions} поз.` : E.units.map((S) => `${Ee(S.fact)} из ${Ee(S.plan)} ${S.unit}`).join(" · ") || "позиций нет")
+      i.createElement("span", { className: "pf-muted p2-num db-place-sub" }, r.can_money && E.plan_money !== null ? `${nn(E.done_money)} из ${nn(E.plan_money)} · ${E.positions} поз.` : E.units.map((N) => `${Ee(N.fact)} из ${Ee(N.plan)} ${N.unit}`).join(" · ") || "позиций нет")
     )),
     v && v.here && v.node_type === "building" ? i.createElement("div", { className: "ft-warn", "data-testid": "sm-not-split" }, `Объёмы не разнесены по этажам: ${v.here} поз. записаны на корпус целиком. Разнесение по этажам — в блоке прораба.`) : null,
     v && m && m.length ? i.createElement(
@@ -38534,31 +38534,31 @@ function JO(n, t) {
 }
 function FO(n) {
   const { api: t, save: r, links: s } = n, [c, u] = i.useState(null), [d, m] = i.useState(""), [h, g] = i.useState(!1), [y, v] = i.useState(() => Si(window.location.hash, "p") || "all"), [b] = i.useState(() => Si(window.location.hash, "focus")), [w, E] = i.useState(8);
-  async function S() {
+  async function N() {
     m("");
-    const z = await t.portfolio();
-    if (!z.ok) {
-      m(z.message), u([]);
+    const B = await t.portfolio();
+    if (!B.ok) {
+      m(B.message), u([]);
       return;
     }
-    u(z.value), v((X) => X === "all" || z.value.some((ue) => ue.project_id === X) ? X : "all");
+    u(B.value), v((z) => z === "all" || B.value.some((F) => F.project_id === z) ? z : "all");
   }
   if (i.useEffect(() => {
-    S();
+    N();
   }, []), i.useEffect(() => {
     if (b !== "attention" || c === null) return;
-    let z = 0, X;
-    const ue = () => {
-      const B = document.querySelector('[data-testid="sm-attention"]');
-      B && typeof B.scrollIntoView == "function" && (B.scrollIntoView({ block: "start" }), Math.abs(B.getBoundingClientRect().top) < 40) || ++z < 8 && (X = setTimeout(ue, 250));
+    let B = 0, z;
+    const F = () => {
+      const ue = document.querySelector('[data-testid="sm-attention"]');
+      ue && typeof ue.scrollIntoView == "function" && (ue.scrollIntoView({ block: "start" }), Math.abs(ue.getBoundingClientRect().top) < 40) || ++B < 8 && (z = setTimeout(F, 250));
     };
-    return ue(), () => {
-      X && clearTimeout(X);
+    return F(), () => {
+      z && clearTimeout(z);
     };
   }, [b, c]), c === null) return i.createElement("div", { className: "pf-muted" }, "Загрузка…");
-  const k = [...c].sort(JO), N = y === "all" ? c.length === 1 ? c[0] : null : c.find((z) => z.project_id === y) || null, O = (z) => {
-    g(!1), v(z);
-  }, R = (z, X, ue, B, j) => i.createElement("button", { key: B, type: "button", className: "sm-chip" + (z ? " sm-chip--on" : ""), "aria-pressed": z, "data-testid": j, onClick: ue }, X), K = c.length ? i.createElement(
+  const k = [...c].sort(JO), S = y === "all" ? c.length === 1 ? c[0] : null : c.find((B) => B.project_id === y) || null, O = (B) => {
+    g(!1), v(B);
+  }, R = (B, z, F, ue, I) => i.createElement("button", { key: ue, type: "button", className: "sm-chip" + (B ? " sm-chip--on" : ""), "aria-pressed": B, "data-testid": I, onClick: F }, z), Y = c.length ? i.createElement(
     L_,
     { slot: "picker" },
     i.createElement(
@@ -38568,34 +38568,29 @@ function FO(n) {
         "aria-label": "Объект",
         value: y,
         "data-testid": "sm-project",
-        onChange: (z) => {
-          const X = z.target.value;
-          X !== "all" && B_(X), O(X);
+        onChange: (B) => {
+          const z = B.target.value;
+          z !== "all" && B_(z), O(z);
         }
       },
       i.createElement("option", { value: "all" }, `Все объекты (${c.length})`),
-      k.map((z) => i.createElement("option", { key: z.project_id, value: z.project_id }, z.name))
-    )
-  ) : null, A = c.length ? i.createElement(
-    "div",
-    { className: "sm-filters", "data-testid": "sm-filters" },
-    K,
-    i.createElement(
+      k.map((B) => i.createElement("option", { key: B.project_id, value: B.project_id }, B.name))
+    ),
+    S ? i.createElement(
       "div",
-      { className: "sm-chips", role: "group", "aria-label": "Период" },
-      i.createElement("span", { className: "pf-muted sm-flabel" }, "Период"),
-      IO.map((z) => R(w === z, `${z} недель`, () => E(z), String(z), "sm-chip-period"))
-    )
-  ) : null, J = (z) => i.createElement(
+      { className: "sm-chips", role: "group", "aria-label": "Период графиков", "data-testid": "sm-filters" },
+      IO.map((B) => R(w === B, `${B} недель`, () => E(B), String(B), "sm-chip-period"))
+    ) : null
+  ) : null, A = (B) => i.createElement(
     "div",
     { className: "sm-dash" },
-    i.createElement(PO, { api: t, p: z, period: w, links: s, onDates: z.can_manage ? () => g(!0) : void 0, actions: z.can_manage || z.can_thresholds ? [
-      z.can_manage ? i.createElement("button", { key: "d", type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "sm-dates-btn", onClick: () => g(!h) }, h ? "Закрыть даты" : "Даты проекта") : null,
+    i.createElement(PO, { api: t, p: B, period: w, links: s, onDates: B.can_manage ? () => g(!0) : void 0, actions: B.can_manage || B.can_thresholds ? [
+      B.can_manage ? i.createElement("button", { key: "d", type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "sm-dates-btn", onClick: () => g(!h) }, h ? "Закрыть даты" : "Даты проекта") : null,
       // P2-0038: пороги — в «Настройки → Администрирование → Модули → План/Факт»; отсюда — ссылка на объект там
-      z.can_thresholds ? i.createElement("button", { key: "t", type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "sm-th-btn", onClick: () => tR(z.project_id) }, "Пороги светофора →") : null
+      B.can_thresholds ? i.createElement("button", { key: "t", type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "sm-th-btn", onClick: () => tR(B.project_id) }, "Пороги светофора →") : null
     ] : null }),
-    h && z.can_manage ? i.createElement(WO, { api: t, p: z, onSaved: () => {
-      g(!1), S();
+    h && B.can_manage ? i.createElement(WO, { api: t, p: B, onSaved: () => {
+      g(!1), N();
     } }) : null
   );
   return i.createElement(
@@ -38603,17 +38598,17 @@ function FO(n) {
     { className: "pj-tab sm-tab", "data-testid": "sm-tab" },
     d ? i.createElement("div", { className: "pf-error", role: "alert" }, d) : null,
     !d && !c.length ? i.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "sm-empty" }, "Нет объектов: сводка видна по проектам, где у вас есть право просмотра факта.") : null,
-    A,
-    N ? i.createElement(RO, {
-      key: N.project_id,
+    Y,
+    S ? i.createElement(RO, {
+      key: S.project_id,
       api: t,
-      p: N,
-      card: J(N),
+      p: S,
+      card: A(S),
       onBack: c.length > 1 ? () => O("all") : void 0,
-      ks2: (z) => i.createElement(MO, { api: t, p: z }),
+      ks2: (B) => i.createElement(MO, { api: t, p: B }),
       save: r
     }) : null,
-    c.length && (!N || c.length > 1) ? i.createElement(ZO, { list: k, onOpen: O }) : null
+    c.length && (!S || c.length > 1) ? i.createElement(ZO, { list: k, onOpen: O }) : null
   );
 }
 function ZO(n) {
@@ -38630,13 +38625,13 @@ function ZO(n) {
       i.createElement("tbody", null, t.map((c) => i.createElement(
         "tr",
         { key: c.project_id, "data-project-id": c.project_id },
-        i.createElement("td", null, i.createElement("button", { type: "button", className: "sm-olink", "data-testid": "sm-open", onClick: () => r(c.project_id) }, c.name)),
-        i.createElement("td", null, i.createElement(At, { status: c.light, label: Xc[c.light], title: gi(c), testId: "sm-olight" })),
-        i.createElement("td", null, rn(c.pct_money)),
-        i.createElement("td", { "data-testid": "sm-olag" }, em(c.lag_days)),
-        i.createElement("td", null, Et(c.done_money)),
-        i.createElement("td", null, Et(c.gap_money)),
-        i.createElement("td", null, Ct(c.forecast_finish))
+        i.createElement("td", { className: "sm-omain" }, i.createElement("button", { type: "button", className: "sm-olink", "data-testid": "sm-open", onClick: () => r(c.project_id) }, c.name)),
+        i.createElement("td", { "data-label": "Статус" }, i.createElement(At, { status: c.light, label: Xc[c.light], title: gi(c), testId: "sm-olight" })),
+        i.createElement("td", { "data-label": "Готовность" }, rn(c.pct_money)),
+        i.createElement("td", { "data-testid": "sm-olag", "data-label": "Отставание" }, em(c.lag_days)),
+        i.createElement("td", { "data-label": "Сделано" }, Et(c.done_money)),
+        i.createElement("td", { "data-label": "Не выставлено" }, Et(c.gap_money)),
+        i.createElement("td", { "data-label": "Прогноз" }, Ct(c.forecast_finish))
       )))
     ))
   );
@@ -38645,7 +38640,7 @@ function WO(n) {
   const { api: t, p: r, onSaved: s } = n, [c, u] = i.useState(""), [d, m] = i.useState(!1);
   async function h(g) {
     if (g.preventDefault(), d) return;
-    const y = g.currentTarget, v = (S) => y.elements.namedItem(S).value.trim() || null, b = v("start"), w = v("finish");
+    const y = g.currentTarget, v = (N) => y.elements.namedItem(N).value.trim() || null, b = v("start"), w = v("finish");
     if (b && w && b > w) {
       u("Дата начала позже даты окончания");
       return;
@@ -38678,13 +38673,13 @@ function aR(n) {
   const { api: t, p: r, onSaved: s } = n, [c, u] = i.useState(""), [d, m] = i.useState(!1);
   async function h(y) {
     if (y.preventDefault(), d) return;
-    const v = y.currentTarget, b = (N) => Number(String(v.elements.namedItem(N).value).replace(",", ".")), w = b("yellow"), E = b("red"), S = b("days");
-    if (![w, E, S].every(Number.isFinite) || w < 0 || w >= E || E > 100 || S < 0 || S > 60 || !Number.isInteger(S)) {
+    const v = y.currentTarget, b = (S) => Number(String(v.elements.namedItem(S).value).replace(",", ".")), w = b("yellow"), E = b("red"), N = b("days");
+    if (![w, E, N].every(Number.isFinite) || w < 0 || w >= E || E > 100 || N < 0 || N > 60 || !Number.isInteger(N)) {
       u("Пороги: 0 ≤ жёлтый < красный ≤ 100 п.п., дни — целое число от 0 до 60");
       return;
     }
     m(!0), u("");
-    const k = await t.setThresholds(r.project_id, w, E, S);
+    const k = await t.setThresholds(r.project_id, w, E, N);
     if (m(!1), !k.ok) {
       u(k.message);
       return;
@@ -38740,6 +38735,16 @@ const nR = `
 .sm-chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
 .sm-chip{flex-shrink:0}
 .sm-dates .pf-field{flex:1 1 140px}
+/* P2-0041: список объектов на телефоне — карточками (подписи колонок слева), без прокрутки вбок */
+.sm-otable{min-width:0}
+.sm-otable thead{display:none}
+.sm-otable,.sm-otable tbody,.sm-otable tr,.sm-otable td{display:block;width:100%;box-sizing:border-box}
+.sm-otable tr{border-bottom:1px solid var(--card-border);padding:8px 0}
+.sm-otable tr:last-child{border-bottom:0}
+.sm-otable td{display:flex;justify-content:space-between;gap:12px;padding:2px 0;border:0;text-align:right}
+.sm-otable td::before{content:attr(data-label);color:var(--text-muted);font-size:12px;text-align:left}
+.sm-otable td.sm-omain{display:block;text-align:left}
+.sm-otable td.sm-omain::before{content:none}
 }
 `, uw = ["desk-user-name", "desk-user-avatar", "header-user-block"];
 let Yr = null;
@@ -38943,7 +38948,7 @@ function ER(n) {
   return Array.from(new Set(t)).join("; ");
 }
 function xR(n) {
-  const { auth: t, projects: r, vor: s, estimate: c, fact: u, ks2: d, summary: m, onAccess: h, onDemo: g } = n, [y, v] = i.useState(t ? "loading" : "demo"), [b, w] = i.useState(""), [E, S] = i.useState(null), [k, N] = i.useState([]), [O, R] = i.useState(wc(window.location.hash)), [K, A] = i.useState([]), [J, z] = i.useState(!1), [X, ue] = i.useState(!1), [B, j] = i.useState(null), [re, W] = i.useState(A_()), [ae, pe] = i.useState(null), [ne, de] = i.useState(null);
+  const { auth: t, projects: r, vor: s, estimate: c, fact: u, ks2: d, summary: m, onAccess: h, onDemo: g } = n, [y, v] = i.useState(t ? "loading" : "demo"), [b, w] = i.useState(""), [E, N] = i.useState(null), [k, S] = i.useState([]), [O, R] = i.useState(wc(window.location.hash)), [Y, A] = i.useState([]), [B, z] = i.useState(!1), [F, ue] = i.useState(!1), [I, j] = i.useState(null), [re, W] = i.useState(A_()), [ae, pe] = i.useState(null), [ne, de] = i.useState(null);
   i.useEffect(() => {
     g && g(y === "demo");
   }, [y]), i.useEffect(() => {
@@ -38962,7 +38967,7 @@ function xR(n) {
       L(), v("demo");
       return;
     }
-    w(ge), N(await ee.getAccess());
+    w(ge), S(await ee.getAccess());
     const ie = r ? await r.myAccess() : [];
     A(ie);
     let ze = !1;
@@ -38992,9 +38997,9 @@ function xR(n) {
     }
   }, []);
   const U = y === "authed" && r && m ? _R(window.location.hash, {
-    company: K.length > 0,
-    estimate: J && !!c && !!s,
-    ks2: X && !!d && !!s,
+    company: Y.length > 0,
+    estimate: B && !!c && !!s,
+    ks2: F && !!d && !!s,
     fact: !!u && !!s,
     brigades: !!u
   }) : null;
@@ -39005,9 +39010,9 @@ function xR(n) {
   }, [U]), i.useEffect(() => {
     const ee = document.querySelector('[data-testid="pf-facttabs"] .pf-seg-btn--active');
     ee && typeof ee.scrollIntoView == "function" && ee.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [O, R_(window.location.hash), y, K.length, B]);
+  }, [O, R_(window.location.hash), y, Y.length, I]);
   function L() {
-    lR(), w(""), N([]), A([]), z(!1), ue(!1), h && h(!1, !1, !1);
+    lR(), w(""), S([]), A([]), z(!1), ue(!1), h && h(!1, !1, !1);
   }
   if (y === "loading") return i.createElement("div", { className: "pf-root pf-muted" }, "Загрузка…");
   const q = y !== "authed" && t ? i.createElement(
@@ -39025,7 +39030,7 @@ function xR(n) {
       onChange: (ee) => iR(ee.target.value)
     },
     re.companies.map((ee) => i.createElement("option", { key: ee.id, value: ee.id }, "Компания: " + ee.name))
-  ) : null, G = y === "authed" ? i.createElement("span", { className: "pf-visually-hidden", "data-testid": "pf-user" }, b, " · ", re ? oR(re) : ER(k)) : null, C = (ee, ge) => i.createElement(
+  ) : null, V = y === "authed" ? i.createElement("span", { className: "pf-visually-hidden", "data-testid": "pf-user" }, b, " · ", re ? oR(re) : ER(k)) : null, C = (ee, ge) => i.createElement(
     "div",
     { className: "pf-root pf-dirhead" },
     i.createElement(
@@ -39037,39 +39042,39 @@ function xR(n) {
       i.createElement("div", { className: "pf-head-actions", ref: de, "data-testid": "pf-head-actions" })
     ),
     ge || null
-  ), Y = y === "authed" && r && K.length > 0 && O.page === "directories", le = (ee) => {
+  ), X = y === "authed" && r && Y.length > 0 && O.page === "directories", le = (ee) => {
     const ge = window.AppRouter;
     ge && typeof ge.navigate == "function" ? ge.navigate(ee) : window.location.hash = ee;
-  }, se = (ee) => le(`${an}/directories/${ee}`), be = O.page === "vor" && (y === "authed" && K.length > 0 || y === "demo"), ke = O.page === "estimate" && y === "authed" && J && c && s, Se = bR(window.location.hash), V = R_(window.location.hash), he = O.page === "fact" && y === "authed" && K.length > 0 && u && s && r, Ne = O.page === "ks2" && y === "authed" && X && d && s, Te = O.page === "inbox" && y === "authed" && K.length > 0 && m, Oe = y === "authed" && K.length > 0 && m && !(Ne || he || ke || be || Y || Te), fe = y === "authed" ? "Нет доступных объектов. Обратитесь к администратору компании." : t ? "Войдите, чтобы увидеть сводку, ВОР, факт и акты КС-2. Без входа доступен только разбор файла ВОР." : "Сервер не настроен — вход недоступен. Без входа доступен только разбор файла ВОР.", $ = Te ? i.createElement("div", { className: "pf-root" }, i.createElement(mR, { api: m, me: b, go: le })) : Oe ? i.createElement("div", { className: "pf-root" }, i.createElement(FO, { api: m, links: { go: (ee) => le(`${an}/${ee}`), can: { ks2: !!X, estimate: !!J, fact: !0 } } })) : Ne ? i.createElement("div", { className: "pf-root" }, i.createElement(SO, { api: d, vor: s, me: b })) : he ? i.createElement("div", { className: "pf-root" }, i.createElement(qC, { api: u, vor: s, projects: r, me: b, mode: V, onApprove: j })) : ke ? i.createElement("div", { className: "pf-root" }, i.createElement(LA, { api: c, vor: s })) : be ? i.createElement("div", { className: "pf-root" }, i.createElement(eA, {
+  }, se = (ee) => le(`${an}/directories/${ee}`), be = O.page === "vor" && (y === "authed" && Y.length > 0 || y === "demo"), ke = O.page === "estimate" && y === "authed" && B && c && s, Se = bR(window.location.hash), K = R_(window.location.hash), he = O.page === "fact" && y === "authed" && Y.length > 0 && u && s && r, Ne = O.page === "ks2" && y === "authed" && F && d && s, Te = O.page === "inbox" && y === "authed" && Y.length > 0 && m, Oe = y === "authed" && Y.length > 0 && m && !(Ne || he || ke || be || X || Te), fe = y === "authed" ? "Нет доступных объектов. Обратитесь к администратору компании." : t ? "Войдите, чтобы увидеть сводку, ВОР, факт и акты КС-2. Без входа доступен только разбор файла ВОР." : "Сервер не настроен — вход недоступен. Без входа доступен только разбор файла ВОР.", $ = Te ? i.createElement("div", { className: "pf-root" }, i.createElement(mR, { api: m, me: b, go: le })) : Oe ? i.createElement("div", { className: "pf-root" }, i.createElement(FO, { api: m, links: { go: (ee) => le(`${an}/${ee}`), can: { ks2: !!F, estimate: !!B, fact: !0 } } })) : Ne ? i.createElement("div", { className: "pf-root" }, i.createElement(SO, { api: d, vor: s, me: b })) : he ? i.createElement("div", { className: "pf-root" }, i.createElement(qC, { api: u, vor: s, projects: r, me: b, mode: K, onApprove: j })) : ke ? i.createElement("div", { className: "pf-root" }, i.createElement(LA, { api: c, vor: s })) : be ? i.createElement("div", { className: "pf-root" }, i.createElement(eA, {
     api: y === "authed" && s || null,
     projects: y === "authed" && r || null,
     sub: y === "authed" ? Se : "load",
     fact: y === "authed" && u || null,
     summary: y === "authed" && m || null,
     user: b,
-    onCount: S
-  })) : Y && r ? i.createElement(A1, { api: r, render: (ee) => O.sub === "prices" && J && c ? i.createElement(cA, { api: c, vor: s || null, company: ee }) : O.sub === "overheads" && J && c ? i.createElement(SA, { api: c, company: ee }) : u ? i.createElement(aA, { api: u, company: ee }) : i.createElement("div", { className: "pf-muted" }, "Справочник недоступен") }) : i.createElement("div", { className: "pf-root" }, i.createElement(
+    onCount: N
+  })) : X && r ? i.createElement(A1, { api: r, render: (ee) => O.sub === "prices" && B && c ? i.createElement(cA, { api: c, vor: s || null, company: ee }) : O.sub === "overheads" && B && c ? i.createElement(SA, { api: c, company: ee }) : u ? i.createElement(aA, { api: u, company: ee }) : i.createElement("div", { className: "pf-muted" }, "Справочник недоступен") }) : i.createElement("div", { className: "pf-root" }, i.createElement(
     "div",
     { className: "pf-card pf-hint", "data-testid": "pf-hint" },
     i.createElement("div", null, fe),
     y === "demo" ? i.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "pf-hint-vor", onClick: () => le(`${an}/vor`) }, "Разбор файла ВОР") : null
-  )), F = Te ? C("Требует моего участия") : Oe ? C("Сводка — готовность объектов") : Ne ? C("КС-2 — акты о приёмке") : he ? C(
+  )), J = Te ? C("Требует моего участия") : Oe ? C("Сводка — готовность объектов") : Ne ? C("КС-2 — акты о приёмке") : he ? C(
     "Факт — выполненные объёмы",
     i.createElement(
       "div",
       { className: "pf-seg", role: "tablist", "data-testid": "pf-facttabs" },
-      vR.filter((ee) => !ee.approve || B !== null).map((ee) => i.createElement(
+      vR.filter((ee) => !ee.approve || I !== null).map((ee) => i.createElement(
         "button",
         {
           key: ee.id,
           type: "button",
           role: "tab",
-          "aria-selected": V === ee.id,
+          "aria-selected": K === ee.id,
           "data-sub": ee.id,
-          className: "pf-seg-btn" + (V === ee.id ? " pf-seg-btn--active" : ""),
+          className: "pf-seg-btn" + (K === ee.id ? " pf-seg-btn--active" : ""),
           onClick: () => le(`${an}${ee.path}`)
         },
-        ...wR(ee.label, ee.short, ee.approve && B !== null ? B : null)
+        ...wR(ee.label, ee.short, ee.approve && I !== null ? I : null)
       ))
     )
   ) : ke ? C("Смета — тендерная стоимость") : be ? C(
@@ -39091,12 +39096,12 @@ function xR(n) {
         ee.id === "positions" && E !== null ? `${ee.label} (${E})` : ee.label
       ))
     ) : null
-  ) : Y ? C(
+  ) : X ? C(
     "Справочники",
     i.createElement(
       "div",
       { className: "pf-seg", role: "tablist", "data-testid": "pf-dirtabs" },
-      gR.filter((ee) => !ee.estimate || J).map((ee) => i.createElement("button", {
+      gR.filter((ee) => !ee.estimate || B).map((ee) => i.createElement("button", {
         key: ee.id,
         type: "button",
         role: "tab",
@@ -39107,7 +39112,7 @@ function xR(n) {
       }, ee.label))
     )
   ) : null;
-  return i.createElement(M_.Provider, { value: { picker: F ? ae : null, actions: F ? ne : null } }, i.createElement("div", { className: "pf-page" }, q, G, F, $));
+  return i.createElement(M_.Provider, { value: { picker: J ? ae : null, actions: J ? ne : null } }, i.createElement("div", { className: "pf-page" }, q, V, J, $));
 }
 const kR = `
 .pf-bar-company{width:auto;max-width:100%;font-size:12px;font-weight:700;min-height:40px}

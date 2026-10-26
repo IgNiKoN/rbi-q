@@ -65,18 +65,17 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
   const chip = (on: boolean, label: string, onClick: () => void, key: string, testId?: string) =>
     h('button', { key, type: 'button', className: 'sm-chip' + (on ? ' sm-chip--on' : ''), 'aria-pressed': on, 'data-testid': testId, onClick }, label);
   // P2-0041: объект — тот же выпадающий список, что в других разделах, в шапке раздела; «Все объекты» — первым пунктом.
-  const objectPick = list.length
+  // Период графиков — рядом, только когда открыт объект (у списка объектов графиков нет).
+  const filters = list.length
     ? h(InHead, { slot: 'picker' },
         h('select', { className: 'pj-input', 'aria-label': 'Объект', value: sel, 'data-testid': 'sm-project',
           onChange: (e: { target: EventTarget | null }) => { const id = (e.target as HTMLSelectElement).value; if (id !== 'all') rememberProject(id); pick(id); } },
           h('option', { value: 'all' }, `Все объекты (${list.length})`),
-          sorted.map((p) => h('option', { key: p.project_id, value: p.project_id }, p.name))))
-    : null;
-  const filters = list.length
-    ? h('div', { className: 'sm-filters', 'data-testid': 'sm-filters' }, objectPick,
-        h('div', { className: 'sm-chips', role: 'group', 'aria-label': 'Период' },
-          h('span', { className: 'pf-muted sm-flabel' }, 'Период'),
-          PERIODS.map((w) => chip(period === w, `${w} недель`, () => setPeriod(w), String(w), 'sm-chip-period'))))
+          sorted.map((p) => h('option', { key: p.project_id, value: p.project_id }, p.name))),
+        opened
+          ? h('div', { className: 'sm-chips', role: 'group', 'aria-label': 'Период графиков', 'data-testid': 'sm-filters' },
+              PERIODS.map((w) => chip(period === w, `${w} недель`, () => setPeriod(w), String(w), 'sm-chip-period')))
+          : null)
     : null;
   const dash = (p: SummaryProject): ReactElement => h('div', { className: 'sm-dash' },
     h(Dashboard, { api, p, period, links, onDates: p.can_manage ? () => setEditing(true) : undefined, actions: p.can_manage || p.can_thresholds
@@ -106,13 +105,13 @@ function Objects(props: { list: SummaryProject[]; onOpen: (id: string) => void }
     h('div', { className: 'p2-chart__body' }, h('table', { className: 'p2-chart__table sm-otable' },
       h('thead', null, h('tr', null, ['Объект', 'Статус', 'Готовность', 'Отставание', 'Сделано', 'Не выставлено', 'Прогноз'].map((c) => h('th', { key: c, scope: 'col' }, c)))),
       h('tbody', null, list.map((p) => h('tr', { key: p.project_id, 'data-project-id': p.project_id },
-        h('td', null, h('button', { type: 'button', className: 'sm-olink', 'data-testid': 'sm-open', onClick: () => onOpen(p.project_id) }, p.name)),
-        h('td', null, h(StatusBadge, { status: p.light, label: LIGHT_LABEL[p.light], title: lightText(p), testId: 'sm-olight' })),
-        h('td', null, pctText(p.pct_money)),
-        h('td', { 'data-testid': 'sm-olag' }, lagDaysText(p.lag_days)),
-        h('td', null, rub(p.done_money)),
-        h('td', null, rub(p.gap_money)),
-        h('td', null, dateOr(p.forecast_finish))))))));
+        h('td', { className: 'sm-omain' }, h('button', { type: 'button', className: 'sm-olink', 'data-testid': 'sm-open', onClick: () => onOpen(p.project_id) }, p.name)),
+        h('td', { 'data-label': 'Статус' }, h(StatusBadge, { status: p.light, label: LIGHT_LABEL[p.light], title: lightText(p), testId: 'sm-olight' })),
+        h('td', { 'data-label': 'Готовность' }, pctText(p.pct_money)),
+        h('td', { 'data-testid': 'sm-olag', 'data-label': 'Отставание' }, lagDaysText(p.lag_days)),
+        h('td', { 'data-label': 'Сделано' }, rub(p.done_money)),
+        h('td', { 'data-label': 'Не выставлено' }, rub(p.gap_money)),
+        h('td', { 'data-label': 'Прогноз' }, dateOr(p.forecast_finish))))))));
 }
 
 function DatesForm(props: { api: SummaryApi; p: SummaryProject; onSaved: () => void }): ReactElement {
@@ -201,5 +200,15 @@ export const SUMMARY_CSS = `
 .sm-chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
 .sm-chip{flex-shrink:0}
 .sm-dates .pf-field{flex:1 1 140px}
+/* P2-0041: список объектов на телефоне — карточками (подписи колонок слева), без прокрутки вбок */
+.sm-otable{min-width:0}
+.sm-otable thead{display:none}
+.sm-otable,.sm-otable tbody,.sm-otable tr,.sm-otable td{display:block;width:100%;box-sizing:border-box}
+.sm-otable tr{border-bottom:1px solid var(--card-border);padding:8px 0}
+.sm-otable tr:last-child{border-bottom:0}
+.sm-otable td{display:flex;justify-content:space-between;gap:12px;padding:2px 0;border:0;text-align:right}
+.sm-otable td::before{content:attr(data-label);color:var(--text-muted);font-size:12px;text-align:left}
+.sm-otable td.sm-omain{display:block;text-align:left}
+.sm-otable td.sm-omain::before{content:none}
 }
 `;
