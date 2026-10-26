@@ -661,7 +661,20 @@ function emit(eventName, detail) {
   const MANAGER_PIN_HASH = "1570722437";
   const ADMIN_GATE_SESSION_KEY = 'rbi_admin_gate_ok';
 
+  // P2-0037: вошедшему почтой замок не спрашивает PIN — «Админ Качества» и панель руководителя открывает право сервера
+  // quality.manage / construction.manage (quality.my_access компании, RBI.qualitySync.actions); PIN при почте не действует.
+  function isAdminGateEmail() {
+    const sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+    return !!(sh && typeof sh.platformEntryMode === 'function' && sh.platformEntryMode() === 'email');
+  }
+
+  function hasQualityServerAction(action) {
+    const a = window.RBI && window.RBI.qualitySync && window.RBI.qualitySync.actions;
+    return Array.isArray(a) && a.indexOf(action) !== -1;
+  }
+
   function isAdminGateUnlocked() {
+    if (isAdminGateEmail()) return hasQualityServerAction('quality.manage') || hasQualityServerAction('construction.manage');
     try {
       return sessionStorage.getItem(ADMIN_GATE_SESSION_KEY) === '1';
     } catch (_e) {
@@ -680,6 +693,7 @@ function emit(eventName, detail) {
    * 'manager' (панель) | 'settings-admin' (вкладка Администрирование).
    */
   function gameCompleteAdminGate() {
+    if (isAdminGateEmail() && !isAdminGateUnlocked()) return;   // P2-0037: при почте PIN права не даёт
     setAdminGateUnlocked();
     const pending = window._rbiAdminGatePending || 'manager';
     window._rbiAdminGatePending = null;
@@ -723,6 +737,8 @@ function emit(eventName, detail) {
   };
 
   window.isAdminGateUnlocked = isAdminGateUnlocked;
+  window.isAdminGateEmail = isAdminGateEmail;
+  window.hasQualityServerAction = hasQualityServerAction;
   window.setAdminGateUnlocked = setAdminGateUnlocked;
   window.gameCompleteAdminGate = gameCompleteAdminGate;
 

@@ -307,7 +307,9 @@ async function publishCorporateBranding() {
     if (!window.supabaseClient) return showToast("❌ Облако не подключено!");
     showToast("⏳ Публикация корпоративного стиля...");
     try {
-        const pCode = window.syncConfig?.projectCode;
+        // P2-0037: при входе по почте оформление — одно на компанию (ключ — id компании входа), не на объект
+        const qs = window.RBI && window.RBI.qualitySync;
+        const pCode = (qs && qs.active && qs.companyId) ? qs.companyId : window.syncConfig?.projectCode;
         let logoUrl = _getSetting('brandLogo');
 
         if (logoUrl && (logoUrl.startsWith('data:') || logoUrl.startsWith('local://'))) {
@@ -388,7 +390,8 @@ async function applyContractorAliasToInspectionHistory(rawName, canonicalKey, di
     }
 
     if (updated > 0) {
-        window.contractorArray = (await _storage().getAll(_storage().stores().HISTORY) || []).filter(x => !x._deleted && !x.is_deleted);
+        window.contractorArray = (await _storage().getAll(_storage().stores().HISTORY) || []).filter(x => !x._deleted && !x.is_deleted)
+            .map(window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten : (x) => x); // P2-0024
 
         localStorage.setItem('rbi_cloud_dirty', '1');
 
@@ -427,6 +430,12 @@ function isConstructionV2TestMode(mode) {
 /** knowledge ∈ availableModules (enabled ∩ role). Default true if context missing. */
 function isKnowledgeAvailable() {
     try {
+        // P2-0031: вход по почте — по выключателю «База знаний» у компании (ответ сервера), как пункт меню
+        var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+        if (sh && typeof sh.platformEntryMode === 'function' && sh.platformEntryMode() === 'email'
+            && typeof sh.legacyModuleAllowed === 'function') {
+            return sh.legacyModuleAllowed('knowledge');
+        }
         var uc = window.RBI && window.RBI.services && window.RBI.services.userContext;
         if (uc && typeof uc.getUserContext === 'function') {
             var snap = uc.getUserContext();
@@ -507,7 +516,13 @@ const AppModeManager = {
         this.updateHeaderVisibility();
     },
 
-    changeMode(newMode) {
+    /**
+     * opts.fromRoute — режим меняет показ маршрута (назад/вперёд, прямой адрес): экран уже нужный, никуда не переходить (P2-0011;
+     * раньше переход на главную модуля уводил «назад» с «Инженера» на «Осмотр»). Переключение пользователем — новым шагом
+     * истории (раньше replace: «назад» пропускал предыдущий экран); из Настроек — по-прежнему replace.
+     */
+    changeMode(newMode, opts) {
+        const fromRoute = !!(opts && opts.fromRoute);
         const hash = window.location.hash || '';
         const onSettings = /^#\/settings(\/|$)/i.test(hash)
             || /^#\/quality\/settings(\/|$)/i.test(hash);
@@ -533,10 +548,19 @@ const AppModeManager = {
             }
         }
 
-        // Тот же режим, но открыты Настройки (chrome) — выйти в home модуля.
+        // P2-0011: открыт модуль платформы (План/Факт …, пункт меню из манифеста) — режим прежний, но экран чужой;
+        // без этого клик по «Качество» из План/Факт ничего не делал (переключение «не с первого раза»).
+        const platformItems = (window.RBI && window.RBI.moduleLoader && typeof window.RBI.moduleLoader.getMenuItems === 'function')
+            ? window.RBI.moduleLoader.getMenuItems() : [];
+        const onPlatform = platformItems.some((it) => it && it.path && (hash === it.path || hash.indexOf(it.path + '/') === 0));
+
+        // Тот же режим, но открыты Настройки (chrome) или модуль платформы — выйти в home модуля.
         // Иначе early-return оставлял hash на #/settings и F5 снова открывал настройки.
         if (this.currentMode === newMode) {
-            if (!onSettings && !this._pendingKnowledgeReferencePath) return;
+            if (!onSettings && !onPlatform && !this._pendingKnowledgeReferencePath) return;
+            // P2-0030: План/Факт прячет плашку «Стройконтроль — бета» — вернувшись в Стройконтроль, показать снова
+            const bannerSame = document.getElementById('construction-warning-banner');
+            if (bannerSame) bannerSame.style.display = newMode === 'construction' ? 'flex' : 'none';
             this.renderBottomNav();
             this.updateHeaderVisibility();
             const shellSame = window.RBI?.services?.shell;
@@ -554,16 +578,16 @@ const AppModeManager = {
             }
             switch (newMode) {
                 case 'quality':
-                    window.AppRouter.navigate('#/quality/audit', true);
+                    window.AppRouter.navigate('#/quality/audit', !onPlatform);   // из модуля платформы — новым шагом истории («назад» вернёт)
                     break;
                 case 'construction':
-                    window.AppRouter.navigate('#/construction/defects', true);
+                    window.AppRouter.navigate('#/construction/defects', !onPlatform);
                     break;
                 case 'knowledge':
-                    window.AppRouter.navigate('#/knowledge', true);
+                    window.AppRouter.navigate('#/knowledge', !onPlatform);
                     break;
                 case 'construction-v2':
-                    window.AppRouter.navigate('#/construction-v2', true);
+                    window.AppRouter.navigate('#/construction-v2', !onPlatform);
                     break;
                 default:
                     break;
@@ -607,31 +631,33 @@ const AppModeManager = {
         const knowledgeRef = this._pendingKnowledgeReferencePath;
         this._pendingKnowledgeReferencePath = null;
 
+        // тот же адрес (переход вызван показом маршрута, как у «Базы знаний») — replace, без дубля шага истории
+        const go = (p) => { if (!fromRoute) window.AppRouter.navigate(p, onSettings || p === hash); };
         switch (newMode) {
             case 'quality':
                 document.getElementById('construction-warning-banner').style.display = 'none';
-                window.AppRouter.navigate(knowledgeRef || '#/quality/audit', true);
+                go(knowledgeRef || '#/quality/audit');
                 break;
             case 'construction':
                 document.getElementById('construction-warning-banner').style.display = 'flex';
-                window.AppRouter.navigate(knowledgeRef || '#/construction/defects', true);
+                go(knowledgeRef || '#/construction/defects');
                 break;
             case 'knowledge':
                 document.getElementById('construction-warning-banner').style.display = 'none';
-                window.AppRouter.navigate('#/knowledge', true);
+                go('#/knowledge');
                 break;
             case 'construction-v2':
                 document.getElementById('construction-warning-banner').style.display = 'none';
-                window.AppRouter.navigate('#/construction-v2', true);
+                go('#/construction-v2');
                 break;
             case 'safety':
-                window.AppRouter.navigate('#/safety/placeholder', true);
+                go('#/safety/placeholder');
                 break;
             case 'warranty':
-                window.AppRouter.navigate('#/warranty/placeholder', true);
+                go('#/warranty/placeholder');
                 break;
             case 'uk':
-                window.AppRouter.navigate('#/uk/placeholder', true);
+                go('#/uk/placeholder');
                 break;
         }
 
@@ -701,7 +727,37 @@ const AppModeManager = {
             cabinet: _t('nav.bottom.cabinet', 'Кабинет')
         };
 
-        if (this.currentMode === 'quality') {
+        // Platform 2.0: модуль платформы (План/Факт …) задаёт свои подвкладки через window.RBI.platformNav —
+        // тот же нижний таббар (телефон/планшет) и nav2 (≥1280), что у Quality. Пока модуль не активен, platformNav = null.
+        const pnav = window.RBI && window.RBI.platformNav;
+        const platformNavOn = !!(pnav && Array.isArray(pnav.items) && pnav.items.length);
+        if (platformNavOn) {
+            html = pnav.items.map((it) => `
+                <div class="nav-item" data-path="${it.path}">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${it.icon || ''}"></path></svg>
+                    <span class="nav-text">${it.label}</span>
+                </div>`).join('') + `
+                <div class="nav-item" data-path="#/settings">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="nav-text">${L.settings}</span>
+                </div>
+            `;
+            nav.style.display = 'flex';
+        } else if (window.RBI && window.RBI.services && window.RBI.services.shell
+            && typeof window.RBI.services.shell.platformEntryMode === 'function'
+            && window.RBI.services.shell.platformEntryMode() === 'email'
+            && !(typeof window.RBI.services.shell.legacyModuleAllowed === 'function'
+                 && window.RBI.services.shell.legacyModuleAllowed(this.currentMode))) {
+            // P2-0013: вошедшему почтой подвкладки старого Quality / Стройконтроля не показываются;
+            // P2-0016: кроме модулей, включённых у компании (дальше — обычные подвкладки режима).
+            html = `
+                <div class="nav-item" data-path="#/settings">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="nav-text">${L.settings}</span>
+                </div>
+            `;
+            nav.style.display = 'flex';
+        } else if (this.currentMode === 'quality') {
             html = `
                 <div class="nav-item" data-path="#/quality/audit">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
@@ -804,7 +860,7 @@ const AppModeManager = {
         nav.innerHTML = html;
 
         if (window.RBI && window.RBI.shellDesktop && typeof window.RBI.shellDesktop.fillNav2 === 'function') {
-            window.RBI.shellDesktop.fillNav2(html, this.currentMode);
+            window.RBI.shellDesktop.fillNav2(html, platformNavOn ? 'platform' : this.currentMode);
         }
 
         if (typeof updateBodyPadding === 'function') updateBodyPadding();
@@ -816,6 +872,20 @@ const AppModeManager = {
 function changeAppMode(mode) {
     AppModeManager.changeMode(mode);
 }
+
+// P2-0011: режим = адрес. Показан экран другого бизнес-модуля (назад/вперёд, ссылка, F5) — переключить режим без перехода,
+// чтобы меню (таббар, nav2, боковое) было от открытого модуля. «База знаний» (#/knowledge) — своя логика в renderKnowledge.
+function modeFromPath(path) {
+    const p = String(path || '');
+    if (/^#\/quality(\/|$)/.test(p)) return 'quality';
+    if (/^#\/construction-v2(\/|$)/.test(p)) return 'construction-v2';
+    if (/^#\/construction(\/|$)/.test(p)) return 'construction';
+    return null;
+}
+window.addEventListener('rbi:route', function (e) {
+    const m = modeFromPath(e && e.detail && e.detail.path);
+    if (m && AppModeManager.currentMode !== m) AppModeManager.changeMode(m, { fromRoute: true });
+});
 
 function revertToPreviousMode() {
     AppModeManager.revertToPrevious();
@@ -903,19 +973,28 @@ async function purgeDataOutsideAssignedProjects(assignedKeysArray) {
             const items = await _storage().getAll(store);
             if (!items) continue;
 
+            const permSvcMatch = (_ctx && _ctx.permissions) || window.RBI.services.permissions;
+            const inAssigned = (rec, names) => {
+                if (permSvcMatch && typeof permSvcMatch.isRecordInAssignedProjects === 'function') {
+                    return permSvcMatch.isRecordInAssignedProjects(rec, keysToKeep);
+                }
+                return names.some((n) => keysToKeep.includes(n));
+            };
+            const mergePolicy = window.RbiSyncMergePolicy;
+
             for (let item of items) {
-                if (item.syncStatus === 'not_synced' || item.sync_status === 'not_synced' || item.source === 'local') {
+                // P2-0023: не трогаем «Все объекты», записи по нескольким объектам (если назначен хоть один)
+                // и неотправленные записи (любой статус ожидания, не только not_synced).
+                if (mergePolicy) {
+                    if (mergePolicy.keepOnPurge(item, inAssigned)) continue;
+                } else if (item.syncStatus === 'not_synced' || item.sync_status === 'not_synced' || item.source === 'local') {
                     continue;
                 }
 
                 const pKey = item.project_canonical_key || item.projectName || item.project || item.project_display_name || '';
-                const keep = (() => {
+                const keep = mergePolicy ? false : (() => {
                     if (!pKey || pKey === 'Все' || pKey === 'Системная') return false;
-                    const permSvcMatch = (_ctx && _ctx.permissions) || window.RBI.services.permissions;
-                    if (permSvcMatch && typeof permSvcMatch.isRecordInAssignedProjects === 'function') {
-                        return permSvcMatch.isRecordInAssignedProjects(item, keysToKeep);
-                    }
-                    return keysToKeep.includes(pKey);
+                    return inAssigned(item, [pKey]);
                 })();
 
                 if (pKey && pKey !== 'Все' && pKey !== 'Системная' && !keep) {

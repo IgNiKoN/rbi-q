@@ -674,6 +674,11 @@ window.emptyTrashBin = async function () {
             if (items) items.forEach(extractFiles);
         }
 
+        // P2-0023: фото черновика текущей проверки ещё не в истории — не мусор.
+        if (typeof PhotoManager !== 'undefined' && typeof PhotoManager.collectDraftPhotoRefs === 'function') {
+            (await PhotoManager.collectDraftPhotoRefs()).forEach((r) => usedFiles.add(r));
+        }
+
         // Сканируем системные справочники из памяти (TWI, Узлы, Нормативы)
         if (typeof customTwiCards !== 'undefined') extractFiles(customTwiCards);
         if (typeof customNodes !== 'undefined') extractFiles(customNodes);

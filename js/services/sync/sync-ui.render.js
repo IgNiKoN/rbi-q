@@ -56,6 +56,30 @@ window.renderSyncUI = function () {
 
     if (!container) return;
 
+    // P2-0016: вход почтой — облако = хранилище компании; вместо формы PIN — компания, объект из «Объектов», синхронизация.
+    const qs = window.RBI && window.RBI.qualitySync;
+    if (qs) {
+        const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const opts = qs.projects.map((p) => `<option value="${esc(p.id)}" ${p.id === qs.projectId ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+        container.innerHTML = `
+            <div class="p-4 border-b border-[var(--card-border)] bg-[var(--card-bg)] space-y-3" data-testid="quality-company-sync">
+                <div class="text-[11px] text-[var(--text-muted)]">${_t('settings.sync.company', 'Компания')}: <b class="text-[var(--text-main)]">${esc(qs.companyName)}</b> · ${esc(qs.email)}</div>
+                <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase block">${_t('settings.sync.object', 'Объект')}
+                    <select id="quality-sync-project" class="input-base mt-1" data-testid="quality-sync-project">
+                        ${qs.projectId ? '' : `<option value="" selected disabled>${_t('settings.sync.object_choose', 'Выберите объект')}</option>`}${opts}
+                    </select>
+                </label>
+                ${qs.projects.length ? '' : `<div class="text-[11px] text-[var(--text-muted)]">${_t('settings.sync.no_objects', 'Объектов нет — их заводит администратор компании в «Справочники → Объекты».')}</div>`}
+            </div>
+            ${qs.projectId ? `<div class="p-4 bg-[var(--hover-bg)]">
+                <button onclick="window.triggerSync('manual')" class="w-full bg-[var(--card-bg)] text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 py-3 rounded-xl font-bold text-[11px] uppercase shadow-sm active:scale-95 flex items-center justify-center gap-2 transition-colors hover:border-indigo-400">${_t('settings.sync.now', 'Синхронизировать')}</button>
+            </div>` : ''}
+        `;
+        const sel = container.querySelector('#quality-sync-project');
+        if (sel) sel.addEventListener('change', () => { void qs.selectProject(sel.value).then(() => window.renderSyncUI()); });
+        return;
+    }
+
     let engName = window.syncConfig.engineerName || (typeof appSettings !== 'undefined' ? appSettings.engineerName : '');
 
     if (window.syncConfig.enabled) {

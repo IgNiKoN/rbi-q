@@ -142,7 +142,13 @@
          * Получить значение одной настройки.
          */
         get: function (key) {
-            return _getSettings()[key];
+            var v = _getSettings()[key];
+            // P2-0031: «ИИ-помощник» выключен у компании (вход по почте, «Админ платформы») — ИИ ведёт себя как выключенный
+            if (key === 'aiEnabled' && v) {
+                var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+                if (sh && typeof sh.legacyModuleAllowed === 'function' && !sh.legacyModuleAllowed('ai')) return false;
+            }
+            return v;
         },
 
         /**

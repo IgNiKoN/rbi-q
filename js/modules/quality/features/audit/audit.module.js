@@ -174,10 +174,10 @@ var AuditModule = {
       window.AuditRender.render();
     }
 
-    // sync:completed → автосохранение сеанса
-    on(document, 'sync:completed', function () {
+    // sync:completed → автосохранение сеанса (P2-0025: «к отправке» — только при правке)
+    on(document, 'sync:completed', function (e) {
       if (window.AuditActions) {
-        window.AuditActions.scheduleSessionSave();
+        window.AuditActions.onSyncCompleted(e && e.detail);
       }
     });
 

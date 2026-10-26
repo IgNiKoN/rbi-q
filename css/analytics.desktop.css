@@ -3887,3 +3887,106 @@ body.rbi-analytics-desktop-wide #sub-schedule.ana-desk-sched .ana-desk-sched-emp
     grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
   }
 }
+
+/* P2-0026: «История» → «Проверки» — группы Объект → Подрядчик → Вид работ (как на телефоне) */
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--rbi-radius-md);
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp[data-lvl="1"] { padding-left: 1.1rem; }
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp[data-lvl="2"] { padding-left: 2.2rem; }
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  background: transparent;
+  padding: 0.5rem 0.4rem;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--rbi-radius-md);
+  color: var(--text-main);
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-main:hover {
+  background: var(--hover-bg);
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp[data-lvl="0"] .ana-desk-hist-grp-main {
+  background: var(--bg-main);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp[data-lvl="1"] .ana-desk-hist-grp-main {
+  font-size: 13px;
+  font-weight: 750;
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp[data-lvl="2"] .ana-desk-hist-grp-main {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-chev {
+  display: inline-block;
+  width: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 800;
+  transition: transform 0.15s ease;
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-main[aria-expanded="true"] .ana-desk-hist-grp-chev {
+  transform: rotate(90deg);
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--hover-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--rbi-radius-sm);
+  padding: 0.1rem 0.4rem;
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-urk {
+  flex-shrink: 0;
+  min-width: 3rem;
+  text-align: right;
+  font-size: 11px !important;
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-body[hidden] {
+  display: none;
+}
+
+body.rbi-analytics-desktop-wide #sub-history.ana-desk-hist .ana-desk-hist-grp-cb {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.25rem;
+  accent-color: var(--primary);
+}

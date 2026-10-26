@@ -100,12 +100,16 @@ window.AppRouter = {
             defaultSlug: 'platform',
             slugToId: {
                 platform: 'platform',
+                company: 'company',
+                'platform-admin': 'platform-admin',
                 admin: 'admin',
                 quality: 'quality',
                 construction: 'construction'
             },
             idToSlug: {
                 platform: 'platform',
+                company: 'company',
+                'platform-admin': 'platform-admin',
                 admin: 'admin',
                 quality: 'quality',
                 construction: 'construction'
@@ -525,6 +529,8 @@ window.AppRouter = {
             renderFunction();
             this.activePath = path;
             this.updateNavHighlight(path);
+            // P2-0011: модули платформы (План/Факт …) узнают, что показан другой маршрут — переход через pushState не даёт hashchange.
+            try { window.dispatchEvent(new CustomEvent('rbi:route', { detail: { path: path } })); } catch (_) { /* ignore */ }
 
             // 3. Восстанавливаем скролл.
             // Ждем 60мс, чтобы скрипт шапки успел пересчитать отступы (padding)
@@ -539,32 +545,41 @@ window.AppRouter = {
         const p = String(path || '');
         // Longest data-path wins — иначе parent (`#/construction-v2` = Планы)
         // остаётся active вместе с дочерней вкладкой (`…/defects` и т.д.).
-        const items = Array.from(document.querySelectorAll(
-            '#main-bottom-nav .nav-item[data-path], #app-nav2 .app-nav2-item[data-path], #app-sidebar [data-path]'
-        ));
-        let bestLen = -1;
-        items.forEach((item) => {
-            const itemPath = item.dataset.path || '';
-            if (!itemPath) return;
-            if (p === itemPath || p.startsWith(itemPath + '/')) {
-                if (itemPath.length > bestLen) bestLen = itemPath.length;
-            }
-        });
-        items.forEach((item) => {
-            const itemPath = item.dataset.path || '';
-            const match = !!(itemPath && itemPath.length === bestLen &&
-                (p === itemPath || p.startsWith(itemPath + '/')));
-            item.classList.toggle('active', match);
-        });
+        // P2-0011: уровни считаются отдельно — подвкладки (нижний таббар + nav2) и боковое меню; раньше общий «самый длинный»
+        // путь подвкладки гасил пункт модуля платформы в боковом меню (#/planfact при открытом #/planfact/vor).
+        const matches = (itemPath) => !!(itemPath && (p === itemPath || p.startsWith(itemPath + '/')));
+        const highlight = (selector) => {
+            const items = Array.from(document.querySelectorAll(selector));
+            let bestLen = -1;
+            items.forEach((item) => {
+                const itemPath = item.dataset.path || '';
+                if (matches(itemPath) && itemPath.length > bestLen) bestLen = itemPath.length;
+            });
+            items.forEach((item) => {
+                const itemPath = item.dataset.path || '';
+                item.classList.toggle('active', itemPath.length === bestLen && matches(itemPath));
+            });
+        };
+        highlight('#main-bottom-nav .nav-item[data-path], #app-nav2 .app-nav2-item[data-path]');
+        highlight('#app-sidebar [data-path]');
         // Mode icons in sidebar: path-independent — sync with AppModeManager.
         // Settings is chrome (footer): keep the current business module highlighted too.
+        // P2-0011: открыт модуль платформы (пункт с data-path, напр. План/Факт) — подсвечен он, а не бизнес-модуль режима.
+        // Настройки из модуля платформы (его подвкладки ещё в RBI.platformNav) — текущим модулем остаётся он.
+        const pnav = window.RBI && window.RBI.platformNav;
+        let platformOpen = false;
+        document.querySelectorAll('#app-sidebar [data-sidebar-module-id][data-path]').forEach((el) => {
+            const own = matches(el.dataset.path || '') || !!(pnav && pnav.id === el.getAttribute('data-sidebar-module-id') && this._isSettingsPath(p));
+            if (own) { el.classList.add('active'); platformOpen = true; }
+        });
         let mode = null;
         try {
             mode = window.AppModeManager && window.AppModeManager.currentMode;
         } catch (_) { mode = null; }
         document.querySelectorAll('#app-sidebar [data-sidebar-module-id]').forEach(function (el) {
+            if (el.hasAttribute('data-path')) return;   // пункт модуля платформы — по пути (выше)
             const id = el.getAttribute('data-sidebar-module-id');
-            el.classList.toggle('active', !!(mode && id === mode));
+            el.classList.toggle('active', !platformOpen && !!(mode && id === mode));
         });
     }
 };

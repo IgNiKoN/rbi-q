@@ -99,7 +99,7 @@ function _formatAiRichText(raw) {
     text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const applyInline = (s) => s
-        .replace(/§B§([\s\S]+?)§\/B§/g, '<b class="font-bold text-slate-900 dark:text-white">$1</b>')
+        .replace(/§B§([\s\S]+?)§\/B§/g, '<b class="font-bold text-ink">$1</b>')
         .replace(/§B§|§\/B§/g, '');
 
     const lines = text.split('\n');
@@ -122,7 +122,7 @@ function _formatAiRichText(raw) {
         const hMatch = trimmed.match(/^§H§(.+)§\/H§$/);
         if (hMatch) {
             closeList();
-            out.push(`<p class="font-black text-[13px] mt-3 mb-1.5 text-slate-900 dark:text-white">${applyInline(hMatch[1])}</p>`);
+            out.push(`<p class="font-black text-rbi-body mt-3 mb-1.5 text-ink">${applyInline(hMatch[1])}</p>`);
             continue;
         }
 
@@ -143,7 +143,7 @@ function _formatAiRichText(raw) {
             const looksLikeSection = /:$/.test(body) || body.length <= 90;
             if (looksLikeSection) {
                 closeList();
-                out.push(`<p class="font-black text-[13px] mt-3 mb-1.5 text-slate-900 dark:text-white">${sec[1]}. ${applyInline(body.replace(/:$/, ''))}</p>`);
+                out.push(`<p class="font-black text-rbi-body mt-3 mb-1.5 text-ink">${sec[1]}. ${applyInline(body.replace(/:$/, ''))}</p>`);
                 continue;
             }
             if (listType !== 'ol') {
@@ -224,76 +224,70 @@ function _templates() {
     return (AIActions._ctx && AIActions._ctx.templates) || window.RBI.services.templates;
 }
 
-// === ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА AI (перенесено 1:1 из app.js) ===
+// === ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА AI ===
 function changeAiMode(mode) {
     var settingsSvc = (AIActions._ctx && AIActions._ctx.settings) || window.RBI.services.settings;
     settingsSvc.set('aiAuthMode', mode);
 
+    // P2-0034: «account» (по учётке) или «personal» (свой ключ DeepSeek)
     const personalKeyBlock = document.getElementById('personal-key-field');
-    const corporatePwdBlock = document.getElementById('corporate-pwd-field');
-
-    if (personalKeyBlock) personalKeyBlock.classList.add('hidden');
-    if (corporatePwdBlock) corporatePwdBlock.classList.add('hidden');
-
-    if (mode === 'personal') {
-        if (personalKeyBlock) personalKeyBlock.classList.remove('hidden');
-    } else if (mode === 'corporate') {
-        if (corporatePwdBlock) corporatePwdBlock.classList.remove('hidden');
-    }
+    if (personalKeyBlock) personalKeyBlock.classList.toggle('hidden', mode !== 'personal');
 };
 
 // === ГЛОБАЛЬНАЯ ФУНКЦИЯ ВЫЗОВА DEEPSEEK AI ===
+// P2-0034: «свой ключ» (personal) — прямой запрос к DeepSeek; иначе — «по учётке»: серверная функция pf-ai
+// через клиент Качества (токен входа и x-company-id подставляет он сам), право решает сервер.
+function _aiText(data, options) {
+    let aiText = data.choices[0].message.content;
+    // raw:true — для JSON-ответов (FMEA / отчёты): не превращать ** в <b>, иначе парсер ломается
+    if (!options.raw) {
+        aiText = aiText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    }
+    return aiText;
+}
+
+async function _callAiByAccount(messages, temperature, max_tokens, options) {
+    const client = window.supabaseClient;
+    if (!client || !client.functions) {
+        throw new Error(_t('quality.ai.error.login', 'Войдите в Платформу 2.0, чтобы пользоваться ИИ-помощником.'));
+    }
+    const { data, error } = await client.functions.invoke('pf-ai', { body: { messages, temperature, max_tokens } });
+    if (error) {
+        let msg = _t('quality.ai.error.unavailable', 'ИИ-помощник недоступен. Попробуйте позже.');
+        try {
+            const errData = error.context && typeof error.context.json === 'function' ? await error.context.json() : null;
+            if (errData && errData.error) msg = errData.error;
+        } catch (e) { }
+        throw new Error(msg);
+    }
+    return _aiText(data, options);
+}
+
 async function callAI(messages, options = {}) {
     const { temperature = 0.7, max_tokens = 2000 } = options;
-    const mode = _getSetting('aiAuthMode') || 'corporate';   // по умолчанию corporate
-
-    let url, headers, body;
-
-    if (mode === 'personal') {
-        if (!_getSetting('apiKey')) throw new Error(_t('quality.ai.error.api_key', 'Введите ваш API-ключ в Настройках!'));
-        url = 'https://api.deepseek.com/chat/completions';
-        headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_getSetting('apiKey')}` };
-        body = { model: 'deepseek-chat', messages, temperature, max_tokens };
-    } else {
-        url = `${window.APP_CONFIG.SUPABASE_URL}/functions/v1/deepseek-proxy`;
-        headers = { 'Content-Type': 'application/json' };
-        body = {
-            model: 'deepseek-chat',
-            messages,
-            temperature,
-            max_tokens,
-            mode: mode,
-            engineer_name: window.syncConfig?.engineerName || '',
-            project_code: window.syncConfig?.projectCode || '',
-            password: _getSetting('aiCorpPwd') || ''
-        };
-    }
+    const mode = _getSetting('aiAuthMode');
 
     try {
-        const response = await fetch(url, {
+        if (mode !== 'personal') return await _callAiByAccount(messages, temperature, max_tokens, options);
+
+        if (!_getSetting('apiKey')) throw new Error(_t('quality.ai.error.api_key', 'Введите ваш API-ключ в Настройках!'));
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
             method: 'POST',
-            headers: headers,
-            body: JSON.stringify(body)
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_getSetting('apiKey')}` },
+            body: JSON.stringify({ model: 'deepseek-chat', messages, temperature, max_tokens })
         });
 
         if (!response.ok) {
             let errorMsg = _t('quality.ai.error.server', 'Ошибка сервера: {status}', { status: response.status });
             try {
                 const errData = await response.json();
-                if (errData.error) errorMsg = errData.error;
+                if (errData.error) errorMsg = errData.error.message || errData.error;
             } catch (e) { }
-            if (response.status === 403) throw new Error(_t('quality.ai.error.forbidden', 'Доступ запрещен. Проверьте пароль.'));
             if (response.status === 401) throw new Error(_t('quality.ai.error.bad_key', 'Неверный персональный API-ключ.'));
             throw new Error(errorMsg);
         }
 
-        const data = await response.json();
-        let aiText = data.choices[0].message.content;
-        // raw:true — для JSON-ответов (FMEA / отчёты): не превращать ** в <b>, иначе парсер ломается
-        if (!options.raw) {
-            aiText = aiText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-        }
-        return aiText;
+        return _aiText(await response.json(), options);
     } catch (e) {
         console.error("[AI Error]:", e);
         throw e;
@@ -544,19 +538,19 @@ function openHeatmapAiModal(opts) {
     let modal = document.getElementById('heatmap-ai-modal');
     if (!modal) {
         document.body.insertAdjacentHTML('beforeend', `
-<div id="heatmap-ai-modal" class="fixed inset-0 bg-slate-900/80 z-[6000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onclick="if(event.target===this)closeHeatmapAiModal()">
+<div id="heatmap-ai-modal" class="fixed inset-0 bg-surface/80 z-[6000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onclick="if(event.target===this)closeHeatmapAiModal()">
   <div class="bg-[var(--card-bg)] w-full max-w-3xl sm:rounded-2xl rounded-t-2xl shadow-2xl border border-[var(--card-border)] flex flex-col overflow-hidden" style="max-height:min(94vh,100dvh)" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="heatmap-ai-modal-title">
     <div class="flex items-center justify-between gap-2 px-4 sm:px-5 pt-4 pb-3 border-b border-[var(--card-border)] shrink-0">
-      <h3 id="heatmap-ai-modal-title" class="font-black text-[13px] uppercase tracking-tight text-slate-800 dark:text-white">${_t('quality.ai.title.heatmap', 'Анализ матрицы рисков')}</h3>
-      <button type="button" onclick="closeHeatmapAiModal()" class="text-slate-400 hover:text-red-500 px-2 text-lg leading-none" aria-label="${_t('quality.ai.btn.close', 'Закрыть')}">❌</button>
+      <h3 id="heatmap-ai-modal-title" class="font-black text-rbi-body uppercase tracking-tight text-ink">${_t('quality.ai.title.heatmap', 'Анализ матрицы рисков')}</h3>
+      <button type="button" onclick="closeHeatmapAiModal()" class="text-muted hover:text-danger px-2 text-lg leading-none" aria-label="${_t('quality.ai.btn.close', 'Закрыть')}">❌</button>
     </div>
-    <div id="heatmap-ai-modal-body" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 sm:px-5 py-4 text-[13px] sm:text-[14px] leading-relaxed text-slate-800 dark:text-slate-100" style="min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div id="heatmap-ai-modal-body" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 sm:px-5 py-4 text-rbi-body sm:text-rbi-title leading-relaxed text-ink" style="min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="flex gap-2 p-4 pt-3 border-t border-[var(--card-border)] shrink-0 bg-[var(--card-bg)]">
-      <button type="button" id="heatmap-ai-modal-copy" onclick="copyHeatmapAiText()" class="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-md active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
+      <button type="button" id="heatmap-ai-modal-copy" onclick="copyHeatmapAiText()" class="flex-1 bg-brand text-white py-3.5 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-md active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
         ${_t('quality.ai.btn.copy', 'Копировать')}
       </button>
-      <button type="button" onclick="closeHeatmapAiModal()" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-3.5 rounded-xl font-bold text-[11px] uppercase border border-slate-200 dark:border-slate-700 active:scale-95">${_t('quality.ai.btn.close', 'Закрыть')}</button>
+      <button type="button" onclick="closeHeatmapAiModal()" class="flex-1 bg-surface text-muted py-3.5 rounded-xl font-bold text-rbi-label uppercase border border-surface active:scale-95">${_t('quality.ai.btn.close', 'Закрыть')}</button>
     </div>
   </div>
 </div>`);
@@ -576,7 +570,7 @@ function openHeatmapAiModal(opts) {
         body.style.overflowY = 'auto';
         body.style.WebkitOverflowScrolling = 'touch';
         if (loading) {
-            body.innerHTML = `<span class="animate-pulse text-indigo-500 dark:text-indigo-300 font-bold">${_t('quality.ai.loading.heatmap_matrix', '⏳ AI разбирает матрицу этап × подрядчик...')}</span>`;
+            body.innerHTML = `<span class="animate-pulse text-brand font-bold">${_t('quality.ai.loading.heatmap_matrix', '⏳ AI разбирает матрицу этап × подрядчик...')}</span>`;
         } else {
             body.innerHTML = options.html || _heatmapAiLast.html || '—';
             body.scrollTop = 0;
@@ -592,21 +586,21 @@ function _setHeatmapAiTeaser(state) {
     teaser.classList.add('is-open');
     teaser.classList.remove('hidden');
     if (state === 'loading') {
-        teaser.innerHTML = `<span class="text-indigo-500 dark:text-indigo-300 font-bold animate-pulse">${_t('quality.ai.loading.analysis_window', '⏳ Анализ формируется в окне…')}</span>`;
+        teaser.innerHTML = `<span class="text-brand font-bold animate-pulse">${_t('quality.ai.loading.analysis_window', '⏳ Анализ формируется в окне…')}</span>`;
         return;
     }
     if (state === 'empty') {
-        teaser.innerHTML = `<span class="text-slate-500">${_t('quality.ai.empty.no_analysis', 'Нет данных для анализа.')}</span>`;
+        teaser.innerHTML = `<span class="text-muted">${_t('quality.ai.empty.no_analysis', 'Нет данных для анализа.')}</span>`;
         return;
     }
     if (state === 'error') {
-        teaser.innerHTML = `<span class="text-red-500 font-bold">${_t('quality.ai.error.ai_link_short', '❌ Ошибка связи с нейросетью')}</span>`;
+        teaser.innerHTML = `<span class="text-danger font-bold">${_t('quality.ai.error.ai_link_short', '❌ Ошибка связи с нейросетью')}</span>`;
         return;
     }
     teaser.innerHTML = `
         <div class="flex flex-col gap-2">
-            <p class="text-[12px] font-bold text-slate-700 dark:text-slate-200">${_t('quality.ai.teaser.analysis_ready', 'Анализ готов — полный текст в отдельном окне.')}</p>
-            <button type="button" onclick="reopenHeatmapAiModal()" class="w-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 py-2.5 rounded-xl font-bold text-[10px] uppercase active:scale-95">${_t('quality.ai.btn.open_analysis', 'Открыть анализ')}</button>
+            <p class="text-rbi-body font-bold text-ink">${_t('quality.ai.teaser.analysis_ready', 'Анализ готов — полный текст в отдельном окне.')}</p>
+            <button type="button" onclick="reopenHeatmapAiModal()" class="w-full bg-brand-soft text-brand border border-brand-soft py-2.5 rounded-xl font-bold text-rbi-caption uppercase active:scale-95">${_t('quality.ai.btn.open_analysis', 'Открыть анализ')}</button>
         </div>`;
 }
 
@@ -620,7 +614,7 @@ async function generateHeatmapAi() {
     if (data.length === 0) {
         _setHeatmapAiTeaser('empty');
         openHeatmapAiModal({
-            html: `<span class="text-slate-500">${_t('quality.ai.empty.no_analysis', 'Нет данных для анализа.')}</span>`,
+            html: `<span class="text-muted">${_t('quality.ai.empty.no_analysis', 'Нет данных для анализа.')}</span>`,
             plain: _t('quality.ai.empty.no_analysis', 'Нет данных для анализа.')
         });
         return;
@@ -769,7 +763,7 @@ ${topCells.map(lineCell).join('\n') || '—'}
     } catch (e) {
         _setHeatmapAiTeaser('error');
         openHeatmapAiModal({
-            html: `<span class="text-red-500 font-bold">${_t('quality.ai.error.ai_link_short', '❌ Ошибка связи с нейросетью')}</span>`,
+            html: `<span class="text-danger font-bold">${_t('quality.ai.error.ai_link_short', '❌ Ошибка связи с нейросетью')}</span>`,
             plain: _t('quality.ai.error.ai_link_plain', 'Ошибка связи с нейросетью')
         });
     }
@@ -784,14 +778,14 @@ async function generateContractorForecastAi(contractorName) {
     const data = getFilteredAnalyticsData().filter(c => c.contractorName + ' [' + (c.projectName || 'Без объекта') + ']' === contractorName);
 
     if (data.length < 5) {
-        container.innerHTML = `<div class="text-[11px] text-slate-500 font-bold bg-slate-50 p-3 rounded-lg border border-dashed border-slate-300">${_t('quality.ai.empty.low_data_5', 'Слишком мало данных для нейросети (нужно от 5 проверок). Продолжайте инспекции.')}</div>`;
+        container.innerHTML = `<div class="text-rbi-label text-muted font-bold bg-surface p-3 rounded-lg border border-dashed border-surface">${_t('quality.ai.empty.low_data_5', 'Слишком мало данных для нейросети (нужно от 5 проверок). Продолжайте инспекции.')}</div>`;
         return;
     }
 
     const m = getContractorMetrics(data, _templates().getUserTemplates());
  const trend = data.slice(-5).map(c => c.metrics.final).join('% ') + '%';
 
-    container.innerHTML = `<span class="animate-pulse font-bold text-indigo-600 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> ${_t('quality.ai.loading.trend', 'Нейросеть вычисляет тренд...')}</span>`;
+    container.innerHTML = `<span class="animate-pulse font-bold text-brand flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> ${_t('quality.ai.loading.trend', 'Нейросеть вычисляет тренд...')}</span>`;
 
     const promptSystem = `Ты — предиктивный AI-советник по строительству. Твоя задача — спрогнозировать рейтинг подрядчика через 2 недели и дать ОДИН главный совет инженеру.
     Ответь СТРОГО в 2 абзаца:
@@ -802,20 +796,20 @@ async function generateContractorForecastAi(contractorName) {
 
     try {
         const res = await callAI([{ role: 'system', content: promptSystem }, { role: 'user', content: promptUser }], { temperature: 0.3, max_tokens: 150 });
-        container.innerHTML = `<div class="text-[12px] leading-relaxed text-indigo-900 dark:text-indigo-200 font-medium whitespace-pre-wrap">${res}</div>`;
+        container.innerHTML = `<div class="text-rbi-body leading-relaxed text-brand font-medium whitespace-pre-wrap">${res}</div>`;
         _gameLogAction('ai_generate', 'forecast');
     } catch (e) {
-        container.innerHTML = `<span class="text-red-500 font-bold">${_t('quality.ai.error.ai_link_short', '❌ Ошибка связи с нейросетью')}</span>`;
+        container.innerHTML = `<span class="text-danger font-bold">${_t('quality.ai.error.ai_link_short', '❌ Ошибка связи с нейросетью')}</span>`;
     }
 };
 
 async function generateCultureAi(contractorName) {
     if (!_getSetting('aiEnabled')) return showToast(_t('quality.ai.toast.enable_assistant_warn', '⚠️ Включите AI-ассистента!'));
     const container = document.getElementById('culture-ai-text');
-    container.innerHTML = `<span class="animate-pulse text-indigo-500 font-bold">${_t('quality.ai.loading.culture', '⏳ AI оценивает культуру...')}</span>`;
+    container.innerHTML = `<span class="animate-pulse text-brand font-bold">${_t('quality.ai.loading.culture', '⏳ AI оценивает культуру...')}</span>`;
 
     const cData = getFilteredAnalyticsData().filter(c => c.contractorName + ' [' + (c.projectName || 'Без объекта') + ']' === contractorName);
-    if (cData.length === 0) return container.innerHTML = `<span class="text-red-500">${_t('quality.ai.error.data', 'Ошибка данных')}</span>`;
+    if (cData.length === 0) return container.innerHTML = `<span class="text-danger">${_t('quality.ai.error.data', 'Ошибка данных')}</span>`;
 
     const m = getContractorMetrics(cData, _templates().getUserTemplates());
     const promptSystem = `Ты — эксперт по бережливому производству (Lean). Дай оценку 'Культуры качества' подрядчика. 
@@ -827,7 +821,7 @@ async function generateCultureAi(contractorName) {
         container.innerHTML = res;
         _reports().setExpertConclusion(`culture_${contractorName}`, res);
         if (typeof scheduleSessionSave === 'function') scheduleSessionSave();
-    } catch (e) { container.innerHTML = `<span class="text-red-500">${_t('quality.ai.error.ai_link_plain2', 'Ошибка связи с AI')}</span>`; }
+    } catch (e) { container.innerHTML = `<span class="text-danger">${_t('quality.ai.error.ai_link_plain2', 'Ошибка связи с AI')}</span>`; }
 };
 
 // === AI: ГЕНЕРАЦИЯ ЧЕРНОВИКА TWI КАРТЫ ===
@@ -922,8 +916,8 @@ async function generatePrescriptionAi(inspectionId) {
     document.getElementById('modal-title').innerHTML = `<div class="text-center font-black uppercase text-lg">${_t('quality.ai.title.gen_doc', 'Генерация документа...')}</div>`;
     document.getElementById('modal-body').innerHTML = `
         <div class="flex flex-col items-center justify-center py-6">
-            <div class="mb-4 animate-bounce text-indigo-500 flex justify-center">🤖</div>
-            <div class="text-sm font-bold text-slate-500 text-center">${_t('quality.ai.loading.prescription', 'Нейросеть составляет юридически грамотный текст предписания...')}</div>
+            <div class="mb-4 animate-bounce text-brand flex justify-center">🤖</div>
+            <div class="text-sm font-bold text-muted text-center">${_t('quality.ai.loading.prescription', 'Нейросеть составляет юридически грамотный текст предписания...')}</div>
         </div>
     `;
     document.body.classList.add('modal-open');
@@ -953,8 +947,8 @@ async function generatePrescriptionAi(inspectionId) {
         // Выводим готовый текст в текстовое поле с возможностью копирования
         document.getElementById('modal-title').innerHTML = `<div class="text-center font-black uppercase text-lg">${_t('quality.ai.title.prescription_ready', 'Предписание готовое')}</div>`;
         document.getElementById('modal-body').innerHTML = `
-            <textarea id="ai-prescription-text" class="w-full h-[50vh] bg-[var(--hover-bg)] border border-[var(--card-border)] rounded-xl p-3 text-[11px] outline-none resize-none text-slate-800 dark:text-slate-200 mb-4">${response}</textarea>
-            <button onclick="copyExpertText(this.id, 'ai-prescription-text')" id="btn-copy-presc" class="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-black text-[12px] uppercase tracking-widest shadow-md active:scale-95 flex items-center justify-center gap-2">
+            <textarea id="ai-prescription-text" class="w-full h-[50vh] bg-[var(--hover-bg)] border border-[var(--card-border)] rounded-xl p-3 text-rbi-label outline-none resize-none text-ink mb-4">${response}</textarea>
+            <button onclick="copyExpertText(this.id, 'ai-prescription-text')" id="btn-copy-presc" class="w-full bg-brand text-white py-3.5 rounded-xl font-black text-rbi-body uppercase tracking-widest shadow-md active:scale-95 flex items-center justify-center gap-2">
                 ${_t('quality.ai.btn.copy_text', '📋 Скопировать текст')}
             </button>
         `;
@@ -975,7 +969,7 @@ async function generateTaskRiskAi(contractorName, templateKey, containerId) {
     const cData = _allInspections.filter(c => c.contractorName === contractorName && c.templateKey === templateKey).sort((a, b) => new Date(a.date) - new Date(b.date));
     if (cData.length < 3) return showToast(_t('quality.ai.toast.low_data_forecast', '⚠️ Мало данных для прогноза (нужно хотя бы 3 проверки).'));
 
-    container.innerHTML = `<div class="text-center text-[10px] text-indigo-500 font-bold animate-pulse py-3">${_t('quality.ai.loading.dynamics', 'Анализирую динамику...')}</div>`;
+    container.innerHTML = `<div class="text-center text-rbi-caption text-brand font-bold animate-pulse py-3">${_t('quality.ai.loading.dynamics', 'Анализирую динамику...')}</div>`;
 
     const m = getContractorMetrics(cData, _templates().getUserTemplates());
     const urkHistory = cData.slice(-5).map(c => c.metrics.final).join('%, ') + '%';
@@ -998,16 +992,16 @@ async function generateTaskRiskAi(contractorName, templateKey, containerId) {
 
         const isBad = response.toLowerCase().includes('растёт') || m.finalC < 75;
         const isGood = response.toLowerCase().includes('снижается') || (m.finalC > 85 && m.stabilityIndex > 80);
-        const bgColor = isBad ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30' : (isGood ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30' : 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/30');
+        const bgColor = isBad ? 'bg-danger-soft border-danger-soft text-danger' : (isGood ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30' : 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/30');
 
         container.innerHTML = `
-            <div class="${bgColor} border p-3 rounded-xl shadow-sm text-[11px] leading-snug">
+            <div class="${bgColor} border p-3 rounded-xl shadow-sm text-rbi-label leading-snug">
                 <div class="font-black uppercase mb-1 flex items-center gap-1">🤖 AI-Прогноз</div>
                 ${response.replace(/\n/g, '<br>')}
             </div>
         `;
     } catch (e) {
-        container.innerHTML = `<button onclick="generateTaskRiskAi('${contractorName}', '${templateKey}', '${containerId}')" class="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-xl font-black text-[10px] uppercase active:scale-95 flex justify-center items-center gap-2">${_t('quality.ai.btn.retry', '❌ Ошибка. Повторить')}</button>`;
+        container.innerHTML = `<button onclick="generateTaskRiskAi('${contractorName}', '${templateKey}', '${containerId}')" class="w-full bg-danger-soft text-danger border border-danger-soft py-3 rounded-xl font-black text-rbi-caption uppercase active:scale-95 flex justify-center items-center gap-2">${_t('quality.ai.btn.retry', '❌ Ошибка. Повторить')}</button>`;
     }
 };
 
@@ -1025,7 +1019,7 @@ async function generateAiRoutePlan() {
     if (!container) return;
 
     container.classList.remove('hidden');
-    container.innerHTML = `<span class="animate-pulse text-indigo-600 font-bold flex items-center gap-2"><svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> ${_t('quality.ai.loading.route', 'Нейросеть прокладывает оптимальный маршрут...')}</span>`;
+    container.innerHTML = `<span class="animate-pulse text-brand font-bold flex items-center gap-2"><svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> ${_t('quality.ai.loading.route', 'Нейросеть прокладывает оптимальный маршрут...')}</span>`;
 
     // 1. Собираем умный контекст по каждой задаче для ИИ
     const tasksContext = activeTasks.map(t => {
@@ -1060,14 +1054,14 @@ async function generateAiRoutePlan() {
             { role: 'user', content: `Задачи инженера на сегодня:\n${tasksContext}` }
         ], { temperature: 0.3, max_tokens: 600 });
 
-        container.innerHTML = `<div class="text-[11px] leading-relaxed text-slate-800 dark:text-slate-200">${response.replace(/\n/g, '<br>')}</div>`;
+        container.innerHTML = `<div class="text-rbi-label leading-relaxed text-ink">${response.replace(/\n/g, '<br>')}</div>`;
         showToast(_t('quality.ai.toast.route_done', 'Маршрут и приоритеты расставлены!'));
 
         // Логируем в геймификацию
         _gameLogAction('ai_generate', 'route_plan');
 
     } catch (e) {
-        container.innerHTML = `<span class="text-red-600 font-bold">${_t('quality.ai.error.ai_link', '❌ Ошибка связи с нейросетью: {message}', { message: e.message })}</span>`;
+        container.innerHTML = `<span class="text-danger font-bold">${_t('quality.ai.error.ai_link', '❌ Ошибка связи с нейросетью: {message}', { message: e.message })}</span>`;
     }
 };
 
@@ -1094,7 +1088,7 @@ async function generateAiTutorAdvice() {
         const response = await callAI([{ role: 'system', content: promptSystem }, { role: 'user', content: promptUser }], { temperature: 0.5, max_tokens: 150 });
         container.innerHTML = `<b>${_t('quality.ai.label.advice', '💡 Наставление:')}</b> ${response}`;
     } catch (e) {
-        container.innerHTML = `<span class="text-red-500">${_t('quality.ai.error.ai', 'Ошибка AI')}</span>`;
+        container.innerHTML = `<span class="text-danger">${_t('quality.ai.error.ai', 'Ошибка AI')}</span>`;
     }
 };
 
@@ -1122,7 +1116,7 @@ async function generateAiHintForDefect() {
     const twiContext = existingTwi ? `В базе УЖЕ ЕСТЬ TWI-карта "${existingTwi.title}". Посоветуй инженеру показать её рабочим.` : `В базе НЕТ TWI-карты для этого узла. Посоветуй инженеру её создать.`;
 
     aiHint.classList.remove('hidden');
-    aiHint.innerHTML = `<span class="animate-pulse text-slate-500">${_t('quality.ai.loading.hint', '⏳ AI формулирует совет...')}</span>`;
+    aiHint.innerHTML = `<span class="animate-pulse text-muted">${_t('quality.ai.loading.hint', '⏳ AI формулирует совет...')}</span>`;
 
     const promptSystem = `Ты — старший наставник стройконтроля. Дай инспектору 1-2 коротких предложения: как предотвратить этот дефект прямо сейчас на площадке. 
     ОБЯЗАТЕЛЬНО учти контекст: ${twiContext}`;
@@ -2040,7 +2034,7 @@ function _renderAiDocChips(suggestions) {
         if (!label) return '';
         const short = label.length > 42 ? label.slice(0, 40) + '…' : label;
         return `<button type="button" data-action="applyAiDocChip" data-action-arg="${_escAiDoc(label)}"
-            class="text-[10px] font-bold px-2.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 active:scale-95 max-w-full truncate">${_escAiDoc(short)}</button>`;
+            class="text-rbi-caption font-bold px-2.5 py-1.5 rounded-full bg-brand-soft text-brand border border-brand-soft active:scale-95 max-w-full truncate">${_escAiDoc(short)}</button>`;
     }).join('');
 }
 
@@ -2120,7 +2114,7 @@ function _buildAiDocCatalogAnswer() {
 
     const html = `<p class="mb-2"><b>${_t('quality.ai.catalog.html_header', 'В базе {count} документ(ов)', { count: sorted.length })}</b>${_t('quality.ai.catalog.html_header_note', ' (системные + загруженные):')}</p>`
         + `<ul class="list-disc pl-4 mb-2">${htmlItems}</ul>`
-        + `<p class="mb-0 text-[12px] text-slate-600 dark:text-slate-300">${_t('quality.ai.catalog.html_footer', 'Для ответа по содержанию укажите шифр или тему — например: «допуски монолитных стен по СП 70».')}</p>`;
+        + `<p class="mb-0 text-rbi-body text-muted">${_t('quality.ai.catalog.html_footer', 'Для ответа по содержанию укажите шифр или тему — например: «допуски монолитных стен по СП 70».')}</p>`;
 
     return { plain, html };
 }
@@ -2613,14 +2607,14 @@ function _renderAiDocSourcesHtml(sources) {
             label = s.code;
         }
         const snip = String(s.snippet || '');
-        return `<div class="py-2 ${i ? 'border-t border-slate-200 dark:border-slate-700' : ''}">
-            <div class="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400">${_escAiDoc(typeLabel)}</div>
-            <div class="text-[11px] font-bold text-slate-700 dark:text-slate-200 mt-0.5 leading-snug">${_escAiDoc(label)}</div>
-            <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">${_escAiDoc(snip)}${snip.length >= snipLimit ? '…' : ''}</div>
+        return `<div class="py-2 ${i ? 'border-t border-surface' : ''}">
+            <div class="text-rbi-caption font-black uppercase text-brand">${_escAiDoc(typeLabel)}</div>
+            <div class="text-rbi-label font-bold text-ink mt-0.5 leading-snug">${_escAiDoc(label)}</div>
+            <div class="text-rbi-label text-muted mt-0.5 leading-snug">${_escAiDoc(snip)}${snip.length >= snipLimit ? '…' : ''}</div>
         </div>`;
     }).join('');
-    return `<details class="mt-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/40 px-3 py-2">
-        <summary class="cursor-pointer text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 select-none">${_t('quality.ai.sources.count', 'Источники ({count})', { count: sources.length })}</summary>
+    return `<details class="mt-2 rounded-xl border border-surface bg-white/70 px-3 py-2">
+        <summary class="cursor-pointer text-rbi-caption font-black uppercase tracking-widest text-muted select-none">${_t('quality.ai.sources.count', 'Источники ({count})', { count: sources.length })}</summary>
         <div class="mt-1">${items}</div>
     </details>`;
 }
@@ -2662,7 +2656,7 @@ function _relatedMaterialsAppendix(cleanQuestion) {
     const topTwis = twiScores.slice(0, 2).map(t => t.title);
     if (!topChecklists.length && !topTwis.length) return { html: '', plain: '' };
 
-    let html = `<div class="mt-2 p-3 bg-indigo-100/50 dark:bg-indigo-900/40 rounded-xl border border-indigo-200 dark:border-indigo-800 text-[11px] text-indigo-900 dark:text-indigo-200 leading-relaxed">`;
+    let html = `<div class="mt-2 p-3 bg-brand-soft rounded-xl border border-brand-soft text-rbi-label text-brand leading-relaxed">`;
     html += `<b>${_t('quality.ai.related.title_html', 'Связанные материалы в приложении')}</b>`;
     if (topChecklists.length) html += `<span class="mt-1 block">${_t('quality.ai.related.checklists', '• Чек-листы: ')}<b>${_escAiDoc(topChecklists.join(', '))}</b></span>`;
     if (topTwis.length) html += `<span class="mt-1 block">${_t('quality.ai.related.twi', '• TWI-карты: ')}<b>${_escAiDoc(topTwis.join(', '))}</b></span>`;
@@ -2689,7 +2683,7 @@ async function askAiDocQuestion() {
 
     chatHistory.insertAdjacentHTML('beforeend', `
         <div class="flex gap-2 w-full max-w-[92%] ml-auto justify-end">
-            <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none text-[13px] shadow-sm">${_escAiDoc(question)}</div>
+            <div class="bg-brand text-white p-3 rounded-2xl rounded-tr-none text-rbi-body shadow-sm">${_escAiDoc(question)}</div>
         </div>`);
     inputEl.value = '';
     inputEl.focus();
@@ -2697,8 +2691,8 @@ async function askAiDocQuestion() {
     const loaderId = 'loader_' + Date.now();
     chatHistory.insertAdjacentHTML('beforeend', `
         <div id="${loaderId}" class="flex gap-2 w-full max-w-[95%]">
- <div class="w-7 h-7 bg-indigo-200 rounded-full flex items-center justify-center text-[11px] shrink-0"></div>
-            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-2xl rounded-tl-none text-[13px] text-slate-500 shadow-sm animate-pulse">
+ <div class="w-7 h-7 bg-brand-soft rounded-full flex items-center justify-center text-rbi-label shrink-0"></div>
+            <div class="bg-surface border border-surface p-3 rounded-2xl rounded-tl-none text-rbi-body text-muted shadow-sm animate-pulse">
                 ${_t('quality.ai.status.searching_loader', 'Ищу в чек-листах и нормативах…')}
             </div>
         </div>`);
@@ -2713,13 +2707,13 @@ async function askAiDocQuestion() {
         _aiDocPlainById[plainId] = String(plainText || '') + (related.plain || '');
         chatHistory.insertAdjacentHTML('beforeend', `
             <div class="flex gap-2 w-full max-w-[95%]" data-ai-doc-id="${plainId}">
-                <div class="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] shrink-0 font-bold shadow-md">AI</div>
-                <div class="min-w-0 flex-1 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-3 rounded-2xl rounded-tl-none text-[13px] text-slate-800 dark:text-slate-100 shadow-sm leading-relaxed font-medium">
+                <div class="w-7 h-7 bg-brand text-white rounded-full flex items-center justify-center text-rbi-caption shrink-0 font-bold shadow-md">AI</div>
+                <div class="min-w-0 flex-1 bg-brand-soft border border-brand-soft p-3 rounded-2xl rounded-tl-none text-rbi-body text-ink shadow-sm leading-relaxed font-medium">
                     <div class="ai-doc-answer-body">${bodyHtml}</div>
                     ${sourcesHtml}
                     ${related.html || ''}
                     <div class="mt-2 flex gap-2">
-                        <button type="button" onclick="copyAiDocAnswer(this)" class="flex-1 bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 py-2 rounded-lg text-[10px] font-black uppercase active:scale-95">${_t('quality.ai.btn.copy', 'Копировать')}</button>
+                        <button type="button" onclick="copyAiDocAnswer(this)" class="flex-1 bg-surface text-brand border border-brand-soft py-2 rounded-lg text-rbi-caption font-black uppercase active:scale-95">${_t('quality.ai.btn.copy', 'Копировать')}</button>
                     </div>
                 </div>
             </div>`);
@@ -2755,7 +2749,7 @@ async function askAiDocQuestion() {
         });
     } catch (e) {
         appendAnswer(
-            `<p class="mb-0 text-red-600">${_escAiDoc(_t('quality.ai.error.search_prefix', 'Ошибка поиска по базе: {message}', { message: e.message || e }))}</p>`,
+            `<p class="mb-0 text-danger">${_escAiDoc(_t('quality.ai.error.search_prefix', 'Ошибка поиска по базе: {message}', { message: e.message || e }))}</p>`,
             _t('quality.ai.error.search_plain', 'Ошибка поиска по базе'),
             [],
             _t('quality.ai.status.search_error', 'Ошибка поиска')
@@ -2880,8 +2874,8 @@ ${contextText}`;
         if (node) node.remove();
         chatHistory.insertAdjacentHTML('beforeend', `
             <div class="flex gap-2 w-full max-w-[95%]">
- <div class="w-7 h-7 bg-red-200 rounded-full flex items-center justify-center text-[11px] shrink-0"></div>
-                <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 p-3 rounded-2xl rounded-tl-none text-[13px] shadow-sm">
+ <div class="w-7 h-7 bg-danger-soft rounded-full flex items-center justify-center text-rbi-label shrink-0"></div>
+                <div class="bg-danger-soft text-danger border border-danger-soft p-3 rounded-2xl rounded-tl-none text-rbi-body shadow-sm">
                     ${_escAiDoc(e.message || e)}
                 </div>
             </div>`);
@@ -3323,19 +3317,19 @@ function openWorkshopAiModal(opts) {
     let modal = document.getElementById('workshop-ai-modal');
     if (!modal) {
         document.body.insertAdjacentHTML('beforeend', `
-<div id="workshop-ai-modal" class="fixed inset-0 bg-slate-900/80 z-[6000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onclick="if(event.target===this)closeWorkshopAiModal()">
+<div id="workshop-ai-modal" class="fixed inset-0 bg-surface/80 z-[6000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onclick="if(event.target===this)closeWorkshopAiModal()">
   <div class="bg-[var(--card-bg)] w-full max-w-3xl sm:rounded-2xl rounded-t-2xl shadow-2xl border border-[var(--card-border)] flex flex-col overflow-hidden" style="max-height:min(94vh,100dvh)" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="workshop-ai-modal-title">
     <div class="flex items-center justify-between gap-2 px-4 sm:px-5 pt-4 pb-3 border-b border-[var(--card-border)] shrink-0">
-      <h3 id="workshop-ai-modal-title" class="font-black text-[13px] uppercase tracking-tight text-slate-800 dark:text-white">${_t('quality.ai.title.workshop', 'Разбор дефектов')}</h3>
-      <button type="button" onclick="closeWorkshopAiModal()" class="text-slate-400 hover:text-red-500 px-2 text-lg leading-none" aria-label="${_t('quality.ai.btn.close', 'Закрыть')}">✕</button>
+      <h3 id="workshop-ai-modal-title" class="font-black text-rbi-body uppercase tracking-tight text-ink">${_t('quality.ai.title.workshop', 'Разбор дефектов')}</h3>
+      <button type="button" onclick="closeWorkshopAiModal()" class="text-muted hover:text-danger px-2 text-lg leading-none" aria-label="${_t('quality.ai.btn.close', 'Закрыть')}">✕</button>
     </div>
-    <div id="workshop-ai-modal-body" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 sm:px-5 py-4 text-[13px] sm:text-[14px] leading-relaxed text-slate-800 dark:text-slate-100 whitespace-pre-wrap" style="min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div id="workshop-ai-modal-body" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 sm:px-5 py-4 text-rbi-body sm:text-rbi-title leading-relaxed text-ink whitespace-pre-wrap" style="min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="flex gap-2 p-4 pt-3 border-t border-[var(--card-border)] shrink-0 bg-[var(--card-bg)]">
-      <button type="button" id="workshop-ai-modal-copy" onclick="copyWorkshopAiText()" class="flex-1 bg-purple-600 text-white py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-md active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
+      <button type="button" id="workshop-ai-modal-copy" onclick="copyWorkshopAiText()" class="flex-1 bg-purple-600 text-white py-3.5 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-md active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
         ${_t('quality.ai.btn.copy', 'Копировать')}
       </button>
-      <button type="button" onclick="closeWorkshopAiModal()" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-3.5 rounded-xl font-bold text-[11px] uppercase border border-slate-200 dark:border-slate-700 active:scale-95">${_t('quality.ai.btn.close', 'Закрыть')}</button>
+      <button type="button" onclick="closeWorkshopAiModal()" class="flex-1 bg-surface text-muted py-3.5 rounded-xl font-bold text-rbi-label uppercase border border-surface active:scale-95">${_t('quality.ai.btn.close', 'Закрыть')}</button>
     </div>
   </div>
 </div>`);
@@ -3367,17 +3361,17 @@ function _setWorkshopAiTeaser(state) {
     if (!teaser) return;
     teaser.classList.remove('hidden');
     if (state === 'loading') {
-        teaser.innerHTML = `<span class="text-purple-600 dark:text-purple-300 font-bold animate-pulse text-[12px]">${_t('quality.ai.loading.workshop_teaser', 'Разбор дефектов формируется…')}</span>`;
+        teaser.innerHTML = `<span class="text-purple-600 dark:text-purple-300 font-bold animate-pulse text-rbi-body">${_t('quality.ai.loading.workshop_teaser', 'Разбор дефектов формируется…')}</span>`;
         return;
     }
     if (state === 'error') {
-        teaser.innerHTML = `<span class="text-red-500 font-bold text-[12px]">${_t('quality.ai.error.ai_link_plain', 'Ошибка связи с нейросетью')}</span>`;
+        teaser.innerHTML = `<span class="text-danger font-bold text-rbi-body">${_t('quality.ai.error.ai_link_plain', 'Ошибка связи с нейросетью')}</span>`;
         return;
     }
     teaser.innerHTML = `
         <div class="flex flex-col gap-2">
-            <p class="text-[12px] font-bold text-slate-700 dark:text-slate-200">${_t('quality.ai.teaser.review_ready', 'Разбор готов — полный текст в отдельном окне.')}</p>
-            <button type="button" onclick="reopenWorkshopAiModal()" class="w-full bg-purple-50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800 py-2.5 rounded-xl font-bold text-[10px] uppercase active:scale-95">${_t('quality.ai.btn.open_review', 'Открыть разбор')}</button>
+            <p class="text-rbi-body font-bold text-ink">${_t('quality.ai.teaser.review_ready', 'Разбор готов — полный текст в отдельном окне.')}</p>
+            <button type="button" onclick="reopenWorkshopAiModal()" class="w-full bg-purple-50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800 py-2.5 rounded-xl font-bold text-rbi-caption uppercase active:scale-95">${_t('quality.ai.btn.open_review', 'Открыть разбор')}</button>
         </div>`;
 }
 
@@ -3449,7 +3443,7 @@ async function rbi_generateWorkshop(taskId) {
     } catch (e) {
         _setWorkshopAiTeaser('error');
         openWorkshopAiModal({
-            html: `<span class="text-red-500 font-bold">Ошибка ИИ: ${(e && e.message) ? e.message : 'попробуйте ещё раз'}</span>`,
+            html: `<span class="text-danger font-bold">Ошибка ИИ: ${(e && e.message) ? e.message : 'попробуйте ещё раз'}</span>`,
             plain: ''
         });
         _syncWorkshopScenarioField('');
@@ -3746,7 +3740,7 @@ async function sk_generateContractorAiSummary(cName, safeId) {
     btn.innerHTML = `<span class="animate-pulse">${_t('quality.ai.loading.sk_defects', '⏳ DeepSeek анализирует дефекты...')}</span>`;
     btn.disabled = true;
     resBox.classList.remove('hidden');
-    resBox.innerHTML = `<div class="text-center text-indigo-500 font-bold animate-pulse">${_t('quality.ai.loading.sk_match', 'ИИ сопоставляет замечания с чек-листами RBI...')}</div>`;
+    resBox.innerHTML = `<div class="text-center text-brand font-bold animate-pulse">${_t('quality.ai.loading.sk_match', 'ИИ сопоставляет замечания с чек-листами RBI...')}</div>`;
 
     let total = 0, open = 0, overdue = 0;
     const defectsFreq = {};
@@ -3792,14 +3786,14 @@ async function sk_generateContractorAiSummary(cName, safeId) {
         const response = await callAI([{ role: 'system', content: promptSystem }, { role: 'user', content: promptUser }], { temperature: 0.2, max_tokens: 800 });
 
         const formattedResponse = response
- .replace(/\[ОЦЕНКА ФОРМУЛИРОВОК \(KPI\)\]/g, '<div class="text-[12px] font-black text-purple-700 uppercase mb-1 border-b border-purple-100 pb-1"> ' + _t('quality.ai.sk.kpi', 'Качество работы инженеров СК') + '</div>')
- .replace(/\[ПРОГНОЗ РИСКА ПРОСРОЧКИ\]/g, '<div class="text-[12px] font-black text-red-700 uppercase mt-3 mb-1 border-b border-red-100 pb-1"> ' + _t('quality.ai.sk.risk_forecast', 'AI-Прогноз рисков') + '</div>')
- .replace(/\[СВЯЗЬ С ЧЕК-ЛИСТАМИ RBI\]/g, '<div class="text-[12px] font-black text-indigo-700 uppercase mt-3 mb-1 border-b border-indigo-100 pb-1"> ' + _t('quality.ai.sk.rbi_focus', 'Фокус для RBI Аудита') + '</div>')
- .replace(/\[СООБЩЕНИЕ ПРОРАБУ В WHATSAPP\]/g, '<div class="text-[12px] font-black text-green-700 uppercase mt-3 mb-1 border-b border-green-100 pb-1"> ' + _t('quality.ai.sk.foreman_msg', 'Сообщение прорабу (Копировать)') + '</div>');
+ .replace(/\[ОЦЕНКА ФОРМУЛИРОВОК \(KPI\)\]/g, '<div class="text-rbi-body font-black text-purple-700 uppercase mb-1 border-b border-purple-100 pb-1"> ' + _t('quality.ai.sk.kpi', 'Качество работы инженеров СК') + '</div>')
+ .replace(/\[ПРОГНОЗ РИСКА ПРОСРОЧКИ\]/g, '<div class="text-rbi-body font-black text-danger uppercase mt-3 mb-1 border-b border-danger-soft pb-1"> ' + _t('quality.ai.sk.risk_forecast', 'AI-Прогноз рисков') + '</div>')
+ .replace(/\[СВЯЗЬ С ЧЕК-ЛИСТАМИ RBI\]/g, '<div class="text-rbi-body font-black text-brand uppercase mt-3 mb-1 border-b border-brand-soft pb-1"> ' + _t('quality.ai.sk.rbi_focus', 'Фокус для RBI Аудита') + '</div>')
+ .replace(/\[СООБЩЕНИЕ ПРОРАБУ В WHATSAPP\]/g, '<div class="text-rbi-body font-black text-green-700 uppercase mt-3 mb-1 border-b border-green-100 pb-1"> ' + _t('quality.ai.sk.foreman_msg', 'Сообщение прорабу (Копировать)') + '</div>');
 
         resBox.innerHTML = `
             ${formattedResponse}
-            <button onclick="navigator.clipboard.writeText(this.parentElement.innerText); showToast(${JSON.stringify(_t('quality.ai.toast.text_copied', 'Текст скопирован!'))});" class="mt-3 w-full bg-slate-100 text-slate-600 border border-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase active:scale-95 shadow-sm">
+            <button onclick="navigator.clipboard.writeText(this.parentElement.innerText); showToast(${JSON.stringify(_t('quality.ai.toast.text_copied', 'Текст скопирован!'))});" class="mt-3 w-full bg-surface text-muted border border-surface py-2 rounded-lg text-rbi-caption font-bold uppercase active:scale-95 shadow-sm">
                 ${_t('quality.ai.btn.copy_all', '📋 Скопировать весь текст')}
             </button>
         `;
@@ -3825,7 +3819,7 @@ async function sk_generateContractorAiSummary(cName, safeId) {
             }
         }
     } catch (e) {
-        resBox.innerHTML = `<span class="text-red-500 font-bold">${_t('quality.ai.error.ai_prefix_plain', '❌ Ошибка ИИ: {message}', { message: e.message })}</span>`;
+        resBox.innerHTML = `<span class="text-danger font-bold">${_t('quality.ai.error.ai_prefix_plain', '❌ Ошибка ИИ: {message}', { message: e.message })}</span>`;
     } finally {
         btn.innerHTML = _t('quality.ai.btn.sk_analysis', '🤖 AI-Анализ и Письмо прорабу');
         btn.disabled = false;
@@ -3925,7 +3919,7 @@ async function rbi_generateGlobalAi() {
     const data = getFilteredAnalyticsData();
     if (data.length === 0) return showToast(_t('quality.ai.toast.no_data_analysis', '⚠️ Нет данных для анализа'));
 
-    container.innerHTML = `<span class="animate-pulse text-indigo-600 font-bold">${_t('quality.ai.loading.portfolio', '🤖 DeepSeek анализирует весь портфель объектов...')}</span>`;
+    container.innerHTML = `<span class="animate-pulse text-brand font-bold">${_t('quality.ai.loading.portfolio', '🤖 DeepSeek анализирует весь портфель объектов...')}</span>`;
 
     let sumB3 = 0;
     const projectsMap = {};
@@ -3960,7 +3954,7 @@ async function rbi_generateGlobalAi() {
         _reports().setExpertConclusion('global_portfolio_ai', response);
         if (typeof scheduleSessionSave === 'function') scheduleSessionSave();
     } catch (e) {
-        container.innerHTML = `<span class="text-red-500">${_t('quality.ai.error.ai_short_prefix', '❌ Ошибка AI: {message}', { message: e.message })}</span>`;
+        container.innerHTML = `<span class="text-danger">${_t('quality.ai.error.ai_short_prefix', '❌ Ошибка AI: {message}', { message: e.message })}</span>`;
     }
 };
 
@@ -4060,19 +4054,19 @@ async function runSelfLearningAi() {
         ], { temperature: 0.2, max_tokens: 800 });
 
         // 3. Вывод результата
-        container.innerHTML = `<div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-purple-200 shadow-sm mt-2">
+        container.innerHTML = `<div class="bg-surface p-3 rounded-xl border border-purple-200 shadow-sm mt-2">
             <div class="flex justify-between items-center mb-2">
                 <b class="text-purple-700">🤖 Рекомендации ИИ (DeepSeek)</b>
-                <button onclick="document.getElementById('ai-self-learning-result').innerHTML = ''; document.getElementById('ai-self-learning-result').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-lg leading-none">❌</button>
+                <button onclick="document.getElementById('ai-self-learning-result').innerHTML = ''; document.getElementById('ai-self-learning-result').classList.add('hidden')" class="text-muted hover:text-danger text-lg leading-none">❌</button>
             </div>
             <div class="text-sm leading-relaxed whitespace-pre-wrap">${response}</div>
- <div class="text-xs text-slate-500 mt-3 pt-2 border-t border-slate-100">ℹ Рекомендации носят аналитический характер. Изменить пороги можно вручную в настройках проекта (будет добавлено позже).</div>
+ <div class="text-xs text-muted mt-3 pt-2 border-t border-surface">ℹ Рекомендации носят аналитический характер. Изменить пороги можно вручную в настройках проекта (будет добавлено позже).</div>
         </div>`;
 
         _gameLogAction('ai_generate', 'system_optimization');
     } catch (e) {
         console.error("[SelfLearning AI]", e);
-        container.innerHTML = `<span class="text-red-500">${_t('quality.ai.error.prefix', '❌ Ошибка: {message}', { message: e.message })}</span>`;
+        container.innerHTML = `<span class="text-danger">${_t('quality.ai.error.prefix', '❌ Ошибка: {message}', { message: e.message })}</span>`;
     } finally {
         _selfLearningRunning = false;
     }
@@ -4148,19 +4142,19 @@ function openSkTutorAiModal(opts) {
     let modal = document.getElementById('sk-tutor-ai-modal');
     if (!modal) {
         document.body.insertAdjacentHTML('beforeend', `
-<div id="sk-tutor-ai-modal" class="fixed inset-0 bg-slate-900/80 z-[6000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onclick="if(event.target===this)closeSkTutorAiModal()">
+<div id="sk-tutor-ai-modal" class="fixed inset-0 bg-surface/80 z-[6000] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm" onclick="if(event.target===this)closeSkTutorAiModal()">
   <div class="bg-[var(--card-bg)] w-full max-w-3xl sm:rounded-2xl rounded-t-2xl shadow-2xl border border-[var(--card-border)] flex flex-col overflow-hidden" style="max-height:min(94vh,100dvh)" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="sk-tutor-ai-modal-title">
     <div class="flex items-center justify-between gap-2 px-4 sm:px-5 pt-4 pb-3 border-b border-[var(--card-border)] shrink-0">
-      <h3 id="sk-tutor-ai-modal-title" class="font-black text-[13px] uppercase tracking-tight text-slate-800 dark:text-white">${_t('quality.ai.title.sk_tutor', 'AI-Тренер: разбор формулировок')}</h3>
-      <button type="button" onclick="closeSkTutorAiModal()" class="text-slate-400 hover:text-red-500 px-2 text-lg leading-none" aria-label="${_t('quality.ai.btn.close', 'Закрыть')}">❌</button>
+      <h3 id="sk-tutor-ai-modal-title" class="font-black text-rbi-body uppercase tracking-tight text-ink">${_t('quality.ai.title.sk_tutor', 'AI-Тренер: разбор формулировок')}</h3>
+      <button type="button" onclick="closeSkTutorAiModal()" class="text-muted hover:text-danger px-2 text-lg leading-none" aria-label="${_t('quality.ai.btn.close', 'Закрыть')}">❌</button>
     </div>
-    <div id="sk-tutor-ai-modal-body" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 sm:px-5 py-4 text-[13px] sm:text-[14px] leading-relaxed text-slate-800 dark:text-slate-100" style="min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div id="sk-tutor-ai-modal-body" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 sm:px-5 py-4 text-rbi-body sm:text-rbi-title leading-relaxed text-ink" style="min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="flex gap-2 p-4 pt-3 border-t border-[var(--card-border)] shrink-0 bg-[var(--card-bg)]">
-      <button type="button" id="sk-tutor-ai-modal-copy" onclick="copySkTutorAiText()" class="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-md active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
+      <button type="button" id="sk-tutor-ai-modal-copy" onclick="copySkTutorAiText()" class="flex-1 bg-brand text-white py-3.5 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-md active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
         ${_t('quality.ai.btn.copy', 'Копировать')}
       </button>
-      <button type="button" onclick="closeSkTutorAiModal()" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-3.5 rounded-xl font-bold text-[11px] uppercase border border-slate-200 dark:border-slate-700 active:scale-95">${_t('quality.ai.btn.close', 'Закрыть')}</button>
+      <button type="button" onclick="closeSkTutorAiModal()" class="flex-1 bg-surface text-muted py-3.5 rounded-xl font-bold text-rbi-label uppercase border border-surface active:scale-95">${_t('quality.ai.btn.close', 'Закрыть')}</button>
     </div>
   </div>
 </div>`);
@@ -4176,7 +4170,7 @@ function openSkTutorAiModal(opts) {
         body.style.overflowY = 'auto';
         body.style.WebkitOverflowScrolling = 'touch';
         if (loading) {
-            body.innerHTML = `<span class="animate-pulse text-indigo-500 dark:text-indigo-300 font-bold">${_t('quality.ai.loading.sk_tutor', '⏳ DeepSeek готовит материал для планерки…')}</span>`;
+            body.innerHTML = `<span class="animate-pulse text-brand font-bold">${_t('quality.ai.loading.sk_tutor', '⏳ DeepSeek готовит материал для планерки…')}</span>`;
         } else {
             body.innerHTML = options.html || _skTutorAiLast.html || '—';
             body.scrollTop = 0;
@@ -4191,7 +4185,7 @@ function _setSkTutorAiTeaser(state) {
     if (!teaser) return;
     teaser.classList.remove('hidden');
     if (state === 'loading') {
-        teaser.innerHTML = `<span class="text-indigo-500 dark:text-indigo-300 font-bold animate-pulse">${_t('quality.ai.loading.sk_tutor_teaser', '⏳ Разбор формируется в окне…')}</span>`;
+        teaser.innerHTML = `<span class="text-brand font-bold animate-pulse">${_t('quality.ai.loading.sk_tutor_teaser', '⏳ Разбор формируется в окне…')}</span>`;
         return;
     }
     if (state === 'empty') {
@@ -4199,13 +4193,13 @@ function _setSkTutorAiTeaser(state) {
         return;
     }
     if (state === 'error') {
-        teaser.innerHTML = `<span class="text-red-500 font-bold">${_t('quality.ai.error.ai_link_short', '❌ Ошибка связи с нейросетью')}</span>`;
+        teaser.innerHTML = `<span class="text-danger font-bold">${_t('quality.ai.error.ai_link_short', '❌ Ошибка связи с нейросетью')}</span>`;
         return;
     }
     teaser.innerHTML = `
         <div class="flex flex-col gap-2">
-            <p class="text-[12px] font-bold text-slate-700 dark:text-slate-200">${_t('quality.ai.teaser.review_ready', 'Разбор готов — полный текст в отдельном окне.')}</p>
-            <button type="button" onclick="reopenSkTutorAiModal()" class="w-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 py-2.5 rounded-xl font-bold text-[10px] uppercase active:scale-95">${_t('quality.ai.btn.open_review', 'Открыть разбор')}</button>
+            <p class="text-rbi-body font-bold text-ink">${_t('quality.ai.teaser.review_ready', 'Разбор готов — полный текст в отдельном окне.')}</p>
+            <button type="button" onclick="reopenSkTutorAiModal()" class="w-full bg-brand-soft text-brand border border-brand-soft py-2.5 rounded-xl font-bold text-rbi-caption uppercase active:scale-95">${_t('quality.ai.btn.open_review', 'Открыть разбор')}</button>
         </div>`;
 }
 
@@ -4254,7 +4248,7 @@ async function sk_auditTemplatesAi() {
     } catch (e) {
         _setSkTutorAiTeaser('error');
         openSkTutorAiModal({
-            html: `<span class="text-red-500 font-bold">❌ Ошибка ИИ: ${_escAiDoc(e.message || e)}</span>`,
+            html: `<span class="text-danger font-bold">❌ Ошибка ИИ: ${_escAiDoc(e.message || e)}</span>`,
             plain: 'Ошибка ИИ: ' + (e.message || e)
         });
     }

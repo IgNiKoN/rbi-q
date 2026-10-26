@@ -111,9 +111,16 @@
             etalonIdsToRemoveFromHistory.push(item.id);
             return;
           }
-          if (!item._deleted) historyList.push(item);
+          // P2-0024: повторяющиеся строки — общим экземпляром (содержимое то же, −16% памяти истории)
+          if (!item._deleted) historyList.push(window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten(item) : item);
         });
         window.contractorArray = historyList;
+        // P2-0024: Журнал, уже показанный первой порцией из базы, — на полную историю из памяти (без второй копии)
+        if (window.HistoryState && typeof window.HistoryState.useMemoryHistoryIfReady === 'function'
+            && window.HistoryState.useMemoryHistoryIfReady()
+            && document.getElementById('history-list') && typeof window.renderHistoryTab === 'function') {
+          try { window.renderHistoryTab(); } catch (_e) { /* ignore */ }
+        }
 
         if (etalonIdsToRemoveFromHistory.length > 0) {
           for (const id of etalonIdsToRemoveFromHistory) {

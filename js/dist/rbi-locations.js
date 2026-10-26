@@ -133,7 +133,7 @@ function resolveObjectLink(api, input = {}) {
   return { od: od || null, locationObject: loc || null, linked };
 }
 function listUnlinkedObjects(api) {
-  const locationOnly = locs.filter((n) => {
+  const locationOnly = listLocationObjects(api).filter((n) => {
     return !String(n.canonical_key || "").trim();
   });
   const leftover = listOdLeftover();

@@ -4,6 +4,8 @@
  * Библиотека PptxGenJS — напрямую; PDF-пайплайн не затрагивается.
  */
 
+import { reportKindFromTitle } from './report-kind.js';
+
 const root = typeof globalThis !== 'undefined' ? globalThis : window;
 
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -235,16 +237,6 @@ async function _thumb(photoRef) {
             reader.readAsDataURL(blob);
         });
     })(), 4000);
-}
-
-function _docKindFromTitle(title) {
-    var t = String(title || '');
-    if (t.includes('Плакат')) return 'Плакат качества';
-    if (t.includes('Повторяющиеся дефекты')) return 'Повторяющиеся дефекты';
-    if (t.includes('Отчёт по объекту 2.0') || t.includes('Отчет по объекту 2.0')) return 'Отчёт по объекту 2.0';
-    if (t.includes('One-Pager 4.0')) return 'One-Pager 4.0';
-    if (t.includes('One-Pager') || t.includes('Сводный отчет') || t.includes('Полный отчет') || t.includes('Отчёт по объекту')) return 'Сводный отчёт';
-    return 'Прочее';
 }
 
 function _collectOp2Payload(data) {
@@ -600,7 +592,7 @@ async function _downloadAndSave(pptx, title, project, period) {
             await root.saveReportToLocal({
                 type: 'pptx',
                 mimeType: PPTX_MIME,
-                docKind: _docKindFromTitle(title),
+                docKind: reportKindFromTitle(title),
                 title: title,
                 blob: blob,
                 project: project || '—',

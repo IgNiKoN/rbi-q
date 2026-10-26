@@ -862,6 +862,12 @@ let gameChartInstance = null;
       }
       return;
     }
+    // P2-0037: при входе по почте PIN не спрашиваем — доступ только по роли компании
+    if (typeof window.isAdminGateEmail === 'function' && window.isAdminGateEmail()) {
+      window._rbiAdminGatePending = null;
+      showToast(_t('quality.game.toast.admin_by_role', '🔒 Доступно администратору компании (роль в «Компания → Сотрудники»)'));
+      return;
+    }
     const pinEl = document.getElementById('manager-pin-input');
     if (pinEl) pinEl.value = '';
     const modal = document.getElementById('manager-auth-modal');

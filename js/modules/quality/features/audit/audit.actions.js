@@ -296,9 +296,60 @@ function _t(key, fallback, vars) {
       return true;
     },
 
+    // P2-0025: содержимое черновика (те же поля, что пишет saveSession, без времени).
+    _draftFingerprint: function () {
+      var policy = window.RbiSyncRetryPolicy;
+      if (!policy || typeof policy.draftFingerprint !== 'function') return null;
+      function _val(id) {
+        var el = document.getElementById(id);
+        return el ? el.value : '';
+      }
+      var planPin = (window.AuditState && typeof window.AuditState.getPlanPin === 'function')
+        ? window.AuditState.getPlanPin()
+        : null;
+      return policy.draftFingerprint({
+        templateKey: AuditState.currentTemplateKey,
+        project: _val('inp-project'), inspector: _val('inp-inspector'), contractor: _val('inp-contractor'),
+        section: _val('inp-section'), floor: _val('inp-floor'), room: _val('inp-room'), location: _val('inp-location'),
+        planPin: planPin || null,
+        state: AuditState.state, details: AuditState.details, photos: AuditActions.getSessionPhotosForSync(),
+        customExpertConclusions: _reports().getExpertConclusions()
+      });
+    },
+    _lastDraftFp: null,
+    _lastDraftChangeAt: 0,
+
+    // P2-0025: «к отправке» — только при реальном изменении черновика (сравнение по содержимому).
+    // Первый вызов после загрузки страницы (отпечатка ещё нет) помечает, как раньше.
     scheduleSessionSave: function () {
       if (AuditActions._sessionIsEmpty()) return;
-      localStorage.setItem('rbi_cloud_dirty', '1');
+      var fp = AuditActions._draftFingerprint();
+      if (fp === null || fp !== AuditActions._lastDraftFp) {
+        AuditActions._lastDraftFp = fp;
+        AuditActions._lastDraftChangeAt = Date.now();
+        localStorage.setItem('rbi_cloud_dirty', '1');
+      }
+      clearTimeout(window.__saveSessionTimer);
+      window.__saveSessionTimer = setTimeout(function () {
+        AuditActions.saveSession();
+      }, 500);
+    },
+
+    // P2-0025: после синхронизации — сохранить черновик; «к отправке» снова, только если он
+    // менялся после начала синхронизации (иначе раньше: метка каждый раз → синхронизация раз в минуту).
+    onSyncCompleted: function (detail) {
+      if (AuditActions._sessionIsEmpty()) return;
+      var fp = AuditActions._draftFingerprint();
+      if (fp !== null && fp !== AuditActions._lastDraftFp) {
+        AuditActions.scheduleSessionSave();
+        return;
+      }
+      var policy = window.RbiSyncRetryPolicy;
+      var startedAt = detail && detail.startedAt;
+      var again = (policy && typeof policy.draftNeedsPushAfterSync === 'function')
+        ? policy.draftNeedsPushAfterSync(AuditActions._lastDraftChangeAt, startedAt)
+        : true;
+      if (fp === null || again) localStorage.setItem('rbi_cloud_dirty', '1');
       clearTimeout(window.__saveSessionTimer);
       window.__saveSessionTimer = setTimeout(function () {
         AuditActions.saveSession();
@@ -804,6 +855,18 @@ function _t(key, fallback, vars) {
       var initialSyncStatus = isConstructionMode ? 'blocked' : 'not_synced';
       var initialSyncReason = isConstructionMode ? _t('quality.audit.sync.sk_offline', 'Модуль СК временно отключен от облака') : '';
 
+      // P2-0024: снимок чек-листа — один раз на версию шаблона (хранилище checklist_snapshots),
+      // в проверке — ссылка. Демо / ошибка хранилища — как раньше, копией в записи (читается так же).
+      var checklistSnapshot = _buildChecklistSnapshot(AuditState.currentChecklist);
+      var checklistSnapshotRef = '';
+      if (checklistSnapshot && !_isDemoMode() && typeof window.rbiPutChecklistSnapshot === 'function') {
+        try {
+          checklistSnapshotRef = await window.rbiPutChecklistSnapshot(checklistSnapshot);
+        } catch (_e) {
+          checklistSnapshotRef = '';
+        }
+      }
+
       var newItem = {
         id: String(Date.now() + Math.floor(Math.random() * 1000)),
         date: new Date().toISOString(),
@@ -820,7 +883,8 @@ function _t(key, fallback, vars) {
         contractorId: contractorNormalized.contractorId || '',
         templateKey: AuditState.currentTemplateKey,
         templateTitle: tTitle,
-        checklistSnapshot: _buildChecklistSnapshot(AuditState.currentChecklist),
+        checklistSnapshot: checklistSnapshotRef ? undefined : checklistSnapshot,
+        checklistSnapshotRef: checklistSnapshotRef || undefined,
         section: secInput.value.trim(),
         floor: floorInput.value.trim(),
         room: roomInput.value.trim(),
@@ -847,6 +911,9 @@ function _t(key, fallback, vars) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+
+      if (newItem.checklistSnapshot === undefined) delete newItem.checklistSnapshot;
+      if (newItem.checklistSnapshotRef === undefined) delete newItem.checklistSnapshotRef;
 
       _pushInspection(newItem);
       if (!_isDemoMode()) {

@@ -9,6 +9,7 @@
  */
 
 import { ReportsState } from './reports.state.js';
+import { reportKindFromTitle } from './report-kind.js';
 import { buildMeetingProtocolHtml, meetingRichToSafeHtml } from '../meetings/meetings.protocol.js';
 import { buildInspectionPlanSheetHtml } from '../shared/plan-pin-print.js';
 
@@ -417,7 +418,7 @@ function getTenderData() {
 
                 let rec = "РЕКОМЕНДОВАН"; let recClass = "text-green-600"; let recDesc = "Подрядчик стабилен и показывает высокое качество работ за весь период.";
                 if (m.finalC < 70 || m.rateB3 >= 20) {
-                    rec = "НЕ РЕКОМЕНДОВАН"; recClass = "text-red-600";
+                    rec = "НЕ РЕКОМЕНДОВАН"; recClass = "text-danger";
                     recDesc = "Подрядчик имеет недопустимый уровень критического брака и низкую оценку. Высокие риски для компании.";
                 } else if (m.finalC < 85 || m.rateB3 > 0 || m.stabilityIndex < 60) {
                     rec = "ДОПУСТИМ С ОГРАНИЧЕНИЯМИ"; recClass = "text-orange-500";
@@ -806,7 +807,7 @@ export function renderPdfTemplatesList() {
     const listDiv = document.getElementById('pdf-templates-list');
 
     if (window.userReportTemplates.length === 0) {
-        listDiv.innerHTML = `<div class="text-center py-4 text-slate-400 text-[10px] font-bold">${_t('quality.reports.templates.empty', 'У вас нет сохраненных шаблонов. Используются системные настройки.')}</div>`;
+        listDiv.innerHTML = `<div class="text-center py-4 text-muted text-rbi-caption font-bold">${_t('quality.reports.templates.empty', 'У вас нет сохраненных шаблонов. Используются системные настройки.')}</div>`;
         return;
     }
 
@@ -816,14 +817,14 @@ export function renderPdfTemplatesList() {
             : _t('quality.reports.templates.type_object', 'По объекту');
         const meta = _t('quality.reports.templates.meta', 'Тип: {type} | Блоков: {count}', { type: typeLabel, count: t.active_blocks.length });
         return `
-        <div class="flex items-center justify-between bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center justify-between bg-surface p-2 rounded-lg border border-surface">
             <div>
-                <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase">${t.name}</div>
-                <div class="text-[9px] text-slate-500 font-bold">${meta}</div>
+                <div class="text-rbi-label font-black text-ink uppercase">${t.name}</div>
+                <div class="text-rbi-caption text-muted font-bold">${meta}</div>
             </div>
             <div class="flex gap-1.5">
-                <button onclick="window.editPdfTemplate('${t.id}')" class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[9px] font-bold active:scale-95 border border-indigo-200">${_t('quality.reports.templates.edit', 'Изменить')}</button>
-                <button onclick="window.deletePdfTemplate('${t.id}')" class="bg-red-50 text-red-500 px-2 py-1 rounded text-[9px] font-bold active:scale-95 border border-red-200">${_t('quality.reports.templates.delete', 'Удалить')}</button>
+                <button onclick="window.editPdfTemplate('${t.id}')" class="bg-brand-soft text-brand px-2 py-1 rounded text-rbi-caption font-bold active:scale-95 border border-brand-soft">${_t('quality.reports.templates.edit', 'Изменить')}</button>
+                <button onclick="window.deletePdfTemplate('${t.id}')" class="bg-danger-soft text-danger px-2 py-1 rounded text-rbi-caption font-bold active:scale-95 border border-danger-soft">${_t('quality.reports.templates.delete', 'Удалить')}</button>
             </div>
         </div>
     `;
@@ -851,7 +852,7 @@ function initDragAndDrop(availableIds, activeIds) {
         const blockDef = PDF_BLOCKS_LIBRARY.find(b => b.id === id);
         if (!blockDef) return '';
         return `
-            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 p-2 rounded-lg text-[10px] font-bold text-slate-700 dark:text-slate-300 shadow-sm cursor-move flex items-center gap-2" data-id="${id}">
+            <div class="bg-surface border border-surface p-2 rounded-lg text-rbi-caption font-bold text-ink shadow-sm cursor-move flex items-center gap-2" data-id="${id}">
                 <span>${blockDef.icon}</span> ${_t('quality.reports.block.' + id, blockDef.name)}
             </div>
         `;
@@ -1122,29 +1123,9 @@ function exportPdfData(data, mode = 'script') {
 // перенесённых методов ReportsActions (printEtalon, printMeeting и др.) —
 // резолвится как обычная module-level function declaration этого файла
 // (hoisting), без необходимости в window.X внутри самого модуля.
-// Определяет человекочитаемый вид документа по заголовку — для чипсов-фильтров
-// на вкладке «Отчёты» (см. _ai/current_plan.md, блок "UI вкладки «Отчёты»").
-// Аддитивное поле doc_kind, не заменяет report_type ('print'/'pdf', используется
-// синком/бейджем) — только для UI-группировки. По тому же принципу, что уже
-// используется чуть ниже для скрытия QR по подстроке в title (showQr).
-function classifyDocKind(title) {
-    if (title.includes('Протокол')) return 'Протокол совещания';
-    if (title.includes('FMEA')) return 'FMEA';
-    if (title.includes('TWI')) return 'TWI';
-    if (title.includes('Практика')) return 'Практика';
-    if (title.includes('Воркшоп')) return 'Воркшоп';
-    if (title.includes('Инструктаж')) return 'Инструктаж';
-    if (title.includes('КС-2')) return 'КС-2';
-    if (title.includes('Акт-Эталон')) return 'Акт-эталон';
-    if (title.includes('Дашборд СК')) return 'Дашборд СК';
-    if (title.includes('График СМР')) return 'График СМР';
-    if (title.includes('День Качества')) return 'День качества';
-    if (title.includes('Плакат Качества')) return 'Плакат качества';
-    if (title.includes('Повторяющиеся дефекты')) return 'Повторяющиеся дефекты';
-    if (title.includes('Паспорта Подрядчиков') || title.includes('Список подрядчиков') || title.includes('Срез:') || title.includes('Отчет для')) return 'Отчёт по подрядчику';
-    if (title.includes('Сводка для Руководства') || title.includes('One-Pager 2.0') || title.includes('One-Pager 4.0') || title.includes('Отчёт по объекту 2.0') || title.includes('Сводный отчет по объект') || title.includes('Полный отчет по объекту') || title.includes('База проверок')) return 'Сводный отчёт';
-    return 'Прочее';
-}
+// Вид документа по заголовку — общие правила (P2-0039, report-kind.js);
+// doc_kind — аддитивное локальное поле, не заменяет report_type ('print'/'pdf').
+const classifyDocKind = reportKindFromTitle;
 
 /** Текущее значение фильтра периода аналитики (дефолт 30 дней). */
 function _reportPeriodSel() {
@@ -2526,7 +2507,7 @@ async function exportPdfOnePager(data, mode = 'script') {
     const currContractorsCount = Object.keys(groupedC).length;
 
     const currIntMetrics = typeof getObjectIntegralMetrics === 'function' ? getObjectIntegralMetrics(data, _templates().getUserTemplates()) : null;
-    const mData = currIntMetrics || { redZonePerc: 0, IKO: "0.00", ikoStatus: "Мало данных", ikoColor: "text-slate-500" };
+    const mData = currIntMetrics || { redZonePerc: 0, IKO: "0.00", ikoStatus: "Мало данных", ikoColor: "text-muted" };
     const docGapPdfWarning = (currAvgDoc !== null && Math.abs(currAvgUrk - currAvgDoc) > 30)
         ? `<div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:${mode === 'browser' ? '8pt' : '10px'}; font-weight:900; color:#c2410c; text-align:center;">⚠️ Разрыв физика (${currAvgUrk}%) / документация (${currAvgDoc}%) — ${Math.abs(currAvgUrk - currAvgDoc)} п.п.</div>`
         : '';
@@ -7044,25 +7025,25 @@ function _ensureDefectRemediationModal() {
         : document.getElementById('app-modals');
     if (!root) return null;
     root.insertAdjacentHTML('beforeend', `
-    <div id="defect-remediation-modal" class="fixed inset-0 bg-slate-900/60 z-[9100] hidden items-end sm:items-center justify-center p-2 sm:p-4 backdrop-blur-sm" onclick="if(event.target===this)closeDefectRemediationPreview()">
-        <div class="bg-[var(--card-bg)] w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[92vh]" onclick="event.stopPropagation()">
-            <div class="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-2 shrink-0">
+    <div id="defect-remediation-modal" class="fixed inset-0 bg-surface/60 z-[9100] hidden items-end sm:items-center justify-center p-2 sm:p-4 backdrop-blur-sm" onclick="if(event.target===this)closeDefectRemediationPreview()">
+        <div class="bg-[var(--card-bg)] w-full max-w-4xl rounded-2xl shadow-2xl border border-surface overflow-hidden flex flex-col max-h-[92vh]" onclick="event.stopPropagation()">
+            <div class="p-3 sm:p-4 border-b border-surface flex items-start justify-between gap-2 shrink-0">
                 <div class="min-w-0">
-                    <div class="font-black text-[12px] uppercase tracking-tight text-slate-800 dark:text-white">${_t('quality.reports.remediation.title', 'Повторяющиеся дефекты · А3')}</div>
-                    <div class="text-[9px] font-bold text-slate-400 uppercase mt-0.5 leading-snug" id="defect-remediation-modal-sub">${_t('quality.reports.remediation.subtitle_filters', 'Фильтры аналитики')}</div>
+                    <div class="font-black text-rbi-body uppercase tracking-tight text-ink">${_t('quality.reports.remediation.title', 'Повторяющиеся дефекты · А3')}</div>
+                    <div class="text-rbi-caption font-bold text-muted uppercase mt-0.5 leading-snug" id="defect-remediation-modal-sub">${_t('quality.reports.remediation.subtitle_filters', 'Фильтры аналитики')}</div>
                 </div>
-                <button type="button" onclick="closeDefectRemediationPreview()" class="shrink-0 w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center active:scale-95" aria-label="${_t('quality.reports.remediation.close', 'Закрыть')}">✕</button>
+                <button type="button" onclick="closeDefectRemediationPreview()" class="shrink-0 w-9 h-9 rounded-xl bg-surface text-muted flex items-center justify-center active:scale-95" aria-label="${_t('quality.reports.remediation.close', 'Закрыть')}">✕</button>
             </div>
             <div id="defect-remediation-list" class="p-2 sm:p-3 space-y-3 overflow-y-auto custom-scrollbar flex-1"></div>
-            <div class="p-3 border-t border-slate-100 dark:border-slate-800 shrink-0 space-y-2">
+            <div class="p-3 border-t border-surface shrink-0 space-y-2">
                 <div class="flex flex-wrap gap-2">
-                    <button type="button" id="defect-remediation-ai-draft-btn" onclick="runDefectRemediationAi('draft')" class="flex-1 min-w-[140px] py-2.5 rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-200 dark:border-violet-800 font-bold text-[10px] uppercase tracking-widest active:scale-95">${_t('quality.reports.remediation.ai_draft', 'Черновик ИИ')}</button>
-                    <button type="button" id="defect-remediation-ai-improve-btn" onclick="runDefectRemediationAi('improve')" class="flex-1 min-w-[140px] py-2.5 rounded-xl bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold text-[10px] uppercase tracking-widest active:scale-95">${_t('quality.reports.remediation.ai_improve', 'Улучшить мой текст')}</button>
+                    <button type="button" id="defect-remediation-ai-draft-btn" onclick="runDefectRemediationAi('draft')" class="flex-1 min-w-[140px] py-2.5 rounded-xl bg-brand-soft text-brand border border-brand-soft font-bold text-rbi-caption uppercase tracking-widest active:scale-95">${_t('quality.reports.remediation.ai_draft', 'Черновик ИИ')}</button>
+                    <button type="button" id="defect-remediation-ai-improve-btn" onclick="runDefectRemediationAi('improve')" class="flex-1 min-w-[140px] py-2.5 rounded-xl bg-brand-soft text-brand border border-brand-soft font-bold text-rbi-caption uppercase tracking-widest active:scale-95">${_t('quality.reports.remediation.ai_improve', 'Улучшить мой текст')}</button>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <button type="button" onclick="closeDefectRemediationPreview()" class="flex-1 min-w-[100px] py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-[11px] uppercase tracking-widest active:scale-95">${_t('quality.reports.remediation.cancel', 'Отмена')}</button>
-                    <button type="button" onclick="confirmDefectRemediationExport('browser')" class="flex-1 min-w-[100px] py-3 rounded-xl bg-slate-700 text-white font-bold text-[11px] uppercase tracking-widest active:scale-95">${_t('quality.reports.remediation.print', 'Печать')}</button>
-                    <button type="button" onclick="confirmDefectRemediationExport('script')" class="flex-[1.2] min-w-[120px] py-3 rounded-xl bg-indigo-600 text-white font-bold text-[11px] uppercase tracking-widest active:scale-95 shadow-md">${_t('quality.reports.remediation.download_pdf', 'Скачать PDF')}</button>
+                    <button type="button" onclick="closeDefectRemediationPreview()" class="flex-1 min-w-[100px] py-3 rounded-xl bg-surface text-muted font-bold text-rbi-label uppercase tracking-widest active:scale-95">${_t('quality.reports.remediation.cancel', 'Отмена')}</button>
+                    <button type="button" onclick="confirmDefectRemediationExport('browser')" class="flex-1 min-w-[100px] py-3 rounded-xl bg-slate-700 text-white font-bold text-rbi-label uppercase tracking-widest active:scale-95">${_t('quality.reports.remediation.print', 'Печать')}</button>
+                    <button type="button" onclick="confirmDefectRemediationExport('script')" class="flex-[1.2] min-w-[120px] py-3 rounded-xl bg-brand text-white font-bold text-rbi-label uppercase tracking-widest active:scale-95 shadow-md">${_t('quality.reports.remediation.download_pdf', 'Скачать PDF')}</button>
                 </div>
             </div>
             <input type="file" id="defect-remediation-photo-input" accept="image/*" class="hidden">
@@ -7123,7 +7104,7 @@ function _renderDefectRemediationPreviewList() {
     if (!state || !list) return;
     const cards = state.cards || [];
     if (!cards.length) {
-        list.innerHTML = `<div class="text-center py-8 text-[11px] font-bold text-slate-500 uppercase">${_t('quality.reports.remediation.empty', 'Нет дефектов с ≥{n} повторениями по текущим фильтрам', { n: DEFECT_REMEDIATION_THRESHOLD })}</div>`;
+        list.innerHTML = `<div class="text-center py-8 text-rbi-label font-bold text-muted uppercase">${_t('quality.reports.remediation.empty', 'Нет дефектов с ≥{n} повторениями по текущим фильтрам', { n: DEFECT_REMEDIATION_THRESHOLD })}</div>`;
         return;
     }
 
@@ -7131,54 +7112,54 @@ function _renderDefectRemediationPreviewList() {
         const val = _defectRemediationPlainText((cards[idx].fields && cards[idx].fields[key]) || '');
         return `
             <label class="block">
-                <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest">${label}</span>
-                <textarea data-dr-field="${key}" rows="${rows}" class="mt-0.5 w-full text-[12px] font-medium text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 outline-none focus:border-indigo-400 resize-y min-h-[2.75rem] leading-snug">${escapeHtml(val)}</textarea>
+                <span class="text-rbi-caption font-black uppercase text-muted tracking-widest">${label}</span>
+                <textarea data-dr-field="${key}" rows="${rows}" class="mt-0.5 w-full text-rbi-body font-medium text-ink bg-surface border border-surface rounded-lg p-2.5 outline-none focus:border-brand resize-y min-h-[2.75rem] leading-snug">${escapeHtml(val)}</textarea>
             </label>`;
     };
 
     list.innerHTML = cards.map((card, idx) => {
         const leftThumb = card.leftSrc
             ? `<img src="${escapeHtml(_defectRemediationPhotoSrc(card.leftSrc))}" class="w-full h-full object-cover" alt="">`
-            : `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-[9px] font-bold text-slate-400 uppercase px-2 text-center">${_t('quality.reports.remediation.no_photo', 'Нет фото')}<br><span class="text-indigo-500 normal-case font-black">${_t('quality.reports.remediation.click_upload', 'нажмите · загрузить')}</span></div>`;
+            : `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-rbi-caption font-bold text-muted uppercase px-2 text-center">${_t('quality.reports.remediation.no_photo', 'Нет фото')}<br><span class="text-brand normal-case font-black">${_t('quality.reports.remediation.click_upload', 'нажмите · загрузить')}</span></div>`;
         const rightThumb = card.rightSrc
             ? `<img src="${escapeHtml(_defectRemediationPhotoSrc(card.rightSrc))}" class="w-full h-full object-cover" alt="">`
-            : `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-[9px] font-bold text-amber-600/80 uppercase px-2 text-center">${_t('quality.reports.remediation.no_etalon', 'Нет эталона')}<br><span class="text-indigo-500 normal-case font-black">${_t('quality.reports.remediation.click_upload', 'нажмите · загрузить')}</span></div>`;
+            : `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-rbi-caption font-bold text-amber-600/80 uppercase px-2 text-center">${_t('quality.reports.remediation.no_etalon', 'Нет эталона')}<br><span class="text-brand normal-case font-black">${_t('quality.reports.remediation.click_upload', 'нажмите · загрузить')}</span></div>`;
         const rightBadge = card.rightSource === 'ok' ? 'ok' : (card.rightSource === 'twi' ? 'TWI' : (card.rightSource === 'upload' ? _t('quality.reports.remediation.badge_file', 'файл') : '—'));
         return `
-        <div class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-white dark:bg-slate-900/40 ${card.included ? '' : 'opacity-50'}" data-dr-idx="${idx}">
+        <div class="border border-surface rounded-xl p-3 bg-surface ${card.included ? '' : 'opacity-50'}" data-dr-idx="${idx}">
             <div class="flex items-start gap-2 mb-2">
                 <label class="flex items-center gap-2 cursor-pointer shrink-0 pt-0.5">
                     <input type="checkbox" data-dr-include class="w-4 h-4 accent-indigo-600" ${card.included ? 'checked' : ''} onchange="toggleDefectRemediationCard(${idx}, this.checked)">
                 </label>
                 <div class="min-w-0 flex-1">
-                    <div class="text-[12px] font-black text-slate-800 dark:text-white leading-snug">${escapeHtml(card.defectName)}</div>
-                    <div class="text-[9px] font-bold text-indigo-600/80 dark:text-indigo-300 uppercase mt-0.5">${escapeHtml(_defectRemediationProjectKey(card))}</div>
-                    <div class="text-[9px] font-bold text-slate-500 uppercase mt-0.5">${escapeHtml(card.contractor)} · ${escapeHtml(card.workType)}</div>
-                    <div class="text-[9px] font-bold text-rose-600 mt-0.5">${card.count}× · ${escapeHtml(card.dateFrom)} — ${escapeHtml(card.dateTo)}</div>
+                    <div class="text-rbi-body font-black text-ink leading-snug">${escapeHtml(card.defectName)}</div>
+                    <div class="text-rbi-caption font-bold text-brand uppercase mt-0.5">${escapeHtml(_defectRemediationProjectKey(card))}</div>
+                    <div class="text-rbi-caption font-bold text-muted uppercase mt-0.5">${escapeHtml(card.contractor)} · ${escapeHtml(card.workType)}</div>
+                    <div class="text-rbi-caption font-bold text-rose-600 mt-0.5">${card.count}× · ${escapeHtml(card.dateFrom)} — ${escapeHtml(card.dateTo)}</div>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-2 mb-2">
                 <div>
-                    <div class="text-[9px] font-black uppercase text-slate-400 mb-1.5 flex justify-between items-center gap-1">
+                    <div class="text-rbi-caption font-black uppercase text-muted mb-1.5 flex justify-between items-center gap-1">
                         <span>${_t('quality.reports.remediation.side_defect', 'Брак')}</span>
                         <span class="flex gap-1.5">
-                            <button type="button" class="min-w-[2.75rem] h-10 px-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-indigo-600 text-[16px] font-black active:scale-95 border border-slate-200 dark:border-slate-600" onclick="event.stopPropagation();cycleDefectRemediationPhoto(${idx}, 'left')" title="${_t('quality.reports.remediation.cycle_photo', 'Сменить из кандидатов')}">↻</button>
-                            <button type="button" class="min-w-[2.75rem] h-10 px-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[16px] font-black active:scale-95 border border-indigo-200 dark:border-indigo-700" onclick="event.stopPropagation();uploadDefectRemediationPhoto(${idx}, 'left')" title="${_t('quality.reports.remediation.upload_own', 'Загрузить своё')}">↑</button>
+                            <button type="button" class="min-w-[2.75rem] h-10 px-3 rounded-lg bg-surface text-brand text-[16px] font-black active:scale-95 border border-surface" onclick="event.stopPropagation();cycleDefectRemediationPhoto(${idx}, 'left')" title="${_t('quality.reports.remediation.cycle_photo', 'Сменить из кандидатов')}">↻</button>
+                            <button type="button" class="min-w-[2.75rem] h-10 px-3 rounded-lg bg-brand-soft text-brand text-[16px] font-black active:scale-95 border border-brand-soft" onclick="event.stopPropagation();uploadDefectRemediationPhoto(${idx}, 'left')" title="${_t('quality.reports.remediation.upload_own', 'Загрузить своё')}">↑</button>
                         </span>
                     </div>
-                    <div class="aspect-[4/3] rounded-lg overflow-hidden border border-rose-200 bg-slate-50 dark:bg-slate-800 cursor-pointer" onclick="onDefectRemediationPhotoClick(${idx}, 'left')">${leftThumb}</div>
-                    <div class="text-[9px] font-bold text-slate-400 mt-1 truncate">${escapeHtml(card.leftCaption || '')}</div>
+                    <div class="aspect-[4/3] rounded-lg overflow-hidden border border-rose-200 bg-surface cursor-pointer" onclick="onDefectRemediationPhotoClick(${idx}, 'left')">${leftThumb}</div>
+                    <div class="text-rbi-caption font-bold text-muted mt-1 truncate">${escapeHtml(card.leftCaption || '')}</div>
                 </div>
                 <div>
-                    <div class="text-[9px] font-black uppercase text-slate-400 mb-1.5 flex justify-between items-center gap-1">
+                    <div class="text-rbi-caption font-black uppercase text-muted mb-1.5 flex justify-between items-center gap-1">
                         <span>${_t('quality.reports.remediation.side_fix', 'Устранение')} · ${escapeHtml(rightBadge)}</span>
                         <span class="flex gap-1.5">
-                            <button type="button" class="min-w-[2.75rem] h-10 px-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-indigo-600 text-[16px] font-black active:scale-95 border border-slate-200 dark:border-slate-600" onclick="event.stopPropagation();cycleDefectRemediationPhoto(${idx}, 'right')" title="${_t('quality.reports.remediation.cycle_photo', 'Сменить из кандидатов')}">↻</button>
-                            <button type="button" class="min-w-[2.75rem] h-10 px-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[16px] font-black active:scale-95 border border-indigo-200 dark:border-indigo-700" onclick="event.stopPropagation();uploadDefectRemediationPhoto(${idx}, 'right')" title="${_t('quality.reports.remediation.upload_own', 'Загрузить своё')}">↑</button>
+                            <button type="button" class="min-w-[2.75rem] h-10 px-3 rounded-lg bg-surface text-brand text-[16px] font-black active:scale-95 border border-surface" onclick="event.stopPropagation();cycleDefectRemediationPhoto(${idx}, 'right')" title="${_t('quality.reports.remediation.cycle_photo', 'Сменить из кандидатов')}">↻</button>
+                            <button type="button" class="min-w-[2.75rem] h-10 px-3 rounded-lg bg-brand-soft text-brand text-[16px] font-black active:scale-95 border border-brand-soft" onclick="event.stopPropagation();uploadDefectRemediationPhoto(${idx}, 'right')" title="${_t('quality.reports.remediation.upload_own', 'Загрузить своё')}">↑</button>
                         </span>
                     </div>
-                    <div class="aspect-[4/3] rounded-lg overflow-hidden border border-emerald-200 bg-slate-50 dark:bg-slate-800 cursor-pointer" onclick="onDefectRemediationPhotoClick(${idx}, 'right')">${rightThumb}</div>
-                    <div class="text-[8px] font-bold text-slate-400 mt-1 truncate">${escapeHtml(card.rightCaption || '')}</div>
+                    <div class="aspect-[4/3] rounded-lg overflow-hidden border border-emerald-200 bg-surface cursor-pointer" onclick="onDefectRemediationPhotoClick(${idx}, 'right')">${rightThumb}</div>
+                    <div class="text-[8px] font-bold text-muted mt-1 truncate">${escapeHtml(card.rightCaption || '')}</div>
                 </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -7645,20 +7626,20 @@ function _promptPosterFormat() {
         document.getElementById('modal-title').innerHTML =
             '<div class="text-center font-black uppercase text-lg">Плакат качества</div>';
         document.getElementById('modal-body').innerHTML = `
-            <div class="text-center text-[12px] text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
+            <div class="text-center text-rbi-body text-muted mb-4 leading-relaxed">
                 Выберите формат печати. Оба — альбом. A3 — частая ротация, A1 — стенд на проходной.
             </div>
             <div class="space-y-3 mb-4">
-                <button type="button" id="poster-fmt-a3" class="w-full text-left p-4 bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl active:scale-[0.98] transition-transform shadow-sm">
-                    <div class="font-black text-sm text-slate-800 dark:text-white uppercase">A3 альбом</div>
-                    <div class="text-[11px] text-slate-500 mt-1">Оперативная вывеска · удобно печатать часто</div>
+                <button type="button" id="poster-fmt-a3" class="w-full text-left p-4 bg-surface border-2 border-brand-soft rounded-xl active:scale-[0.98] transition-transform shadow-sm">
+                    <div class="font-black text-sm text-ink uppercase">A3 альбом</div>
+                    <div class="text-rbi-label text-muted mt-1">Оперативная вывеска · удобно печатать часто</div>
                 </button>
-                <button type="button" id="poster-fmt-a1" class="w-full text-left p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl active:scale-[0.98] transition-transform shadow-sm">
-                    <div class="font-black text-sm text-slate-800 dark:text-white uppercase">A1 альбом</div>
-                    <div class="text-[11px] text-slate-500 mt-1">Стенд на проходной · читается с 3–5 м</div>
+                <button type="button" id="poster-fmt-a1" class="w-full text-left p-4 bg-surface border border-surface rounded-xl active:scale-[0.98] transition-transform shadow-sm">
+                    <div class="font-black text-sm text-ink uppercase">A1 альбом</div>
+                    <div class="text-rbi-label text-muted mt-1">Стенд на проходной · читается с 3–5 м</div>
                 </button>
             </div>
-            <button type="button" id="poster-fmt-cancel" class="w-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 py-3 rounded-xl font-bold text-[11px] uppercase border border-slate-200 dark:border-slate-700">Отмена</button>
+            <button type="button" id="poster-fmt-cancel" class="w-full bg-surface text-muted py-3 rounded-xl font-bold text-rbi-label uppercase border border-surface">Отмена</button>
         `;
         document.body.classList.add('modal-open');
         modal.style.display = 'flex';
@@ -8522,25 +8503,25 @@ function openShareModal() {
     document.getElementById('modal-title').innerHTML = `<div class="text-center">Отправить бэкап</div>`;
     document.getElementById('modal-body').innerHTML = `
         <div class="space-y-2">
-            <button onclick="closeModal(); shareBackupViaApi('incremental')" class="w-full text-left p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
-                <div class="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div>
+            <button onclick="closeModal(); shareBackupViaApi('incremental')" class="w-full text-left p-3 bg-surface border border-surface rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
+                <div class="w-8 h-8 bg-brand-soft text-brand rounded-lg flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></div>
                 <div>
-                    <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-wide">Только Новое</div>
-                    <div class="text-[9px] text-slate-500 font-bold mt-0.5">Всё, что было после последней выгрузки</div>
+                    <div class="text-rbi-label font-black text-ink uppercase tracking-wide">Только Новое</div>
+                    <div class="text-rbi-caption text-muted font-bold mt-0.5">Всё, что было после последней выгрузки</div>
                 </div>
             </button>
-            <button onclick="closeModal(); shareBackupViaApi('full')" class="w-full text-left p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
-                <div class="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg></div>
+            <button onclick="closeModal(); shareBackupViaApi('full')" class="w-full text-left p-3 bg-surface border border-surface rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
+                <div class="w-8 h-8 bg-surface text-muted rounded-lg flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg></div>
                 <div>
-                    <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-wide">Полная база (Всё)</div>
-                    <div class="text-[9px] text-slate-500 font-bold mt-0.5">Весь архив за всё время работы</div>
+                    <div class="text-rbi-label font-black text-ink uppercase tracking-wide">Полная база (Всё)</div>
+                    <div class="text-rbi-caption text-muted font-bold mt-0.5">Весь архив за всё время работы</div>
                 </div>
             </button>
-            <button onclick="closeModal(); shareBackupViaApi('filtered')" class="w-full text-left p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
-                <div class="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg></div>
+            <button onclick="closeModal(); shareBackupViaApi('filtered')" class="w-full text-left p-3 bg-surface border border-surface rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
+                <div class="w-8 h-8 bg-surface text-muted rounded-lg flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg></div>
                 <div>
-                    <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-wide">По фильтрам экрана</div>
-                    <div class="text-[9px] text-slate-500 font-bold mt-0.5">Только то, что сейчас отфильтровано</div>
+                    <div class="text-rbi-label font-black text-ink uppercase tracking-wide">По фильтрам экрана</div>
+                    <div class="text-rbi-caption text-muted font-bold mt-0.5">Только то, что сейчас отфильтровано</div>
                 </div>
             </button>
         </div>
@@ -9191,17 +9172,17 @@ export const ReportsActions = {
      */
     promptMeetingAfterReport() {
         const modal = document.getElementById('modal-overlay');
-        document.getElementById('modal-icon').innerHTML = `<div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-indigo-200">📅</div>`;
+        document.getElementById('modal-icon').innerHTML = `<div class="w-16 h-16 bg-brand-soft text-brand rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-brand-soft">📅</div>`;
         document.getElementById('modal-title').innerHTML = `<div class="text-center font-black uppercase text-lg">Отчет сформирован!</div>`;
         document.getElementById('modal-body').innerHTML = `
-            <div class="text-center text-[12px] text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+            <div class="text-center text-rbi-body text-muted mb-6 leading-relaxed">
                 Данные по объекту собраны. Хотите перейти к формированию протокола (Мемо) для еженедельного совещания с подрядчиками? Система автоматически подтянет все нерешенные задачи и дефекты.
             </div>
             <div class="flex gap-2">
-                <button onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 py-3.5 rounded-xl font-bold text-[11px] uppercase active:scale-95 shadow-sm">
+                <button onclick="closeModal()" class="flex-1 bg-surface text-muted py-3.5 rounded-xl font-bold text-rbi-label uppercase active:scale-95 shadow-sm">
                     Позже
                 </button>
-                <button onclick="closeModal(); startMeetingFlow();" class="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-black text-[11px] uppercase shadow-md active:scale-95">
+                <button onclick="closeModal(); startMeetingFlow();" class="flex-1 bg-brand text-white py-3.5 rounded-xl font-black text-rbi-label uppercase shadow-md active:scale-95">
                     Начать совещание
                 </button>
             </div>
@@ -10575,15 +10556,15 @@ export const ReportsActions = {
         }
 
         const modal = document.getElementById('modal-overlay');
-        document.getElementById('modal-icon').innerHTML = `<div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-2 border border-indigo-200 animate-pulse">🤖</div>`;
+        document.getElementById('modal-icon').innerHTML = `<div class="w-14 h-14 bg-brand-soft text-brand rounded-2xl flex items-center justify-center text-3xl mx-auto mb-2 border border-brand-soft animate-pulse">🤖</div>`;
         document.getElementById('modal-title').innerHTML = `<div class="text-center font-black uppercase text-lg">Сборка Дня Качества</div>`;
         document.getElementById('modal-body').innerHTML = `
             <div class="flex flex-col items-center justify-center py-4">
-                <div class="text-[11px] font-bold text-slate-500 text-center space-y-2">
+                <div class="text-rbi-label font-bold text-muted text-center space-y-2">
                     <div>📥 Агрегируем метрики подрядчиков...</div>
                     <div>📊 Рассчитываем Impact Score команды...</div>
                     <div>🏆 Выбираем лучшие практики месяца...</div>
-                    <div class="text-indigo-600 font-black mt-2">DeepSeek пишет управленческое резюме...</div>
+                    <div class="text-brand font-black mt-2">DeepSeek пишет управленческое резюме...</div>
                 </div>
             </div>
         `;

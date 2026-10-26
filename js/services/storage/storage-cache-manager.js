@@ -1132,13 +1132,29 @@ window.RbiStorageManager = {
             };
         }
     },
+    /**
+     * P2-0023: убрать тяжёлые данные фото с устройства. Для local:// запись не удаляется,
+     * а становится псевдонимом на облачный адрес — иначе карточка с local:// не найдёт фото.
+     */
+    async _dropPhotoPayload(id, cloudUrl, rec) {
+        const key = String(id || '');
+        const target = cloudUrl || (rec && (rec.sourceUrl || rec.source_url)) || '';
+        if (key.startsWith('local://') && /^https?:\/\//i.test(String(target))
+            && typeof PhotoManager !== 'undefined' && typeof PhotoManager._aliasRecord === 'function') {
+            const prev = rec || await dbGet(STORES.PHOTOS, key);
+            await dbPut(STORES.PHOTOS, PhotoManager._aliasRecord(key, String(target), prev));
+            return;
+        }
+        await dbDelete(STORES.PHOTOS, key);
+    },
+
     async evictLocalCopy(candidate) {
         if (!candidate || !candidate.id) return 0;
 
         const rec = await dbGet(STORES.PHOTOS, candidate.id);
         const freed = this.payloadBytes(rec?.data, rec) || candidate.sizeBytes || 0;
 
-        await dbDelete(STORES.PHOTOS, candidate.id);
+        await this._dropPhotoPayload(candidate.id, candidate.cloudUrl || candidate.publicUrl || candidate.public_url || '', rec);
 
         if (typeof PhotoManager !== 'undefined') {
             if (typeof PhotoManager.releaseCachedUrl === 'function') {
@@ -1257,7 +1273,7 @@ window.RbiStorageManager = {
             });
 
             for (const c of toEvict) {
-                await dbDelete(STORES.PHOTOS, c.id);
+                await this._dropPhotoPayload(c.id, c.cloudUrl, null);
 
                 if (c.registryItem) {
                     c.registryItem.cache_status = 'cloud_only';

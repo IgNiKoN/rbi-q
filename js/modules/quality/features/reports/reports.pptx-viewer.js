@@ -40,7 +40,7 @@
             + '  </div>'
             + '  <div class="bg-slate-800/95 border-t border-slate-700 px-4 py-3 flex items-center justify-center gap-3 shrink-0">'
             + '    <button type="button" data-pptx-viewer-action="prev" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold">← Назад</button>'
-            + '    <button type="button" data-pptx-viewer-action="next" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold">Вперёд →</button>'
+            + '    <button type="button" data-pptx-viewer-action="next" class="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold">Вперёд →</button>'
             + '  </div>'
             + '</div>';
     }

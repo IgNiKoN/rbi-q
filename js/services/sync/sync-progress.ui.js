@@ -244,6 +244,13 @@
             paint();
         },
 
+        /** P2-0024: строка подробностей во время работы (например «Загрузка истории: 45%»); null — убрать. */
+        setDetail: function (text) {
+            if (!active) return;
+            detailOverride = text ? String(text) : null;
+            paint();
+        },
+
         addPushed: function (n) {
             if (!active) return;
             pushed += Math.max(0, Number(n) || 0);

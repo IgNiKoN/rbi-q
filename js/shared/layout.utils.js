@@ -55,6 +55,13 @@ function updateBodyPadding() {
             //    не переписываем кэш меньшим значением.
             const wasCollapsed = headerEl.classList.contains('header-collapsed');
             let expandedH = 0;
+            // P2-0030: у каждого модуля своя шапка (Качество — с чек-листом и полями, Стройконтроль в2 — одна строка):
+            // высота из кэша другого модуля давала огромный отступ сверху при первом входе в в2 — кэш только своего модуля.
+            const headerMode = (window.AppModeManager && window.AppModeManager.currentMode) || '';
+            if (window._rbiExpandedHeaderHeightMode !== headerMode) {
+                window._rbiExpandedHeaderHeight = 0;
+                window._rbiExpandedHeaderHeightMode = headerMode;
+            }
             const cached = window._rbiExpandedHeaderHeight || 0;
             if (wasCollapsed && cached > 0) {
                 expandedH = cached;
@@ -76,7 +83,11 @@ function updateBodyPadding() {
                 window._rbiExpandedHeaderHeight = expandedH;
             } else {
                 const measured = headerEl.offsetHeight;
-                if (cached > 0 && measured < cached * 0.9) {
+                // P2-0030: кэш главнее только пока шапка анимируется (раскрытие) — иначе шапка стала ниже по-настоящему
+                // (другой режим/скрыты строки), и старая высота давала пустую полосу сверху
+                const animating = typeof headerEl.getAnimations === 'function'
+                    && headerEl.getAnimations({ subtree: true }).length > 0;
+                if (cached > 0 && animating && measured < cached * 0.9) {
                     expandedH = cached;
                 } else {
                     expandedH = measured;

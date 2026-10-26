@@ -1,5 +1,5 @@
 /* Файл: js/services/i18n.service.js */
-/* i18n Service v1 — тонкий каркас локализации оболочки (ru / en / sr-Latn) */
+/* i18n Service v1 — тонкий каркас локализации оболочки (ru / en / sr-Latn / ka) */
 
 (function () {
     'use strict';
@@ -8,12 +8,13 @@
     window.RBI.services = window.RBI.services || {};
 
     var LOCALE_KEY = 'rbi_locale';
-    var ALLOWED = ['ru', 'en', 'sr-Latn'];
+    var ALLOWED = ['ru', 'en', 'sr-Latn', 'ka'];
     var FALLBACK = 'ru';
     var LOCALE_URLS = {
         'ru': './locales/ru.json',
         'en': './locales/en.json',
-        'sr-Latn': './locales/sr-Latn.json'
+        'sr-Latn': './locales/sr-Latn.json',
+        'ka': './locales/ka.json'
     };
 
     var _locale = FALLBACK;

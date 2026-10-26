@@ -24,6 +24,159 @@
   ];
   var pendingModuleSelection = null;
 
+  /** P2-0013: как вошли — 'email' | 'pin' | 'demo' | 'none' (решает вход платформы js/dist/platform/platform.js). */
+  function platformEntryMode() {
+    var p2 = window.RBI && window.RBI.platform2;
+    var st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
+    return (st && st.mode) || 'none';
+  }
+
+  /**
+   * P2-0013: модуль Platform 2.0 положен этому входу? Почта — модуль включён у выбранной компании и есть право (ответ сервера
+   * pf_my_platform → RBI.platformMenuAccess[id]); демо — только модули с menu.demo (разбор ВОР без сервера); PIN и «никто» — нет.
+   * Единственное место правила для меню, адреса и загрузки модуля.
+   */
+  function isPlatformModuleAllowed(id) {
+    var mode = platformEntryMode();
+    if (mode === 'email') {
+      var access = (window.RBI && window.RBI.platformMenuAccess) || {};
+      return access[id] === true;
+    }
+    if (mode === 'demo') {
+      var loader = window.RBI && window.RBI.moduleLoader;
+      var m = loader && typeof loader.getById === 'function' ? loader.getById(id) : null;
+      return !!(m && m.menu && m.menu.demo === true);
+    }
+    return false;
+  }
+
+  /**
+   * Platform 2.0: пункты меню модулей из manifest (menu.section 'platform', enabled !== false) — только положенные (isPlatformModuleAllowed).
+   * Единая точка: новый модуль появляется в меню без правок оболочки. Клик — через data-path (router).
+   */
+  function getPlatformMenuItems() {
+    var loader = window.RBI && window.RBI.moduleLoader;
+    if (!loader || typeof loader.getMenuItems !== 'function') return [];
+    var access = (window.RBI && window.RBI.platformMenuAccess) || {};
+    return loader.getMenuItems().filter(function (item) {
+      if (item.section !== 'platform' || !item.path) return false;
+      if (!isPlatformModuleAllowed(item.id)) return false;
+      if (item.requiresAccess && access[item.id] !== true) return false;  // право подтверждает сервер (раздел ставит флаг)
+      return true;
+    });
+  }
+
+  /**
+   * P2-0030: пункт платформы на экране сейчас (План/Факт…) — по началу hash; null — экран старого Quality.
+   * Настройки — служебный раздел текущего модуля: пока они открыты, остаётся тот пункт, с которого в них пришли.
+   */
+  var lastPlatformPath = null;
+  function currentPlatformItem() {
+    var hash = String(location.hash || '');
+    var items = getPlatformMenuItems();
+    var i;
+    for (i = 0; i < items.length; i++) {
+      if (hash.indexOf(items[i].path) === 0) { lastPlatformPath = items[i].path; return items[i]; }
+    }
+    if (!/^#\/(quality\/)?settings(\/|$)/i.test(hash)) { lastPlatformPath = null; return null; }
+    for (i = 0; i < items.length; i++) if (items[i].path === lastPlatformPath) return items[i];
+    return null;
+  }
+
+  function businessModuleLabels() {
+    return {
+      quality: _navLabel('quality', 'Качество'),
+      construction: _navLabel('construction', 'Стройконтроль'),
+      knowledge: _navLabel('knowledge', 'База знаний'),
+      'construction-v2': _navLabel('construction_v2', 'Стройконтроль в2 (тест)')
+    };
+  }
+
+  // Место .mobile-module-menu-wrap в шапке (комментарий-якорь), куда она возвращается из #mobile-module-strip.
+  var mobileMenuWrapAnchor = null;
+
+  /**
+   * P2-0016: модуль старого Quality (quality, construction, construction-v2, knowledge) в меню этого входа?
+   * Почта — если модуль включён у текущей компании и положен человеку (RBI.platformMenuAccess, ответ сервера) и мост
+   * синхронизации с хранилищем компании подключён (RBI.qualitySync). P2-0031: «База знаний» — тоже по выключателю компании
+   * (сервер даёт её при включённом Качестве и праве quality.view, 038), «ИИ-помощник» (ai) — по выключателю и праву quality.ai.
+   * Демо и «никто» — как раньше.
+   */
+  function legacyModuleAllowed(id) {
+    if (platformEntryMode() !== 'email') return true;
+    var access = (window.RBI && window.RBI.platformMenuAccess) || {};
+    var base = id === 'construction-v2' ? 'construction' : id;
+    if (base !== 'quality' && base !== 'construction' && base !== 'knowledge' && base !== 'ai') return false;
+    return access[base] === true && !!(window.RBI && window.RBI.qualitySync);
+  }
+
+  /**
+   * P2-0021: число на пункте меню («красная точка»). Модуль сообщает числа: setNavBadges(scope, { '<путь>': n, 'module:<id>': n }) —
+   * путь — пункт подвкладок (нижний таббар, nav2), 'module:<id>' — пункт модуля в боковом меню и в мобильном меню модулей.
+   * 0 / нет числа — без точки; > 99 — «99+». setNavBadges(scope, null) — убрать числа модуля. Без чисел меню прежнее.
+   */
+  var navBadgesByScope = {};
+  var NAV_BADGE_STYLE_ID = 'shell-nav-badge-style';
+  var NAV_BADGE_CSS =
+    '.shell-nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;' +
+    'border-radius:8px;background:var(--color-red);color:var(--white);font-size:10px;font-weight:700;line-height:1;box-sizing:border-box;' +
+    'pointer-events:none;font-variant-numeric:tabular-nums}' +
+    '.has-shell-nav-badge{position:relative}' +
+    '#main-bottom-nav .shell-nav-badge,#app-sidebar .shell-nav-badge{position:absolute;top:2px;left:calc(50% + 4px)}' +
+    '#app-nav2 .shell-nav-badge,#mobile-module-menu .shell-nav-badge{margin-left:auto}';
+
+  function navBadgeCount(key) {
+    var sum = 0;
+    Object.keys(navBadgesByScope).forEach(function (s) {
+      var n = Number(navBadgesByScope[s][key]);
+      if (isFinite(n) && n > 0) sum += Math.floor(n);
+    });
+    return sum;
+  }
+
+  function navBadgeText(n) {
+    return n > 99 ? '99+' : String(n);
+  }
+
+  function ensureNavBadgeStyle() {
+    if (document.getElementById(NAV_BADGE_STYLE_ID)) return;
+    var st = document.createElement('style');
+    st.id = NAV_BADGE_STYLE_ID;
+    st.textContent = NAV_BADGE_CSS;
+    (document.head || document.body).appendChild(st);
+  }
+
+  /** Рисует точки на уже отрисованных пунктах: боковое меню, мобильное меню модулей, нижний таббар, nav2. */
+  function paintNavBadges() {
+    var hasAny = Object.keys(navBadgesByScope).length > 0;
+    var els = document.querySelectorAll('#app-sidebar [data-path], #mobile-module-menu [data-path], #main-bottom-nav [data-path], #app-nav2 [data-path]');
+    if (hasAny) ensureNavBadgeStyle();
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      var old = el.querySelector('.shell-nav-badge');
+      if (old) old.remove();
+      el.classList.remove('has-shell-nav-badge');
+      if (!hasAny) continue;
+      var mod = el.getAttribute('data-sidebar-module-id') || el.getAttribute('data-menu-module-id');
+      var key = mod ? 'module:' + mod : el.getAttribute('data-path');
+      var n = navBadgeCount(key);
+      if (n <= 0) continue;
+      var b = document.createElement('span');
+      b.className = 'shell-nav-badge';
+      b.textContent = navBadgeText(n);
+      b.setAttribute('aria-label', 'Требует участия: ' + n);
+      el.classList.add('has-shell-nav-badge');
+      el.appendChild(b);
+    }
+  }
+
+  function setNavBadges(scope, map) {
+    if (!scope) return;
+    if (map && typeof map === 'object') navBadgesByScope[scope] = Object.assign({}, map);
+    else delete navBadgesByScope[scope];
+    paintNavBadges();
+  }
+
   function _i18n() {
     return window.RBI && window.RBI.services && window.RBI.services.i18n;
   }
@@ -68,6 +221,11 @@
   }
 
   var ShellService = {
+    platformEntryMode: platformEntryMode,
+    isPlatformModuleAllowed: isPlatformModuleAllowed,
+    legacyModuleAllowed: legacyModuleAllowed,
+    setNavBadges: setNavBadges,
+    paintNavBadges: paintNavBadges,
     getContentRoot: function () {
       return document.getElementById('app-content');
     },
@@ -135,17 +293,36 @@
       el.textContent = company.name + suffix;
       if (syncEl) el.dataset.hasSyncIndicator = '1';
     },
+    /**
+     * P2-0013: при открытии решает вход платформы (js/dist/platform/platform.js) — кто вошёл (почта / PIN / демо);
+     * никто — экран «Вход» поверх оболочки. Ключи старого Quality (rbi_auth_gate_seen) не читаются и не пишутся.
+     */
     shouldShowAuthGate: function () {
-      return !localStorage.getItem('rbi_auth_gate_seen');
+      return true;
+    },
+    _platformEntry: null,
+    loadPlatformEntry: function () {
+      if (!this._platformEntry) {
+        var url = new URL('./js/dist/platform/platform.js', document.baseURI).href;
+        this._platformEntry = import(url).then(function (m) { return m.api; });
+      }
+      return this._platformEntry;
     },
     showAuthGate: function () {
       var el = document.getElementById('auth-gate-overlay');
-      if (el) el.classList.remove('hidden');
+      // Сразу закрыть экран, если на устройстве нет ни сессии, ни выбора «демо» (без мелькания оболочки).
+      var known = false;
+      try { known = !!(localStorage.getItem('platform2-auth') || localStorage.getItem('platform2_entry')); } catch (e) { /* ignore */ }
+      if (el && !known) el.classList.remove('hidden');
+      this.loadPlatformEntry().then(function (api) { return api.start(); }).catch(function (e) {
+        console.error('[ShellService] вход платформы не загрузился', e);
+        if (el) el.classList.remove('hidden');
+      });
     },
     hideAuthGate: function () {
       var el = document.getElementById('auth-gate-overlay');
       if (el) el.classList.add('hidden');
-      localStorage.setItem('rbi_auth_gate_seen', '1');
+      window.dispatchEvent(new Event('platform2:refresh'));   // вход по PIN завершён — вход платформы перечитывает состояние
     },
     showPlatformEntry: function () {
       var el = document.getElementById('platform-entry-modal');
@@ -230,7 +407,9 @@
       };
 
       var html = '';
+      var legacy = platformEntryMode() !== 'email';   // заглушки модулей — как раньше, не при входе почтой
       BUSINESS_MODULES.forEach(function (mod) {
+        if (!legacyModuleAllowed(mod.id)) return;
         if (roleAllowedIds.indexOf(mod.id) === -1) return;
         if (selected.indexOf(mod.id) === -1) return;
         if (mod.id === 'knowledge' && !knowledgePeer) return;
@@ -254,7 +433,15 @@
             '</button>';
         }
       });
-      PLACEHOLDER_MODULES.forEach(function (mod) {
+      getPlatformMenuItems().forEach(function (item) {
+        var pActive = String(location.hash || '').indexOf(item.path) === 0;
+        html += '<button type="button" data-sidebar-module-id="' + item.id + '" data-path="' + item.path + '"' +
+          ' class="app-sidebar-item' + (pActive ? ' active' : '') + '" title="' + item.label + '">' +
+          '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18M10 3v18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"></path></svg>' +
+          '<span class="app-sidebar-item-label">' + item.label + '</span>' +
+          '</button>';
+      });
+      if (legacy) PLACEHOLDER_MODULES.forEach(function (mod) {
         var phLabel = _navLabel(mod.id, mod.label);
         html += '<button type="button" data-shell-action="showPlaceholderModule" data-shell-action-arg="' + mod.id + '"' +
           ' class="app-sidebar-item app-sidebar-item--placeholder" title="' + phLabel + _placeholderSuffix() + '">' +
@@ -279,6 +466,9 @@
         '</button>';
 
       container.innerHTML = html;
+      paintNavBadges();
+      // P2-0011: подсветка — по текущему маршруту (единое правило роутера), а не только по режиму
+      if (window.AppRouter && typeof window.AppRouter.updateNavHighlight === 'function') window.AppRouter.updateNavHighlight(location.hash);
     },
     renderModuleSelection: function () {
       var container = document.getElementById('platform-entry-modules');
@@ -359,18 +549,17 @@
 
       var selected = this.getSelectedModules();
       var roleAllowedIds = getRoleAllowedBusinessModuleIds();
-      var currentMode = (window.AppModeManager && window.AppModeManager.currentMode) || null;
+      // P2-0030: на экране раздела платформы (План/Факт…) отмечен он, а не режим старого Quality
+      var platformItem = currentPlatformItem();
+      var currentMode = platformItem ? null : ((window.AppModeManager && window.AppModeManager.currentMode) || null);
       var knowledgePeer = this.isKnowledgePeerVisible(selected);
 
-      var labels = {
-        quality: _navLabel('quality', 'Качество'),
-        construction: _navLabel('construction', 'Стройконтроль'),
-        knowledge: _navLabel('knowledge', 'База знаний'),
-        'construction-v2': _navLabel('construction_v2', 'Стройконтроль в2 (тест)')
-      };
+      var labels = businessModuleLabels();
       var html = '';
 
+      var legacy = platformEntryMode() !== 'email';   // заглушки модулей — как раньше, не при входе почтой
       BUSINESS_MODULES.forEach(function (mod) {
+        if (!legacyModuleAllowed(mod.id)) return;
         if (roleAllowedIds.indexOf(mod.id) === -1) return;
         if (selected.indexOf(mod.id) === -1) return;
         if (mod.id === 'knowledge' && !knowledgePeer) return;
@@ -392,15 +581,26 @@
         }
       });
 
-      html += '<div class="border-t border-[var(--card-border)] my-1"></div>';
+      getPlatformMenuItems().forEach(function (item) {
+        var pActive = !!platformItem && platformItem.path === item.path;
+        html += '<button type="button" data-path="' + item.path + '" data-menu-module-id="' + item.id + '"' +
+          ' class="w-full text-left px-3.5 py-2.5 text-[11px] font-bold uppercase flex items-center justify-between gap-2 transition-colors ' +
+          (pActive ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-700 dark:text-slate-300') + '">' +
+          '<span>' + item.label + '</span>' +
+          (pActive ? '<span class="text-[8px] font-black text-indigo-500">●</span>' : '') +
+          '</button>';
+      });
 
-      PLACEHOLDER_MODULES.forEach(function (mod) {
+      if (legacy) html += '<div class="border-t border-[var(--card-border)] my-1"></div>';
+
+      if (legacy) PLACEHOLDER_MODULES.forEach(function (mod) {
         html += '<button type="button" data-shell-action="selectMobilePlaceholderModule" data-shell-action-arg="' + mod.id + '"' +
           ' class="w-full text-left px-3.5 py-2.5 text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 opacity-70">' +
           _navLabel(mod.id, mod.label) + '</button>';
       });
 
       container.innerHTML = html;
+      paintNavBadges();
     },
     toggleMobileModuleMenu: function () {
       var menu = document.getElementById('mobile-module-menu');
@@ -416,6 +616,34 @@
     closeMobileModuleMenu: function () {
       var menu = document.getElementById('mobile-module-menu');
       if (menu) menu.classList.add('hidden');
+    },
+    // P2-0030: экраны без шапки #main-header (План/Факт, Настройки, Аналитика…) — на телефоне «☰» пропадал вместе
+    // с ней. Тогда та же .mobile-module-menu-wrap (кнопка и список) переезжает в строку #mobile-module-strip над
+    // содержимым, рядом — название текущего модуля; шапка снова видна — возвращается на место. На ПК строка скрыта (CSS).
+    syncMobileModuleStrip: function () {
+      var strip = document.getElementById('mobile-module-strip');
+      var header = document.getElementById('main-header');
+      var wrap = document.querySelector('.mobile-module-menu-wrap');
+      if (!strip || !header || !wrap) return;
+      if (!mobileMenuWrapAnchor && wrap.parentNode !== strip) {
+        mobileMenuWrapAnchor = document.createComment('mobile-module-menu-wrap');
+        wrap.parentNode.insertBefore(mobileMenuWrapAnchor, wrap);
+      }
+      var headerHidden = header.style.display === 'none' || window.getComputedStyle(header).display === 'none';
+      if (headerHidden && wrap.parentNode !== strip) {
+        this.closeMobileModuleMenu();
+        strip.insertBefore(wrap, strip.firstChild);
+      } else if (!headerHidden && wrap.parentNode === strip && mobileMenuWrapAnchor && mobileMenuWrapAnchor.parentNode) {
+        this.closeMobileModuleMenu();
+        mobileMenuWrapAnchor.parentNode.insertBefore(wrap, mobileMenuWrapAnchor.nextSibling);
+      }
+      strip.classList.toggle('is-on', headerHidden);
+      var label = strip.querySelector('.mobile-module-strip-label');
+      if (label) {
+        var item = currentPlatformItem();
+        var mode = (window.AppModeManager && window.AppModeManager.currentMode) || '';
+        label.textContent = item ? item.label : (businessModuleLabels()[mode] || '');
+      }
     },
     selectMobileModule: function (moduleId) {
       this.closeMobileModuleMenu();
@@ -543,6 +771,30 @@
   bindShellActionDelegation();
   ShellService.renderSidebar();
   ShellService.renderMobileModuleMenu();
+
+  // P2-0030: строка «☰» следит за шапкой — её прячут/показывают экраны (switchViewNode, План/Факт, Аналитика…)
+  // и смена маршрута/ширины; несколько изменений подряд — одна проверка.
+  (function wireMobileModuleStrip() {
+    var queued = false;
+    var sync = function () {
+      if (queued) return;
+      queued = true;
+      var run = function () { queued = false; ShellService.syncMobileModuleStrip(); };
+      window.setTimeout(run, 0);   // не requestAnimationFrame: в фоновой вкладке он не вызывается, строка «застревала»
+    };
+    var header = document.getElementById('main-header');
+    if (header && typeof window.MutationObserver === 'function') {
+      new window.MutationObserver(sync).observe(header, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
+    if (typeof window.MutationObserver === 'function') {
+      new window.MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+    window.addEventListener('hashchange', sync);
+    window.addEventListener('rbi:route', sync);
+    window.addEventListener('rbi:platform-access', sync);
+    window.addEventListener('resize', sync);
+    ShellService.syncMobileModuleStrip();
+  })();
 
   // i18n — перерисовка chrome без reload
   if (window.RBI && window.RBI.events && typeof window.RBI.events.on === 'function') {

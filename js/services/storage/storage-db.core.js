@@ -1,12 +1,22 @@
 /* Файл: js/services/storage/storage-db.core.js — перенесено из js/storage.js без изменения логики */
 /* Файл: js/storage.js */
 
-const DB_NAME = 'RBI_QUALITY_DB';
+// P2-0016: при входе почтой у каждой компании своя локальная база (PLATFORM2_DB_<компания>); компанию записывает
+// src/platform/auth/quality-bridge.ts (ключ platform2_quality_company) и перезагружает страницу при её смене.
+// P2-0018: и у каждого пользователя компании — своя (PLATFORM2_DB_<компания>_<пользователь>, ключ platform2_quality_user).
+const DB_NAME = (function () {
+    const base = (window.APP_CONFIG && window.APP_CONFIG.LOCAL_DB_NAME) || 'PLATFORM2_DB';
+    let company = '', user = '';
+    try { company = localStorage.getItem('platform2_quality_company') || ''; user = localStorage.getItem('platform2_quality_user') || ''; } catch (e) { company = ''; }
+    if (!/^[0-9a-f-]{36}$/i.test(company)) return base;
+    return /^[0-9a-f]{16}$/.test(user) ? base + '_' + company + '_' + user : base + '_' + company;
+}());
 // Повышаем версию только при изменении структуры IndexedDB
-const DB_VERSION = 29; // БЫЛО 28, СТАЛО 29 — units_v2 + паритет с self-heal bump (локально уже 29)
+const DB_VERSION = 30; // БЫЛО 29, СТАЛО 30 — P2-0024: хранилище снимков чек-листа checklist_snapshots
 
 // Глобально отдаём версию БД в интерфейс диагностики
 window.RBI_DB_VERSION = DB_VERSION;
+window.RBI_DB_NAME = DB_NAME;   // P2-0016: «Сброс данных» удаляет базу текущей компании
 
 const STORES = {
     // --- НОВЫЕ ТАБЛИЦЫ ДЛЯ СТРОЙКОНТРОЛЯ ---
@@ -66,7 +76,8 @@ const STORES = {
     ASSISTANT_KB: 'app_assistant_kb',
     FILE_REGISTRY: 'file_registry_cache',
     STORAGE_EVENTS: 'storage_events',
-    SYNC_QUEUE: 'sync_queue'
+    SYNC_QUEUE: 'sync_queue',
+    CHECKLIST_SNAPSHOTS: 'checklist_snapshots' // P2-0024: снимок чек-листа один раз на версию шаблона (id = ссылка)
 };
 window.STORES = STORES;
 
@@ -112,6 +123,7 @@ function _openDbCurrent() {
         request.onsuccess = () => {
             const db = request.result;
             db.onversionchange = () => {
+                db.__rbiClosed = true; // P2-0025: закрыта из-за смены версии (другая вкладка)
                 db.close();
                 _dbPromise = null;
                 if (typeof showToast === 'function') {
@@ -164,6 +176,7 @@ function _openDbAtVersion(version) {
         request.onsuccess = () => {
             const db = request.result;
             db.onversionchange = () => {
+                db.__rbiClosed = true; // P2-0025: закрыта из-за смены версии (другая вкладка)
                 db.close();
                 _dbPromise = null;
                 if (typeof showToast === 'function') {
@@ -209,6 +222,24 @@ function openAppDb() {
                 }
             }
             window.RBI_DB_VERSION = Math.max(DB_VERSION, db.version);
+            // P2-0024: один раз — снимки чек-листа из проверок в отдельное хранилище (до любого чтения истории).
+            try {
+                await rbiMigrateChecklistSnapshots(db);
+            } catch (e) {
+                console.warn('[DB] Перевод снимков чек-листа не выполнен (данные не тронуты):', e);
+            }
+            // P2-0025 (ТД №164): во время перевода другая вкладка сменила версию — база закрыта;
+            // не отдаём закрытую, а открываем заново (не больше двух раз подряд).
+            if (db.__rbiClosed) {
+                if ((openAppDb._reopens = (openAppDb._reopens || 0) + 1) > 2) {
+                    openAppDb._reopens = 0;
+                    throw new Error('База закрыта другой вкладкой во время открытия');
+                }
+                console.warn('[DB] База закрыта сменой версии во время перевода — открываем заново');
+                _dbPromise = null;
+                return openAppDb();
+            }
+            openAppDb._reopens = 0;
             return db;
         })().catch((err) => {
             _dbPromise = null;
@@ -272,6 +303,175 @@ function normalizeSystemKeys(obj) {
     return obj;
 }
 /**
+ * Ошибка прерванной транзакции: QuotaExceededError, если браузер так сказал
+ * (или так выглядит), иначе AbortError. Вызывающий код уже умеет чистить место по Quota.
+ */
+function rbiTxAbortError(tx) {
+    const err = tx && tx.error;
+    if (err) return err;
+    try {
+        return new DOMException('Транзакция IndexedDB прервана (возможно, нет места)', 'AbortError');
+    } catch (_e) {
+        const e = new Error('Транзакция IndexedDB прервана');
+        e.name = 'AbortError';
+        return e;
+    }
+}
+
+/**
+ * P2-0024 этап 3: перевод старых проверок — снимок чек-листа (checklistSnapshot) из каждой записи
+ * в хранилище checklist_snapshots (один раз на одинаковый снимок), в записи остаётся checklistSnapshotRef.
+ * ОДНА транзакция на app_history + checklist_snapshots + app_state: перед фиксацией перечитываются все
+ * затронутые снимки и сверяются побайтно (JSON) с исходными, число проверок до = после; любое расхождение
+ * или ошибка (в т.ч. нет места) → abort → IndexedDB откатывает всё, данные остаются в старом формате
+ * (он читается как раньше). Метка «сделано» пишется в той же транзакции. После 3 неудач подряд — не пытаемся.
+ */
+// доработка 1 (ревью №8): свой счётчик у каждой базы (компания / пользователь устройства)
+const SNAPSHOT_MIGRATION_FAILS_KEY = 'rbi_checklist_snapshots_migration_fails:' + DB_NAME;
+// Чистые функции — js/services/storage/checklist-snapshot.utils.js (подключён в index.html перед этим файлом;
+// без import: тесты загружают этот файл как обычный скрипт).
+function _cs() { return window.RbiChecklistSnapshots || null; }
+
+function rbiReadMigrationFlag(db, key) {
+    return new Promise((resolve) => {
+        try {
+            const r = db.transaction(STORES.STATE, 'readonly').objectStore(STORES.STATE).get(key);
+            r.onsuccess = () => resolve(r.result || null);
+            r.onerror = () => resolve(null);
+        } catch (_e) {
+            resolve(null);
+        }
+    });
+}
+
+async function rbiMigrateChecklistSnapshots(db) {
+    const cs = _cs();
+    if (!cs) return { skipped: 'no-utils' };
+    const { SNAPSHOT_MIGRATION_KEY, snapshotJson, assignRef, withSnapshotRef } = cs;
+    if (!db.objectStoreNames.contains(STORES.CHECKLIST_SNAPSHOTS)) return { skipped: 'no-store' };
+    const flag = await rbiReadMigrationFlag(db, SNAPSHOT_MIGRATION_KEY);
+    if (flag && flag.done) return { skipped: 'done' };
+    let fails = 0;
+    try { fails = parseInt(localStorage.getItem(SNAPSHOT_MIGRATION_FAILS_KEY) || '0', 10) || 0; } catch (_e) { fails = 0; }
+    if (fails >= 3) return { skipped: 'too-many-failures' };
+
+    const t0 = Date.now();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORES.HISTORY, STORES.CHECKLIST_SNAPSHOTS, STORES.STATE], 'readwrite');
+        const hist = tx.objectStore(STORES.HISTORY);
+        const snaps = tx.objectStore(STORES.CHECKLIST_SNAPSHOTS);
+        const jsonById = new Map();
+        const newSnaps = new Map();
+        const usedRefs = new Set();
+        const at = new Date().toISOString();
+        let records = 0;
+        let migrated = 0;
+        let failReason = '';
+        const fail = (reason) => {
+            if (failReason) return;
+            failReason = reason;
+            try { tx.abort(); } catch (_e) { /* уже завершена */ }
+        };
+
+        const known = snaps.getAll();
+        known.onsuccess = () => {
+            (known.result || []).forEach((s) => { if (s && s.id) jsonById.set(s.id, snapshotJson(s.snapshot)); });
+            const cur = hist.openCursor();
+            cur.onsuccess = () => {
+                if (failReason) return;
+                const c = cur.result;
+                if (!c) { verifyAndMark(); return; }
+                records++;
+                const r = c.value;
+                if (r && Array.isArray(r.checklistSnapshot)) {
+                    const json = snapshotJson(r.checklistSnapshot);
+                    const ref = assignRef(r.checklistSnapshot, jsonById, newSnaps);
+                    if (jsonById.get(ref) !== json) { fail('snapshot-mismatch'); return; }
+                    usedRefs.add(ref);
+                    c.update(withSnapshotRef(r, ref));
+                    migrated++;
+                }
+                c.continue();
+            };
+        };
+
+        function verifyAndMark() {
+            newSnaps.forEach((snapshot, ref) => snaps.put({ id: ref, snapshot, createdAt: at }));
+            let pending = usedRefs.size + 1;
+            const done = () => {
+                if (--pending > 0 || failReason) return;
+                tx.objectStore(STORES.STATE).put({
+                    key: SNAPSHOT_MIGRATION_KEY, done: true, at, records, migrated, snapshots: newSnaps.size
+                });
+            };
+            usedRefs.forEach((ref) => {
+                const g = snaps.get(ref);
+                g.onsuccess = () => {
+                    if (!g.result || snapshotJson(g.result.snapshot) !== jsonById.get(ref)) fail('verify-snapshot');
+                    done();
+                };
+            });
+            const cnt = hist.count();
+            cnt.onsuccess = () => {
+                if (cnt.result !== records) fail('verify-count');
+                done();
+            };
+        }
+
+        tx.oncomplete = () => {
+            try { localStorage.removeItem(SNAPSHOT_MIGRATION_FAILS_KEY); } catch (_e) { /* ignore */ }
+            const res = { records, migrated, snapshots: newSnaps.size, ms: Date.now() - t0 };
+            if (migrated) console.log('[DB] Снимки чек-листа переведены:', res);
+            resolve(res);
+        };
+        const onFail = () => {
+            try { localStorage.setItem(SNAPSHOT_MIGRATION_FAILS_KEY, String(fails + 1)); } catch (_e) { /* ignore */ }
+            const err = failReason ? new Error('checklist snapshots: ' + failReason) : rbiTxAbortError(tx);
+            reject(err);
+        };
+        tx.onabort = onFail; // ошибка любого запроса (в т.ч. нет места) по умолчанию прерывает транзакцию → откат
+    });
+}
+
+/**
+ * P2-0024: положить снимок чек-листа в хранилище (если такого ещё нет) и вернуть ссылку для записи проверки.
+ * Совпадение хэша при другом тексте — суффикс ссылки (как при переводе).
+ */
+async function rbiPutChecklistSnapshot(snapshot) {
+    const cs = _cs();
+    if (!cs) throw new Error('checklist-snapshot.utils.js не загружен');
+    const { snapshotJson, snapshotRef } = cs;
+    const base = snapshotRef(snapshot);
+    if (!base) return '';
+    const db = await openAppDb();
+    const json = snapshotJson(snapshot);
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORES.CHECKLIST_SNAPSHOTS, 'readwrite');
+        const st = tx.objectStore(STORES.CHECKLIST_SNAPSHOTS);
+        let ref = base;
+        let n = 0;
+        const tryRef = () => {
+            const g = st.get(ref);
+            g.onsuccess = () => {
+                if (!g.result) st.put({ id: ref, snapshot, createdAt: new Date().toISOString() });
+                else if (snapshotJson(g.result.snapshot) !== json) { n++; ref = base + '_' + n; tryRef(); }
+            };
+        };
+        tryRef();
+        tx.oncomplete = () => resolve(ref);
+        tx.onerror = () => reject(rbiTxAbortError(tx));
+        tx.onabort = () => reject(rbiTxAbortError(tx));
+    });
+}
+
+/** P2-0024: снимок чек-листа по ссылке (для открытия старой проверки с тем чек-листом, что был). */
+async function rbiGetChecklistSnapshot(ref) {
+    if (!ref) return null;
+    const row = await dbGet(STORES.CHECKLIST_SNAPSHOTS, ref);
+    return row && Array.isArray(row.snapshot) ? row.snapshot : null;
+}
+
+/**
  * Базовые операции CRUD
  */
 async function dbPut(storeName, data, retryAfterCleanup = true) {
@@ -286,7 +486,11 @@ async function dbPut(storeName, data, retryAfterCleanup = true) {
             store.put(normalizedData);
 
             tx.oncomplete = () => resolve(true);
-            tx.onerror = () => reject(tx.error);
+            // tx.error бывает null (abort запроса всплывает в onerror раньше, чем tx.error заполнен).
+            tx.onerror = () => reject(rbiTxAbortError(tx));
+            // P2-0023: при нехватке места транзакция прерывается (abort) без onerror —
+            // раньше promise висел вечно и сохранение «молча» не заканчивалось.
+            tx.onabort = () => reject(rbiTxAbortError(tx));
         });
     } catch (e) {
         if (e && e.name === 'QuotaExceededError' && retryAfterCleanup) {
@@ -325,7 +529,8 @@ async function dbPutBatch(storeName, itemsArray, retryAfterCleanup = true) {
             });
 
             tx.oncomplete = () => resolve(true);
-            tx.onerror = () => reject(tx.error);
+            tx.onerror = () => reject(rbiTxAbortError(tx));
+            tx.onabort = () => reject(rbiTxAbortError(tx));
         });
     } catch (e) {
         if (e && e.name === 'QuotaExceededError' && retryAfterCleanup) {
@@ -632,4 +837,7 @@ window.dbForEachCursor = dbForEachCursor;
 window.dbDelete = dbDelete;
 window.dbClear = dbClear;
 window.dbPutBatch = dbPutBatch;
+window.rbiPutChecklistSnapshot = rbiPutChecklistSnapshot;
+window.rbiGetChecklistSnapshot = rbiGetChecklistSnapshot;
+window.rbiMigrateChecklistSnapshots = rbiMigrateChecklistSnapshots;
 

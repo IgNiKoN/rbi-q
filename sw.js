@@ -2,8 +2,11 @@
 // ОБЯЗАТЕЛЬНО МЕНЯЕМ ВЕРСИЮ при любых изменениях в коде!
 // ОБЯЗАТЕЛЬНО МЕНЯЕМ ВЕРСИЮ при любых изменениях в коде!
 const APP_VERSION = '18.59.0';
-const SW_VERSION = '18.59.59';
-const CACHE_NAME = `rbi-quality-v${SW_VERSION}`;
+const SW_VERSION = '18.86.0';
+// P2-0013: «разработка / выпуск» — из единственного переключателя js/services/config.service.js (выпуск: rbi-quality-* вместо старой версии).
+importScripts('./js/services/config.service.js');
+const CACHE_PREFIX = (self.APP_CONFIG && self.APP_CONFIG.SW_CACHE_PREFIX) || 'platform2-';
+const CACHE_NAME = `${CACHE_PREFIX}v${SW_VERSION}`;
 
 /**
  * Business path prefix → shortId (app.entry allowSet / RBI_SW_ALLOWLIST).
@@ -20,6 +23,35 @@ const BUSINESS_PREFIX_TO_MODULE = [
 
 /** null = allowlist ещё не пришёл — временно разрешаем cache.put (первый paint). */
 let allowedModules = null;
+
+/**
+ * P2-0013: бандлы модулей Platform 2.0 — в кэше только положенные этому входу (сообщение P2_SW_ALLOWLIST от входа платформы:
+ * модуль компании ∩ права по ответу сервера); остальные не кэшируются и удаляются. Сам вход (js/dist/platform/) — всем.
+ */
+const P2_PREFIX_TO_MODULE = [
+  { prefix: '/js/dist/planfact/', module: 'planfact' },
+  { prefix: '/js/dist/company/', module: 'company' },
+  { prefix: '/js/dist/platform-admin/', module: 'platform-admin' }
+];
+let p2AllowedModules = null;
+
+function resolveP2Module(url) {
+  try {
+    const path = new URL(url).pathname;
+    for (let i = 0; i < P2_PREFIX_TO_MODULE.length; i++) {
+      if (path.indexOf(P2_PREFIX_TO_MODULE[i].prefix) !== -1) return P2_PREFIX_TO_MODULE[i].module;
+    }
+  } catch (e) { /* ignore */ }
+  return null;
+}
+
+function purgeDisallowedP2Cache() {
+  if (p2AllowedModules === null) return Promise.resolve();
+  return caches.open(CACHE_NAME).then((cache) => cache.keys().then((keys) => Promise.all(keys.map((req) => {
+    const mod = resolveP2Module(req.url);
+    return mod && p2AllowedModules.indexOf(mod) === -1 ? cache.delete(req) : null;
+  }))));
+}
 
 function isManifestUrl(url) {
   try {
@@ -46,6 +78,8 @@ function resolveBusinessModule(url) {
 }
 
 function mayCachePut(url) {
+  const p2 = resolveP2Module(url);
+  if (p2) return p2AllowedModules === null || p2AllowedModules.indexOf(p2) !== -1;
   if (isManifestUrl(url)) return true;
   const mod = resolveBusinessModule(url);
   if (!mod) return true;
@@ -98,6 +132,7 @@ const urlsToCache = [
   './data/system_templates.js',
   './data/system_templates.en.js',
   './data/system_templates.sr-Latn.js',
+  './data/system_templates.ka.js',
   './js/shared/system-templates-locale.js',
   './js/core/router.js',
   './js/core/views.js',
@@ -115,6 +150,9 @@ const urlsToCache = [
   './libs/panzoom.min.js',
   './libs/Sortable.min.js',
   './libs/supabase-js.min.js',
+  './js/services/sync/sync-pull.policy.js',
+  './js/services/sync/sync-retry.policy.js',
+  './js/services/sync/sync-merge.policy.js',
   './js/services/sync/sync-core.state.js',
   './js/services/sync/sync-cloud-prepare.utils.js',
   './js/services/sync/sync-auth.js',
@@ -125,10 +163,13 @@ const urlsToCache = [
   './js/services/sync/sync-engine.core.js',
   './js/services/sync/sync-post-actions.js',
   './js/services/storage/storage-db.core.js',
+  './js/services/storage/checklist-snapshot.utils.js',
+  './js/services/storage/history-memory.utils.js',
   './js/services/storage/storage-converters.utils.js',
   './js/services/storage/storage-cache-manager.js',
   './js/services/storage/storage-offline-cache.utils.js',
   './js/services/storage/storage-diagnostics.render.js',
+  './js/services/storage/storage-photo-loader.js',
   './js/services/storage/storage-photo-manager.js',
   './js/services/storage/storage-file-queue.actions.js',
   './js/shared/math.utils.js',
@@ -192,6 +233,7 @@ const urlsToCache = [
   './locales/ru.json',
   './locales/en.json',
   './locales/sr-Latn.json',
+  './locales/ka.json',
   './js/services/app-mode.service.js',
   './js/services/company.service.js',
   './js/services/user-context.service.js',
@@ -211,7 +253,6 @@ const urlsToCache = [
   './js/modules/settings/features/cloud-deleted-purge-ui.js',
   './js/modules/settings/features/cloud-orphan-urls-ui.js',
   './js/modules/settings/features/role-matrix-ui.js',
-  './js/modules/settings/features/enabled-modules-ui.js',
   './js/modules/settings/features/official-templates-ui.js',
   './js/modules/settings/features/location-directory-ui.js',
   './js/modules/settings/index.js',
@@ -328,7 +369,8 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
+          // Platform 2.0: удаляем только свои старые кэши, чужие (другие приложения на origin) не трогаем
+          if (cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME) {
             console.log('[SW] Удаляем старый кэш:', cacheName);
             return caches.delete(cacheName);
           }
@@ -340,18 +382,76 @@ self.addEventListener('activate', event => {
 });
 
 // 4. ПЕРЕХВАТ ЗАПРОСОВ
+// P2-0016 (ADR-068): файлы компаний — в закрытых бакетах quality-*. Ссылки в записях Качества остаются «публичного» вида
+// (…/object/public/quality-…); кэш приложения подставляет вход вошедшего (токен присылает страница — сообщение P2_STORAGE_TOKEN)
+// и берёт файл по …/object/authenticated/…. Только сервер платформы (APP_CONFIG.P2_SUPABASE_URL). Нет связи — офлайн-кэш.
+let p2StorageToken = null;
+let p2TokenKnown = false;   // страница уже сообщила (в т.ч. «вышли» — null): не ждать
+let p2TokenWaiters = [];
+const P2_STORAGE_ORIGIN = (() => { try { return new URL(self.APP_CONFIG.P2_SUPABASE_URL).origin; } catch (e) { return ''; } })();
+
+function isCompanyFileUrl(url) {
+  return !!P2_STORAGE_ORIGIN && url.startsWith(P2_STORAGE_ORIGIN + '/storage/v1/object/public/quality-');
+}
+
+async function p2Token() {
+  if (p2TokenKnown) return p2StorageToken;
+  const list = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+  list.forEach((c) => c.postMessage({ type: 'P2_STORAGE_TOKEN_REQUEST' }));
+  return new Promise((resolve) => {
+    p2TokenWaiters.push(resolve);
+    setTimeout(() => resolve(p2StorageToken), 3000);
+  });
+}
+
+// P2-0018 (ТД №121): ответ сервера (в т.ч. 401/403 — нет входа или права) отдаётся как есть; офлайн-кэш — только без сети.
+async function fetchCompanyFile(request) {
+  const token = await p2Token();
+  const url = request.url.replace('/storage/v1/object/public/', '/storage/v1/object/authenticated/');
+  try {
+    return await fetch(url, { headers: token ? { Authorization: 'Bearer ' + token, apikey: self.APP_CONFIG.P2_SUPABASE_ANON_KEY } : {} });
+  } catch (e) {
+    const cached = await caches.match(request, { ignoreVary: true });
+    return cached || Response.error();
+  }
+}
+
+// P2-0018 (ТД №121): закрытые файлы компаний в кэше — только текущего входа. Выход (токен сброшен) или другой
+// «компания + пользователь» (сообщение страницы P2_STORAGE_SLOT) — такие файлы удаляются из всех кэшей.
+const P2_SLOT_CACHE = 'p2-storage-slot', P2_SLOT_KEY = '/__p2_storage_slot';
+function purgeCompanyFiles() {
+  return caches.keys().then((names) => Promise.all(names.map((n) => caches.open(n).then((c) => c.keys()
+    .then((keys) => Promise.all(keys.filter((r) => isCompanyFileUrl(r.url)).map((r) => c.delete(r))))))));
+}
+async function setStorageSlot(slot) {
+  let prev = null;
+  try {
+    const c = await caches.open(P2_SLOT_CACHE);
+    const hit = typeof c.match === 'function' ? await c.match(P2_SLOT_KEY) : null;
+    prev = hit ? await hit.text() : null;
+    if (prev !== slot) {
+      await purgeCompanyFiles();
+      await c.put(P2_SLOT_KEY, new Response(slot));
+    }
+  } catch (e) { await purgeCompanyFiles(); }
+}
+
 self.addEventListener('fetch', event => {
   if (!event.request.url.startsWith('http')) return;
   if (event.request.method !== 'GET') return;
+
+  if (isCompanyFileUrl(event.request.url)) {
+    event.respondWith(fetchCompanyFile(event.request));
+    return;
+  }
 
   // ✅ НОВОЕ: Полностью пропускаем запросы к облачному хранилищу (Storage)
   if (event.request.url.includes('/storage/v1/object/public/')) {
     return;   // Браузер обработает запрос напрямую, без вмешательства SW
   }
 
-  // ✅ Пропускаем запросы к API (база данных, функции), чтобы не ломать синхронизацию
-  const isApi = event.request.url.includes('api.rbi-q.ru') &&
-    !event.request.url.includes('/storage/v1/object/public/');
+  // ✅ Пропускаем запросы к API Supabase (база, авторизация, функции) по пути, без привязки к хосту
+  const isApi = /\/(rest|auth|functions|realtime)\/v1\//.test(event.request.url);
   if (isApi) return;
 
   event.respondWith(
@@ -438,5 +538,24 @@ self.addEventListener('message', (event) => {
     allowedModules = event.data.modules.slice();
     console.log('[SW] RBI_SW_ALLOWLIST:', allowedModules.join(','));
     event.waitUntil(purgeDisallowedBusinessCache());
+  }
+  if (event.data && event.data.type === 'P2_STORAGE_TOKEN') {
+    const had = p2StorageToken;
+    p2StorageToken = typeof event.data.token === 'string' && event.data.token ? event.data.token : null;
+    p2TokenKnown = true;
+    // выход — закрытые файлы из кэша убрать (и после перезапуска кэша: по сохранённому слоту входа)
+    if (!p2StorageToken) event.waitUntil(had ? purgeCompanyFiles().then(() => setStorageSlot('')) : setStorageSlot(''));
+    const w = p2TokenWaiters; p2TokenWaiters = [];
+    w.forEach((r) => r(p2StorageToken));
+    return;
+  }
+  if (event.data && event.data.type === 'P2_STORAGE_SLOT' && typeof event.data.slot === 'string') {
+    event.waitUntil(setStorageSlot(event.data.slot));
+    return;
+  }
+  if (event.data && event.data.type === 'P2_SW_ALLOWLIST' && Array.isArray(event.data.modules)) {
+    p2AllowedModules = event.data.modules.slice();
+    console.log('[SW] P2_SW_ALLOWLIST:', p2AllowedModules.join(',') || '—');
+    event.waitUntil(purgeDisallowedP2Cache());
   }
 });

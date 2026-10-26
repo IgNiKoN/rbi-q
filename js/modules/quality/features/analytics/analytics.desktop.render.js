@@ -1898,14 +1898,25 @@ function paintOnePagerDesktopNow(data) {
   if (isOnePagerDesktopFresh(container, fp)) return;
 
   // Full mobile data parity — then executive layout restyle
+  let rendered = null;
   if (typeof _origRenderOnePagerSubTab === 'function') {
-    try { _origRenderOnePagerSubTab(payload); } catch (_) { /* ignore */ }
+    try { rendered = _origRenderOnePagerSubTab(payload); } catch (_) { /* ignore */ }
   }
-  // Высоту графиков ставим ДО setTimeout(100) внутри mobile-render,
-  // чтобы Chart создался уже в финальном размере (без resize-мигания).
-  restyleOnePagerForDesktop(container);
-  colorHeatmapWorkTypeCells(container, payload);
-  _opPaintFp = fp;
+  // P2-0024: мобильная «Сводка» дорисовывается во втором шаге (async) — раскладку ПК делаем после него.
+  Promise.resolve(rendered).then((ok) => {
+    // P2-0024 доработка 1 (ревью №4): мобильная «Сводка» вышла по смене поколения — раскладку не трогаем,
+    // отпечаток «свежо» не ставим (иначе при возврате с теми же фильтрами остался бы старый экран)
+    if (ok === false) return;
+    // Высоту графиков ставим ДО setTimeout(100) внутри mobile-render,
+    // чтобы Chart создался уже в финальном размере (без resize-мигания).
+    // P2-0024: тепловая карта строится при раскрытии блока; на ПК блоки раскрыты сразу — строим до раскраски.
+    if (typeof window.rbiDrawOnePagerHeatmap === 'function') {
+      try { window.rbiDrawOnePagerHeatmap(); } catch (_) { /* ignore */ }
+    }
+    restyleOnePagerForDesktop(container);
+    colorHeatmapWorkTypeCells(container, payload);
+    _opPaintFp = fp;
+  }).catch(() => { /* ignore */ });
 }
 
 /** Схлопывает повторные вызовы из wrap + afterTabPaint. */

@@ -8,17 +8,35 @@ window.rbiPhotoPlaceholder = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
 </svg>
 `);
 
-window.rbiPhotoCloudPlaceholder = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360">
-    <rect width="100%" height="100%" fill="#f1f5f9"/>
-    <text x="50%" y="45%" text-anchor="middle" fill="#64748b" font-size="22" font-family="Arial" font-weight="700">
-        Файл очищен с устройства
-    </text>
-    <text x="50%" y="55%" text-anchor="middle" fill="#94a3b8" font-size="16" font-family="Arial">
-        Подключитесь к интернету для загрузки из облака
-    </text>
-</svg>
-`);
+// P2-0023: заглушки по состоянию фото. Фон полупрозрачный, текст средне-серый —
+// читается и в светлой, и в тёмной теме (data:-SVG не видит CSS-токены страницы).
+// Надписи «Файл очищен с устройства» больше нет: она показывалась и при обычной ошибке.
+function rbiStatePlaceholder(lines) {
+    // Квадрат и крупный шрифт: читается и в превью 80 px (object-cover не обрежет).
+    const step = 46;
+    const y0 = 150 - ((lines.length - 1) * step) / 2;
+    const text = lines.map((l, i) =>
+        '<text x="150" y="' + (y0 + i * step) + '" text-anchor="middle" dominant-baseline="middle" fill="#7b8aa1"'
+        + ' font-size="' + (i === 0 ? 38 : 32) + '" font-family="Arial" font-weight="' + (i === 0 ? 700 : 400) + '">' + l + '</text>'
+    ).join('');
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">'
+        + '<rect width="100%" height="100%" fill="#94a3b8" fill-opacity="0.16"/>' + text + '</svg>'
+    );
+}
+window.rbiPhotoErrorPlaceholder = rbiStatePlaceholder(['Не удалось', 'загрузить', '↻ нажмите']);
+window.rbiPhotoOfflinePlaceholder = rbiStatePlaceholder(['Загрузится', 'при', 'подключении']);
+window.rbiPhotoMissingPlaceholder = rbiStatePlaceholder(['Фото', 'не найдено']);
+// Старое имя: «нет локальной копии» — теперь это офлайн-заглушка.
+window.rbiPhotoCloudPlaceholder = window.rbiPhotoOfflinePlaceholder;
+
+/** Заглушка для состояния из PhotoManager.resolvePhoto / RbiPhotoLoader. */
+window.rbiPhotoPlaceholderFor = function (state) {
+    if (state === 'error') return window.rbiPhotoErrorPlaceholder;
+    if (state === 'offline') return window.rbiPhotoOfflinePlaceholder;
+    if (state === 'missing') return window.rbiPhotoMissingPlaceholder;
+    return window.rbiPhotoPlaceholder || '';
+};
 
 window.rbiEscapeAttr = function (value) {
     return String(value || '')
@@ -201,35 +219,11 @@ function renderPhotoSourceModalMarkup() {
     }
 }());
 
+// P2-0023: один механизм — ленивый загрузчик RbiPhotoLoader (storage-photo-loader.js):
+// грузятся только видимые фото, ≤4 одновременно. Promise — когда видимые загружены.
 window.rbiHydrateLocalImages = async function (root = document) {
-    if (typeof PhotoManager === 'undefined' || typeof PhotoManager.getAsyncUrl !== 'function') return;
-
-    const scope = root || document;
-    const imgs = Array.from(scope.querySelectorAll('img[data-local-src]'));
-
-    for (const img of imgs) {
-        const src = img.getAttribute('data-local-src');
-        if (!src) continue;
-        const preferThumb = img.getAttribute('data-prefer-thumb') === '1';
-
-        try {
-            const realUrl = await PhotoManager.getAsyncUrl(src, preferThumb ? { preferThumb: true } : undefined);
-
-            if (
-                realUrl &&
-                !String(realUrl).startsWith('local://') &&
-                !String(realUrl).startsWith('cloud://')
-            ) {
-                img.src = realUrl;
-                img.removeAttribute('data-local-src');
-                continue;
-            }
-
-            img.src = window.rbiPhotoCloudPlaceholder || window.rbiPhotoPlaceholder || img.src;
-
-        } catch (e) {
-            img.src = window.rbiPhotoCloudPlaceholder || window.rbiPhotoPlaceholder || img.src;
-        }
+    if (window.RbiPhotoLoader && typeof window.RbiPhotoLoader.hydrate === 'function') {
+        return window.RbiPhotoLoader.hydrate(root || document);
     }
 };
 
@@ -463,6 +457,17 @@ async function saveEditedPhoto() {
         // Фото дефекта СК — своя однофото-семантика (не входит в этот блок), перезапись.
         photos[photoId] = photoRef;
     } else {
+        // P2-0023: фото черновика сразу отдельной записью на устройстве (local://), в сессии —
+        // только ссылка. Раньше base64 лежал в сессии, и вся сессия переписывалась на каждое сохранение.
+        try {
+            photoRef = await window.ensureLocalPhotoRef(photoRef, 'audit', { entityType: 'inspection_photo' });
+        } catch (e) {
+            // Нет места на устройстве: фото не теряем — оставляем в памяти черновика, честно предупреждаем.
+            console.warn('[Фото] не удалось сохранить на устройство', e);
+            showToast(e && e.name === 'QuotaExceededError'
+                ? '⚠️ Память устройства заполнена: фото держится только до закрытия приложения. Отправьте проверку.'
+                : '⚠️ Фото не сохранилось на устройство — отправьте проверку, пока приложение открыто.');
+        }
         // Обычный контекст (пункт чек-листа аудита): добавление в массив, не перезапись.
         if (!Array.isArray(photos[photoId])) photos[photoId] = photos[photoId] ? [photos[photoId]] : [];
         photos[photoId].push(photoRef);
@@ -496,22 +501,17 @@ async function openPhotoViewer(src) {
     setTimeout(() => viewer.classList.remove('opacity-0'), 10);
 
     let finalSrc = null;
+    let failState = 'error';
     const srcStr = String(src || '');
 
     if (srcStr.startsWith('data:') || srcStr.startsWith('blob:')) {
         finalSrc = src;
     } else {
         try {
-            if (src && typeof PhotoManager !== 'undefined' && typeof PhotoManager.getAsyncUrl === 'function') {
-                const resolvedSrc = await PhotoManager.getAsyncUrl(src);
-
-                if (
-                    resolvedSrc &&
-                    !String(resolvedSrc).startsWith('local://') &&
-                    !String(resolvedSrc).startsWith('cloud://')
-                ) {
-                    finalSrc = resolvedSrc;
-                }
+            if (src && typeof PhotoManager !== 'undefined' && typeof PhotoManager.resolvePhoto === 'function') {
+                const res = await PhotoManager.resolvePhoto(src);
+                if (res && res.state === 'ok' && res.url) finalSrc = res.url;
+                else if (res && res.state) failState = res.state;
             }
         } catch (e) {
             finalSrc = null;
@@ -521,7 +521,7 @@ async function openPhotoViewer(src) {
     if (finalSrc) {
         img.src = finalSrc;
     } else {
-        img.src = window.rbiPhotoCloudPlaceholder || window.rbiPhotoPlaceholder || '';
+        img.src = window.rbiPhotoPlaceholderFor(failState);
     }
 
     img.style.opacity = '1';

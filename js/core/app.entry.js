@@ -29,6 +29,8 @@
         'module.construction-v2',
         'module.game',
         'module.ai',
+        'module.planfact',
+        'module.company',
     ];
 
     /** Feature-of / сквозные бандлы: бизнес-id → дополнительные ключи init. */
@@ -39,6 +41,12 @@
 
     /** Platform chrome — всегда в init, даже если нет в availableModules. */
     var ALWAYS_INIT = ['settings'];
+
+    /**
+     * Platform 2.0 модули (вне каталога компании Quality): init, если manifest.enabled !== false.
+     * Выключатель — только флаг enabled в манифесте модуля.
+     */
+    var PLATFORM2_MODULES = ['planfact', 'company'];
 
     /**
      * Orphan feature-of / construction-v2 / settings — не peer business-id.
@@ -111,6 +119,11 @@
         }
         for (i = 0; i < ALWAYS_INIT.length; i++) {
             allow[ALWAYS_INIT[i]] = true;
+        }
+        var loader = window.RBI && window.RBI.moduleLoader;
+        for (i = 0; i < PLATFORM2_MODULES.length; i++) {
+            var m = loader && typeof loader.getById === 'function' ? loader.getById(PLATFORM2_MODULES[i]) : null;
+            if (m && m.enabled !== false) allow[PLATFORM2_MODULES[i]] = true;
         }
         return allow;
     }

@@ -905,6 +905,33 @@ body.modal-open {
     overflow-y: auto;
 }
 
+/* P2-0030: экран без шапки (План/Факт, Настройки, Аналитика…) — «☰» и название модуля в строке над
+   содержимым (ShellService.syncMobileModuleStrip переносит туда .mobile-module-menu-wrap). Только телефон. */
+.mobile-module-strip {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .mobile-module-strip.is-on {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .mobile-module-strip-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-main);
+    }
+}
+
 @media (min-width: 768px) {
     .mobile-module-menu-wrap {
         display: none;

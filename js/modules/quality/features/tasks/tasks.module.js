@@ -690,6 +690,9 @@ async function _gameGenerateWeeklyPlan(force) {
 
                 if (existingTask) {
                     var oldId = existingTask.id;
+                    // P2-0023: «к отправке» — только если план правда изменил задачу. Раньше каждая
+                    // существующая задача помечалась при каждом пересчёте → отправка всех задач на каждом круге.
+                    var beforeSig = [existingTask.id, existingTask.engineerId, existingTask.target, existingTask.date].join('|');
                     if (String(oldId) !== String(taskId)) {
                         var ghost = Object.assign({}, existingTask, {
                             id: oldId, _deleted: true, is_deleted: true,
@@ -716,8 +719,11 @@ async function _gameGenerateWeeklyPlan(force) {
                             existingTask.date = tDate.toISOString();
                         }
                     }
-                    _touchTaskForSync(existingTask);
-                    _storage().put(_storage().stores().TASKS, existingTask);
+                    var afterSig = [existingTask.id, existingTask.engineerId, existingTask.target, existingTask.date].join('|');
+                    if (afterSig !== beforeSig) {
+                        _touchTaskForSync(existingTask);
+                        _storage().put(_storage().stores().TASKS, existingTask);
+                    }
                     return existingTask;
                 }
 
@@ -2391,8 +2397,11 @@ async function _switchEngineerSubTab(tabId, btnElement, opts) {
     var fromRouter = !!(opts && opts.fromRouter);
     currentActiveEngineerTab = tabId;
     document.querySelectorAll('.eng-sub-section').forEach(function(el) { el.classList.add('hidden'); });
+    // Сбрасываем стили всех кнопок (в т.ч. legacy `active`/`bg-white` со статичной разметки
+    // «Задачи» в engineer.render.js — без этого дефолтная активная кнопка навсегда остаётся
+    // подсвеченной после переключения на другую подвкладку, см. аналог в analytics.actions.js).
     document.querySelectorAll('#engineer-subtabs-block .sub-tab-btn').forEach(function(el) {
-        el.classList.remove('bg-surface', 'shadow-sm', 'text-brand');
+        el.classList.remove('bg-surface', 'bg-white', 'shadow-sm', 'text-brand', 'active');
         el.classList.add('text-[var(--text-muted)]');
     });
 
@@ -2402,7 +2411,7 @@ async function _switchEngineerSubTab(tabId, btnElement, opts) {
         btnElement = document.querySelector('#engineer-subtabs-block .sub-tab-btn[data-action-arg="' + tabId + '"]');
     }
     if (btnElement) {
-        btnElement.classList.add('bg-surface', 'shadow-sm', 'text-brand');
+        btnElement.classList.add('bg-surface', 'shadow-sm', 'text-brand', 'active');
         btnElement.classList.remove('text-[var(--text-muted)]');
     }
 

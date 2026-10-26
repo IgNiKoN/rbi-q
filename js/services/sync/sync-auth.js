@@ -50,7 +50,7 @@ window.rbiBuildAuthPassword = async function (projectCode, userName, pin) {
 // === AUTH: вход или регистрация через Supabase Auth ===
 window.rbiEnsureAuthSession = async function (projectCode, userName, pin) {
     if (!window.supabaseClient) {
-        throw new Error('Supabase не подключен.');
+        throw new Error(window.APP_CONFIG.CLOUD_DISABLED_MESSAGE || 'Supabase не подключен.');
     }
 
     const email = await window.rbiBuildTechnicalEmail(projectCode, userName);
@@ -124,8 +124,12 @@ window.hashPin = async function (pin) {
 window.initSync = async function () {
     window.renderSyncUI();
 
+    // P2-0016: вход почтой — клиент хранилища компании уже создан мостом (quality-bridge.ts); цикл запускается один раз.
+    const companyMode = !!(window.RBI && window.RBI.qualitySync && window.supabaseClient);
+    if (window._rbiSyncLoopStarted) return;
+
     try {
-        if (window.supabase && window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) {
+        if (!companyMode && window.supabase && window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) {
             window.supabaseClient = window.supabase.createClient(
                 window.APP_CONFIG.SUPABASE_URL,
                 window.APP_CONFIG.SUPABASE_KEY
@@ -140,7 +144,7 @@ window.initSync = async function () {
         if (block && !block.innerHTML.includes('Облако отключено')) {
             block.insertAdjacentHTML(
                 'afterbegin',
-                '<div class="p-3 bg-red-50 text-red-600 text-[10px] font-bold text-center border-b border-red-200">⚠️ Облако отключено</div>'
+                '<div class="p-3 bg-red-50 text-red-600 text-[10px] font-bold text-center border-b border-red-200">⚠️ Облако отключено: ' + (window.APP_CONFIG.CLOUD_DISABLED_MESSAGE || '') + '</div>'
             );
         }
         return;
@@ -150,6 +154,7 @@ window.initSync = async function () {
     // Автосинхронизация запускается только если облако уже включено.
     // При локальной работе приложение вообще не трогаем.
     if (window.syncConfig.enabled && window.syncConfig.engineerName && window.syncConfig.projectCode) {
+        window._rbiSyncLoopStarted = true;
         setTimeout(() => {
             window.triggerSync('silent');
         }, 5000);
@@ -159,7 +164,7 @@ window.initSync = async function () {
 
             if (!isTabActive) return;
 
-            const needPush = localStorage.getItem('rbi_cloud_dirty') === '1';
+            const needPush = localStorage.getItem('rbi_cloud_dirty') === '1' || rbiAttentionRetryDueNow();
             const needFullPull = localStorage.getItem('rbi_force_full_pull') === '1';
             const needRemotePoll =
                 localStorage.getItem('rbi_force_remote_poll') === '1' ||
@@ -177,6 +182,9 @@ window.initSync = async function () {
                 return;
             }
 
+            // P2-0023: после ошибки — пауза (2/5/10/30 мин), а не повтор каждую минуту.
+            if (!rbiAutoSyncAllowedNow()) return;
+
             if (needPush || needFullPull || needRemotePoll) {
                 window.triggerSync('silent');
             }
@@ -189,7 +197,7 @@ window.initSync = async function () {
             }
             clearTimeout(window.__rbiResumeSyncTimer);
             window.__rbiResumeSyncTimer = setTimeout(() => {
-                const needPush = localStorage.getItem('rbi_cloud_dirty') === '1';
+                const needPush = localStorage.getItem('rbi_cloud_dirty') === '1' || rbiAttentionRetryDueNow();
                 const needFullPull = localStorage.getItem('rbi_force_full_pull') === '1';
                 const needRemotePoll =
                     localStorage.getItem('rbi_force_remote_poll') === '1' ||
@@ -202,6 +210,7 @@ window.initSync = async function () {
                     console.log('[Sync] Пропуск resume-sync: идёт фоновый кэш файлов');
                     return;
                 }
+                if (!rbiAutoSyncAllowedNow()) return;
                 if (needPush || needFullPull || needRemotePoll) {
                     console.log('[Sync] Приложение активно. Проверяем обновления в облаке...');
                     window.triggerSync('silent');
@@ -213,3 +222,17 @@ window.initSync = async function () {
 
 window.isSyncEnabled = function () { return window.syncConfig.enabled; };
 
+// Доработка 2: подошло время повторить запись «нужно внимание» (фото не было на устройстве).
+// Метку снимает сама синхронизация при старте; неудача поставит новую (sync-engine.core.js, rbiNoteAttentionRetry).
+function rbiAttentionRetryDueNow() {
+    const at = parseInt(localStorage.getItem('rbi_sync_attention_retry_at') || '0', 10) || 0;
+    return !!at && Date.now() >= at;
+}
+
+// P2-0023: автосинхронизация (таймер/возврат) ждёт паузу после ошибки; ручная — нет.
+function rbiAutoSyncAllowedNow() {
+    const retryAfter = parseInt(localStorage.getItem('rbi_sync_retry_after') || '0', 10) || 0;
+    return window.RbiSyncRetryPolicy
+        ? window.RbiSyncRetryPolicy.autoSyncAllowed({ now: Date.now(), retryAfter })
+        : true;
+}

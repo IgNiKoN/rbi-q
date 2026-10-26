@@ -17,6 +17,26 @@ function _syncAssignedCanonicalKeys(assignedProjects) {
     return list;
 }
 
+// P2-0023: пауза перед автоповтором после неудачной синхронизации (2 → 5 → 10 → 30 мин).
+function rbiScheduleSyncRetry() {
+    try {
+        const n = (parseInt(localStorage.getItem('rbi_sync_fail_count') || '0', 10) || 0) + 1;
+        localStorage.setItem('rbi_sync_fail_count', String(n));
+        const delay = window.RbiSyncRetryPolicy ? window.RbiSyncRetryPolicy.retryDelayMs(n) : 120000;
+        localStorage.setItem('rbi_sync_retry_after', String(Date.now() + delay));
+    } catch (_e) { /* ignore */ }
+}
+
+// Доработка 2: когда повторить записи «нужно внимание» — таймер автосинхронизации (sync-auth.js) смотрит сюда.
+function rbiNoteAttentionRetry(at) {
+    try {
+        const t = Number(at) || 0;
+        if (!t) return;
+        const cur = parseInt(localStorage.getItem('rbi_sync_attention_retry_at') || '0', 10) || 0;
+        if (!cur || t < cur) localStorage.setItem('rbi_sync_attention_retry_at', String(t));
+    } catch (_e) { /* ignore */ }
+}
+
 window.triggerSync = async function (mode = 'silent') {
     // ЖЕСТКАЯ ЗАЩИТА: Запрещаем синхронизацию в демо-режиме
     if (typeof isDemoMode !== 'undefined' && isDemoMode) {
@@ -80,9 +100,24 @@ window.triggerSync = async function (mode = 'silent') {
 
     let pushErrors = 0;
     let pullErrors = 0;
+    let syncAttentionCount = 0; // P2-0023: объекты «нужно внимание» за этот проход
     let referencePullErrors = 0;
+    // Доработка 5: пауза автосинхронизации — только при сетевых/серверных ошибках отправки;
+    // запись, которую сервер отклонил (права, данные), не останавливает синхронизацию остальных.
+    let transientPushErrors = 0;
+    const rbiNoteErr = (err) => {
+        if (!window.RbiSyncRetryPolicy || window.RbiSyncRetryPolicy.isTransientSyncError(err)) transientPushErrors++;
+    };
+    let retryScheduled = false; // пауза ставится не больше одного раза за проход
+    const rbiScheduleSyncRetryOnce = () => { if (!retryScheduled) { retryScheduled = true; rbiScheduleSyncRetry(); } };
 
     window.isSyncing = true;
+    const syncStartedAt = Date.now(); // P2-0025: черновик, изменённый после начала, снова «к отправке»
+    // Доработка 2: подошедшие повторы «нужно внимание» уходят в этом проходе; неудача поставит новое время.
+    try {
+        const attAt = parseInt(localStorage.getItem('rbi_sync_attention_retry_at') || '0', 10) || 0;
+        if (attAt && Date.now() >= attAt) localStorage.removeItem('rbi_sync_attention_retry_at');
+    } catch (_e) { /* ignore */ }
     // §5: единый defer full-render активного экрана (js/shared/sync-ui-defer.utils.js).
     if (typeof window.rbiBeginSyncUiDefer === 'function') window.rbiBeginSyncUiDefer();
     else window._rbiDeferActiveViewFullRender = true;
@@ -117,7 +152,11 @@ window.triggerSync = async function (mode = 'silent') {
     const pCode = window.syncConfig.projectCode;
     const iName = window.syncConfig.engineerName;
     const stableInspectorId = `${pCode}_${iName}`.replace(/\s+/g, '_');
-    let lastPullAt = localStorage.getItem('rbi_sync_last_pull_at') || '';
+    // P2-0023: догрузка «с прошлого раза» — с запасом 15 мин назад (запись, отправленная во время
+    // прошлой синхронизации или с отстающими часами, иначе не приходила никогда).
+    let lastPullAt = window.RbiSyncPullPolicy
+        ? window.RbiSyncPullPolicy.pullSinceWithOverlap(localStorage.getItem('rbi_sync_last_pull_at') || '')
+        : (localStorage.getItem('rbi_sync_last_pull_at') || '');
     const lastPushAt = localStorage.getItem('rbi_sync_last_push_at') || '';
 
     const forceFullPullRequested = localStorage.getItem('rbi_force_full_pull') === '1';
@@ -166,7 +205,8 @@ window.triggerSync = async function (mode = 'silent') {
     // --- НОВОЕ: Проверка роли при синхронизации ---
     // --- НОВОЕ: Проверка роли при синхронизации ---
     // --- Проверка серверного профиля перед синхронизацией ---
-    try {
+    // P2-0016: при входе почтой роль и допуск — из прав компании (quality-bridge.ts), профиль PIN не читается.
+    if (!(window.RBI && window.RBI.qualitySync)) try {
         const { data: roleData, error: roleError } = await window.supabaseClient
             .from('rbi_engineer_profiles')
             .select('role, cloud_status, assigned_contractor, contractor_name, assigned_projects, settings')
@@ -455,9 +495,16 @@ window.triggerSync = async function (mode = 'silent') {
     window.getStoragePathFromPublicUrl = function (url, bucketName) {
         if (!url || !bucketName) return '';
         const marker = `/storage/v1/object/public/${bucketName}/`;
-        const idx = url.indexOf(marker);
+        let idx = url.indexOf(marker);
+        let len = marker.length;
+        if (idx === -1) {
+            // P2-0016: файлы компании — в бакете quality-<бакет>, путь <компания>/… (обёртка Storage моста не удвоит компанию)
+            const companyMarker = `/storage/v1/object/public/quality-${bucketName}/`;
+            idx = url.indexOf(companyMarker);
+            len = companyMarker.length;
+        }
         if (idx === -1) return '';
-        return decodeURIComponent(url.slice(idx + marker.length));
+        return decodeURIComponent(url.slice(idx + len));
     };
 
     window.dataUrlToBlob = function (dataUrl) {
@@ -534,7 +581,17 @@ window.triggerSync = async function (mode = 'silent') {
         let blobData = null;
         const wasLocalUrl = window.isLocalUrl(value);
 
-        if (wasLocalUrl) blobData = await window.localPhotoToBlob(value);
+        if (wasLocalUrl) {
+            // P2-0023: local:// уже отправленного фото — псевдоним на облачный адрес, грузить нечего.
+            try {
+                const aliasRec = typeof dbGet === 'function' ? await dbGet('app_photos', value) : null;
+                const aliasUrl = aliasRec && !aliasRec.data
+                    ? (aliasRec.aliasOf || aliasRec.alias_of || aliasRec.sourceUrl || aliasRec.source_url || '')
+                    : '';
+                if (aliasUrl && window.isHttpUrl(aliasUrl)) return aliasUrl;
+            } catch (_e) { /* идём обычным путём */ }
+            blobData = await window.localPhotoToBlob(value);
+        }
         else if (window.isDataUrl(value)) blobData = window.dataUrlToBlob(value);
         else return value;
 
@@ -547,6 +604,9 @@ window.triggerSync = async function (mode = 'silent') {
                 // попытки отправки уже никогда не происходило. Теперь бросаем ошибку,
                 // чтобы pushCloudObject для этого объекта прервался, запись осталась
                 // not_synced и была отправлена повторно на следующем цикле синхронизации.
+                // P2-0023: ошибка с кодом — вызывающий помечает объект «нужно внимание» и идёт дальше,
+                // а не роняет всю синхронизацию каждую минуту.
+                if (window.RbiSyncRetryPolicy) throw window.RbiSyncRetryPolicy.makeMissingFileError(value);
                 throw new Error(`[Sync] Локальный файл не найден в IndexedDB (возможна гонка записи): ${value}`);
             }
             return value;
@@ -794,10 +854,13 @@ window.triggerSync = async function (mode = 'silent') {
         // 1.5. PULL: КОРПОРАТИВНЫЙ СТИЛЬ (Логотип и Цвет)
         // =====================================================
         try {
+            // P2-0037: при входе по почте оформление — одно на компанию (ключ — id компании входа, как при публикации)
+            const qsBrand = window.RBI && window.RBI.qualitySync;
+            const brandCode = (qsBrand && qsBrand.active && qsBrand.companyId) ? qsBrand.companyId : pCode;
             const { data: pSet, error: pSetErr } = await window.supabaseClient
                 .from('project_settings')
                 .select('*')
-                .eq('project_code', pCode)
+                .eq('project_code', brandCode)
                 .maybeSingle();
 
             if (!pSetErr && pSet) {
@@ -837,10 +900,13 @@ window.triggerSync = async function (mode = 'silent') {
             const companyId = (companySvc && typeof companySvc.getCompanyId === 'function')
                 ? companySvc.getCompanyId()
                 : 'rbi';
+            // P2-0037: при входе по почте строка настроек — компании входа (сервер пишет company_id = id компании, 018 bind_company)
+            const qs = window.RBI && window.RBI.qualitySync;
+            const settingsCompanyId = (qs && qs.active && qs.companyId) ? qs.companyId : companyId;
             const { data: cSet, error: cSetErr } = await window.supabaseClient
                 .from('rbi_company_settings')
                 .select('company_id, role_matrix_overrides, official_templates, updated_at')
-                .eq('company_id', companyId)
+                .eq('company_id', settingsCompanyId)
                 .maybeSingle();
 
             if (cSetErr) {
@@ -938,9 +1004,18 @@ window.triggerSync = async function (mode = 'silent') {
                 q = q.eq('is_deleted', false);
             }
 
-            if (dataScope === 'none' || cloudStatus !== 'approved') {
+            // P2-0023: через сервер Platform 2.0 видимость решает сервер (quality.row_visible, P2-0018),
+            // клиентское «ФИО И объект» отбрасывало свои же проверки. Гость/неподтверждённый — режется всегда.
+            const scopeMode = window.RbiSyncPullPolicy
+                ? window.RbiSyncPullPolicy.clientScopeMode({ serverScoped: !!(window.RBI && window.RBI.qualitySync), dataScope, approved: cloudStatus === 'approved' })
+                : 'client';
+
+            if (scopeMode === 'block') {
                 // БЕЗОПАСНОСТЬ: Гостям и неподтвержденным пользователям запрещено качать чужие проверки
                 q = q.eq('id', 'impossible_id');
+            }
+            else if (scopeMode === 'none') {
+                // сервер уже отдал ровно видимое этому пользователю
             }
             else if (dataScope === 'ownContractor') {
                 const myContrName =
@@ -995,8 +1070,20 @@ window.triggerSync = async function (mode = 'silent') {
 
             // RBI FIX: не грузим все inspection_items/photos одним огромным GET-запросом.
             // Иначе URL становится слишком длинным, API может вернуть 502 Bad Gateway.
-            const cloudItems = await rbiPullRowsByInspectionIds('rbi_inspection_items', ids, 40);
-            const cloudPhotos = await rbiPullRowsByInspectionIds('rbi_inspection_photos', ids, 40);
+            // P2-0024: пачки по 200, до 3 запросов одновременно, страница до 5000 строк (хвост при лимите
+            // сервера не теряется — см. pullPagedByIds); прогресс в процентах для большой загрузки.
+            const _pol = window.RbiSyncPullPolicy || {};
+            const _bs = _pol.PULL_BATCH_SIZE || 40;
+            let _conc = _pol.PULL_CONCURRENCY || 1;
+            const _onThrottle = () => { _conc = 1; }; // сервер перегружен — до конца загрузки по одному запросу
+            const _batchesPerTable = Math.ceil(ids.length / _bs);
+            const _pct = (offset) => (doneN, total) => {
+                if (!_syncProg() || _batchesPerTable < 3 || typeof _syncProg().setDetail !== 'function') return;
+                _syncProg().setDetail('Загрузка истории: ' + Math.min(99, Math.round(((offset + doneN) / (2 * total)) * 100)) + '%');
+            };
+            const cloudItems = await rbiPullRowsByInspectionIds('rbi_inspection_items', ids, _bs, 5000, { concurrency: _conc, onBatchDone: _pct(0), onThrottle: _onThrottle });
+            const cloudPhotos = await rbiPullRowsByInspectionIds('rbi_inspection_photos', ids, _bs, 5000, { concurrency: _conc, onBatchDone: _pct(_batchesPerTable), onThrottle: _onThrottle });
+            if (_syncProg() && typeof _syncProg().setDetail === 'function') _syncProg().setDetail(null);
 
             const itemsMap = {};
             const photosMap = {};
@@ -1041,23 +1128,38 @@ window.triggerSync = async function (mode = 'silent') {
                 }
             }
 
+            // P2-0024: при большой загрузке локальные записи читаются одной выборкой, а не dbGet на каждую.
+            // P2-0025: одна выборка — только при полной загрузке; обычная синхронизация — по нужным id.
+            const _bulk = _pol.useBulkLocalLookup ? _pol.useBulkLocalLookup(!lastPullAt, cloudInspections.length) : cloudInspections.length > 50;
+            const _localLookup = (_bulk && typeof dbGetAll === 'function' && _pol.indexLocalHistory)
+                ? _pol.indexLocalHistory(await dbGetAll('app_history') || [])
+                : null;
+
             for (const h of cloudInspections) {
                 // --- ЗАЩИТА ОТ ПЕРЕЗАПИСИ УДАЛЕННЫХ ИЛИ ОФЛАЙН ИЗМЕНЕНИЙ ---
-                let existingLocal = typeof dbGet === 'function' ? await dbGet('app_history', String(h.id)) : null;
+                let existingLocal = null;
+                if (_localLookup) {
+                    const hit = _localLookup(h.id);
+                    if (hit) {
+                        existingLocal = hit.record;
+                        // Авто-лечение дубликатов (старый ID в виде числа)
+                        if (hit.numericDup) await dbDelete('app_history', Number(h.id));
+                    }
+                } else {
+                    existingLocal = typeof dbGet === 'function' ? await dbGet('app_history', String(h.id)) : null;
 
-                // Авто-лечение дубликатов (если в базе телефона остался старый ID в виде числа)
-                if (!existingLocal && !isNaN(Number(h.id))) {
-                    const numExisting = await dbGet('app_history', Number(h.id));
-                    if (numExisting) {
-                        existingLocal = numExisting;
-                        await dbDelete('app_history', Number(h.id)); // Стираем числовой дубль
+                    // Авто-лечение дубликатов (если в базе телефона остался старый ID в виде числа)
+                    if (!existingLocal && !isNaN(Number(h.id))) {
+                        const numExisting = await dbGet('app_history', Number(h.id));
+                        if (numExisting) {
+                            existingLocal = numExisting;
+                            await dbDelete('app_history', Number(h.id)); // Стираем числовой дубль
+                        }
                     }
                 }
 
-                const localTime = existingLocal ? new Date(existingLocal.updatedAt || existingLocal._deletedAt || 0).getTime() : 0;
-                const cloudTime = new Date(h.updated_at || 0).getTime();
-
-                if (existingLocal && localTime >= cloudTime) {
+                if (_pol.keepLocalOverCloud ? _pol.keepLocalOverCloud(existingLocal, h)
+                    : (existingLocal && new Date(existingLocal.updatedAt || existingLocal._deletedAt || 0).getTime() >= new Date(h.updated_at || 0).getTime())) {
                     // Наша локальная версия новее (например, мы её только что удалили). Пропускаем облачную!
                     continue;
                 }
@@ -1135,7 +1237,9 @@ window.triggerSync = async function (mode = 'silent') {
 
             if (typeof dbForEachCursor === 'function') {
                 const historyList = [];
-                await dbForEachCursor('app_history', (x) => { if (x && !x._deleted) historyList.push(x); });
+                // P2-0024: история в памяти — облегчённая (повторяющиеся строки общим экземпляром, содержимое то же)
+                const _lightH = window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten : (x) => x;
+                await dbForEachCursor('app_history', (x) => { if (x && !x._deleted) historyList.push(_lightH(x)); });
                 window.contractorArray = historyList;
 
                 // <-- ОЧЕНЬ ВАЖНО: обновляем и эталоны
@@ -1143,7 +1247,8 @@ window.triggerSync = async function (mode = 'silent') {
                 await dbForEachCursor('rbi_etalon_acts', (x) => { if (x && !x._deleted) etalonsList.push(x); });
                 window.etalonActsArray = etalonsList;
             } else if (typeof dbGetAll === 'function') {
-                window.contractorArray = (await dbGetAll('app_history') || []).filter(x => !x._deleted);
+                window.contractorArray = (await dbGetAll('app_history') || []).filter(x => !x._deleted)
+                    .map(window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten : (x) => x);
                 window.etalonActsArray = (await dbGetAll('rbi_etalon_acts') || []).filter(x => !x._deleted);
             }
 
@@ -1423,7 +1528,15 @@ window.triggerSync = async function (mode = 'silent') {
 
                         const cloudTime = new Date(obj.updatedAt || obj.updated_at || 0).getTime();
 
-                        if (!localExisting || cloudTime >= localTime || needFullReferencePull) {
+                        // P2-0023: неотправленная местная правка (или удаление) главнее облака — уйдёт следующей
+                        // отправкой. Раньше облако затирало её при cloudTime >= localTime.
+                        const mayOverwrite = window.RbiSyncMergePolicy
+                            ? window.RbiSyncMergePolicy.cloudMayOverwrite({ local: localExisting, cloudTime, localTime, forceReference: needFullReferencePull })
+                            : (!localExisting || cloudTime >= localTime || needFullReferencePull);
+                        if (!mayOverwrite && localExisting && (cloudTime >= localTime || needFullReferencePull)) {
+                            console.log(`[Sync] ${cType.type} ${obj.id}: есть неотправленная правка на устройстве — облако не затирает`);
+                        }
+                        if (mayOverwrite) {
                             if (obj._deleted || obj.is_deleted) {
                                 await dbDelete(cType.store, obj.id);
                                 window[cType.memory] = window[cType.memory].filter(x => String(x.id) !== String(obj.id));
@@ -2161,7 +2274,7 @@ window.triggerSync = async function (mode = 'silent') {
                         }, { onConflict: 'company_id' });
                     if (cPushErr) {
                         console.warn('[Sync] company role-matrix push:', cPushErr.message || cPushErr);
-                        pushErrors++;
+                        pushErrors++; rbiNoteErr(cPushErr);
                         localStorage.setItem('rbi_cloud_dirty', '1');
                     } else if (typeof companySvcPush.markRoleMatrixSynced === 'function') {
                         companySvcPush.markRoleMatrixSynced(updatedAtPush);
@@ -2170,7 +2283,7 @@ window.triggerSync = async function (mode = 'silent') {
                 }
             } catch (e) {
                 console.warn('[Sync] company role-matrix push failed:', e && e.message ? e.message : e);
-                pushErrors++;
+                pushErrors++; rbiNoteErr(e);
             }
 
             // =====================================================
@@ -2205,7 +2318,7 @@ window.triggerSync = async function (mode = 'silent') {
                         }, { onConflict: 'company_id' });
                     if (cPushErr2) {
                         console.warn('[Sync] official templates push:', cPushErr2.message || cPushErr2);
-                        pushErrors++;
+                        pushErrors++; rbiNoteErr(cPushErr2);
                         localStorage.setItem('rbi_cloud_dirty', '1');
                     } else if (typeof companySvcPush2.markOfficialTemplatesSynced === 'function') {
                         companySvcPush2.markOfficialTemplatesSynced(updatedAtPush2);
@@ -2214,7 +2327,7 @@ window.triggerSync = async function (mode = 'silent') {
                 }
             } catch (e) {
                 console.warn('[Sync] official templates push failed:', e && e.message ? e.message : e);
-                pushErrors++;
+                pushErrors++; rbiNoteErr(e);
             }
 
             if (typeof dbForEachCursor === 'function') {
@@ -2235,6 +2348,14 @@ window.triggerSync = async function (mode = 'silent') {
 
                 const status = i.syncStatus || i.sync_status || '';
                 const source = i.source || '';
+
+                // P2-0023: «нужно внимание» (фото нет на устройстве) — доработка 2: повтор по расписанию 2/5/10/30 мин;
+                // после ATTENTION_ASK_USER_AFTER неудач ждём решения пользователя («Отправить без этого фото» в Истории).
+                if (window.RbiSyncRetryPolicy && window.RbiSyncRetryPolicy.isAttention(i)) {
+                    const rpA = window.RbiSyncRetryPolicy;
+                    if (rpA.attentionNeedsUser(i)) return false;
+                    if (!rpA.attentionRetryDue(i, Date.now())) { rbiNoteAttentionRetry(i.syncAttentionRetryAt); return false; }
+                }
 
                 // Уже синхронизированное облачное эхо не отправляем обратно
                 if (source === 'cloud' || status === 'synced') return false;
@@ -2391,7 +2512,41 @@ window.triggerSync = async function (mode = 'silent') {
                         uploadedPhotos[itemId] = uploadedArr;
                     });
 
-                    await Promise.all(photoPromises); // Дожидаемся фоток
+                    // P2-0023: ошибка фото одной проверки не роняет всю синхронизацию.
+                    // Доработка 3: allSettled — обрезаем строки фото только после завершения ВСЕХ загрузок,
+                    // иначе опоздавшие загрузки допишут строки «удержанной» проверки (Promise.all отклоняется на первой ошибке).
+                    const photosBatchBefore = photosBatch.length;
+                    const photoResults = await Promise.allSettled(photoPromises); // Дожидаемся фоток
+                    const photoFails = photoResults.filter(r => r.status === 'rejected').map(r => r.reason);
+                    if (photoFails.length) {
+                        photosBatch.length = photosBatchBefore; // строки фото этой проверки — не отправляем
+                        const rp = window.RbiSyncRetryPolicy;
+                        // сеть/сервер важнее «нет файла»: такая ошибка — просто повтор позже
+                        const photoErr = photoFails.find(e => !(rp && rp.isMissingFileError(e))) || photoFails[0];
+                        if (rp && rp.isMissingFileError(photoErr)) {
+                            console.warn('[Sync] Проверка помечена «нужно внимание» (фото нет на устройстве):', inspectionId, photoErr.message);
+                            // Доработка 2: запоминаем, каких фото нет (для «Отправить без этого фото»), и время повтора.
+                            const missing = [];
+                            photoResults.forEach((r, idx) => {
+                                if (r.status === 'rejected' && rp.isMissingFileError(r.reason)) {
+                                    missing.push({ itemId: String(photoItemIds[idx]), ref: String(r.reason.ref || '') });
+                                }
+                            });
+                            const missingNames = missing.map(m => {
+                                const info = typeof getChecklistItem === 'function' ? getChecklistItem(c.templateKey || '', m.itemId) : null;
+                                return (info && info.n) || ((c.details || {})[m.itemId] || {}).name || ('№ ' + m.itemId);
+                            });
+                            rp.markAttention(c, rp.missingPhotoReason(missingNames));
+                            c.syncMissingPhotos = missing;
+                            rbiNoteAttentionRetry(c.syncAttentionRetryAt);
+                            localHistoryToUpdate.push(c);
+                            syncAttentionCount++;
+                        } else {
+                            console.warn('[Sync] Фото проверки не отправлены, повторим позже:', inspectionId, photoErr && photoErr.message);
+                            pushErrors++; rbiNoteErr(photoErr);
+                        }
+                        continue;
+                    }
 
                     if (storagePathsToRemove.length > 0) {
                         await window.supabaseClient.storage.from('inspection-photos').remove(storagePathsToRemove);
@@ -2431,6 +2586,7 @@ window.triggerSync = async function (mode = 'silent') {
                     }
 
                     // Помечаем, что всё ок (и для живых, и для удаленных!)
+                    if (window.RbiSyncRetryPolicy) window.RbiSyncRetryPolicy.clearAttention(c);
                     c.source = 'cloud'; c.syncStatus = 'synced'; c.sync_status = 'synced';
                     c.syncBlockReason = ''; c.sync_block_reason = ''; c.importedFromBackup = false;
                     c.updatedAt = new Date().toISOString(); c.updated_at = c.updatedAt;
@@ -2471,7 +2627,7 @@ window.triggerSync = async function (mode = 'silent') {
                     if (Array.isArray(contractorArray)) {
                         localHistoryToUpdate.forEach(updatedC => {
                             const idx = contractorArray.findIndex(x => String(x.id) === String(updatedC.id));
-                            if (idx >= 0) contractorArray[idx] = updatedC;
+                            if (idx >= 0) contractorArray[idx] = window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten(updatedC) : updatedC;
                         });
                     }
                 }
@@ -2678,6 +2834,13 @@ window.triggerSync = async function (mode = 'silent') {
                     const tTime = new Date(t.updatedAt || t.updated_at || t.date || t.createdAt || 0).getTime();
                     return tTime === 0 || Number.isNaN(tTime) || tTime >= lastPushTimeTasks;
                 });
+                // P2-0023: задачи «нужно внимание» не шлём, пока пользователь их не изменит.
+                // Доработка 2: с повтором по расписанию (2/5/10/30 мин), как у проверок.
+                if (window.RbiSyncRetryPolicy) tasks = tasks.filter(t => {
+                    if (!window.RbiSyncRetryPolicy.isAttention(t) || window.RbiSyncRetryPolicy.attentionRetryDue(t, Date.now())) return true;
+                    rbiNoteAttentionRetry(t.syncAttentionRetryAt);
+                    return false;
+                });
                 const taskPushRole = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentRole() : 'guest';
 
                 if (taskPushRole === 'engineer') {
@@ -2706,21 +2869,32 @@ window.triggerSync = async function (mode = 'silent') {
                         const batch = tasks.slice(i, i + 50);
 
                         // --- НОВОЕ: Загружаем фото закрытия задачи в облако ---
+                        // P2-0023: задача без файла фото → «нужно внимание», остальные задачи уходят.
+                        const attentionTasks = new Set();
                         for (let task of batch) {
                             if (task.completionPhoto && task.completionPhoto.startsWith('local://')) {
-                                task.completionPhoto = await window.rbiUploadAsset(
-                                    task.completionPhoto,
-                                    'inspection-photos',
-                                    `${pCode}/tasks/${task.id}`,
-                                    'photo'
-                                );
+                                try {
+                                    task.completionPhoto = await window.rbiUploadAsset(
+                                        task.completionPhoto,
+                                        'inspection-photos',
+                                        `${pCode}/tasks/${task.id}`,
+                                        'photo'
+                                    );
+                                } catch (upErr) {
+                                    const rp = window.RbiSyncRetryPolicy;
+                                    if (!(rp && rp.isMissingFileError(upErr))) throw upErr;
+                                    rp.markAttention(task);
+                                    rbiNoteAttentionRetry(task.syncAttentionRetryAt);
+                                    attentionTasks.add(task);
+                                    syncAttentionCount++;
+                                }
                                 if (typeof dbPut === 'function') await dbPut('rbi_tasks', task); // Обновляем локально, чтобы сохранить ссылку
                             }
                         }
-                        // ------------------------------------------------------
+                        const sendBatch = batch.filter(t => !attentionTasks.has(t));
                         // ------------------------------------------------------
 
-                        const upsertData = batch.map(task => ({
+                        const upsertData = sendBatch.map(task => ({
                             id: String(task.id),
                             project_code: pCode,
                             project_canonical_key: task.project_canonical_key || task.project || task.projectName || '',
@@ -2742,13 +2916,15 @@ window.triggerSync = async function (mode = 'silent') {
                             created_at: task.createdAt || task.created_at || new Date().toISOString()
                         }));
 
-                        const { error: taskError } = await window.supabaseClient
+                        const { error: taskError } = upsertData.length === 0 ? { error: null } : await window.supabaseClient
                             .from('rbi_tasks')
                             .upsert(upsertData, { onConflict: 'id' });
 
                         if (taskError) throw taskError;
+                        batch.length = 0; batch.push(...sendBatch);
                         // После успешной отправки задач помечаем локальные ручные задачи как синхронизированные
                         for (const task of batch) {
+                            if (window.RbiSyncRetryPolicy) window.RbiSyncRetryPolicy.clearAttention(task);
                             task.source = 'cloud';
                             task.syncStatus = 'synced';
                             task.sync_status = 'synced';
@@ -2765,7 +2941,15 @@ window.triggerSync = async function (mode = 'silent') {
                 }
             } catch (e) {
                 console.warn("[Sync] Задачи не отправлены:", e.message);
-                if (mode === 'manual') safeToast('⚠️ Задачи не отправлены: ' + e.message.substring(0, 60));
+                pushErrors++; rbiNoteErr(e);
+                // P2-0023: одно и то же сообщение — один раз, с понятной причиной (а не на каждый круг).
+                const rp = window.RbiSyncRetryPolicy;
+                const reason = rp ? rp.humanSyncReason(e) : e.message.substring(0, 60);
+                const key = 'tasks:' + reason;
+                if (mode === 'manual' && (!rp || rp.shouldShowErrorOnce(localStorage.getItem('rbi_sync_error_shown'), key))) {
+                    localStorage.setItem('rbi_sync_error_shown', key);
+                    safeToast('⚠️ Задачи не отправлены: ' + reason);
+                }
             }
 
         }
@@ -2874,7 +3058,19 @@ window.triggerSync = async function (mode = 'silent') {
                         // ИСКЛЮЧЕНИЕ: Бэклог (feedback), так как инженеры могут лайкать чужие идеи!
                         const isAdminPush = window.RBI.services.permissions ? window.RBI.services.permissions.isAdmin() : false;
                         if (!isAdminPush && objectType !== 'feedback') {
+                            const mp = window.RbiSyncMergePolicy;
+                            const permsP = window.RBI.services.permissions;
+                            const assignedP = permsP ? permsP.getAssignedProjects() : [];
                             items = items.filter(obj => {
+                                // P2-0023: совещание — по назначенным объектам (автор в протоколе = поле «Инспектор»,
+                                // не обязан совпадать с ФИО профиля буква в букву). Права окончательно — сервер.
+                                if (objectType === 'meeting' && mp) {
+                                    return mp.meetingPushAllowed(obj, {
+                                        iName,
+                                        inAssigned: (rec) => !!(permsP && typeof permsP.isRecordInAssignedProjects === 'function'
+                                            && permsP.isRecordInAssignedProjects(rec, assignedP))
+                                    });
+                                }
                                 const objOwner = obj.owner || obj.author || obj.inspectorName || obj.engineerName || '';
                                 return !objOwner || objOwner === iName;
                             });
@@ -2966,7 +3162,7 @@ window.triggerSync = async function (mode = 'silent') {
                                 // Проблемный объект остаётся not_synced/local и будет отправлен повторно
                                 // на следующем цикле синхронизации, когда файл уже точно будет на месте.
                                 console.warn(`[Sync] Не удалось отправить объект ${objectType}/${obj.id}, повтор на следующей синхронизации:`, objErr.message || objErr);
-                                pushErrors++;
+                                pushErrors++; rbiNoteErr(objErr);
                             }
                         }
                     };
@@ -3016,6 +3212,7 @@ window.triggerSync = async function (mode = 'silent') {
                     await syncTableData('report_templates', 'userReportTemplates', 'report_template');
                     await syncTableData('app_assistant_kb', 'appAssistantData', 'assistant_kb'); // <-- ОТПРАВКА БАЗЫ ИИ В ОБЛАКО
                     // --- АВТОМАТИЧЕСКАЯ ДЕДУПЛИКАЦИЯ TWI (РЕШЕНИЕ ОФЛАЙН-КОНФЛИКТОВ) ---
+                    // Правило владельца (24.10.2026): на один пункт — одна карта, выживает более ранняя. Не убирать.
                     if (typeof customTwiCards !== 'undefined' && customTwiCards.length > 0) {
                         const twiMap = new Map();
                         for (let i = 0; i < customTwiCards.length; i++) {
@@ -3285,7 +3482,7 @@ window.triggerSync = async function (mode = 'silent') {
                                         blockedSkCount++;
                                     }
 
-                                    pushErrors++;
+                                    pushErrors++; rbiNoteErr(e);
                                     localStorage.setItem('rbi_cloud_dirty', '1');
                                 }
                             }
@@ -3383,7 +3580,7 @@ window.triggerSync = async function (mode = 'silent') {
                                 }
                             } catch (e) {
                                 console.warn('[Sync][Подрядчики] Ошибка отправки contractor_directory:', e);
-                                pushErrors++;
+                                pushErrors++; rbiNoteErr(e);
                                 localStorage.setItem('rbi_cloud_dirty', '1');
                             }
 
@@ -3419,7 +3616,7 @@ window.triggerSync = async function (mode = 'silent') {
                                     }
                                 } catch (e) {
                                     console.warn('[Sync][Подрядчики] Ошибка отправки contracts:', e);
-                                    pushErrors++;
+                                    pushErrors++; rbiNoteErr(e);
                                     localStorage.setItem('rbi_cloud_dirty', '1');
                                 }
                             }
@@ -3456,12 +3653,18 @@ window.triggerSync = async function (mode = 'silent') {
                                 }
                             } catch (e) {
                                 console.warn('[Sync][Подрядчики] Ошибка отправки contractor_aliases:', e);
-                                pushErrors++;
+                                pushErrors++; rbiNoteErr(e);
                                 localStorage.setItem('rbi_cloud_dirty', '1');
                             }
 
                             // Push справочника локаций v2 + планов этажей — только admin (как contractor_directory).
-                            if (STORES.LOCATION_NODES && typeof window.prepareLocationNodeForCloud === 'function') {
+                            // P2-0037 (ТД №194): при входе по почте — только роль со справочником объектов (033c); иначе сервер
+                            // отклоняет узел, ошибка повторяется каждый обмен и останавливает отправку следующих узлов.
+                            const qsLoc = window.RBI && window.RBI.qualitySync;
+                            const locActions = qsLoc && qsLoc.active && Array.isArray(qsLoc.actions) ? qsLoc.actions : null;
+                            const canPushLocations = !locActions || locActions.indexOf('quality.objects.manage') !== -1
+                                || locActions.indexOf('construction.objects.manage') !== -1;
+                            if (canPushLocations && STORES.LOCATION_NODES && typeof window.prepareLocationNodeForCloud === 'function') {
                                 try {
                                     const nodeItems = await dbGetAll(STORES.LOCATION_NODES) || [];
                                     const nodesToPush = nodeItems.filter(n => {
@@ -3511,7 +3714,7 @@ window.triggerSync = async function (mode = 'silent') {
                                     }
                                 } catch (e) {
                                     console.warn('[Sync][Локации] Ошибка отправки location_nodes/floors_v2:', e);
-                                    pushErrors++;
+                                    pushErrors++; rbiNoteErr(e);
                                     localStorage.setItem('rbi_cloud_dirty', '1');
                                 }
                             }
@@ -3576,7 +3779,7 @@ window.triggerSync = async function (mode = 'silent') {
                                 }
                             } catch (e) {
                                 console.warn('[Sync][Подрядчики] Ошибка отправки contractor_normalization_queue:', e);
-                                pushErrors++;
+                                pushErrors++; rbiNoteErr(e);
                                 localStorage.setItem('rbi_cloud_dirty', '1');
                             }
                         }
@@ -3667,7 +3870,7 @@ window.triggerSync = async function (mode = 'silent') {
                                 }
                             } catch (e) {
                                 console.warn('[Sync][Стройконтроль v2] Ошибка отправки construction_defects_v2:', e);
-                                pushErrors++;
+                                pushErrors++; rbiNoteErr(e);
                                 localStorage.setItem('rbi_cloud_dirty', '1');
                             }
                         }
@@ -3776,7 +3979,7 @@ window.triggerSync = async function (mode = 'silent') {
                                 }
                             } catch (e) {
                                 console.warn('[Sync][Стройконтроль v2] Ошибка отправки construction_acceptance_v2:', e);
-                                pushErrors++;
+                                pushErrors++; rbiNoteErr(e);
                                 localStorage.setItem('rbi_cloud_dirty', '1');
                             }
                         }
@@ -3819,7 +4022,7 @@ window.triggerSync = async function (mode = 'silent') {
                                 }
                             } catch (e) {
                                 console.warn('[Sync][Стройконтроль v2] Ошибка отправки construction_units_v2:', e);
-                                pushErrors++;
+                                pushErrors++; rbiNoteErr(e);
                                 localStorage.setItem('rbi_cloud_dirty', '1');
                             }
                         }
@@ -3904,22 +4107,41 @@ window.triggerSync = async function (mode = 'silent') {
             referenceOk = false;
         }
 
-        if (pushErrors === 0 && pullErrors === 0 && referencePullErrors === 0 && referenceOk) {
-            localStorage.setItem('rbi_cloud_dirty', '0');
+        // P2-0023: загрузка и отправка — раздельно. Раньше любая ошибка ставила полную загрузку
+        // и не ставила метку последней загрузки → полный круг каждую минуту и «первый запуск» навсегда.
+        const flags = window.RbiSyncRetryPolicy
+            ? window.RbiSyncRetryPolicy.completionFlags({ pushErrors, transientPushErrors, pullErrors, referencePullErrors, referenceOk })
+            : { pullOk: false, pushOk: false, setLastPull: false, clearForceFullPull: false, dirty: true, pause: true };
+        if (flags.setLastPull) {
             localStorage.setItem('rbi_sync_last_pull_at', doneAt);
             localStorage.setItem('rbi_sync_last_remote_check_at', String(Date.now()));
             localStorage.removeItem('rbi_force_full_pull');
             localStorage.removeItem('rbi_force_remote_poll');
-        } else {
-            localStorage.setItem('rbi_force_full_pull', '1');
-            localStorage.setItem('rbi_cloud_dirty', '1');
-            console.log('[Sync] Pull неполный или с ошибками. Полный pull будет повторён при следующей синхронизации.', {
+        }
+        if (flags.pullOk && flags.pushOk) {
+            localStorage.setItem('rbi_cloud_dirty', '0');
+            localStorage.removeItem('rbi_sync_fail_count');
+            localStorage.removeItem('rbi_sync_retry_after');
+            localStorage.removeItem('rbi_sync_error_shown');
+        } else if (flags.pause) {
+            if (flags.dirty) localStorage.setItem('rbi_cloud_dirty', '1');
+            rbiScheduleSyncRetryOnce();
+            console.log('[Sync] Есть ошибки — повтор с паузой, без полной загрузки.', {
                 pushErrors,
+                transientPushErrors,
                 pullErrors,
                 referencePullErrors,
                 referenceOk
             });
+        } else {
+            // Сервер отклонил отдельные записи (права/данные): они остаются неотправленными/«нет прав»
+            // и уйдут со следующей обычной синхронизацией; паузы и круга каждую минуту нет.
+            localStorage.setItem('rbi_cloud_dirty', '0');
+            localStorage.removeItem('rbi_sync_fail_count');
+            localStorage.removeItem('rbi_sync_retry_after');
+            console.log('[Sync] Сервер отклонил отдельные записи — без паузы для остальных.', { pushErrors });
         }
+        if (syncAttentionCount > 0) console.warn('[Sync] Записей «нужно внимание»:', syncAttentionCount);
         // =====================================================
         // 10. АВТО-ОЧИСТКА УДАЛЕННЫХ ЗАПИСЕЙ И ФАЙЛОВ ИЗ ПАМЯТИ
         // =====================================================
@@ -3997,6 +4219,10 @@ window.triggerSync = async function (mode = 'silent') {
                 if (typeof window.rbi_practicesData !== 'undefined') extractFiles(window.rbi_practicesData);
                 if (typeof window.rbi_meetingsData !== 'undefined') extractFiles(window.rbi_meetingsData);
                 if (typeof reportsArray !== 'undefined') extractFiles(reportsArray);
+                // P2-0023: фото черновика текущей проверки ещё не в истории — не мусор.
+                if (typeof PhotoManager !== 'undefined' && typeof PhotoManager.collectDraftPhotoRefs === 'function') {
+                    (await PhotoManager.collectDraftPhotoRefs()).forEach((r) => usedPhotos.add(r));
+                }
 
                 let orphanPhotosDeleted = 0;
                 // Лёгкие дескрипторы (только id) — dbDelete идёт после закрытия курсора,
@@ -4330,6 +4556,7 @@ window.triggerSync = async function (mode = 'silent') {
             hasChanges: hasChanges,
             pulledChecks: pulledChecks,
             totalPushed: totalPushed,
+            startedAt: syncStartedAt,
             activeTabId: activeSection ? activeSection.id : null
         };
         if (window.RBI && window.RBI.events && typeof window.RBI.events.emit === 'function') {
@@ -4340,6 +4567,7 @@ window.triggerSync = async function (mode = 'silent') {
     } catch (e) {
         console.error("[Sync] Ошибка:", e);
         pushErrors++;
+        rbiScheduleSyncRetryOnce(); // P2-0023: не повторять каждую минуту (доработка 5: не дважды за проход)
         const errMsg = e.message ? e.message.substring(0, 80) : 'Сбой сети';
         if (_syncProg()) {
             _syncProg().fail({ summary: 'Ошибка синхронизации', detail: errMsg, hideAfterMs: 3500 });

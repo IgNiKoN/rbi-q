@@ -15,6 +15,13 @@ import {
     assignFloorPointNumbers
 } from '../shared/plan-pin-label.js';
 import { openHistoryPlanViewer } from '../audit/features/quality-plan-pin.js';
+import {
+    histCollator as _histCollator,
+    contractorNameOf as _contractorNameOf,
+    workTypeNameOf as _workTypeNameOf,
+    avgFinalUrk as _avgFinalUrk,
+    avgUrkStatusCls as _avgUrkStatusCls
+} from './history.group.js';
 
 let _ctx = null;
 /** Cache floorId → Map(id→num) for one History render pass. */
@@ -272,20 +279,8 @@ function _escAttr(s) {
         .replace(/>/g, '&gt;');
 }
 
-function _histCollator() {
-    return new Intl.Collator('ru');
-}
-
 function _projectNameOf(item) {
     return (item && item.projectName) || _t('quality.history.fallback.no_project', 'Без объекта');
-}
-
-function _contractorNameOf(item) {
-    return (item && item.contractorName) || _t('quality.history.fallback.unspecified', 'Не указан');
-}
-
-function _workTypeNameOf(item) {
-    return (item && item.templateTitle) || _t('quality.history.fallback.unknown_work', 'Неизвестный вид работ');
 }
 
 function _filterHistoryRecords(allRecords) {
@@ -785,7 +780,12 @@ function _renderContractorBlockHtml(safeGroupName, cName, cIndex, workTypesMap) 
     return html;
 }
 
-function _renderProjectGroupHtml(pName, contractorsMap) {
+/**
+ * P2-0024: lazy=true — тело свёрнутого объекта не рисуется (заголовок, счётчики и УрК — как обычно);
+ * подрядчики/виды работ/строки дорисовываются при первом раскрытии (_histMaterializeProject)
+ * из тех же отфильтрованных данных. На 3000 проверок это −90% узлов «Истории».
+ */
+function _renderProjectGroupHtml(pName, contractorsMap, lazy) {
     const safeGroupName = _nextHistGroupId();
     const collator = _histCollator();
     const contractorNames = Object.keys(contractorsMap).sort(collator.compare);
@@ -806,13 +806,7 @@ function _renderProjectGroupHtml(pName, contractorsMap) {
 
     let groupHtml = `
         <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[14px] shadow-sm mb-2 overflow-hidden" data-hist-project="${pEsc}">
-            <div class="flex justify-between items-center p-2.5 cursor-pointer hover:bg-[var(--hover-bg)] active:bg-[var(--hover-bg)] transition-colors select-none rounded-t-[14px]" onclick="
-                const body = document.getElementById('${safeGroupName}');
-                const icon = this.querySelector('.chevron-icon');
-                if (!body) return;
-                const open = body.classList.toggle('is-open');
-                if (icon) icon.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
-            ">
+            <div class="flex justify-between items-center p-2.5 cursor-pointer hover:bg-[var(--hover-bg)] active:bg-[var(--hover-bg)] transition-colors select-none rounded-t-[14px]" onclick="if (window.rbiHistToggleProject) window.rbiHistToggleProject(this);">
                 <div class="flex items-center gap-2.5 min-w-0 pr-2">
                     <div class="w-8 h-8 bg-brand-soft text-brand rounded-[10px] flex items-center justify-center shrink-0 border border-brand-soft">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
@@ -829,15 +823,80 @@ function _renderProjectGroupHtml(pName, contractorsMap) {
                 </div>
             </div>
             
-            <div id="${safeGroupName}" class="rbi-acc min-w-0" data-hist-project-body>
+            <div id="${safeGroupName}" class="rbi-acc min-w-0" data-hist-project-body${lazy ? ' data-hist-lazy="1"' : ''}>
                 <div class="rbi-acc-inner">
                     <div class="hist-project-list border-t border-[var(--card-border)] bg-surface p-2 min-w-0 overflow-x-hidden">`;
 
-    contractorNames.forEach((cName, cIndex) => {
-        groupHtml += _renderContractorBlockHtml(safeGroupName, cName, cIndex, contractorsMap[cName]);
-    });
+    if (!lazy) {
+        contractorNames.forEach((cName, cIndex) => {
+            groupHtml += _renderContractorBlockHtml(safeGroupName, cName, cIndex, contractorsMap[cName]);
+        });
+    }
     groupHtml += `</div></div></div></div>`;
     return groupHtml;
+}
+
+/** P2-0024: дорисовать тело объекта, отложенное при render() (см. _renderProjectGroupHtml lazy). */
+function _histMaterializeProject(card) {
+    const pBody = card && card.querySelector('[data-hist-project-body]');
+    if (!pBody || pBody.getAttribute('data-hist-lazy') !== '1') return false;
+    // P2-0025: история в памяти заменена синхронизацией — сначала перестроить весь список (тело = актуальный список)
+    if (HistoryState.refreshFromMemoryIfStale()) {
+        HistoryRender.render();
+        return false;
+    }
+    pBody.removeAttribute('data-hist-lazy');
+    const pName = card.getAttribute('data-hist-project');
+    const contractorsMap = {};
+    _filterHistoryRecords(HistoryState.allRecords).forEach((item) => {
+        if (_projectNameOf(item) !== pName) return;
+        const cName = _contractorNameOf(item);
+        const tTitle = _workTypeNameOf(item);
+        if (!contractorsMap[cName]) contractorsMap[cName] = {};
+        if (!contractorsMap[cName][tTitle]) contractorsMap[cName][tTitle] = [];
+        contractorsMap[cName][tTitle].push(item);
+    });
+    const host = _histProjectListHost(pBody);
+    if (!host) return false;
+    const safeGroupName = pBody.id || _nextHistGroupId();
+    host.innerHTML = Object.keys(contractorsMap).sort(_histCollator().compare)
+        .map((cName, cIndex) => _renderContractorBlockHtml(safeGroupName, cName, cIndex, contractorsMap[cName]))
+        .join('');
+    HistoryRender._autoLoadPaused = false;
+    if (!HistoryRender._sentinelObserver) HistoryRender._observeLoadSentinel();
+    return true;
+}
+
+/**
+ * Раскрыть/свернуть объект по нажатию на шапку. P2-0025 доработка 1: если дорисовка перестроила
+ * устаревший список, шапка уже отсоединена — действовать на карточку того же объекта в новом списке.
+ */
+function _histToggleProject(header) {
+    let card = header && header.parentElement;
+    if (!card) return;
+    const pName = card.getAttribute('data-hist-project');
+    _histMaterializeProject(card);
+    if (!card.isConnected) {
+        card = _findHistCard(document.getElementById('history-list'), pName);
+        if (!card) return;
+        _histMaterializeProject(card);
+    }
+    const head = card.firstElementChild;
+    const body = Array.from(card.children).find((el) => el.hasAttribute('data-hist-project-body'));
+    if (!body) return;
+    const icon = head && head.querySelector('.chevron-icon');
+    const open = body.classList.toggle('is-open');
+    if (icon) icon.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function _histMaterializeAllProjects() {
+    const listDiv = document.getElementById('history-list');
+    if (!listDiv) return 0;
+    // P2-0025 доработка 1: устаревший список — один раз перестроить, затем дорисовать уже новые карточки
+    if (HistoryState.refreshFromMemoryIfStale()) HistoryRender.render();
+    let n = 0;
+    listDiv.querySelectorAll('[data-hist-project]').forEach((card) => { if (_histMaterializeProject(card)) n++; });
+    return n;
 }
 
 function _histAccIsOpen(el) {
@@ -1204,31 +1263,6 @@ function _getDocumentaryScore(item) {
     return window.getDocumentaryScore(item.state, flatList);
 }
 
-// Средний итоговый УрК по списку проверок (для свёрнутых заголовков
-// объекта/подрядчика). null — если ни у одной записи нет metrics.final.
-function _avgFinalUrk(items) {
-    let sum = 0;
-    let n = 0;
-    for (let i = 0; i < items.length; i++) {
-        const m = items[i] && items[i].metrics;
-        if (m && m.final !== undefined && m.final !== null) {
-            sum += Number(m.final) || 0;
-            n++;
-        }
-    }
-    if (!n) return null;
-    return Math.round(sum / n);
-}
-
-// Класс цветного status-tag по порогам той же шкалы, что и у отдельной
-// проверки (math.utils.js: ≥85 зелёный, 70–84 жёлтый, <70 красный).
-function _avgUrkStatusCls(avg) {
-    if (avg === null || avg === undefined) return 'tag-blue';
-    if (avg < 70) return 'tag-red';
-    if (avg >= 85) return 'tag-green';
-    return 'tag-yellow';
-}
-
 // Приватная функция — перенесена из history.legacy.js (изначально app.js, строка 3971).
 // Генерирует SVG-бейдж статуса синхронизации для записи истории.
 function getSyncBadgeHtml(item) {
@@ -1243,6 +1277,17 @@ function getSyncBadgeHtml(item) {
         var reason = item.syncBlockReason || item.sync_block_reason || _t('quality.history.sync.blocked_default', 'Отправка запрещена');
         var toastMsg = _t('quality.history.sync.reason_prefix', 'Причина: {reason}', { reason: reason });
         return '<button onclick="event.stopPropagation(); showToast(\'' + String(toastMsg).replace(/'/g, "\\'") + '\')" class="px-1.5 py-0.5 rounded bg-danger-soft text-danger border border-danger text-rbi-caption font-bold uppercase ml-1 flex items-center shadow-sm">' + iconBlocked + _t('quality.history.sync.blocked_badge', 'Заблок.') + '</button>';
+    }
+    // P2-0023 доработка 2: «нужно внимание» — фото пункта нет на устройстве. Пока идут автоповторы —
+    // жёлтая плашка с причиной; после ATTENTION_ASK_USER_AFTER неудач — выбор «Отправить без этого фото».
+    if (syncStatus === 'needs_attention') {
+        var rpA = window.RbiSyncRetryPolicy;
+        var attReason = item.syncBlockReason || item.sync_block_reason || _t('quality.history.sync.attention_default', 'Не отправлено: фото пункта не найдено на устройстве');
+        var askUser = rpA && rpA.attentionNeedsUser(item);
+        var attClick = askUser
+            ? 'window.rbiHistoryResolveAttention(\'' + String(item.id).replace(/['"<>\\]/g, '') + '\')'
+            : 'showToast(\'' + String(attReason + '. ' + _t('quality.history.sync.attention_retry', 'Повторим автоматически.')).replace(/\\/g, '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;') + '\')';
+        return '<button onclick="event.stopPropagation(); ' + attClick + '" title="' + String(attReason).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '" class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-200 text-rbi-caption font-bold uppercase ml-1 flex items-center shadow-sm">' + iconBlocked + _t('quality.history.sync.attention_badge', 'Не отпр.') + '</button>';
     }
     if (source === 'cloud' || syncStatus === 'synced') {
         return '<span class="px-1.5 py-0.5 rounded bg-green-50 text-green-600 border border-green-200 text-rbi-caption font-bold uppercase ml-1 flex items-center shadow-sm">' + iconCloud + '</span>';
@@ -1277,6 +1322,8 @@ export const HistoryRender = {
         const emptyMsg = document.getElementById('hist-empty-msg');
         const countEl = document.getElementById('hist-count-total');
         if (!listDiv) return;
+        // P2-0024: история уже в памяти — список из неё (все записи периода, без второй копии из базы)
+        if (typeof HistoryState.useMemoryHistoryIfReady === 'function') HistoryState.useMemoryHistoryIfReady();
 
         // Preserve open Object/Contractor accordions across full re-render
         // (sync dirty path, filters) — same idea as Tasks UI restore.
@@ -1314,7 +1361,7 @@ export const HistoryRender = {
         });
 
         const groupKeys = Object.keys(grouped).sort(_histCollator().compare);
-        let html = groupKeys.map((pName) => _renderProjectGroupHtml(pName, grouped[pName])).join('');
+        let html = groupKeys.map((pName) => _renderProjectGroupHtml(pName, grouped[pName], !expanded.projects.has(pName))).join('');
 
         if (HistoryState.pageHasMore) {
             html += `<button id="load-more-history-page-btn" onclick="window.loadMoreHistoryPage()" class="w-full bg-brand-soft text-brand py-3 mt-1 mb-2 rounded-xl text-rbi-caption font-black uppercase tracking-widest active:scale-95 transition-colors border border-brand shadow-sm">
@@ -1325,6 +1372,9 @@ export const HistoryRender = {
 
         listDiv.innerHTML = html;
         _restoreExpandedHistory(listDiv, expanded);
+        // P2-0024: все объекты свёрнуты — список не растёт от догрузки, автодогрузка ждёт раскрытия объекта
+        // (как и раньше, при открытии загружена только первая порция; кнопка «Загрузить…» работает всегда).
+        HistoryRender._autoLoadPaused = expanded.projects.size === 0;
         HistoryRender._observeLoadSentinel();
     },
 
@@ -1394,7 +1444,13 @@ export const HistoryRender = {
         Object.keys(byProject).forEach((pName) => {
             let card = _findHistCard(listDiv, pName);
             if (!card) {
-                _insertProjectCardSorted(listDiv, _renderProjectGroupHtml(pName, byProject[pName]), pName);
+                _insertProjectCardSorted(listDiv, _renderProjectGroupHtml(pName, byProject[pName], true), pName);
+                touchedProjects.add(pName);
+                return;
+            }
+            // P2-0024: тело объекта ещё не нарисовано — строки появятся при раскрытии, здесь только счётчики.
+            const lazyBody = card.querySelector('[data-hist-project-body][data-hist-lazy="1"]');
+            if (lazyBody) {
                 touchedProjects.add(pName);
                 return;
             }
@@ -1435,11 +1491,25 @@ export const HistoryRender = {
 
         const sentinel = document.getElementById('history-load-sentinel');
         if (!sentinel || typeof IntersectionObserver !== 'function') return;
+        if (HistoryRender._autoLoadPaused) return;
 
         const observer = new IntersectionObserver((entries) => {
             const isVisible = entries.some(e => e.isIntersecting);
             if (isVisible && HistoryState.pageHasMore && !HistoryState.isLoadingPage) {
-                window.loadMoreHistoryPage();
+                // P2-0024: свёрнутые объекты не растут от догрузки (меняются только счётчики) — если список
+                // не стал длиннее, автодогрузку останавливаем, иначе она подтянула бы в память всю историю.
+                // Раскрытие объекта включает её снова (_histMaterializeProject); кнопка «Загрузить…» остаётся.
+                const listDiv = document.getElementById('history-list');
+                const before = listDiv ? listDiv.scrollHeight : 0;
+                Promise.resolve(window.loadMoreHistoryPage()).then(() => {
+                    if (listDiv && listDiv.scrollHeight <= before) {
+                        HistoryRender._autoLoadPaused = true;
+                        if (HistoryRender._sentinelObserver) {
+                            HistoryRender._sentinelObserver.disconnect();
+                            HistoryRender._sentinelObserver = null;
+                        }
+                    }
+                }).catch(() => { /* ignore */ });
             }
         }, { root: null, rootMargin: '600px 0px 0px 0px', threshold: 0 });
 
@@ -1626,6 +1696,9 @@ if (typeof window !== 'undefined') {
     // Прокси для обратной совместимости: inline-обработчики index.html
     // и внешние вызовы из game.js/export.js/sync.js используют глобальные имена.
     window.renderHistoryTab = HistoryRender.render;
+    window.rbiHistMaterializeProject = _histMaterializeProject;
+    window.rbiHistMaterializeAllProjects = _histMaterializeAllProjects;
+    window.rbiHistToggleProject = _histToggleProject;
     window.showHistoryDetail = HistoryRender.renderDetail;
     window.applyHistoryFilters = HistoryRender.applyFilters;
     window.updateAllDynamicFilters = HistoryRender.updateFilters;

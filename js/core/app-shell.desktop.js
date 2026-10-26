@@ -30,6 +30,15 @@
   }
 
   function modeLabel(modeId) {
+    // Модуль платформы (window.RBI.platformNav): название задаёт сам модуль
+    if (modeId === 'platform') {
+      var pn = window.RBI && window.RBI.platformNav;
+      return (pn && pn.title) || '';
+    }
+    // P2-0013: вошедшему почтой режимы старого Quality не показываются (модуль не открыт — без названия)
+    var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+    if (sh && typeof sh.platformEntryMode === 'function' && sh.platformEntryMode() === 'email'
+        && !(typeof sh.legacyModuleAllowed === 'function' && sh.legacyModuleAllowed(modeId))) return '';
     var key = MODE_LABEL_KEYS[modeId];
     if (!key) return modeId || '';
     return _t(key, MODE_LABEL_FALLBACKS[modeId] || modeId || '');
@@ -82,6 +91,9 @@
 
     setModeChip(modeId);
     syncDemoExitPlacement();
+    // P2-0021: числа на пунктах меню — после перерисовки нижнего таббара и nav2
+    var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+    if (sh && typeof sh.paintNavBadges === 'function') sh.paintNavBadges();
   }
 
   /** Демо-выход: на ≥1280 — в шапке nav2 рядом с названием модуля; иначе fixed FAB. */

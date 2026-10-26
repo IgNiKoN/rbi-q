@@ -54,8 +54,10 @@
             return window.callAI(messages, options);
         },
 
-        /* Активен ли AI в настройках приложения */
+        /* Активен ли AI в настройках приложения (P2-0031: через settings.get — учитывает выключенный у компании модуль «ИИ-помощник») */
         isEnabled: function () {
+            var svc = window.RBI && window.RBI.services && window.RBI.services.settings;
+            if (svc && typeof svc.get === 'function') return !!svc.get('aiEnabled');
             return (window.appSettings && window.appSettings.aiEnabled) || false;
         },
 

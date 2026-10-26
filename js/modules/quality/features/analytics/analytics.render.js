@@ -22,6 +22,7 @@ import {
     formatRiskInsightDisplayHtml,
     isAutoRiskInsightText
 } from './analytics.risk-insight.js';
+import { reportKindOf, reportKindLabel, orderKindGroups, REPORT_KIND_OTHER } from '../reports/report-kind.js';
 
 function _t(key, fallback, vars) {
   try {
@@ -39,27 +40,6 @@ function _t(key, fallback, vars) {
   return fallback;
 }
 
-function _reportDocKindLabel(kind) {
-  var map = {
-    'Протокол совещания': 'quality.analytics.report.kind_protocol',
-    'Практика': 'quality.analytics.report.kind_practice',
-    'Воркшоп': 'quality.analytics.report.kind_workshop',
-    'Инструктаж': 'quality.analytics.report.kind_briefing',
-    'КС-2': 'quality.analytics.report.kind_ks2',
-    'Акт-эталон': 'quality.analytics.report.kind_act_etalon',
-    'Дашборд СК': 'quality.analytics.report.kind_sk_dash',
-    'График СМР': 'quality.analytics.report.kind_smr',
-    'День качества': 'quality.analytics.report.kind_qday',
-    'Плакат качества': 'quality.analytics.report.kind_poster',
-    'Отчёт по подрядчику': 'quality.analytics.report.kind_contractor',
-    'Сводный отчёт': 'quality.analytics.report.kind_summary',
-    'Прочее': 'quality.analytics.report.kind_other',
-    'FMEA': 'quality.analytics.report.kind_fmea',
-    'TWI': 'quality.analytics.report.kind_twi'
-  };
-  var key = map[kind];
-  return key ? _t(key, kind) : kind;
-}
 
 
 function _getSetting(key) {
@@ -88,6 +68,25 @@ function _contractorMetricsCached(groupKey, cData) {
         if (matched) return matched;
     }
     return getContractorMetrics(cData, _templates().getUserTemplates());
+}
+
+/**
+ * P2-0024: отрисовать содержимое свёрнутого <details> при первом раскрытии (уже открытый — сразу).
+ * Блок пересоздаётся при каждой перерисовке вкладки, поэтому «один раз» — на экземпляр блока.
+ */
+function _drawWhenOpen(detailsEl, draw) {
+    let drawn = false;
+    const drawOnce = () => { if (drawn) return; drawn = true; draw(); };
+    if (!detailsEl) return drawOnce;
+    if (detailsEl.open) { drawOnce(); return drawOnce; }
+    const onToggle = () => {
+        if (!detailsEl.open) return;
+        detailsEl.removeEventListener('toggle', onToggle);
+        drawOnce();
+    };
+    detailsEl.addEventListener('toggle', onToggle);
+    // Возвращаем «нарисовать сейчас» — ПК-раскладка раскрывает блоки сама и рисует сразу.
+    return drawOnce;
 }
 
 function _getSkRecords() {
@@ -496,14 +495,56 @@ window.analyticsMarkTabPainted = analyticsMarkTabPainted;
 const _ikoMemo = new Map();
 const IKO_MEMO_MAX = 48;
 
+// P2-0024 доработка 1 (ревью №5): ключ — id И время изменения каждой записи (правка проверки с теми же id
+// даёт новый ключ), сжатый в короткий хэш (раньше ключом была строка всех id — до ≈ 400 КБ на ключ).
 function _ikoIdsSignature(arr) {
     if (!arr || !arr.length) return '0';
-    let s = String(arr.length) + ':';
+    let h1 = 0xdeadbeef ^ arr.length, h2 = 0x41c6ce57 ^ arr.length;
+    const mix = (str) => {
+        for (let k = 0; k < str.length; k++) {
+            const ch = str.charCodeAt(k);
+            h1 = Math.imul(h1 ^ ch, 2654435761);
+            h2 = Math.imul(h2 ^ ch, 1597334677);
+        }
+    };
     for (let i = 0; i < arr.length; i++) {
-        s += (arr[i] && arr[i].id) ? String(arr[i].id) : String(i);
-        s += ',';
+        const r = arr[i];
+        mix((r && r.id) ? String(r.id) : String(i));
+        mix('|' + String((r && (r.updatedAt || r.updated_at)) || '') + ',');
     }
-    return s;
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return arr.length + ':' + (h2 >>> 0).toString(36) + (h1 >>> 0).toString(36);
+}
+
+/**
+ * P2-0024: копия выборки, отсортированная по дате (новые сверху) устойчивой сортировкой.
+ * getContractorMetrics сортирует каждую группу так же (new Date в каждом сравнении); на уже
+ * отсортированном входе устойчивая сортировка почти не сравнивает, а итоговый порядок (и метрики)
+ * тот же — и при одинаковых датах. Есть неразборчивая дата — исходный порядок (ничего не меняем).
+ */
+function _byDateDescStable(arr) {
+    if (!Array.isArray(arr) || arr.length < 2) return arr;
+    const keyed = new Array(arr.length);
+    for (let i = 0; i < arr.length; i++) {
+        const t = new Date(arr[i] && arr[i].date).getTime();
+        if (!Number.isFinite(t)) return arr;
+        keyed[i] = [t, arr[i]];
+    }
+    keyed.sort((a, b) => b[0] - a[0]);
+    return keyed.map(k => k[1]);
+}
+
+// P2-0024: средний рейтинг подрядчиков по выборке — «Подрядчики» и «Сводка» считают его по одной и той же
+// выборке; в пределах одного фильтра/данных второй раз берётся из кэша (сброс — вместе с _ikoMemo).
+const _avgRatingsMemo = new Map();
+function _avgContractorRatingsCached(arr) {
+    const sig = _ikoIdsSignature(arr);
+    if (_avgRatingsMemo.has(sig)) return _avgRatingsMemo.get(sig);
+    const r = window.avgContractorRatingsFromChecks(_byDateDescStable(arr));
+    _avgRatingsMemo.set(sig, r);
+    while (_avgRatingsMemo.size > IKO_MEMO_MAX) _avgRatingsMemo.delete(_avgRatingsMemo.keys().next().value);
+    return r;
 }
 
 function _getObjectIntegralMetricsCached(data) {
@@ -513,7 +554,7 @@ function _getObjectIntegralMetricsCached(data) {
     try { templates = _templates().getUserTemplates() || {}; } catch (_) { templates = {}; }
     const sig = _ikoIdsSignature(data);
     if (_ikoMemo.has(sig)) return _ikoMemo.get(sig);
-    const metrics = getObjectIntegralMetrics(data, templates);
+    const metrics = getObjectIntegralMetrics(_byDateDescStable(data), templates);
     _ikoMemo.set(sig, metrics);
     while (_ikoMemo.size > IKO_MEMO_MAX) {
         const oldest = _ikoMemo.keys().next().value;
@@ -538,6 +579,7 @@ function clearAnalyticsViewRuntimeCaches() {
     _photoThumbCache.clear();
     _clearGalleryHydrateQueue();
     _ikoMemo.clear();
+    _avgRatingsMemo.clear();
     _lazyContractorsGalleryData = null;
     _lazyContractorsGalleryFilled = false;
     _lazyDetailGalleryFilled = false;
@@ -557,67 +599,38 @@ window.clearAnalyticsViewRuntimeCaches = clearAnalyticsViewRuntimeCaches;
 // =========================================================================
 const REPORTS_GROUP_PAGE_SIZE = 12;
 
-// Fallback-классификация вида документа по title — для отчётов, сохранённых
-// ДО появления поля doc_kind (не мигрируются по решению плана, см.
-// current_plan.md), чтобы чипсы работали и на старых записях, а не только на
-// новых. Текстуально идентична classifyDocKind() из reports.actions.js —
-// модули не импортируют друг друга (по тому же принципу, что и дублированная
-// getSyncBadgeHtml в history.render.js/analytics.render.js), сохранённое поле
-// r.doc_kind всегда в приоритете, эта функция — только резерв для его отсутствия.
-function _classifyDocKindFallback(title) {
-    const t = title || '';
-    if (t.includes('Протокол')) return 'Протокол совещания';
-    if (t.includes('FMEA')) return 'FMEA';
-    if (t.includes('TWI')) return 'TWI';
-    if (t.includes('Практика')) return 'Практика';
-    if (t.includes('Воркшоп')) return 'Воркшоп';
-    if (t.includes('Инструктаж')) return 'Инструктаж';
-    if (t.includes('КС-2')) return 'КС-2';
-    if (t.includes('Акт-Эталон')) return 'Акт-эталон';
-    if (t.includes('Дашборд СК')) return 'Дашборд СК';
-    if (t.includes('График СМР')) return 'График СМР';
-    if (t.includes('День Качества')) return 'День качества';
-    if (t.includes('Плакат Качества')) return 'Плакат качества';
-    if (t.includes('Паспорта Подрядчиков') || t.includes('Список подрядчиков') || t.includes('Срез:') || t.includes('Отчет для')) return 'Отчёт по подрядчику';
-    if (t.includes('Сводка для Руководства') || t.includes('Полный отчет по объекту') || t.includes('База проверок')) return 'Сводный отчёт';
-    return 'Прочее';
-}
-
-function _reportDocKind(r) {
-    return r.doc_kind || _classifyDocKindFallback(r.title);
-}
-
-// Выбранный чип вида документа ('ALL' или конкретное значение doc_kind).
-// Естественно теряется при перезагрузке страницы — не персистится, как и
-// currentHistoryViewMode/остальной ephemeral UI-стейт этой вкладки.
-let _reportsActiveDocKindFilter = 'ALL';
 
 // Сохраняет раскрытые аккордеоны объектов до перерисовки списка (по образцу
 // _captureExpandedHistory/_restoreExpandedHistory в history.render.js, но
 // без второго уровня — у отчётов группировка только по объекту).
+
+// P2-0039: раскрытые группы отчётов (объект `p:…` и тип внутри объекта `p:…|k:…`) — по data-ключам.
 function _captureExpandedReports(listDiv) {
-    const projects = new Set();
-    if (!listDiv) return projects;
-    [...listDiv.children].forEach((card) => {
-        const body = card.querySelector('[id^="reports-group-"]');
-        if (!body || body.classList.contains('hidden')) return;
-        const pName = card.querySelector('.reports-group-title')?.textContent?.trim();
-        if (pName) projects.add(pName);
+    const keys = new Set();
+    if (!listDiv) return keys;
+    listDiv.querySelectorAll('[data-rep-grp-body]').forEach((body) => {
+        if (!body.classList.contains('hidden')) keys.add(body.getAttribute('data-rep-grp-body'));
     });
-    return projects;
+    return keys;
 }
 
-function _restoreExpandedReports(listDiv, expandedProjects) {
-    if (!listDiv || !expandedProjects || expandedProjects.size === 0) return;
-    [...listDiv.children].forEach((card) => {
-        const pName = card.querySelector('.reports-group-title')?.textContent?.trim();
-        if (!pName || !expandedProjects.has(pName)) return;
-        const body = card.querySelector('[id^="reports-group-"]');
-        if (!body) return;
-        body.classList.remove('hidden');
-        const icon = card.querySelector('.chevron-icon');
-        if (icon) icon.style.transform = 'rotate(180deg)';
+function _setReportsGroupOpen(body, open) {
+    if (!body) return;
+    body.classList.toggle('hidden', !open);
+    const head = body.previousElementSibling;
+    const icon = head && head.querySelector('.chevron-icon');
+    if (icon) icon.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function _restoreExpandedReports(listDiv, expandedKeys) {
+    if (!listDiv || !expandedKeys || expandedKeys.size === 0) return;
+    listDiv.querySelectorAll('[data-rep-grp-body]').forEach((body) => {
+        if (expandedKeys.has(body.getAttribute('data-rep-grp-body'))) _setReportsGroupOpen(body, true);
     });
+}
+
+function _escAttr(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // Разрешает photoRef в реальный src, пригодный для ЗАГРУЗКИ В CANVAS
@@ -1467,6 +1480,7 @@ export const AnalyticsRender = {
             _analyticsRenderGen += 1;
             _clearGalleryHydrateQueue();
             _ikoMemo.clear();
+            _avgRatingsMemo.clear();
             _lazyContractorsGalleryFilled = false;
             _lazyContractorsGalleryData = null;
             _lazyDetailGalleryFilled = false;
@@ -1750,7 +1764,7 @@ export const AnalyticsRender = {
 
         // KPI УрК/док/надёжность — среднее по подрядчикам (окно ≤15), как в печати One-Pager.
         const kpiRatings = (typeof window.avgContractorRatingsFromChecks === 'function')
-            ? window.avgContractorRatingsFromChecks(data)
+            ? _avgContractorRatingsCached(data)
             : { avgUrk: 0, avgDoc: null, avgReliability: null, relN: 0 };
         const avgUrkProd = kpiRatings.avgUrk;
         const avgDocProd = kpiRatings.avgDoc;
@@ -1860,7 +1874,7 @@ export const AnalyticsRender = {
                 </div>
             </details>
 
-            <details class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm mb-3 group [&_summary::-webkit-details-marker]:hidden">
+            <details id="analytics-dynamics-details" class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm mb-3 group [&_summary::-webkit-details-marker]:hidden">
                 <summary class="p-3 font-bold text-rbi-label text-[var(--text-muted)] uppercase tracking-widest cursor-pointer flex justify-between items-center hover:bg-[var(--hover-bg)] transition-colors rounded-xl">
                     <span class="flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
@@ -1884,7 +1898,7 @@ export const AnalyticsRender = {
                 </div>
             </details>
 
-            <details class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm mb-3 group [&_summary::-webkit-details-marker]:hidden">
+            <details id="analytics-causes-details" class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm mb-3 group [&_summary::-webkit-details-marker]:hidden">
                 <summary class="p-3 font-bold text-rbi-label text-[var(--text-muted)] uppercase tracking-widest cursor-pointer flex justify-between items-center hover:bg-[var(--hover-bg)] transition-colors rounded-xl">
                     <span class="flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -1937,17 +1951,24 @@ export const AnalyticsRender = {
         // Progressive: сначала список, графики — после paint с проверкой gen.
         AnalyticsRender.renderContractorsListOnly(data);
 
-        const chartGen = _analyticsRenderGen;
-        setTimeout(() => {
-            if (chartGen !== _analyticsRenderGen) return;
+        // P2-0024: графики свёрнутых блоков «Динамика» и «Причины и Сравнение» рисуются при раскрытии
+        // (раньше — всегда через 120 мс: ≈ 100 мс работы на каждую смену периода/фильтра на 3000 проверок).
+        // P2-0025 (ТД №165): блок уже не на экране (перерисован) — не рисуем; смена поколения без
+        // перерисовки больше не оставляет раскрытый блок пустым.
+        const dynamicsEl = document.getElementById('analytics-dynamics-details');
+        const causesEl = document.getElementById('analytics-causes-details');
+        const blockGone = (el) => !!el && !el.isConnected;
+        const drawTrendChart = () => {
+            if (blockGone(dynamicsEl)) return;
             const trendContrsData = window.buildTrendChartData(data, 'contractorName', window.selectedChartFilters.contrs, window.trendGroupings.contrs);
             const ctxTrendC = document.getElementById('chart_eng_trend_contrs')?.getContext('2d');
             if (ctxTrendC) {
                 if (_chartInstances()['chart_eng_trend_contrs']) _chartInstances()['chart_eng_trend_contrs'].destroy();
                 _chartInstances()['chart_eng_trend_contrs'] = new Chart(ctxTrendC, { type: 'line', data: trendContrsData, options: { animation: false, responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { position: 'right', labels: { boxWidth: 8, font: { size: 9 } } } } } });
             }
-
-            if (chartGen !== _analyticsRenderGen) return;
+        };
+        const drawCausesCharts = () => {
+            if (blockGone(causesEl)) return;
             let causesLabels = []; let causesData = [];
             Object.keys(causesCount).sort((a, b) => causesCount[b] - causesCount[a]).forEach(code => {
                 const name = _defectCauses().find(c => c.code === code)?.name || _t('quality.analytics.fallback.other_cause', 'Иное');
@@ -1959,7 +1980,7 @@ export const AnalyticsRender = {
                 _chartInstances()['chart_eng_causes'] = new Chart(ctxCauses, { type: 'bar', indexAxis: 'y', data: { labels: causesLabels, datasets: [{ data: causesData, backgroundColor: '#f59e0b', borderRadius: 4 }] }, options: { animation: false, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
             }
 
-            if (chartGen !== _analyticsRenderGen) return;
+            if (blockGone(causesEl)) return;
             cList.sort((a, b) => b.metrics.finalC - a.metrics.finalC);
             const compLabels = cList.map(c => c.name.length > 10 ? c.name.substring(0, 10) + '...' : c.name);
             const compData = cList.map(c => c.metrics.finalC);
@@ -1970,7 +1991,9 @@ export const AnalyticsRender = {
                 if (_chartInstances()['chart_eng_compare']) _chartInstances()['chart_eng_compare'].destroy();
                 _chartInstances()['chart_eng_compare'] = new Chart(ctxComp, { type: 'bar', data: { labels: compLabels, datasets: [{ data: compData, backgroundColor: compColors, borderRadius: 4 }] }, options: { animation: false, responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { display: false } } } });
             }
-        }, 120);
+        };
+        _drawWhenOpen(dynamicsEl, drawTrendChart);
+        _drawWhenOpen(causesEl, drawCausesCharts);
     },
 
 
@@ -2096,7 +2119,7 @@ export const AnalyticsRender = {
     // =========================================================================
     // Перенесено из analytics.legacy.js: подвкладка «Сводка» (One-Pager).
     // =========================================================================
-    renderOnePagerSubTab(data) {
+    async renderOnePagerSubTab(data) {
         var _allInspections = _inspections();
         const container = document.getElementById('onepager-content-container');
 
@@ -2120,7 +2143,7 @@ export const AnalyticsRender = {
         });
         // KPI УрК/док — среднее по подрядчикам (окно ≤15), как в печати One-Pager.
         const kpiRatings = (typeof window.avgContractorRatingsFromChecks === 'function')
-            ? window.avgContractorRatingsFromChecks(data)
+            ? _avgContractorRatingsCached(data)
             : { avgUrk: 0, avgDoc: null };
         const currAvgUrk = kpiRatings.avgUrk;
         const currAvgDoc = kpiRatings.avgDoc;
@@ -2159,6 +2182,13 @@ export const AnalyticsRender = {
             ? 'bg-danger-soft border-danger-soft/50'
             : 'bg-[var(--card-bg)] border-[var(--card-border)]';
 
+        // P2-0024: на 10 000 проверок вкладка считалась одним куском ≈ 75 мс. Текущий период посчитан —
+        // отдаём кадр браузеру, затем сравнение с прошлым периодом, подборка дефектов и разметка.
+        // Пришла новая перерисовка за это время — эту не дописываем.
+        const _opGen = _analyticsRenderGen;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        if (_opGen !== _analyticsRenderGen || !container.isConnected) return false; // не дорисовано (ревью №4)
+
         const selPeriod = document.getElementById('global-filter-period')?.value || 'D30';
         let prevData = [];
         const now = new Date();
@@ -2176,7 +2206,8 @@ export const AnalyticsRender = {
             trendLabel = _t('quality.analytics.kpi.vs_prev', 'к пред. периоду');
         } else {
             const half = Math.floor(data.length / 2);
-            const sortedData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+            // P2-0024: даты разбираются один раз (раньше — new Date в каждом сравнении сортировки); порядок тот же.
+            const sortedData = data.map(i => [new Date(i.date).getTime(), i]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
             prevData = sortedData.slice(0, half);
             trendLabel = _t('quality.analytics.kpi.vs_first_half', 'к 1-й пол. базы');
         }
@@ -2203,7 +2234,7 @@ export const AnalyticsRender = {
         let prevAvgUrk = 0; let prevIko = "0.00"; let prevChecks = prevData.length; let prevContrsCount = 0;
         if (prevData.length > 0) {
             const prevKpi = (typeof window.avgContractorRatingsFromChecks === 'function')
-                ? window.avgContractorRatingsFromChecks(prevData)
+                ? _avgContractorRatingsCached(prevData)
                 : { avgUrk: 0 };
             prevAvgUrk = prevKpi.avgUrk;
             const pGrouped = {}; prevData.forEach(i => pGrouped[i.contractorName] = true);
@@ -2222,21 +2253,25 @@ export const AnalyticsRender = {
             return `<div class="text-right"><span class="${color} text-rbi-label font-black">${sign} ${Math.abs(diff).toFixed(Number.isInteger(diff) ? 0 : 2)}</span><div class="text-rbi-caption text-muted mt-0.5 uppercase tracking-wider">${label}</div></div>`;
         };
 
+        // P2-0024: мини-график «по неделям» (6 пересчётов рейтинга) — нужен только графику, считается
+        // в отложенном шаге отрисовки графиков, а не в основном кадре вкладки.
         const sparkLabels = []; const sparkData = [];
-        const sparkBase = (window.AnalyticsActions && typeof window.AnalyticsActions.applyAnalyticsEntityFilters === 'function')
-            ? window.AnalyticsActions.applyAnalyticsEntityFilters(
-                _allInspections.filter(i => i && i.inspection_type !== 'sk_acceptance')
-            )
-            : _allInspections.filter(i => i && i.inspection_type !== 'sk_acceptance');
-        for (let i = 5; i >= 0; i--) {
-            const dStart = new Date(); dStart.setDate(now.getDate() - (i * 7) - 7);
-            const dEnd = new Date(); dEnd.setDate(now.getDate() - (i * 7));
-            const weekChecks = sparkBase.filter(c => { const d = new Date(c.date); return d >= dStart && d < dEnd; });
-            sparkLabels.push(`-${i}${_t('quality.analytics.period.week_letter', 'н')}`);
-            sparkData.push(weekChecks.length > 0 && typeof window.avgContractorRatingsFromChecks === 'function'
-                ? window.avgContractorRatingsFromChecks(weekChecks).avgUrk
-                : null);
-        }
+        const computeSpark = () => {
+            const sparkBase = (window.AnalyticsActions && typeof window.AnalyticsActions.applyAnalyticsEntityFilters === 'function')
+                ? window.AnalyticsActions.applyAnalyticsEntityFilters(
+                    _allInspections.filter(i => i && i.inspection_type !== 'sk_acceptance')
+                )
+                : _allInspections.filter(i => i && i.inspection_type !== 'sk_acceptance');
+            for (let i = 5; i >= 0; i--) {
+                const dStart = new Date(); dStart.setDate(now.getDate() - (i * 7) - 7);
+                const dEnd = new Date(); dEnd.setDate(now.getDate() - (i * 7));
+                const weekChecks = sparkBase.filter(c => { const d = new Date(c.date); return d >= dStart && d < dEnd; });
+                sparkLabels.push(`-${i}${_t('quality.analytics.period.week_letter', 'н')}`);
+                sparkData.push(weekChecks.length > 0 && typeof window.avgContractorRatingsFromChecks === 'function'
+                    ? window.avgContractorRatingsFromChecks(weekChecks).avgUrk
+                    : null);
+            }
+        };
 
         let defaultChartContrs = [];
         let isTruncatedForChart = false;
@@ -2251,16 +2286,33 @@ export const AnalyticsRender = {
         const activeLineFilters = window.selectedChartFilters.onepager.length > 0 ? window.selectedChartFilters.onepager : defaultChartContrs;
 
         // Сбор всех фото (B3, B2, OK)
+        // P2-0024: только когда результат виден — блок «ТОП-5» включён в настройках или автотекст
+        // «Аналитики качества» (нет сохранённого вывода инженера) берёт из него проблемы;
+        // пункт чек-листа — из таблицы id → пункт на шаблон, а не getFlatList(...).find на каждый ответ.
         let b3Map = {}; let b2Map = {}; let okMap = {};
-        data.forEach(i => {
+        const _flatByTemplate = new Map();
+        const _findChecklistItem = (templateKey, id) => {
+            let byId = _flatByTemplate.get(templateKey);
+            if (!byId) {
+                const tType = templateKey.split('_')[0];
+                const tKey = templateKey.replace(tType + '_', '');
+                const cl = tType === 'sys' && _getSystemTemplates()[tKey] ? _getSystemTemplates()[tKey].groups : (_templates().getUserTemplates()[tKey] ? _templates().getUserTemplates()[tKey].groups : []);
+                byId = new Map();
+                getFlatList(cl).forEach(x => { const k = String(x.id); if (!byId.has(k)) byId.set(k, x); });
+                _flatByTemplate.set(templateKey, byId);
+            }
+            return byId.get(String(id));
+        };
+        const _needTopDefects = !!_getSetting('anaOpTopDefects') || !_reports().getExpertConclusion('global_onepager_pdca');
+        const _defectFallbackName = _t('quality.analytics.fallback.defect', 'Дефект'); // P2-0024: один раз, а не на каждый ответ
+        if (_needTopDefects) data.forEach(i => {
             if (i.state && i.details && i.templateKey) {
                 Object.keys(i.state).forEach(id => {
                     const s = i.state[id];
-                    let defName = _t('quality.analytics.fallback.defect', 'Дефект');
-                    const tType = i.templateKey.split('_')[0];
-                    const tKey = i.templateKey.replace(tType + '_', '');
-                    const cl = tType === 'sys' && _getSystemTemplates()[tKey] ? _getSystemTemplates()[tKey].groups : (_templates().getUserTemplates()[tKey] ? _templates().getUserTemplates()[tKey].groups : []);
-                    const foundItem = getFlatList(cl).find(x => x.id == id);
+                    // P2-0024: в подборку попадают только замечания и «ok» с фото — остальное сразу пропускаем
+                    if (s !== 'fail' && s !== 'fail_escalated' && !(s === 'ok' && i.photos && i.photos[id])) return;
+                    let defName = _defectFallbackName;
+                    const foundItem = _findChecklistItem(i.templateKey, id);
                     if (foundItem) defName = foundItem.n;
 
                     const photo = (i.photos && i.photos[id])
@@ -2365,66 +2417,70 @@ export const AnalyticsRender = {
         let uiPdcaText = rawPdcaText.replace(/\n/g, '<br>').replace(/^\[(.*?)\]/gm, '<b class="text-ink dark:text-white text-rbi-label block mt-2 mb-1">$1</b>');
 
         // --- ТЕПЛОВАЯ КАРТА (МАТРИЦА РИСКОВ) ---
-        const heatmapStages = {};
-        const contrCheckCounts = {}; // Считаем проверки для вывода в топы матрицы
+        // P2-0024: блок свёрнут — таблица (этапы × подрядчики) строится при раскрытии.
+        const buildHeatmapHtml = () => {
+            const heatmapStages = {};
+            const contrCheckCounts = {}; // Считаем проверки для вывода в топы матрицы
 
-        data.forEach(check => {
-            if (!check.metrics) return;
+            data.forEach(check => {
+                if (!check.metrics) return;
 
-            // Бронебойная защита от отсутствия названия
-            const stage = check.templateTitle || check.templateKey || _t('quality.analytics.fallback.unknown_stage', 'Неизвестный этап');
-            const contr = check.contractorName || 'Неизвестно';
+                // Бронебойная защита от отсутствия названия
+                const stage = check.templateTitle || check.templateKey || _t('quality.analytics.fallback.unknown_stage', 'Неизвестный этап');
+                const contr = check.contractorName || 'Неизвестно';
 
-            contrCheckCounts[contr] = (contrCheckCounts[contr] || 0) + 1;
+                contrCheckCounts[contr] = (contrCheckCounts[contr] || 0) + 1;
 
-            if (!heatmapStages[stage]) heatmapStages[stage] = {};
-            if (!heatmapStages[stage][contr]) heatmapStages[stage][contr] = { checks: 0, defects: 0 };
+                if (!heatmapStages[stage]) heatmapStages[stage] = {};
+                if (!heatmapStages[stage][contr]) heatmapStages[stage][contr] = { checks: 0, defects: 0 };
 
-            heatmapStages[stage][contr].checks++;
-            heatmapStages[stage][contr].defects += ((Number(check.metrics.n_B2_fail) || 0) + (Number(check.metrics.n_B3_fail) || 0));
-        });
+                heatmapStages[stage][contr].checks++;
+                heatmapStages[stage][contr].defects += ((Number(check.metrics.n_B2_fail) || 0) + (Number(check.metrics.n_B3_fail) || 0));
+            });
 
-        let heatmapHtml = '';
-        const stageNames = Object.keys(heatmapStages).sort();
+            let heatmapHtml = '';
+            const stageNames = Object.keys(heatmapStages).sort();
 
-        // Все подрядчики текущей выборки; горизонтальный скролл, если не влезают.
-        const topMatrixContrs = Object.keys(contrCheckCounts)
-            .sort((a, b) => contrCheckCounts[b] - contrCheckCounts[a]);
+            // Все подрядчики текущей выборки; горизонтальный скролл, если не влезают.
+            const topMatrixContrs = Object.keys(contrCheckCounts)
+                .sort((a, b) => contrCheckCounts[b] - contrCheckCounts[a]);
 
-        if (stageNames.length > 0 && topMatrixContrs.length > 0) {
-            heatmapHtml = `<div class="overflow-x-auto custom-scrollbar pb-2 -mx-1 px-1"><table class="text-left border-collapse text-rbi-caption w-full" style="min-width: ${Math.max(400, 140 + 72 + topMatrixContrs.length * 96)}px;">
+            if (stageNames.length > 0 && topMatrixContrs.length > 0) {
+                heatmapHtml = `<div class="overflow-x-auto custom-scrollbar pb-2 -mx-1 px-1"><table class="text-left border-collapse text-rbi-caption w-full" style="min-width: ${Math.max(400, 140 + 72 + topMatrixContrs.length * 96)}px;">
                 <thead class="bg-[var(--hover-bg)] text-[var(--text-muted)] uppercase"><tr>
                     <th class="p-2 border border-[var(--card-border)] font-black sticky left-0 z-10 bg-[var(--hover-bg)] min-w-[120px]">Вид работ / Подрядчик</th>
                     <th class="p-2 border border-[var(--card-border)] text-center font-black sticky z-10 bg-[var(--hover-bg)] min-w-[72px] max-w-[88px] whitespace-normal leading-tight" style="left:120px" title="${_t('quality.analytics.heatmap.defects_sum_title', 'Сумма дефектов B2+B3 по этапу')}">${_t('quality.analytics.heatmap.total_defects', 'Всего дефектов')}</th>`;
 
-            topMatrixContrs.forEach(c => heatmapHtml += `<th class="p-2 border border-[var(--card-border)] text-center font-bold min-w-[96px] max-w-[140px] whitespace-normal leading-tight" title="${c}">${c}</th>`);
-            heatmapHtml += `</tr></thead><tbody>`;
+                topMatrixContrs.forEach(c => heatmapHtml += `<th class="p-2 border border-[var(--card-border)] text-center font-bold min-w-[96px] max-w-[140px] whitespace-normal leading-tight" title="${c}">${c}</th>`);
+                heatmapHtml += `</tr></thead><tbody>`;
 
-            stageNames.forEach(stage => {
-                const stageTotal = topMatrixContrs.reduce((sum, contr) => {
-                    const cell = heatmapStages[stage][contr];
-                    return sum + (cell ? (Number(cell.defects) || 0) : 0);
-                }, 0);
-                heatmapHtml += `<tr><td class="p-2 border border-[var(--card-border)] font-bold text-ink sticky left-0 z-10 bg-[var(--card-bg)] min-w-[120px] max-w-[160px] whitespace-normal leading-tight" title="${stage}">${stage}</td>`;
-                heatmapHtml += `<td class="p-2 border border-[var(--card-border)] text-center font-black sticky z-10 bg-[var(--card-bg)] text-ink tabular-nums" style="left:120px">${stageTotal}</td>`;
-                topMatrixContrs.forEach(contr => {
-                    const cell = heatmapStages[stage][contr];
-                    if (!cell) {
-                        heatmapHtml += `<td class="p-2 border border-[var(--card-border)] text-center bg-[var(--hover-bg)] text-muted">-</td>`;
-                    } else {
-                        const defectRate = cell.defects / cell.checks;
-                        let bgColor = 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:border-green-800';
-                        if (defectRate > 1.5) bgColor = 'bg-danger-soft text-danger border-danger font-black/40';
-                        else if (defectRate > 0.5) bgColor = 'bg-yellow-50 text-yellow-700 border-yellow-200 font-bold dark:bg-yellow-900/20 dark:border-yellow-800';
-                        heatmapHtml += `<td class="p-2 border border-[var(--card-border)] text-center ${bgColor}">${cell.defects} ${_t('quality.analytics.heatmap.def_short', 'деф.')}</td>`;
-                    }
+                stageNames.forEach(stage => {
+                    const stageTotal = topMatrixContrs.reduce((sum, contr) => {
+                        const cell = heatmapStages[stage][contr];
+                        return sum + (cell ? (Number(cell.defects) || 0) : 0);
+                    }, 0);
+                    heatmapHtml += `<tr><td class="p-2 border border-[var(--card-border)] font-bold text-ink sticky left-0 z-10 bg-[var(--card-bg)] min-w-[120px] max-w-[160px] whitespace-normal leading-tight" title="${stage}">${stage}</td>`;
+                    heatmapHtml += `<td class="p-2 border border-[var(--card-border)] text-center font-black sticky z-10 bg-[var(--card-bg)] text-ink tabular-nums" style="left:120px">${stageTotal}</td>`;
+                    topMatrixContrs.forEach(contr => {
+                        const cell = heatmapStages[stage][contr];
+                        if (!cell) {
+                            heatmapHtml += `<td class="p-2 border border-[var(--card-border)] text-center bg-[var(--hover-bg)] text-muted">-</td>`;
+                        } else {
+                            const defectRate = cell.defects / cell.checks;
+                            let bgColor = 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:border-green-800';
+                            if (defectRate > 1.5) bgColor = 'bg-danger-soft text-danger border-danger font-black/40';
+                            else if (defectRate > 0.5) bgColor = 'bg-yellow-50 text-yellow-700 border-yellow-200 font-bold dark:bg-yellow-900/20 dark:border-yellow-800';
+                            heatmapHtml += `<td class="p-2 border border-[var(--card-border)] text-center ${bgColor}">${cell.defects} ${_t('quality.analytics.heatmap.def_short', 'деф.')}</td>`;
+                        }
+                    });
+                    heatmapHtml += `</tr>`;
                 });
-                heatmapHtml += `</tr>`;
-            });
-            heatmapHtml += `</tbody></table></div>`;
-        } else {
-            heatmapHtml = `<div class="text-center text-muted py-6 text-rbi-caption font-bold uppercase bg-[var(--hover-bg)] rounded-lg border border-dashed border-[var(--card-border)]">${_t('quality.analytics.heatmap.insufficient', 'Недостаточно дефектов для карты')}</div>`;
-        }
+                heatmapHtml += `</tbody></table></div>`;
+            } else {
+                heatmapHtml = `<div class="text-center text-muted py-6 text-rbi-caption font-bold uppercase bg-[var(--hover-bg)] rounded-lg border border-dashed border-[var(--card-border)]">${_t('quality.analytics.heatmap.insufficient', 'Недостаточно дефектов для карты')}</div>`;
+            }
+            return heatmapHtml;
+        };
 
         // --- ИНДЕКС ЗДОРОВЬЯ (ПУЛЬС) ---
         const healthIndex = Math.max(0, Math.min(100, Math.round(100 - (parseFloat(mData.IKO) * 50) - ((redContrPerc || 0) * 0.5) - (sumB3 * 2))));
@@ -2586,7 +2642,7 @@ export const AnalyticsRender = {
                 </details>
 
                 <!-- АККОРДЕОН 3: ТЕПЛОВАЯ КАРТА -->
-                <details class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden">
+                <details id="op-heatmap-details" class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden">
                     <summary class="p-3.5 font-bold text-rbi-label text-[var(--text-muted)] uppercase tracking-widest cursor-pointer flex justify-between items-center hover:bg-[var(--hover-bg)] transition-colors rounded-2xl select-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
@@ -2595,7 +2651,7 @@ export const AnalyticsRender = {
                         <span class="transition-transform group-open:rotate-180">▼</span>
                     </summary>
                     <div class="p-4 border-t border-[var(--card-border)] bg-surface rounded-b-2xl overflow-visible">
-                        ${heatmapHtml}
+                        <div id="op-heatmap-host"></div>
                         <button onclick="window.RBI.services.ai.generateHeatmapAi()" class="mt-3 w-full bg-slate-50 text-muted py-3 rounded-xl font-bold text-rbi-caption uppercase active:scale-95 shadow-sm flex items-center justify-center gap-1.5 border border-surface transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Анализ Рисков (ИИ)
                         </button>
@@ -2656,9 +2712,15 @@ export const AnalyticsRender = {
             </div>
         `;
 
+        window.rbiDrawOnePagerHeatmap = _drawWhenOpen(document.getElementById('op-heatmap-details'), () => {
+            const host = document.getElementById('op-heatmap-host');
+            if (host) host.outerHTML = buildHeatmapHtml();
+        });
+
         setTimeout(() => {
             const ctxSpark = document.getElementById('op-sparkline-chart');
             if (ctxSpark) {
+                computeSpark();
                 if (_chartInstances()['op-sparkline-chart']) _chartInstances()['op-sparkline-chart'].destroy();
                 _chartInstances()['op-sparkline-chart'] = new Chart(ctxSpark.getContext('2d'), {
                     type: 'line',
@@ -3758,33 +3820,15 @@ export const AnalyticsRender = {
             }
         }
 
-        // Чипсы doc_kind — считаем набор значений, реально встречающихся среди
-        // отчётов, ПОСЛЕ применения остальных фильтров, но ДО фильтра по самому
-        // doc_kind (иначе выбранный чип исчез бы из своей же панели).
-        const docKindCounts = new Map();
-        filteredArr.forEach(r => {
-            const k = _reportDocKind(r);
-            docKindCounts.set(k, (docKindCounts.get(k) || 0) + 1);
-        });
-        if (_reportsActiveDocKindFilter !== 'ALL' && !docKindCounts.has(_reportsActiveDocKindFilter)) {
-            _reportsActiveDocKindFilter = 'ALL';
-        }
-        const chipsHtml = AnalyticsRender._renderReportsDocKindChips(docKindCounts, filteredArr.length);
-
-        if (_reportsActiveDocKindFilter !== 'ALL') {
-            filteredArr = filteredArr.filter(r => _reportDocKind(r) === _reportsActiveDocKindFilter);
-        }
-
         if (filteredArr.length === 0) {
-            listDiv.innerHTML = chipsHtml + `<div class="text-center py-10 text-muted font-bold text-rbi-label uppercase tracking-widest bg-[var(--card-bg)] rounded-xl border border-dashed border-[var(--card-border)] shadow-sm">${_t('quality.analytics.reports.empty_filtered', 'По выбранным фильтрам отчетов не найдено.')}</div>`;
+            listDiv.innerHTML = `<div class="text-center py-10 text-muted font-bold text-rbi-label uppercase tracking-widest bg-[var(--card-bg)] rounded-xl border border-dashed border-[var(--card-border)] shadow-sm">${_t('quality.analytics.reports.empty_filtered', 'По выбранным фильтрам отчетов не найдено.')}</div>`;
             return;
         }
 
         // Сортировка по дате (самые свежие сверху)
         const sorted = filteredArr.sort((a, b) => new Date(b.generated_at) - new Date(a.generated_at));
 
-        // Группировка по объекту (единообразно с аккордеоном вкладки «Проверки»,
-        // см. history.render.js) — один уровень, без вложенного подрядчика.
+        // Группировка Объект → Тип отчёта (P2-0039; как Объект → Подрядчик во вкладке «Проверки»).
         const grouped = {};
         sorted.forEach(r => {
             const pName = r.metadata?.project || _t('quality.analytics.reports.summary_default', 'Сводный Отчет');
@@ -3800,33 +3844,49 @@ export const AnalyticsRender = {
         const hiddenRevealClass = isListView ? 'flex' : 'grid';
 
         let groupIndex = 0;
-        const groupsHtml = groupKeys.map(pName => {
-            const items = grouped[pName];
+        const kindGroupHtml = (pKey, kind, items, open) => {
             const safeGroupId = `reports-group-${groupIndex++}`;
             const visibleItems = items.slice(0, REPORTS_GROUP_PAGE_SIZE);
             const hiddenItems = items.slice(REPORTS_GROUP_PAGE_SIZE);
-
             const cardsHtml = visibleItems.map(r => AnalyticsRender._renderReportCard(r, isListView)).join('');
             let hiddenBlockHtml = '';
             if (hiddenItems.length > 0) {
                 const hiddenId = `${safeGroupId}-hidden`;
                 hiddenBlockHtml = `<div id="${hiddenId}" class="hidden ${itemsWrapClass} mt-3">${hiddenItems.map(r => AnalyticsRender._renderReportCard(r, isListView)).join('')}</div>
-                <button onclick="document.getElementById('${hiddenId}').classList.remove('hidden'); document.getElementById('${hiddenId}').classList.add('${hiddenRevealClass}'); this.style.display='none'" class="w-full bg-[var(--hover-bg)] text-muted py-2 mt-3 rounded-lg text-rbi-caption font-bold uppercase active:scale-95 transition-colors border border-dashed border-[var(--card-border)]">Показать ещё отчёты (${hiddenItems.length})</button>`;
+                <button onclick="document.getElementById('${hiddenId}').classList.remove('hidden'); document.getElementById('${hiddenId}').classList.add('${hiddenRevealClass}'); this.style.display='none'" class="w-full bg-[var(--hover-bg)] text-muted py-2 mt-3 rounded-lg text-rbi-caption font-bold uppercase active:scale-95 transition-colors border border-dashed border-[var(--card-border)]">${_t('quality.analytics.reports.show_more_n', 'Показать ещё отчёты ({n})', { n: hiddenItems.length })}</button>`;
             }
+            return `
+                <div class="border border-[var(--card-border)] rounded-[10px] bg-[var(--card-bg)] overflow-hidden">
+                    <div class="flex justify-between items-center px-2.5 py-2 cursor-pointer active:bg-[var(--hover-bg)] transition-colors select-none" onclick="AnalyticsRender._toggleReportsGroup(this)">
+                        <div class="reports-kind-title text-rbi-label font-bold text-ink dark:text-white truncate min-w-0 pr-2">${reportKindLabel(kind, _t)}</div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <span class="text-rbi-caption font-bold text-muted bg-[var(--hover-bg)] px-1.5 py-0.5 rounded-md border border-[var(--card-border)]">${items.length} ${_t('quality.analytics.chart.pcs', 'шт')}</span>
+                            <svg class="w-4 h-4 text-muted transition-transform duration-300 transform chevron-icon" style="transform: rotate(${open ? 180 : 0}deg)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                    <div id="${safeGroupId}" data-rep-grp-body="${_escAttr(pKey + '|k:' + kind)}" class="${open ? '' : 'hidden '}border-t border-[var(--card-border)] p-2">
+                        <div class="${itemsWrapClass}">${cardsHtml}</div>
+                        ${hiddenBlockHtml}
+                    </div>
+                </div>`;
+        };
+
+        const groupsHtml = groupKeys.map(pName => {
+            const items = grouped[pName];
+            const safeGroupId = `reports-group-${groupIndex++}`;
+            const pKey = `p:${pName}`;
+            const byKind = new Map();
+            items.forEach(r => {
+                const k = reportKindOf(r);
+                if (!byKind.has(k)) byKind.set(k, []);
+                byKind.get(k).push(r);
+            });
+            const kinds = orderKindGroups(new Map([...byKind].map(([k, list]) => [k, list.length])));
+            const kindsHtml = kinds.map(k => kindGroupHtml(pKey, k, byKind.get(k), kinds.length === 1)).join('');
 
             return `
             <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[14px] shadow-sm mb-2 overflow-hidden">
-                <div class="flex justify-between items-center p-2.5 cursor-pointer active:bg-[var(--hover-bg)] transition-colors select-none" onclick="
-                    const body = document.getElementById('${safeGroupId}');
-                    const icon = this.querySelector('.chevron-icon');
-                    if (body.classList.contains('hidden')) {
-                        body.classList.remove('hidden');
-                        icon.style.transform = 'rotate(180deg)';
-                    } else {
-                        body.classList.add('hidden');
-                        icon.style.transform = 'rotate(0deg)';
-                    }
-                ">
+                <div class="flex justify-between items-center p-2.5 cursor-pointer active:bg-[var(--hover-bg)] transition-colors select-none" onclick="AnalyticsRender._toggleReportsGroup(this)">
                     <div class="flex items-center gap-2.5 min-w-0 pr-2">
                         <div class="w-8 h-8 bg-brand-soft/30 text-brand rounded-[10px] flex items-center justify-center shrink-0 border border-brand-soft">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
@@ -3840,14 +3900,11 @@ export const AnalyticsRender = {
                         <svg class="w-4 h-4 text-muted transition-transform duration-300 transform rotate-0 chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                 </div>
-                <div id="${safeGroupId}" class="hidden border-t border-[var(--card-border)] bg-surface/30 p-2.5">
-                    <div class="${itemsWrapClass}">${cardsHtml}</div>
-                    ${hiddenBlockHtml}
-                </div>
+                <div id="${safeGroupId}" data-rep-grp-body="${_escAttr(pKey)}" class="hidden border-t border-[var(--card-border)] bg-surface/30 p-2.5 flex flex-col gap-2">${kindsHtml}</div>
             </div>`;
         }).join('');
 
-        listDiv.innerHTML = chipsHtml + groupsHtml;
+        listDiv.innerHTML = groupsHtml;
         const reportsToggleHost = document.getElementById('reports-view-mode-toggle');
         const kbToggleHtml = window.kbViewModeToggleHtml;
         if (reportsToggleHost && typeof kbToggleHtml === 'function') {
@@ -3856,33 +3913,10 @@ export const AnalyticsRender = {
         _restoreExpandedReports(listDiv, expandedProjects);
     },
 
-    // Горизонтальный ряд чипсов-фильтров по doc_kind над списком отчётов.
-    // Показывает только реально встречающиеся значения (+ «Все») — не полный
-    // хардкод возможных видов документа, чтобы не занимать место пустыми чипами.
-    _renderReportsDocKindChips(docKindCounts, totalCount) {
-        const collator = new Intl.Collator('ru');
-        const kinds = Array.from(docKindCounts.keys()).sort(collator.compare);
-        if (kinds.length <= 1) return ''; // Один тип отчётов — чипсы не несут смысла.
-
-        const chip = (label, value, count, active) => `
-            <button onclick="AnalyticsRender._setReportsDocKindFilter('${value.replace(/'/g, "\\'")}')"
-                class="shrink-0 px-3 py-1.5 rounded-full text-rbi-caption font-black uppercase tracking-wide border transition-colors whitespace-nowrap ${active ? 'bg-brand text-white border-brand shadow-sm' : 'bg-[var(--card-bg)] text-muted border-[var(--card-border)]'}">
-                ${label} <span class="opacity-70">${count}</span>
-            </button>`;
-
-        const allActive = _reportsActiveDocKindFilter === 'ALL';
-        let html = `<div class="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1" style="scrollbar-width: none;">`;
-        html += chip(_t('quality.analytics.chip.all', 'Все'), 'ALL', totalCount, allActive);
-        kinds.forEach(k => {
-            html += chip(k, k, docKindCounts.get(k), _reportsActiveDocKindFilter === k);
-        });
-        html += `</div>`;
-        return html;
-    },
-
-    _setReportsDocKindFilter(value) {
-        _reportsActiveDocKindFilter = value;
-        AnalyticsRender.renderReportsList();
+    // P2-0039: раскрыть/свернуть группу отчётов (объект или тип внутри объекта).
+    _toggleReportsGroup(head) {
+        const body = head && head.nextElementSibling;
+        if (body) _setReportsGroupOpen(body, body.classList.contains('hidden'));
     },
 
     _reportCardAuthor(r) {
@@ -3897,7 +3931,7 @@ export const AnalyticsRender = {
     _renderReportCard(r, isListView) {
         const syncBadge = getSyncBadgeHtml(r);
         const isOwner = !r.created_by || r.created_by === (_getSetting('engineerName') || _t('quality.analytics.fallback.engineer', 'Инженер'));
-        const docKind = _reportDocKind(r);
+        const docKind = reportKindOf(r);
         const safeTitle = String(r.title || '').replace(/'/g, "\\'");
         const dateStr = new Date(r.generated_at).toLocaleDateString('ru-RU');
         const sizeStr = ((r.file_size || 0) / 1024 / 1024).toFixed(2) + ' MB';
@@ -3917,7 +3951,7 @@ export const AnalyticsRender = {
                 <div class="w-9 h-9 rounded-lg shrink-0 bg-surface border border-[var(--card-border)] flex items-center justify-center"><span class="text-rbi-caption font-black ${fileTypeColor}">${fileTypeLabel}</span></div>
                 <div class="min-w-0 flex-1">
                     <div class="text-rbi-body font-black text-ink dark:text-white truncate">${r.title}</div>
-                    <div class="text-rbi-caption font-bold text-muted truncate mt-0.5">${docKind !== 'Прочее' ? _reportDocKindLabel(docKind) + ' · ' : ''}${_t('quality.analytics.reports.author', 'Автор:')} ${author} · ${dateStr}</div>
+                    <div class="text-rbi-caption font-bold text-muted truncate mt-0.5">${docKind !== REPORT_KIND_OTHER ? reportKindLabel(docKind, _t) + ' · ' : ''}${_t('quality.analytics.reports.author', 'Автор:')} ${author} · ${dateStr}</div>
                     <div class="text-rbi-caption font-bold text-muted truncate">${_t('quality.analytics.reports.period', 'Период:')} ${period}</div>
                 </div>
                 <div class="shrink-0">${syncBadge}</div>
@@ -3927,7 +3961,7 @@ export const AnalyticsRender = {
             </div>`;
         }
 
-        const docKindTag = docKind !== 'Прочее' ? `<div class="text-rbi-caption font-bold text-muted truncate mb-0.5">${_reportDocKindLabel(docKind)}</div>` : '';
+        const docKindTag = docKind !== REPORT_KIND_OTHER ? `<div class="text-rbi-caption font-bold text-muted truncate mb-0.5">${reportKindLabel(docKind, _t)}</div>` : '';
         return `
             <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm overflow-hidden flex flex-col active:scale-[0.98] transition-transform relative cursor-pointer" onclick="openReport('${r.id}')">
                 <input type="checkbox" class="report-checkbox absolute top-2 left-2 w-5 h-5 accent-indigo-600 rounded cursor-pointer z-10" value="${r.id}" onclick="event.stopPropagation()">

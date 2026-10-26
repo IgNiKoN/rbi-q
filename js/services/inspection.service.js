@@ -144,7 +144,7 @@
 
         pushSync: function (item) {
             if (Array.isArray(window.contractorArray)) {
-                window.contractorArray.push(item);
+                window.contractorArray.push(window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten(item) : item); // P2-0024
                 return true;
             }
             return false;
@@ -152,6 +152,7 @@
 
         setAllSync: function (arr) {
             var safeArr = Array.isArray(arr) ? arr : [];
+            if (window.RbiHistoryMemory) safeArr.forEach(window.RbiHistoryMemory.lighten); // P2-0024: на месте, тот же массив
             window.contractorArray = safeArr;
             return window.contractorArray;
         },

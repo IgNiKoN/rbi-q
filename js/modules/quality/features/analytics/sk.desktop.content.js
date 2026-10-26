@@ -36,6 +36,7 @@ function _chartLocaleTag() {
     const code = i18n && typeof i18n.getLocale === 'function' ? i18n.getLocale() : 'ru';
     if (code === 'en') return 'en-US';
     if (code === 'sr-Latn') return 'sr-Latn';
+    if (code === 'ka') return 'ka-GE';
   } catch (_) { /* ignore */ }
   return 'ru-RU';
 }

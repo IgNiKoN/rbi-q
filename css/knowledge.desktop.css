@@ -1261,6 +1261,7 @@ body.rbi-knowledge-desktop-wide #ref-sub-docs .kb-desk-docs-rail-row-title {
   line-height: 1.35 !important;
   display: -webkit-box !important;
   -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
   -webkit-box-orient: vertical !important;
   overflow: hidden !important;
 }
@@ -1334,6 +1335,7 @@ body.rbi-knowledge-desktop-wide #ref-sub-docs .kb-desk-docs-viewer-sub {
   line-height: 1.35 !important;
   display: -webkit-box !important;
   -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
   -webkit-box-orient: vertical !important;
   overflow: hidden !important;
 }
@@ -1968,6 +1970,7 @@ body.rbi-knowledge-desktop-wide #ref-sub-twi .kb-desk-twi-rail-row-title {
   overflow: visible !important;
   display: block !important;
   -webkit-line-clamp: unset !important;
+  line-clamp: unset !important;
 }
 
 body.rbi-knowledge-desktop-wide #ref-sub-twi .kb-desk-twi-rail-row.is-active .kb-desk-twi-rail-row-title {
@@ -1982,6 +1985,7 @@ body.rbi-knowledge-desktop-wide #ref-sub-twi .kb-desk-twi-rail-row-meta {
   line-height: 1.35 !important;
   display: block !important;
   -webkit-line-clamp: unset !important;
+  line-clamp: unset !important;
   overflow: visible !important;
 }
 

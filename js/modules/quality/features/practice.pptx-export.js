@@ -369,7 +369,7 @@ export async function exportPracticePptx(id) {
             await root.saveReportToLocal({
                 type: 'pptx',
                 mimeType: PPTX_MIME,
-                docKind: 'Лучшая практика',
+                docKind: 'Практика',
                 title: `Практика: ${title}`,
                 blob,
                 project: p.projectName || '—',

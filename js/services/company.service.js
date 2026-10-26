@@ -4,8 +4,8 @@
 // enabledModules — каталог business platform-modules (quality/construction/knowledge).
 // knowledge — сквозной: при quality и/или construction всегда присутствует в каталоге
 // (sanitize) и в init через BUNDLES; knowledge-only и empty shell [] допустимы.
-// UI §37.2 Block 3: оверрайд в appSettings.enabledModules (prefs устройства /
-// sync UI-профиля), не отдельная company-таблица. Feature-of / construction-v2 —
+// P2-0031: плашка «Модули платформы» (оверрайд appSettings.enabledModules на устройстве) убрана, сохранённый выбор
+// не читается — модули компании включает администратор платформы (core.company_modules). Feature-of / construction-v2 —
 // через BUNDLES в app.entry; settings — ALWAYS_INIT (platform chrome).
 // app.entry режет init по availableModules (= enabled ∩ getAllowedModules)
 // + бандлы + ALWAYS_INIT.
@@ -25,8 +25,6 @@
   if (typeof window === 'undefined') return;
 
   var DEFAULT_ENABLED_MODULES = ['quality', 'construction', 'knowledge'];
-  var BUSINESS_ID_SET = { quality: true, construction: true, knowledge: true };
-  var BUSINESS_ORDER = ['quality', 'construction', 'knowledge'];
   var COMPANY_ID = 'rbi';
   var SMOKE_MARKER = '__SMOKE_TEST__';
 
@@ -50,59 +48,6 @@
         window.RBI.events.emit(name, payload);
       }
     } catch (_e) { /* ignore */ }
-  }
-
-  /**
-   * Sanitize to business ids only: dedupe, order quality → construction → knowledge.
-   * If quality or construction present → knowledge is forced on (cross-cutting).
-   * Empty array is valid (empty shell). Invalid / non-array → null (use default).
-   */
-  function _sanitizeEnabledModules(ids) {
-    if (!Array.isArray(ids)) return null;
-    var seen = {};
-    var cleaned = [];
-    BUSINESS_ORDER.forEach(function (id) {
-      if (ids.indexOf(id) >= 0 && BUSINESS_ID_SET[id] && !seen[id]) {
-        seen[id] = true;
-        cleaned.push(id);
-      }
-    });
-    var hadOnlyJunk = ids.length > 0 && cleaned.length === 0 &&
-      !ids.some(function (id) { return BUSINESS_ID_SET[id]; });
-    if (hadOnlyJunk) return null;
-    // Сквозной knowledge: обязателен вместе с quality / construction
-    var needsKb = cleaned.indexOf('quality') >= 0 || cleaned.indexOf('construction') >= 0;
-    if (needsKb && cleaned.indexOf('knowledge') < 0) {
-      cleaned.push('knowledge');
-    }
-    return cleaned;
-  }
-
-  function _readOverride() {
-    var svc = _settingsSvc();
-    var raw = null;
-    if (svc && typeof svc.get === 'function') {
-      raw = svc.get('enabledModules');
-    } else if (window.appSettings) {
-      raw = window.appSettings.enabledModules;
-    }
-    if (raw == null) return null;
-    return _sanitizeEnabledModules(raw);
-  }
-
-  function _persist(value) {
-    var svc = _settingsSvc();
-    if (svc && typeof svc.set === 'function') {
-      return Promise.resolve(svc.set('enabledModules', value)).then(function () {
-        return true;
-      });
-    }
-    if (window.appSettings) {
-      window.appSettings.enabledModules = value;
-      window.appSettings.settingsUpdatedAt = Date.now();
-      return Promise.resolve(true);
-    }
-    return Promise.resolve(false);
   }
 
   function _cloneRoleOverrides(src) {
@@ -201,48 +146,12 @@
     },
 
     getCompany: function () {
-      var override = _readOverride();
-      var enabled = override != null ? override : DEFAULT_ENABLED_MODULES.slice();
+      var enabled = DEFAULT_ENABLED_MODULES.slice();
       return {
         id: COMPANY_ID,
         name: 'RBI',
         enabledModules: enabled.slice()
       };
-    },
-
-    /**
-     * Persist enabledModules override (prefs). Empty [] allowed = empty shell.
-     * @returns {Promise<{ error: string|null, enabledModules?: string[] }>}
-     */
-    setEnabledModules: function (ids) {
-      var cleaned = _sanitizeEnabledModules(ids);
-      if (cleaned == null) {
-        return Promise.resolve({ error: 'invalid_modules' });
-      }
-      return _persist(cleaned).then(function (ok) {
-        if (!ok) return { error: 'persist_failed' };
-        _emit('company:enabledModulesChanged', { enabledModules: cleaned.slice() });
-        return { error: null, enabledModules: cleaned.slice() };
-      }).catch(function (e) {
-        console.error('[CompanyService] setEnabledModules', e);
-        return { error: e && e.message ? e.message : 'persist_failed' };
-      });
-    },
-
-    /**
-     * Clear override → default ['quality','construction','knowledge'].
-     * @returns {Promise<{ error: string|null, enabledModules?: string[] }>}
-     */
-    resetEnabledModules: function () {
-      return _persist(null).then(function (ok) {
-        if (!ok) return { error: 'persist_failed' };
-        var def = DEFAULT_ENABLED_MODULES.slice();
-        _emit('company:enabledModulesChanged', { enabledModules: def });
-        return { error: null, enabledModules: def };
-      }).catch(function (e) {
-        console.error('[CompanyService] resetEnabledModules', e);
-        return { error: e && e.message ? e.message : 'persist_failed' };
-      });
     },
 
     // --- §23 Блок 2: company role-matrix SoT ---

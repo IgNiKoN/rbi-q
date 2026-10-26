@@ -7,7 +7,7 @@
  * не гарантированно доступен на момент вызова из inline-обработчиков).
  */
 
-import { HistoryState } from './history.state.js';
+import { HistoryState, deletedHistoryCopy, deletedHistoryFlags } from './history.state.js';
 import { HistoryRender } from './history.render.js';
 
 // Фаза 91 (перенесено из history.legacy.js): единая точка доступа к IndexedDB
@@ -70,6 +70,19 @@ export const HistoryActions = {
                 return;
             }
             HistoryState.resetPagination();
+
+            // P2-0024: история уже целиком в памяти (window.contractorArray, облегчённая — содержимое то же).
+            // Список берём оттуда — без второй копии из базы; порядок как у индекса by_date (новые сверху,
+            // при равной дате — больший id выше). Раньше при свёрнутых объектах фоновая догрузка всё равно
+            // подтягивала всю историю второй копией (заголовки объектов считают все записи периода).
+            const mem = Array.isArray(window.contractorArray) ? window.contractorArray : null;
+            if (mem && mem.length) {
+                HistoryState.setRecordsFromMemory(mem);
+                HistoryState.setPageState({ pageCursorKey: null, pageCursorPrimaryKey: null, pageHasMore: false });
+                const ev = this._ctx && this._ctx.events;
+                if (ev && typeof ev.emit === 'function') ev.emit('history:loaded', { count: HistoryState.allRecords.length });
+                return;
+            }
 
             // Первая прогрузка: добираем страницы, пока не наберём
             // initialObjectTarget уникальных объектов (площадок) или не кончатся
@@ -139,11 +152,18 @@ export const HistoryActions = {
 
         try {
             HistoryState.setPageState({ isLoadingPage: true });
+            const gen = HistoryState.listGen;
             const page = await svc.getPage({
                 limit: HistoryState.pageSize,
                 cursorKey: HistoryState.pageCursorKey,
                 cursorPrimaryKey: HistoryState.pageCursorPrimaryKey
             });
+            // P2-0024 доработка 1 (ревью №3): пока шла порция, список заменили (история из памяти, удаление) —
+            // порцию не добавляем (иначе дубли строк); курсор не двигаем.
+            if (HistoryState.listGen !== gen) {
+                if (HistoryState.isLoadingPage) HistoryState.setPageState({ isLoadingPage: false });
+                return;
+            }
             const newItems = page.items || [];
             HistoryState.appendRecords(newItems);
             HistoryState.setPageState({
@@ -198,10 +218,17 @@ export const HistoryActions = {
      * Возвращает массив ID выбранных (отмеченных галочками) проверок.
      * Перенесено из history.legacy.js (бывший app.js, строка 2483).
      * ID — текстовые строки (UUID из облака).
+     * P2-0026: без повторов — на ПК галочки есть и в таблице, и в скрытом телефонном списке
+     * («Выбрать все» ставит обе): иначе печать и удаление шли по каждой проверке дважды.
      */
     getSelectedHistoryIds() {
+        var seen = {};
         return Array.from(document.querySelectorAll('.hist-checkbox:checked')).map(function (cb) {
             return cb.value;
+        }).filter(function (id) {
+            if (seen[id]) return false;
+            seen[id] = true;
+            return true;
         });
     },
 
@@ -211,6 +238,10 @@ export const HistoryActions = {
      * Вызывается из inline handler: onchange="toggleAllHistory(this)"
      */
     toggleAllHistory(checkbox) {
+        // P2-0024: свёрнутые объекты рисуются при раскрытии — перед «выбрать все» дорисовать их.
+        if (checkbox && checkbox.checked && typeof window.rbiHistMaterializeAllProjects === 'function') {
+            window.rbiHistMaterializeAllProjects();
+        }
         var checkboxes = document.querySelectorAll('.hist-checkbox');
         checkboxes.forEach(function (cb) {
             cb.checked = checkbox.checked;
@@ -283,47 +314,92 @@ export const HistoryActions = {
         var contractorMetricsSvc = (HistoryActions._ctx && HistoryActions._ctx.contractorMetrics)
             || (window.RBI && window.RBI.services && window.RBI.services.contractorMetrics);
 
+        // P2-0025: сначала сохранить копию с пометкой удаления, затем пометить запись в памяти
+        // (она общая с contractorArray). Сбой записи — эта и следующие записи в памяти не помечаются.
+        var deletedCount = 0;
+        var deletedIds = Object.create(null);
+        var failed = false;
         for (var j = 0; j < ids.length; j++) {
             var delId = ids[j];
             var item = HistoryState.allRecords.find(function (i) { return String(i.id) === String(delId); });
             if (item) {
-                var now = new Date().toISOString();
-                item._deleted = true;
-                item.is_deleted = true;
-                item._deletedAt = now;
-                item.updatedAt = now;
-                item.updated_at = now;
-                item.source = 'local';
-                item.syncStatus = 'not_synced';
-                item.sync_status = 'not_synced';
-                item.syncBlockReason = '';
-                await storage.put(storage.stores().HISTORY, item);
+                var marked = deletedHistoryCopy(item, new Date().toISOString());
+                try {
+                    await storage.put(storage.stores().HISTORY, marked);
+                } catch (eDel) {
+                    console.error('[HistoryActions] удаление: запись не сохранена', delId, eDel);
+                    failed = true;
+                    break;
+                }
+                Object.assign(item, deletedHistoryFlags(marked));
+                deletedIds[String(item.id)] = true;
+                deletedCount++;
                 if (contractorMetricsSvc) contractorMetricsSvc.recalcTouched(item);
             }
         }
 
-        HistoryState.setRecords(HistoryState.allRecords.filter(function (i) { return !i._deleted; }));
+        var memWasList = HistoryState.memorySource && HistoryState.memorySource === window.contractorArray;
         if (Array.isArray(window.contractorArray)) {
-            window.contractorArray = window.contractorArray.filter(function (i) { return !i._deleted; });
+            // по id: при порционном списке из базы записи в памяти — другие объекты
+            window.contractorArray = window.contractorArray.filter(function (i) { return !i._deleted && !deletedIds[String(i && i.id)]; });
         }
+        if (memWasList) HistoryState.setRecordsFromMemory(window.contractorArray);
+        else HistoryState.setRecords(HistoryState.allRecords.filter(function (i) { return !i._deleted; }));
 
         var selectAllCb = document.getElementById('hist-select-all');
         if (selectAllCb) selectAllCb.checked = false;
 
-        HistoryRender.render();
+        // P2-0026: через window.renderHistoryTab — на ПК он перерисовывает и таблицу «Проверки» (обёртка analytics.desktop.render.js)
+        if (typeof window.renderHistoryTab === 'function') window.renderHistoryTab(); else HistoryRender.render();
 
         if (typeof renderCurrentAnalyticsTab === 'function') {
             renderCurrentAnalyticsTab();
         }
         updateDataSummary();
 
-        localStorage.setItem('rbi_cloud_dirty', '1');
-        _sync('silent');
+        if (deletedCount > 0) {
+            localStorage.setItem('rbi_cloud_dirty', '1');
+            _sync('silent');
+        }
 
         if (typeof renderCurrentAnalyticsTab === 'function') renderCurrentAnalyticsTab();
         if (typeof gameForceUpdatePlan === 'function') gameForceUpdatePlan(true);
         updateDataSummary();
-        showToast('✅ Удалено успешно (' + ids.length + ' шт)');
+        if (failed) {
+            showToast('⚠️ Удалено ' + deletedCount + ' из ' + ids.length + ': не удалось сохранить на устройстве, попробуйте ещё раз');
+        } else {
+            showToast('✅ Удалено успешно (' + ids.length + ' шт)');
+        }
+    },
+
+    /**
+     * P2-0023 доработка 2: проверка не отправляется — фото пункта нет на устройстве, автоповторы исчерпаны.
+     * Показываем причину и даём выбор «Отправить без этого фото» (пропавшие фото убираются из проверки
+     * и запоминаются в missingPhotos, остальное уходит обычной синхронизацией). Иначе — переснять фото в проверке.
+     */
+    async resolveSyncAttention(id) {
+        var rp = window.RbiSyncRetryPolicy;
+        if (!rp) return;
+        var storage = _storage(HistoryActions._ctx);
+        var rec = HistoryState.allRecords.find(function (i) { return String(i.id) === String(id); });
+        if (!rec) {
+            try { rec = await storage.get(storage.stores().HISTORY, id); } catch (_e) { rec = null; }
+        }
+        if (!rec || !rp.isAttention(rec)) return;
+        var reason = rec.syncBlockReason || rec.sync_block_reason || 'Не отправлено: фото пункта не найдено на устройстве';
+        if (!confirm(reason + '.\n\nОтправить проверку без этого фото? Остальные фото и результаты уйдут на сервер.\n\n«Отмена» — оставить как есть (можно открыть проверку и переснять фото).')) return;
+        var dropped = rp.dropMissingPhotos(rec, new Date().toISOString());
+        rec.updatedAt = new Date().toISOString();
+        rec.updated_at = rec.updatedAt;
+        await storage.put(storage.stores().HISTORY, rec);
+        if (Array.isArray(window.contractorArray)) {
+            var idx = window.contractorArray.findIndex(function (x) { return String(x.id) === String(rec.id); });
+            if (idx >= 0) window.contractorArray[idx] = rec;
+        }
+        HistoryRender.render();
+        localStorage.setItem('rbi_cloud_dirty', '1');
+        showToast('Отправляем без ' + (dropped > 1 ? dropped + ' фото' : 'этого фото') + '…');
+        _sync('manual');
     },
 
     /**
@@ -346,6 +422,7 @@ if (typeof window !== 'undefined') {
     window.printSelectedInspectionActs = HistoryActions.printSelectedInspectionActs;
     window.deleteSelectedHistory = HistoryActions.deleteSelectedHistory;
     window.loadHistoryData = HistoryActions.loadHistoryData;
+    window.rbiHistoryResolveAttention = HistoryActions.resolveSyncAttention;
 }
 
 console.log('[HistoryActions] history.actions.js loaded');

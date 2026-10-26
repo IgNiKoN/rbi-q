@@ -11,7 +11,7 @@ const AIState = {
     _ctx: null,
     bindCtx(ctx) { this._ctx = ctx; },
     _isEnabled: false,
-    _authMode: 'corporate',
+    _authMode: 'account',
     _isProcessing: false,
     _lastError: null,
 
@@ -20,9 +20,9 @@ const AIState = {
       return !!_getSetting('aiEnabled');
     },
 
-    /** Живая ссылка на режим авторизации из appSettings */
+    /** Режим ИИ: 'personal' (свой ключ) или 'account' (по учётке; старые 'role'/'corporate' — тоже по учётке, P2-0034) */
     getAuthMode() {
-      return _getSetting('aiAuthMode') || 'corporate';
+      return _getSetting('aiAuthMode') === 'personal' ? 'personal' : 'account';
     },
 
     isProcessing() {
@@ -36,7 +36,7 @@ const AIState = {
     /** Снимает текущие значения из appSettings → внутренние поля */
     syncFromLegacy() {
       this._isEnabled = !!_getSetting('aiEnabled');
-      this._authMode = _getSetting('aiAuthMode') || 'corporate';
+      this._authMode = this.getAuthMode();
     }
 };
 

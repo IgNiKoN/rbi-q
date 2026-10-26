@@ -603,6 +603,20 @@ function processTwiImport(event) {
     event.target.value = '';
 }
 
+// P2-0023: есть ли уже карта ТИВИ на пункт (память + база устройства, и скрытые фильтром).
+// Возвращает карту или null. Используется «магией» перед открытием конструктора.
+window.rbiFindExistingTwiCard = async function (checklistKey, itemId) {
+    var all = (window.customTwiCards || []).slice();
+    try {
+        var stT = _storage();
+        var stored = await stT.getAll((stT.stores ? stT.stores() : STORES).TWI_CARDS);
+        if (Array.isArray(stored)) all = all.concat(stored);
+    } catch (e) { /* только память */ }
+    if (!window.RbiSyncMergePolicy) return null;
+    var r = window.RbiSyncMergePolicy.findTwiConflict(all, { checklistKey: checklistKey, itemId: itemId, me: '' });
+    return r.action === 'none' ? null : r.card;
+};
+
 // === ПОИСК КАНДИДАТОВ ДЛЯ МАГИИ TWI ===
 window.getMagicTwiCandidates = function () {
     let twiMagicMap = {};
@@ -620,15 +634,21 @@ window.getMagicTwiCandidates = function () {
                     const magicKey = check.templateKey + '_' + id;
                     if (!twiMagicMap[magicKey]) twiMagicMap[magicKey] = { ok: null, fail: null, title: defName, tmplKey: check.templateKey, itemId: id };
 
-                    if (s === 'ok') twiMagicMap[magicKey].ok = check.photos[id];
-                    else if (s === 'fail' || s === 'fail_escalated') twiMagicMap[magicKey].fail = check.photos[id];
+                    // P2-0023: photos[id] может быть массивом — в кнопку «магии» идёт одно фото (раньше «a,b» ломало фото).
+                    const firstPhoto = window.normalizeItemPhotos ? window.normalizeItemPhotos(check.photos[id])[0] : check.photos[id];
+                    if (s === 'ok') twiMagicMap[magicKey].ok = firstPhoto;
+                    else if (s === 'fail' || s === 'fail_escalated') twiMagicMap[magicKey].fail = firstPhoto;
                 }
             });
         }
     });
 
     const magicCandidates = Object.values(twiMagicMap).filter(m => m.ok && m.fail);
+    // Правило владельца: на пункт — одна карта ТИВИ. Есть (своя или чужая, не удалённая) — «магию» не предлагаем.
     return magicCandidates.filter(m => {
+        if (window.RbiSyncMergePolicy) {
+            return window.RbiSyncMergePolicy.findTwiConflict(customTwiCards, { checklistKey: m.tmplKey, itemId: m.itemId, me: '' }).action === 'none';
+        }
         const existing = customTwiCards.find(c => c.checklistKey === m.tmplKey && String(c.itemId) === String(m.itemId) && c.type === 'INSPECTOR');
         return !existing;
     });
@@ -828,11 +848,11 @@ function changeTwiType(type) {
     const btns = ['inspector', 'worker', 'pdf'];
     btns.forEach(b => {
         const btnEl = document.getElementById(`twi-type-btn-${b}`);
-        if (btnEl) btnEl.className = "flex-1 py-2.5 text-[10px] font-bold uppercase rounded-lg text-slate-500 hover:text-slate-700 transition-all bg-transparent border border-transparent shadow-none flex items-center justify-center gap-1.5";
+        if (btnEl) btnEl.className = "flex-1 py-2.5 text-rbi-caption font-bold uppercase rounded-lg text-muted hover:text-ink transition-all bg-transparent border border-transparent shadow-none flex items-center justify-center gap-1.5";
     });
 
     const activeBtn = document.getElementById(`twi-type-btn-${type.toLowerCase()}`);
-    if (activeBtn) activeBtn.className = "flex-1 py-2.5 text-[10px] font-bold uppercase rounded-lg bg-indigo-50 shadow-sm text-indigo-600 border border-indigo-200 transition-all flex items-center justify-center gap-1.5";
+    if (activeBtn) activeBtn.className = "flex-1 py-2.5 text-rbi-caption font-bold uppercase rounded-lg bg-brand-soft shadow-sm text-brand border border-brand-soft transition-all flex items-center justify-center gap-1.5";
 
     document.getElementById('twi-block-inspector').classList.add('hidden');
     document.getElementById('twi-block-worker').classList.add('hidden');
@@ -862,7 +882,7 @@ function populateTwiItemSelect(selectedItemId = null) {
         return;
     }
 
-    let optionsHtml = '<option value="ALL" class="font-bold text-indigo-600">📘 Привязать ко всему виду работ</option>';
+    let optionsHtml = '<option value="ALL" class="font-bold text-brand">📘 Привязать ко всему виду работ</option>';
     optionsHtml += '<option value="" disabled>--- Или выберите конкретный пункт ---</option>';
 
     checklistGroups.forEach(g => {
@@ -948,18 +968,18 @@ function openNodeSelectorModal() {
         }
 
         const imgHtml = photoRef
-            ? `<img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(photoRef, { preferThumb: true }) : ('src="' + window.getPhotoSrc(photoRef) + '"')} class="w-12 h-12 object-cover rounded-lg border border-slate-100 bg-white dark:bg-slate-900" loading="lazy">`
-            : `<div class="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-[8px] font-black text-slate-400 uppercase">📄 PDF</div>`;
+            ? `<img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(photoRef, { preferThumb: true }) : ('src="' + window.getPhotoSrc(photoRef) + '"')} class="w-12 h-12 object-cover rounded-lg border border-surface bg-surface" loading="lazy">`
+            : `<div class="w-12 h-12 bg-surface rounded-lg border border-surface flex flex-col items-center justify-center text-rbi-caption font-black text-muted uppercase">📄 PDF</div>`;
 
         return `
-        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-sm flex items-center gap-3 cursor-pointer active:scale-95 transition-transform" onclick="selectNodeForTwi('${node.id}', '${(node.title || 'Узел').replace(/'/g, "\\'")}')">
+        <div class="bg-surface border border-surface rounded-xl p-3 shadow-sm flex items-center gap-3 cursor-pointer active:scale-95 transition-transform" onclick="selectNodeForTwi('${node.id}', '${(node.title || 'Узел').replace(/'/g, "\\'")}')">
             ${imgHtml}
             <div class="flex-1 min-w-0">
-                <div class="text-[9px] font-black text-indigo-500 uppercase">${node.category || 'Без категории'}</div>
-                <div class="text-[12px] font-bold text-slate-800 dark:text-white truncate">${node.title || 'Без названия'}</div>
+                <div class="text-rbi-caption font-black text-brand uppercase">${node.category || 'Без категории'}</div>
+                <div class="text-rbi-body font-bold text-ink dark:text-white truncate">${node.title || 'Без названия'}</div>
             </div>
         </div>`;
-    }).join('') + `<button onclick="selectNodeForTwi('', 'Не привязан')" class="w-full mt-2 py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold uppercase border border-red-200 active:scale-95 transition-colors">Отвязать узел</button>`;
+    }).join('') + `<button onclick="selectNodeForTwi('', 'Не привязан')" class="w-full mt-2 py-3 bg-danger-soft text-danger rounded-xl text-rbi-caption font-bold uppercase border border-danger-soft active:scale-95 transition-colors">Отвязать узел</button>`;
 
     if (typeof window.rbiHydrateLocalImages === 'function') window.rbiHydrateLocalImages(listEl);
 
@@ -986,7 +1006,7 @@ function selectNodeForTwi(id, title) {
     document.getElementById('twi-linked-node-id').value = id;
     const nameEl = document.getElementById('twi-linked-node-name');
     nameEl.innerText = title;
-    nameEl.className = id ? "text-[12px] font-black text-indigo-600 dark:text-indigo-400 mt-0.5" : "text-[12px] font-black text-slate-800 dark:text-white mt-0.5";
+    nameEl.className = id ? "text-rbi-body font-black text-brand mt-0.5" : "text-rbi-body font-black text-ink dark:text-white mt-0.5";
     closeNodeSelectorModal();
 }
 
@@ -1088,12 +1108,12 @@ function renderGoodPhoto(localUrl) {
     const idx = list.indexOf(localUrl);
     const esc = _escTwiPhotoAttr(localUrl);
     const counter = list.length > 1
-        ? `<span class="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-black px-1.5 py-0.5 rounded pointer-events-none">${(idx >= 0 ? idx + 1 : 1)}/${list.length}</span>`
+        ? `<span class="absolute bottom-2 left-2 bg-black/60 text-white text-rbi-caption font-black px-1.5 py-0.5 rounded pointer-events-none">${(idx >= 0 ? idx + 1 : 1)}/${list.length}</span>`
         : '';
     const cycleBtn = list.length > 1
-        ? `<button type="button" onclick="event.stopPropagation();cycleTwiConstructorPhoto('GOOD')" class="absolute bottom-2 right-2 min-w-[2.75rem] h-10 px-3 rounded-lg bg-slate-100/95 dark:bg-slate-800 text-indigo-600 text-[16px] font-black active:scale-95 border border-slate-200 dark:border-slate-600 shadow-md" title="Сменить из осмотров">↻</button>`
+        ? `<button type="button" onclick="event.stopPropagation();cycleTwiConstructorPhoto('GOOD')" class="absolute bottom-2 right-2 min-w-[2.75rem] h-10 px-3 rounded-lg bg-surface/95 text-brand text-[16px] font-black active:scale-95 border border-surface shadow-md" title="Сменить из осмотров">↻</button>`
         : '';
-    cont.innerHTML = `<div class="relative w-full h-40 md:h-64 rounded-lg overflow-hidden border border-green-300 shadow-sm mt-1 bg-slate-50 dark:bg-slate-900 cursor-pointer" onclick="openPhotoViewer('${esc}')"><img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(localUrl) : ('src="' + window.getPhotoSrc(localUrl) + '"')} class="w-full h-full object-contain pointer-events-none"><button type="button" onclick="event.stopPropagation();removeTwiGoodPhoto()" class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md">✕</button>${counter}${cycleBtn}</div>`;
+    cont.innerHTML = `<div class="relative w-full h-40 md:h-64 rounded-lg overflow-hidden border border-green-300 shadow-sm mt-1 bg-surface cursor-pointer" onclick="openPhotoViewer('${esc}')"><img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(localUrl) : ('src="' + window.getPhotoSrc(localUrl) + '"')} class="w-full h-full object-contain pointer-events-none"><button type="button" onclick="event.stopPropagation();removeTwiGoodPhoto()" class="absolute top-2 right-2 bg-danger text-white w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md">✕</button>${counter}${cycleBtn}</div>`;
     if (typeof window.rbiHydrateLocalImages === 'function') window.rbiHydrateLocalImages(cont);
 }
 function removeTwiGoodPhoto() {
@@ -1103,9 +1123,9 @@ function removeTwiGoodPhoto() {
     const pick = window._twiPhotoPick || { good: [], bad: [] };
     const list = pick.good || [];
     const fromMem = list.length
-        ? `<button type="button" onclick="cycleTwiConstructorPhoto('GOOD')" class="w-full mt-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 py-2.5 rounded-lg text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-300 active:scale-95 transition-all">Из осмотров (${list.length})</button>`
+        ? `<button type="button" onclick="cycleTwiConstructorPhoto('GOOD')" class="w-full mt-2 bg-brand-soft border border-brand-soft py-2.5 rounded-lg text-rbi-caption font-black uppercase text-brand active:scale-95 transition-all">Из осмотров (${list.length})</button>`
         : '';
-    cont.innerHTML = `<button type="button" onclick="triggerTwiMarkupUpload('GOOD')" class="w-full h-full min-h-[80px] bg-white dark:bg-slate-800 border border-dashed border-green-300 py-4 rounded-lg text-[10px] font-bold text-green-600 active:scale-95 transition-all">➕ Загрузить фото</button>${fromMem}`;
+    cont.innerHTML = `<button type="button" onclick="triggerTwiMarkupUpload('GOOD')" class="w-full h-full min-h-[80px] bg-surface border border-dashed border-green-300 py-4 rounded-lg text-rbi-caption font-bold text-green-600 active:scale-95 transition-all">➕ Загрузить фото</button>${fromMem}`;
 }
 
 function renderBadPhoto(localUrl) {
@@ -1118,12 +1138,12 @@ function renderBadPhoto(localUrl) {
     const idx = list.indexOf(localUrl);
     const esc = _escTwiPhotoAttr(localUrl);
     const counter = list.length > 1
-        ? `<span class="absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-black px-1.5 py-0.5 rounded pointer-events-none">${(idx >= 0 ? idx + 1 : 1)}/${list.length}</span>`
+        ? `<span class="absolute bottom-2 left-2 bg-black/60 text-white text-rbi-caption font-black px-1.5 py-0.5 rounded pointer-events-none">${(idx >= 0 ? idx + 1 : 1)}/${list.length}</span>`
         : '';
     const cycleBtn = list.length > 1
-        ? `<button type="button" onclick="event.stopPropagation();cycleTwiConstructorPhoto('BAD')" class="absolute bottom-2 right-2 min-w-[2.75rem] h-10 px-3 rounded-lg bg-slate-100/95 dark:bg-slate-800 text-indigo-600 text-[16px] font-black active:scale-95 border border-slate-200 dark:border-slate-600 shadow-md" title="Сменить из осмотров">↻</button>`
+        ? `<button type="button" onclick="event.stopPropagation();cycleTwiConstructorPhoto('BAD')" class="absolute bottom-2 right-2 min-w-[2.75rem] h-10 px-3 rounded-lg bg-surface/95 text-brand text-[16px] font-black active:scale-95 border border-surface shadow-md" title="Сменить из осмотров">↻</button>`
         : '';
-    cont.innerHTML = `<div class="relative w-full h-40 md:h-64 rounded-lg overflow-hidden border border-red-300 shadow-sm mt-1 bg-slate-50 dark:bg-slate-900 cursor-pointer" onclick="openPhotoViewer('${esc}')"><img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(localUrl) : ('src="' + window.getPhotoSrc(localUrl) + '"')} class="w-full h-full object-contain pointer-events-none"><button type="button" onclick="event.stopPropagation();removeTwiBadPhoto()" class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md">✕</button>${counter}${cycleBtn}</div>`;
+    cont.innerHTML = `<div class="relative w-full h-40 md:h-64 rounded-lg overflow-hidden border border-danger shadow-sm mt-1 bg-surface cursor-pointer" onclick="openPhotoViewer('${esc}')"><img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(localUrl) : ('src="' + window.getPhotoSrc(localUrl) + '"')} class="w-full h-full object-contain pointer-events-none"><button type="button" onclick="event.stopPropagation();removeTwiBadPhoto()" class="absolute top-2 right-2 bg-danger text-white w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md">✕</button>${counter}${cycleBtn}</div>`;
     if (typeof window.rbiHydrateLocalImages === 'function') window.rbiHydrateLocalImages(cont);
 }
 function removeTwiBadPhoto() {
@@ -1133,9 +1153,9 @@ function removeTwiBadPhoto() {
     const pick = window._twiPhotoPick || { good: [], bad: [] };
     const list = pick.bad || [];
     const fromMem = list.length
-        ? `<button type="button" onclick="cycleTwiConstructorPhoto('BAD')" class="w-full mt-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 py-2.5 rounded-lg text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-300 active:scale-95 transition-all">Из осмотров (${list.length})</button>`
+        ? `<button type="button" onclick="cycleTwiConstructorPhoto('BAD')" class="w-full mt-2 bg-brand-soft border border-brand-soft py-2.5 rounded-lg text-rbi-caption font-black uppercase text-brand active:scale-95 transition-all">Из осмотров (${list.length})</button>`
         : '';
-    cont.innerHTML = `<button type="button" onclick="triggerTwiMarkupUpload('BAD')" class="w-full h-full min-h-[80px] bg-white dark:bg-slate-800 border border-dashed border-red-300 py-4 rounded-lg text-[10px] font-bold text-red-600 active:scale-95 transition-all">➕ Загрузить фото</button>${fromMem}`;
+    cont.innerHTML = `<button type="button" onclick="triggerTwiMarkupUpload('BAD')" class="w-full h-full min-h-[80px] bg-surface border border-dashed border-danger py-4 rounded-lg text-rbi-caption font-bold text-danger active:scale-95 transition-all">➕ Загрузить фото</button>${fromMem}`;
 }
 
 function handleTwiPdfUpload(event) {
@@ -1180,10 +1200,10 @@ function removeTwiPdf() {
 // =====================================================================
 function renderTwiStepPhotoRow(stepId, photosArr) {
     const thumbsHtml = photosArr.map(function (src, idx) {
-        return `<div class="relative shrink-0"><img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(src, { preferThumb: true }) : ('src="' + (window.getPhotoThumbSrc || window.getPhotoSrc)(src) + '"')} class="w-20 h-20 rounded-lg border border-slate-200 shadow-sm object-cover" loading="lazy" onclick="openPhotoViewer('${src}')"><button onclick="removeTwiPhoto('${stepId}', ${idx})" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[12px] font-bold shadow-md border border-white z-10">✕</button></div>`;
+        return `<div class="relative shrink-0"><img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(src, { preferThumb: true }) : ('src="' + (window.getPhotoThumbSrc || window.getPhotoSrc)(src) + '"')} class="w-20 h-20 rounded-lg border border-surface shadow-sm object-cover" loading="lazy" onclick="openPhotoViewer('${src}')"><button onclick="removeTwiPhoto('${stepId}', ${idx})" class="absolute -top-1.5 -right-1.5 bg-danger text-white rounded-full w-5 h-5 flex items-center justify-center text-rbi-body font-bold shadow-md border border-white z-10">✕</button></div>`;
     }).join('');
 
-    const addBtnHtml = `<button onclick="triggerTwiPhotoUpload('${stepId}')" class="w-20 h-20 shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 font-bold text-[9px] uppercase active:scale-95 transition-colors flex flex-col items-center justify-center gap-1" title="${photosArr.length ? 'Добавить ещё' : 'Прикрепить фото/схему'}">📸<span>${photosArr.length ? 'Ещё' : 'Фото'}</span></button>`;
+    const addBtnHtml = `<button onclick="triggerTwiPhotoUpload('${stepId}')" class="w-20 h-20 shrink-0 bg-surface text-muted rounded-lg border border-dashed border-surface font-bold text-rbi-caption uppercase active:scale-95 transition-colors flex flex-col items-center justify-center gap-1" title="${photosArr.length ? 'Добавить ещё' : 'Прикрепить фото/схему'}">📸<span>${photosArr.length ? 'Ещё' : 'Фото'}</span></button>`;
 
     return `<div class="flex items-center gap-2 flex-wrap mt-2">${thumbsHtml}${addBtnHtml}</div>`;
 }
@@ -1204,15 +1224,15 @@ function addTwiStep(data = null) {
     const photoHtml = renderTwiStepPhotoRow(stepId, photosArr);
 
     const html = `
-        <div id="${stepId}" class="twi-step-item bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-sm relative transition-all">
-            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2 mb-2">
-                <div class="font-black text-[12px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5"><span class="w-5 h-5 bg-indigo-100 dark:bg-indigo-900/50 rounded flex items-center justify-center">${twiStepCount}</span> Шаг</div>
-                <button onclick="document.getElementById('${stepId}').remove()" class="text-red-400 active:scale-90 font-black text-sm px-2">✕</button>
+        <div id="${stepId}" class="twi-step-item bg-surface border border-surface rounded-xl p-3 shadow-sm relative transition-all">
+            <div class="flex justify-between items-center border-b border-surface pb-2 mb-2">
+                <div class="font-black text-rbi-body text-brand flex items-center gap-1.5"><span class="w-5 h-5 bg-brand-soft rounded flex items-center justify-center">${twiStepCount}</span> Шаг</div>
+                <button onclick="document.getElementById('${stepId}').remove()" class="text-danger active:scale-90 font-black text-sm px-2">✕</button>
             </div>
-            <textarea class="input-base text-[12px] h-16 resize-none mb-2 twi-step-text" placeholder="Опишите действие...">${text}</textarea>
+            <textarea class="input-base text-rbi-body h-16 resize-none mb-2 twi-step-text" placeholder="Опишите действие...">${text}</textarea>
             <div class="flex items-center gap-2 mb-1">
-                <span class="text-[10px] font-bold text-slate-500 uppercase flex-1">Время на операцию:</span>
-                <input type="number" class="input-base !w-24 text-center !py-1 text-[11px] twi-step-time" placeholder="Мин." value="${time}">
+                <span class="text-rbi-caption font-bold text-muted uppercase flex-1">Время на операцию:</span>
+                <input type="number" class="input-base !w-24 text-center !py-1 text-rbi-label twi-step-time" placeholder="Мин." value="${time}">
             </div>
             <div class="twi-photo-container" data-photo="${photosArr.length ? JSON.stringify(photosArr).replace(/"/g, '&quot;') : ''}">${photoHtml}</div>
         </div>`;
@@ -1302,14 +1322,14 @@ function toggleManagePanel() {
             });
 
             let html = `
-                <div class="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800 flex gap-2 items-center shadow-sm">
-                    <select id="clone-sys-select" class="input-base text-[10px] !py-1.5 flex-1">${sysOptions}</select>
-                    <button onclick="cloneSystemTemplateToCustom()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold text-[9px] uppercase active:scale-95 shadow-sm shrink-0">Копия</button>
+                <div class="mb-3 p-2 bg-brand-soft rounded-xl border border-brand-soft flex gap-2 items-center shadow-sm">
+                    <select id="clone-sys-select" class="input-base text-rbi-caption !py-1.5 flex-1">${sysOptions}</select>
+                    <button onclick="cloneSystemTemplateToCustom()" class="bg-brand text-white px-3 py-1.5 rounded-lg font-bold text-rbi-caption uppercase active:scale-95 shadow-sm shrink-0">Копия</button>
                 </div>
             `;
 
             if (customKeys.length === 0) {
-                html += `<div class="text-[10px] text-slate-400 italic py-2 text-center bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">Созданных чек-листов пока нет</div>`;
+                html += `<div class="text-rbi-caption text-muted italic py-2 text-center bg-surface rounded-xl border border-dashed border-surface">Созданных чек-листов пока нет</div>`;
             } else {
                 html += customKeys.map(key => {
                     const permSvc = (_ctx && _ctx.permissions) || window.RBI.services.permissions;
@@ -1317,15 +1337,15 @@ function toggleManagePanel() {
                     const isOwner = isAdmin || !_templates().getUserTemplates()[key].owner || _templates().getUserTemplates()[key].owner === currentEngineer;
 
                     const actionBtns = isOwner
-                        ? `<button onclick="editUserTemplate('${key}')" class="bg-blue-50 text-blue-600 border border-blue-200 px-2 py-1 rounded text-[9px] font-bold active:scale-90">Изменить</button>
-                           <button onclick="deleteUserTemplate('${key}')" class="bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded text-[9px] font-bold active:scale-90">Удалить</button>`
-                        : `<div class="text-[8px] font-bold text-slate-400">Автор: ${_templates().getUserTemplates()[key].owner}</div>`;
+                        ? `<button onclick="editUserTemplate('${key}')" class="bg-blue-50 text-blue-600 border border-blue-200 px-2 py-1 rounded text-rbi-caption font-bold active:scale-90">Изменить</button>
+                           <button onclick="deleteUserTemplate('${key}')" class="bg-danger-soft text-danger border border-danger-soft px-2 py-1 rounded text-rbi-caption font-bold active:scale-90">Удалить</button>`
+                        : `<div class="text-rbi-caption font-bold text-muted">Автор: ${_templates().getUserTemplates()[key].owner}</div>`;
 
                     return `
-                    <div class="flex items-center justify-between bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 rounded-xl mb-1.5 shadow-sm">
+                    <div class="flex items-center justify-between bg-surface border border-surface p-2 rounded-xl mb-1.5 shadow-sm">
                         <div class="min-w-0 pr-2">
-                            <div class="text-[11px] font-bold text-slate-800 dark:text-white truncate leading-tight">${_templates().getUserTemplates()[key].title}</div>
-                            <div class="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">${_templates().getUserTemplates()[key].groups?.length || 0} этапов</div>
+                            <div class="text-rbi-label font-bold text-ink dark:text-white truncate leading-tight">${_templates().getUserTemplates()[key].title}</div>
+                            <div class="text-rbi-caption text-muted font-bold uppercase tracking-widest mt-0.5">${_templates().getUserTemplates()[key].groups?.length || 0} этапов</div>
                         </div>
                         <div class="flex gap-1.5 shrink-0">${actionBtns}</div>
                     </div>
@@ -1517,13 +1537,13 @@ function _twiViewerPhotoFigHtml(item) {
     const minBox = isPortrait ? 'min-h-[14rem]' : 'min-h-[9rem]';
     const escRef = String(item.ref || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     return `
-        <div class="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm bg-slate-50 dark:bg-slate-900 relative cursor-pointer active:scale-[0.99] transition-transform"
+        <div class="rounded-lg overflow-hidden border border-surface shadow-sm bg-surface relative cursor-pointer active:scale-[0.99] transition-transform"
              onclick="openPhotoViewer('${escRef}')">
             <div class="w-full ${minBox} flex items-center justify-center p-1.5 box-border">
                 <img src="${item.url}" alt="Фото шага"
                      class="${maxH} max-w-full w-auto h-auto object-contain block">
             </div>
-            <div class="absolute bottom-2 right-2 bg-black/60 text-white text-[9px] font-bold uppercase px-2 py-1 rounded backdrop-blur-sm flex items-center gap-1 pointer-events-none">
+            <div class="absolute bottom-2 right-2 bg-black/60 text-white text-rbi-caption font-bold uppercase px-2 py-1 rounded backdrop-blur-sm flex items-center gap-1 pointer-events-none">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
                 Увеличить
             </div>
@@ -1550,7 +1570,9 @@ function _twiViewerPhotosHtml(items) {
 }
 
 window.openTwiViewer = async function (twiId) {
-    const card = customTwiCards.find(c => c.id === twiId);
+    // P2-0023: синхронизация заменяет window.customTwiCards новым массивом — ищем и там (иначе «не найдена»).
+    const card = customTwiCards.find(c => c.id === twiId)
+        || (window.customTwiCards || []).find(c => String(c.id) === String(twiId));
     if (!card) return showToast('Ошибка: Инструкция не найдена');
     const gen = ++_twiViewerGen;
     if (typeof gameLogAction === 'function') {
@@ -1570,7 +1592,7 @@ window.openTwiViewer = async function (twiId) {
     // Старый markup overlay мог остаться без Word-кнопки — докидываем в футер.
     if (!wordBtn && footer) {
         const printBtn = footer.querySelector('[data-knowledge-action="showTwiPrintOptions"]');
-        const wordHtml = `<button id="viewer-twi-word-btn" type="button" data-knowledge-action="rbi_exportTwiDocx" class="hidden w-12 h-12 bg-sky-600 text-white rounded-xl flex items-center justify-center active:scale-95 shadow-md shrink-0" title="Скачать Word"><span class="text-[10px] font-black uppercase tracking-wider">Word</span></button>`;
+        const wordHtml = `<button id="viewer-twi-word-btn" type="button" data-knowledge-action="rbi_exportTwiDocx" class="hidden w-12 h-12 bg-sky-600 text-white rounded-xl flex items-center justify-center active:scale-95 shadow-md shrink-0" title="Скачать Word"><span class="text-rbi-caption font-black uppercase tracking-wider">Word</span></button>`;
         if (printBtn && printBtn.insertAdjacentHTML) printBtn.insertAdjacentHTML('afterend', wordHtml);
         else footer.insertAdjacentHTML('afterbegin', wordHtml);
         wordBtn = document.getElementById('viewer-twi-word-btn');
@@ -1586,7 +1608,7 @@ window.openTwiViewer = async function (twiId) {
     // === ТИП 1: КАРТА ИНСПЕКТОРА (Правильно / Неправильно) ===
     if (card.type === 'INSPECTOR') {
         badgeEl.innerText = 'Технадзор';
-        badgeEl.className = 'bg-blue-500 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm';
+        badgeEl.className = 'bg-blue-500 text-white px-1.5 py-0.5 rounded text-rbi-caption font-black uppercase tracking-widest shadow-sm';
         infoPanel.classList.add('hidden');
         footer.classList.remove('hidden');
         content.classList.remove('p-0');
@@ -1611,16 +1633,16 @@ window.openTwiViewer = async function (twiId) {
         if (gen !== _twiViewerGen) return;
 
         let photoGoodHtml = resolvedGood ? `
-            <div class="relative rounded-xl overflow-hidden shadow-sm border-2 border-green-500 cursor-pointer active:scale-95 transition-transform bg-slate-50 dark:bg-slate-900" onclick="openPhotoViewer('${card.photoGood}')">
-                <div class="absolute top-0 left-0 w-full bg-gradient-to-b from-green-600/90 to-transparent p-2 text-white font-black text-[10px] uppercase tracking-widest drop-shadow-md flex items-center gap-1.5 z-10"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg> Правильно</div>
+            <div class="relative rounded-xl overflow-hidden shadow-sm border-2 border-green-500 cursor-pointer active:scale-95 transition-transform bg-surface" onclick="openPhotoViewer('${card.photoGood}')">
+                <div class="absolute top-0 left-0 w-full bg-gradient-to-b from-green-600/90 to-transparent p-2 text-white font-black text-rbi-caption uppercase tracking-widest drop-shadow-md flex items-center gap-1.5 z-10"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg> Правильно</div>
                 <img src="${resolvedGood}" class="w-full h-48 md:h-64 object-contain">
-            </div>` : `<div class="h-48 md:h-64 rounded-xl border-2 border-dashed border-green-300 flex flex-col items-center justify-center bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-500"><svg class="w-6 h-6 mb-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="font-bold text-[9px] uppercase">Нет фото эталона</span></div>`;
+            </div>` : `<div class="h-48 md:h-64 rounded-xl border-2 border-dashed border-green-300 flex flex-col items-center justify-center bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-500"><svg class="w-6 h-6 mb-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="font-bold text-rbi-caption uppercase">Нет фото эталона</span></div>`;
 
         let photoBadHtml = resolvedBad ? `
-            <div class="relative rounded-xl overflow-hidden shadow-sm border-2 border-red-500 cursor-pointer active:scale-95 transition-transform bg-slate-50 dark:bg-slate-900" onclick="openPhotoViewer('${card.photoBad}')">
-                <div class="absolute top-0 left-0 w-full bg-gradient-to-b from-red-600/90 to-transparent p-2 text-white font-black text-[10px] uppercase tracking-widest drop-shadow-md flex items-center gap-1.5 z-10"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg> Брак</div>
+            <div class="relative rounded-xl overflow-hidden shadow-sm border-2 border-danger cursor-pointer active:scale-95 transition-transform bg-surface" onclick="openPhotoViewer('${card.photoBad}')">
+                <div class="absolute top-0 left-0 w-full bg-gradient-to-b from-red-600/90 to-transparent p-2 text-white font-black text-rbi-caption uppercase tracking-widest drop-shadow-md flex items-center gap-1.5 z-10"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg> Брак</div>
                 <img src="${resolvedBad}" class="w-full h-48 md:h-64 object-contain">
-            </div>` : `<div class="h-48 md:h-64 rounded-xl border-2 border-dashed border-red-300 flex flex-col items-center justify-center bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500"><svg class="w-6 h-6 mb-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="font-bold text-[9px] uppercase">Нет фото брака</span></div>`;
+            </div>` : `<div class="h-48 md:h-64 rounded-xl border-2 border-dashed border-danger flex flex-col items-center justify-center bg-danger-soft text-danger"><svg class="w-6 h-6 mb-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="font-bold text-rbi-caption uppercase">Нет фото брака</span></div>`;
 
         let normText = 'Норматив не указан';
         const activeChecklist = (window.AuditState && window.AuditState.currentChecklist) || currentChecklist;
@@ -1634,22 +1656,22 @@ window.openTwiViewer = async function (twiId) {
                     ${photoGoodHtml}
                     ${photoBadHtml}
                 </div>
-                <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div class="flex items-center gap-2 mb-2 border-b border-slate-100 dark:border-slate-700 pb-2">
-                        <span class="w-6 h-6 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></span>
-                        <h4 class="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-wider">Почему это важно (Риски)</h4>
+                <div class="bg-surface rounded-xl p-4 shadow-sm border border-surface">
+                    <div class="flex items-center gap-2 mb-2 border-b border-surface pb-2">
+                        <span class="w-6 h-6 bg-danger-soft text-danger rounded flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></span>
+                        <h4 class="text-rbi-label font-black text-ink dark:text-white uppercase tracking-wider">Почему это важно (Риски)</h4>
                     </div>
-                    <div class="text-[12px] font-medium text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${card.whyImportant || 'Обоснование не заполнено'}</div>
+                    <div class="text-rbi-body font-medium text-muted leading-relaxed whitespace-pre-wrap">${card.whyImportant || 'Обоснование не заполнено'}</div>
                 </div>
-                <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div class="flex items-center gap-2 mb-2 border-b border-slate-100 dark:border-slate-700 pb-2">
-                        <span class="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></span>
-                        <h4 class="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-wider">Как проверять (Методика)</h4>
+                <div class="bg-surface rounded-xl p-4 shadow-sm border border-surface">
+                    <div class="flex items-center gap-2 mb-2 border-b border-surface pb-2">
+                        <span class="w-6 h-6 bg-brand-soft text-brand rounded flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></span>
+                        <h4 class="text-rbi-label font-black text-ink dark:text-white uppercase tracking-wider">Как проверять (Методика)</h4>
                     </div>
-                    <div class="text-[12px] font-medium text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${card.howToCheck || 'Методика не заполнена'}</div>
-                    <div class="mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-700">
-                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Справочно (СНиП / ГОСТ):</div>
-                        <div class="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-900 p-2 rounded border border-slate-100 dark:border-slate-800">${normText}</div>
+                    <div class="text-rbi-body font-medium text-muted leading-relaxed whitespace-pre-wrap">${card.howToCheck || 'Методика не заполнена'}</div>
+                    <div class="mt-3 pt-3 border-t border-dashed border-surface">
+                        <div class="text-rbi-caption font-black text-muted uppercase tracking-widest mb-1 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Справочно (СНиП / ГОСТ):</div>
+                        <div class="text-rbi-label font-medium text-muted leading-relaxed bg-surface p-2 rounded border border-surface">${normText}</div>
                     </div>
                 </div>
             </div>
@@ -1658,7 +1680,7 @@ window.openTwiViewer = async function (twiId) {
     // === ТИП 2: ПОШАГОВЫЙ TWI РАБОЧЕГО ===
     else if (card.type === 'WORKER') {
         badgeEl.innerText = 'Инструкция';
-        badgeEl.className = 'bg-orange-500 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm';
+        badgeEl.className = 'bg-orange-500 text-white px-1.5 py-0.5 rounded text-rbi-caption font-black uppercase tracking-widest shadow-sm';
 
         infoPanel.classList.remove('hidden');
         footer.classList.remove('hidden');
@@ -1676,19 +1698,19 @@ window.openTwiViewer = async function (twiId) {
                 const photoHtml = _twiViewerPhotosHtml(stepPhotos);
 
                 stepsHtml += `
-                    <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden">
+                    <div class="bg-surface rounded-xl p-4 shadow-sm border border-surface relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
                         <div class="flex justify-between items-start mb-2">
-                            <div class="font-black text-orange-600 dark:text-orange-400 text-[11px] uppercase tracking-wider bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded">Шаг ${step.order}</div>
-                            ${step.time ? `<div class="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ${step.time} мин</div>` : ''}
+                            <div class="font-black text-orange-600 dark:text-orange-400 text-rbi-label uppercase tracking-wider bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded">Шаг ${step.order}</div>
+                            ${step.time ? `<div class="text-rbi-caption font-bold text-muted bg-surface px-2 py-1 rounded flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ${step.time} мин</div>` : ''}
                         </div>
-                        <div class="text-[13px] font-bold text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">${step.text}</div>
+                        <div class="text-rbi-body font-bold text-ink leading-relaxed whitespace-pre-wrap">${step.text}</div>
                         ${photoHtml}
                     </div>
                 `;
             }
         } else {
-            stepsHtml += `<div class="text-center text-slate-500 text-sm font-bold py-10">Шаги не заполнены</div>`;
+            stepsHtml += `<div class="text-center text-muted text-sm font-bold py-10">Шаги не заполнены</div>`;
         }
         stepsHtml += '</div>';
         if (gen !== _twiViewerGen) return;
@@ -1707,7 +1729,7 @@ window.openTwiViewer = async function (twiId) {
         return;
 
         badgeEl.innerText = 'PDF-Файл';
-        badgeEl.className = 'bg-red-500 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm';
+        badgeEl.className = 'bg-danger text-white px-1.5 py-0.5 rounded text-rbi-caption font-black uppercase tracking-widest shadow-sm';
         infoPanel.classList.add('hidden');
         footer.classList.add('hidden');
         content.classList.add('p-0');
@@ -1729,34 +1751,34 @@ window.openTwiViewer = async function (twiId) {
                 }
                 const isAndroid = /Android/i.test(navigator.userAgent);
                 content.innerHTML = `
-                    <div class="w-full h-full flex flex-col relative bg-slate-100 dark:bg-slate-900">
-                        <div class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 p-2 text-[10px] text-center font-bold flex justify-between items-center shrink-0 border-b border-indigo-100 dark:border-indigo-800">
+                    <div class="w-full h-full flex flex-col relative bg-surface">
+                        <div class="bg-brand-soft text-brand p-2 text-rbi-caption text-center font-bold flex justify-between items-center shrink-0 border-b border-brand-soft">
                             <span>📱 Не листается вниз? Откройте в читалке 👉</span>
-                            <a href="${blobUrl}" target="_blank" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg active:scale-95 shadow-sm uppercase tracking-widest">Открыть</a>
+                            <a href="${blobUrl}" target="_blank" class="bg-brand text-white px-3 py-1.5 rounded-lg active:scale-95 shadow-sm uppercase tracking-widest">Открыть</a>
                         </div>
                         <div style="-webkit-overflow-scrolling: touch; overflow-y: auto; flex: 1; width: 100%; min-height: 60vh;">
                             ${isAndroid ? `
-    <div class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-slate-900">
-        <div class="text-[13px] font-black text-slate-800 dark:text-white mb-2">PDF готов к открытию</div>
-        <div class="text-[10px] font-bold text-slate-500 mb-4">На Android PDF надежнее открывать системной читалкой.</div>
+    <div class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-surface">
+        <div class="text-rbi-body font-black text-ink dark:text-white mb-2">PDF готов к открытию</div>
+        <div class="text-rbi-caption font-bold text-muted mb-4">На Android PDF надежнее открывать системной читалкой.</div>
         <a href="${blobUrl}" target="_blank" download="${card.pdfName || 'document.pdf'}"
-           class="bg-red-600 text-white px-5 py-3 rounded-xl font-black text-[11px] uppercase shadow-md">
+           class="bg-danger text-white px-5 py-3 rounded-xl font-black text-rbi-label uppercase shadow-md">
            Открыть PDF
         </a>
     </div>
 ` : `
-    <object data="${blobUrl}#view=FitH" type="application/pdf" class="w-full h-full border-none bg-white dark:bg-slate-800" style="min-height: 60vh;">
+    <object data="${blobUrl}#view=FitH" type="application/pdf" class="w-full h-full border-none bg-surface" style="min-height: 60vh;">
         <embed src="${blobUrl}#view=FitH" type="application/pdf" class="w-full h-full" />
     </object>
 `}
                         </div>
-                        <div class="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-10">
+                        <div class="p-3 bg-surface border-t border-surface flex justify-between items-center shrink-0 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-10">
                             <div class="min-w-0 pr-2 flex-1">
-                                <div class="text-[11px] font-black text-slate-800 dark:text-white truncate">${card.pdfName || 'Документ.pdf'}</div>
-                                <div class="text-[9px] font-bold text-slate-500">${card.pdfSize || 'Загружено из облака'}</div>
+                                <div class="text-rbi-label font-black text-ink dark:text-white truncate">${card.pdfName || 'Документ.pdf'}</div>
+                                <div class="text-rbi-caption font-bold text-muted">${card.pdfSize || 'Загружено из облака'}</div>
                             </div>
                             <div class="flex gap-2 shrink-0">
-                                <a href="${blobUrl}" target="_blank" download="${card.pdfName || 'document.pdf'}" class="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 px-3 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm active:scale-95 transition-transform flex items-center justify-center" title="Скачать файл">
+                                <a href="${blobUrl}" target="_blank" download="${card.pdfName || 'document.pdf'}" class="bg-surface text-ink px-3 py-2.5 rounded-xl font-black text-rbi-caption uppercase tracking-widest shadow-sm active:scale-95 transition-transform flex items-center justify-center" title="Скачать файл">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                 </a>
                             </div>
@@ -1766,10 +1788,10 @@ window.openTwiViewer = async function (twiId) {
                 content.dataset.blobUrl = blobUrl;
             } catch (err) {
                 console.error(err);
-                content.innerHTML = `<div class="flex flex-col items-center justify-center h-full p-6 text-center"><div class="text-sm font-bold text-slate-500">Не удалось открыть PDF.</div></div>`;
+                content.innerHTML = `<div class="flex flex-col items-center justify-center h-full p-6 text-center"><div class="text-sm font-bold text-muted">Не удалось открыть PDF.</div></div>`;
             }
         } else {
-            content.innerHTML = `<div class="flex flex-col items-center justify-center h-full p-6 text-center"><div class="text-sm font-bold text-slate-500">PDF файл отсутствует.</div></div>`;
+            content.innerHTML = `<div class="flex flex-col items-center justify-center h-full p-6 text-center"><div class="text-sm font-bold text-muted">PDF файл отсутствует.</div></div>`;
         }
     }
     if (gen !== _twiViewerGen) return;
@@ -1778,7 +1800,7 @@ window.openTwiViewer = async function (twiId) {
     // Ссылка на Видео
     if (card.videoLink) {
         crossLinksHtml += `
-            <a href="${card.videoLink}" target="_blank" class="w-full bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/30 dark:text-red-400 py-3 rounded-xl font-bold text-[11px] uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 mb-2">
+            <a href="${card.videoLink}" target="_blank" class="w-full bg-danger-soft text-danger border border-danger-soft py-3 rounded-xl font-bold text-rbi-label uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 mb-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Смотреть видеоинструкцию
             </a>`;
@@ -1787,7 +1809,7 @@ window.openTwiViewer = async function (twiId) {
     // Ссылка на Узел
     if (card.linkedNodeId) {
         crossLinksHtml += `
-            <button onclick="closeTwiViewer(); setTimeout(()=>openNodeViewer('${card.linkedNodeId}'), 300)" class="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 py-3 rounded-xl font-bold text-[11px] uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 mb-2">
+            <button onclick="closeTwiViewer(); setTimeout(()=>openNodeViewer('${card.linkedNodeId}'), 300)" class="w-full bg-brand-soft text-brand border border-brand-soft py-3 rounded-xl font-bold text-rbi-label uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 mb-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
                 Открыть Технический Узел
             </button>`;
@@ -1796,7 +1818,7 @@ window.openTwiViewer = async function (twiId) {
     // Ссылка на Норматив (НД)
     if (card.linkedDocId) {
         crossLinksHtml += `
-            <button onclick="closeTwiViewer(); setTimeout(()=>openDocViewer('${card.linkedDocId}'), 300)" class="w-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 py-3 rounded-xl font-bold text-[11px] uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 mb-2">
+            <button onclick="closeTwiViewer(); setTimeout(()=>openDocViewer('${card.linkedDocId}'), 300)" class="w-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 py-3 rounded-xl font-bold text-rbi-label uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 mb-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
                 Смотреть Норматив (ГОСТ/СП)
             </button>`;
@@ -1805,7 +1827,7 @@ window.openTwiViewer = async function (twiId) {
     // Ссылка на Чек-лист (внутри Базы знаний)
     if (card.checklistKey && !String(card.checklistKey).includes('|')) {
         crossLinksHtml += `
-            <button onclick="closeTwiViewer(); setTimeout(()=>window.openKnowledgeLinkedChecklist('${card.checklistKey}'), 300)" class="w-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 py-3 rounded-xl font-bold text-[11px] uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 mb-2">
+            <button onclick="closeTwiViewer(); setTimeout(()=>window.openKnowledgeLinkedChecklist('${card.checklistKey}'), 300)" class="w-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 py-3 rounded-xl font-bold text-rbi-label uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 mb-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                 Открыть Чек-лист
             </button>`;
@@ -1814,8 +1836,8 @@ window.openTwiViewer = async function (twiId) {
     // Добавляем кнопки в конец контента (если они есть)
     if (crossLinksHtml) {
         content.insertAdjacentHTML('beforeend', `
-            <div class="p-4 border-t border-slate-200 dark:border-slate-700 mt-4 bg-slate-100 dark:bg-slate-900/50">
-                <div class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest text-center">Связанные материалы</div>
+            <div class="p-4 border-t border-surface mt-4 bg-surface">
+                <div class="text-rbi-caption font-black uppercase text-muted mb-3 tracking-widest text-center">Связанные материалы</div>
                 ${crossLinksHtml}
             </div>
         `);
@@ -2005,15 +2027,15 @@ window.openItemHelpMenu = function (id, event, ctx) {
 
     if (inspectorCard) {
         html += `
-            <div class="bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-xl p-3 shadow-md flex items-center justify-between cursor-pointer active:scale-95 transition-transform mb-4" 
+            <div class="bg-surface border-2 border-blue-500 rounded-xl p-3 shadow-md flex items-center justify-between cursor-pointer active:scale-95 transition-transform mb-4" 
                  onclick="closeItemHelpMenu(); setTimeout(() => openTwiViewer('${inspectorCard.id}'), 300)">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center shrink-0">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                     </div>
                     <div>
-                        <div class="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Карта Технадзора</div>
-                        <div class="text-[12px] font-bold text-slate-800 dark:text-white leading-tight">Эталон и примеры брака</div>
+                        <div class="text-rbi-caption font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Карта Технадзора</div>
+                        <div class="text-rbi-body font-bold text-ink dark:text-white leading-tight">Эталон и примеры брака</div>
                     </div>
                 </div>
                 <div class="text-blue-500 font-black"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg></div>
@@ -2022,7 +2044,7 @@ window.openItemHelpMenu = function (id, event, ctx) {
     }
 
     if (generalCards.length > 0) {
-        html += `<div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1 border-b border-slate-200 dark:border-slate-700 pb-2 mt-2">Инструкции к виду работ</div>`;
+        html += `<div class="text-rbi-caption font-black text-muted uppercase tracking-widest mb-2 pl-1 border-b border-surface pb-2 mt-2">Инструкции к виду работ</div>`;
 
         generalCards.forEach(c => {
             const isPdf = c.type === 'PDF';
@@ -2030,27 +2052,27 @@ window.openItemHelpMenu = function (id, event, ctx) {
                 ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>'
                 : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>';
 
-            const colorClass = isPdf ? 'text-red-500 bg-red-50 dark:bg-red-900/30' : 'text-orange-500 bg-orange-50 dark:bg-orange-900/30';
+            const colorClass = isPdf ? 'text-danger bg-danger-soft' : 'text-orange-500 bg-orange-50 dark:bg-orange-900/30';
             const typeName = isPdf ? 'Внешний PDF-Регламент' : 'Пошаговое руководство (TWI)';
 
             html += `
-                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-sm flex items-center justify-between cursor-pointer active:scale-95 transition-transform" 
+                <div class="bg-surface border border-surface rounded-xl p-3 shadow-sm flex items-center justify-between cursor-pointer active:scale-95 transition-transform" 
                      onclick="closeItemHelpMenu(); setTimeout(() => openTwiViewer('${c.id}'), 300)">
                     <div class="flex items-center gap-3 min-w-0 pr-2">
                         <div class="w-10 h-10 ${colorClass} rounded-lg flex items-center justify-center shrink-0">${iconSvg}</div>
                         <div class="min-w-0">
-                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">${typeName}</div>
-                            <div class="text-[12px] font-bold text-slate-800 dark:text-white leading-tight truncate">${c.title}</div>
+                            <div class="text-rbi-caption font-black text-muted uppercase tracking-widest mb-0.5">${typeName}</div>
+                            <div class="text-rbi-body font-bold text-ink dark:text-white leading-tight truncate">${c.title}</div>
                         </div>
                     </div>
-                    <div class="text-slate-400 shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg></div>
+                    <div class="text-muted shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg></div>
                 </div>
             `;
         });
     }
 
     if (!html) {
-        html = `<div class="text-[12px] font-bold text-slate-500 p-3">К этому пункту пока не привязаны инструкции</div>`;
+        html = `<div class="text-rbi-body font-bold text-muted p-3">К этому пункту пока не привязаны инструкции</div>`;
     }
 
     listContainer.innerHTML = html;
@@ -2086,30 +2108,30 @@ window.showTwiPrintOptions = function () {
     const canWord = !!(card && (card.type === 'WORKER' || card.type === 'INSPECTOR'));
 
     const modal = document.getElementById('modal-overlay');
-    document.getElementById('modal-icon').innerHTML = `<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-[14px] flex items-center justify-center border border-slate-200 dark:border-slate-700 mx-auto"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg></div>`;
+    document.getElementById('modal-icon').innerHTML = `<div class="w-14 h-14 bg-surface text-ink rounded-[14px] flex items-center justify-center border border-surface mx-auto"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg></div>`;
     document.getElementById('modal-title').innerText = "Печать Инструкции";
     document.getElementById('modal-body').innerHTML = `
         <div class="space-y-2">
-            <button onclick="closeModal(); setTimeout(()=>window.RBI.services.reports.printTwi('script'), 300)" class="w-full text-left p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
-                <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></div>
+            <button onclick="closeModal(); setTimeout(()=>window.RBI.services.reports.printTwi('script'), 300)" class="w-full text-left p-3 bg-surface border border-surface rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
+                <div class="w-10 h-10 bg-brand-soft text-brand rounded-lg flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></div>
                 <div>
-                    <div class="text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-wide">Скачать PDF файл</div>
-                    <div class="text-[10px] text-slate-500 font-bold mt-0.5">Сохранить в память устройства</div>
+                    <div class="text-rbi-body font-black text-ink dark:text-white uppercase tracking-wide">Скачать PDF файл</div>
+                    <div class="text-rbi-caption text-muted font-bold mt-0.5">Сохранить в память устройства</div>
                 </div>
             </button>
             ${canWord ? `
-            <button onclick="closeModal(); setTimeout(()=>{ if(window.rbi_exportTwiDocx) rbi_exportTwiDocx('${twiId}'); }, 300)" class="w-full text-left p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
+            <button onclick="closeModal(); setTimeout(()=>{ if(window.rbi_exportTwiDocx) rbi_exportTwiDocx('${twiId}'); }, 300)" class="w-full text-left p-3 bg-surface border border-surface rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
                 <div class="w-10 h-10 bg-sky-50 text-sky-700 rounded-lg flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div>
                 <div>
-                    <div class="text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-wide">Скачать Word</div>
-                    <div class="text-[10px] text-slate-500 font-bold mt-0.5">Документ .docx для редактирования</div>
+                    <div class="text-rbi-body font-black text-ink dark:text-white uppercase tracking-wide">Скачать Word</div>
+                    <div class="text-rbi-caption text-muted font-bold mt-0.5">Документ .docx для редактирования</div>
                 </div>
             </button>` : ''}
-            <button onclick="closeModal(); setTimeout(()=>window.RBI.services.reports.printTwi('browser'), 300)" class="w-full text-left p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
-                <div class="w-10 h-10 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg></div>
+            <button onclick="closeModal(); setTimeout(()=>window.RBI.services.reports.printTwi('browser'), 300)" class="w-full text-left p-3 bg-surface border border-surface rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
+                <div class="w-10 h-10 bg-surface text-muted rounded-lg flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg></div>
                 <div>
-                    <div class="text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-wide">Печать через принтер</div>
-                    <div class="text-[10px] text-slate-500 font-bold mt-0.5">Системное диалоговое окно (A4)</div>
+                    <div class="text-rbi-body font-black text-ink dark:text-white uppercase tracking-wide">Печать через принтер</div>
+                    <div class="text-rbi-caption text-muted font-bold mt-0.5">Системное диалоговое окно (A4)</div>
                 </div>
             </button>
         </div>
@@ -2134,7 +2156,7 @@ window.openNodeViewer = async function (nodeId) {
 
     const attContainer = document.getElementById('viewer-node-attachments');
     if (attContainer) {
-        attContainer.innerHTML = '<div class="text-[10px] text-center text-slate-400 py-4 animate-pulse">Загрузка файлов...</div>';
+        attContainer.innerHTML = '<div class="text-rbi-caption text-center text-muted py-4 animate-pulse">Загрузка файлов...</div>';
 
         let files = node.attachments || [];
         if (files.length === 0 && node.img) {
@@ -2142,28 +2164,28 @@ window.openNodeViewer = async function (nodeId) {
         }
 
         if (files.length === 0) {
-            attContainer.innerHTML = '<div class="text-[10px] text-center text-slate-400 py-4">Нет вложенных файлов</div>';
+            attContainer.innerHTML = '<div class="text-rbi-caption text-center text-muted py-4">Нет вложенных файлов</div>';
         } else {
             let html = '';
             for (let file of files) {
                 if (file.type === 'image') {
                     const realSrc = await PhotoManager.getAsyncUrl(file.url) || window.getPhotoSrc(file.url);
                     html += `
-                    <div class="relative w-full h-48 sm:h-64 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 cursor-pointer shadow-sm mb-3 bg-white dark:bg-slate-800" onclick="openPhotoViewer('${file.url}')">
+                    <div class="relative w-full h-48 sm:h-64 rounded-xl overflow-hidden border border-surface cursor-pointer shadow-sm mb-3 bg-surface" onclick="openPhotoViewer('${file.url}')">
                         <img src="${realSrc}" class="w-full h-full object-contain">
-                        <div class="absolute bottom-2 right-2 bg-black/60 text-white text-[9px] font-bold uppercase px-2 py-1 rounded backdrop-blur-sm flex items-center gap-1">🔍 Увеличить</div>
+                        <div class="absolute bottom-2 right-2 bg-black/60 text-white text-rbi-caption font-bold uppercase px-2 py-1 rounded backdrop-blur-sm flex items-center gap-1">🔍 Увеличить</div>
                     </div>`;
                 } else if (file.type === 'pdf' || (file.url && file.url.includes('application/pdf'))) {
                     html += `
-                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex justify-between items-center cursor-pointer active:scale-95 transition-transform mb-3" onclick="window.openNodeAttachmentPdf('${file.url}', '${file.name || 'Документ'}', '${file.size || ''}')">
+                    <div class="bg-danger-soft border border-danger-soft rounded-xl p-3 flex justify-between items-center cursor-pointer active:scale-95 transition-transform mb-3" onclick="window.openNodeAttachmentPdf('${file.url}', '${file.name || 'Документ'}', '${file.size || ''}')">
                         <div class="flex items-center gap-3 min-w-0 pr-2">
-                            <div class="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center shrink-0 font-black">PDF</div>
+                            <div class="w-10 h-10 bg-danger-soft text-danger rounded-lg flex items-center justify-center shrink-0 font-black">PDF</div>
                             <div class="truncate min-w-0">
-                                <div class="text-[11px] font-bold text-slate-800 dark:text-white truncate">${file.name || 'Документ.pdf'}</div>
-                                <div class="text-[9px] text-slate-500">${file.size || 'PDF Файл'}</div>
+                                <div class="text-rbi-label font-bold text-ink dark:text-white truncate">${file.name || 'Документ.pdf'}</div>
+                                <div class="text-rbi-caption text-muted">${file.size || 'PDF Файл'}</div>
                             </div>
                         </div>
-                        <span class="text-[10px] font-bold text-red-600 bg-white dark:bg-slate-800 px-2 py-1 rounded border border-red-200 dark:border-red-800">Открыть</span>
+                        <span class="text-rbi-caption font-bold text-danger bg-surface px-2 py-1 rounded border border-danger-soft">Открыть</span>
                     </div>`;
                 }
             }
@@ -2175,9 +2197,9 @@ window.openNodeViewer = async function (nodeId) {
     if (matTbody) {
         if (node.materials && node.materials.length > 0) {
             matTbody.innerHTML = node.materials.map(m => `
-                <tr class="border-b border-slate-100 dark:border-slate-700">
-                    <td class="p-2 font-medium text-slate-700 dark:text-slate-300 text-[12px]">${m.name}</td>
-                    <td class="p-2 text-right font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap text-[12px]">${m.qty}</td>
+                <tr class="border-b border-surface">
+                    <td class="p-2 font-medium text-ink text-rbi-body">${m.name}</td>
+                    <td class="p-2 text-right font-bold text-brand whitespace-nowrap text-rbi-body">${m.qty}</td>
                 </tr>
             `).join('');
             matTbody.parentElement.parentElement.classList.remove('hidden');
@@ -2193,7 +2215,7 @@ window.openNodeViewer = async function (nodeId) {
 
         let deleteBtnHtml = '';
         if (!isSystem && isOwner) {
-            deleteBtnHtml = `<button onclick="closeNodeViewer(); deleteNode('${node.id}')" class="bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400 py-3 rounded-xl text-[10px] font-bold uppercase shadow-sm active:scale-95 flex items-center justify-center gap-1.5 mt-2 col-span-full">
+            deleteBtnHtml = `<button onclick="closeNodeViewer(); deleteNode('${node.id}')" class="bg-danger-soft text-danger border border-danger-soft py-3 rounded-xl text-rbi-caption font-bold uppercase shadow-sm active:scale-95 flex items-center justify-center gap-1.5 mt-2 col-span-full">
                 <span>🗑️</span> Удалить узел
             </button>`;
         }
@@ -2202,14 +2224,14 @@ window.openNodeViewer = async function (nodeId) {
         if (node.linkedDoc) {
             let docAction = `findAndOpenND('${node.linkedDoc || ''}')`;
             if (node.linkedDoc.startsWith('sys_') || node.linkedDoc.startsWith('usr_')) { docAction = `openDocViewer('${node.linkedDoc}')`; }
-            docActionHtml = `<button onclick="closeNodeViewer(); setTimeout(()=>${docAction}, 300)" class="bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 py-3.5 rounded-xl text-[11px] font-bold uppercase shadow-sm active:scale-95 flex items-center justify-center gap-2 w-full">
+            docActionHtml = `<button onclick="closeNodeViewer(); setTimeout(()=>${docAction}, 300)" class="bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 py-3.5 rounded-xl text-rbi-label font-bold uppercase shadow-sm active:scale-95 flex items-center justify-center gap-2 w-full">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg> Норматив
             </button>`;
         }
 
         let twiActionHtml = '';
         if (node.linkedTwiId) {
-            twiActionHtml = `<button onclick="closeNodeViewer(); setTimeout(()=>openTwiViewer('${node.linkedTwiId}'), 300)" class="bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400 py-3.5 rounded-xl text-[11px] font-bold uppercase shadow-sm active:scale-95 flex items-center justify-center gap-2 w-full">
+            twiActionHtml = `<button onclick="closeNodeViewer(); setTimeout(()=>openTwiViewer('${node.linkedTwiId}'), 300)" class="bg-brand-soft text-brand border border-brand-soft py-3.5 rounded-xl text-rbi-label font-bold uppercase shadow-sm active:scale-95 flex items-center justify-center gap-2 w-full">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> TWI Карта
             </button>`;
         }
@@ -2217,7 +2239,7 @@ window.openNodeViewer = async function (nodeId) {
         let chkActionHtml = '';
         const checklistKey = node.linkedChecklistKey || node.linkedTwiChecklistKey;
         if (checklistKey && !checklistKey.includes('|')) {
-            chkActionHtml = `<button onclick="closeNodeViewer(); setTimeout(()=>window.openKnowledgeLinkedChecklist('${checklistKey}'), 300)" class="bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400 py-3.5 rounded-xl text-[11px] font-bold uppercase shadow-sm active:scale-95 flex items-center justify-center gap-2 w-full">
+            chkActionHtml = `<button onclick="closeNodeViewer(); setTimeout(()=>window.openKnowledgeLinkedChecklist('${checklistKey}'), 300)" class="bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400 py-3.5 rounded-xl text-rbi-label font-bold uppercase shadow-sm active:scale-95 flex items-center justify-center gap-2 w-full">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg> Чек-лист
             </button>`;
         }
@@ -2345,9 +2367,9 @@ function addNodeMaterialRow() {
     const id = Date.now();
     const html = `
         <div class="flex gap-2 items-center node-material-row mb-2" id="mat-${id}">
-            <input type="text" class="input-base text-[12px] flex-1 mat-name" placeholder="Название (напр: Анкер 10х100)">
-            <input type="text" class="input-base text-[12px] w-24 text-center mat-qty" placeholder="Кол-во">
-            <button onclick="document.getElementById('mat-${id}').remove()" class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center border border-red-200 active:scale-90 shrink-0">
+            <input type="text" class="input-base text-rbi-body flex-1 mat-name" placeholder="Название (напр: Анкер 10х100)">
+            <input type="text" class="input-base text-rbi-body w-24 text-center mat-qty" placeholder="Кол-во">
+            <button onclick="document.getElementById('mat-${id}').remove()" class="w-10 h-10 bg-danger-soft text-danger rounded-xl flex items-center justify-center border border-danger-soft active:scale-90 shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>`;
@@ -2366,21 +2388,21 @@ window.renderNodeAttachmentsUI = async function () {
         if (att.type === 'image') {
             const realSrc = await PhotoManager.getAsyncUrl(att.url) || window.getPhotoSrc(att.url);
             html += `
-            <div class="relative w-full h-32 rounded-xl overflow-hidden border border-slate-300 shadow-sm bg-slate-50 dark:bg-slate-900 mt-2">
+            <div class="relative w-full h-32 rounded-xl overflow-hidden border border-surface shadow-sm bg-surface mt-2">
                 <img src="${realSrc}" class="w-full h-full object-contain">
-                <button onclick="window.removeNodeAttachment(${i})" class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md active:scale-90">✕</button>
+                <button onclick="window.removeNodeAttachment(${i})" class="absolute top-2 right-2 bg-danger text-white w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md active:scale-90">✕</button>
             </div>`;
         } else if (att.type === 'pdf') {
             html += `
-            <div class="flex items-center justify-between p-3 mt-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl shadow-sm">
+            <div class="flex items-center justify-between p-3 mt-2 bg-danger-soft border border-danger-soft rounded-xl shadow-sm">
                 <div class="flex items-center gap-3 min-w-0 pr-2">
-                    <div class="text-red-500 font-black text-lg">PDF</div>
+                    <div class="text-danger font-black text-lg">PDF</div>
                     <div class="min-w-0">
-                        <div class="text-[11px] font-bold text-slate-800 dark:text-white truncate">${att.name}</div>
-                        <div class="text-[9px] text-slate-500">${att.size}</div>
+                        <div class="text-rbi-label font-bold text-ink dark:text-white truncate">${att.name}</div>
+                        <div class="text-rbi-caption text-muted">${att.size}</div>
                     </div>
                 </div>
-                <button onclick="window.removeNodeAttachment(${i})" class="text-red-500 font-black px-2 text-lg active:scale-90 shrink-0">✕</button>
+                <button onclick="window.removeNodeAttachment(${i})" class="text-danger font-black px-2 text-lg active:scale-90 shrink-0">✕</button>
             </div>`;
         }
     }
@@ -2543,9 +2565,9 @@ function filterNodes(category, btnElement) {
     currentNodeFilter = category;
     const container = document.getElementById('node-filters-container');
     container.querySelectorAll('.node-filter-btn').forEach(btn => {
-        btn.className = "node-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 active:scale-95 whitespace-nowrap border border-slate-200 dark:border-slate-700";
+        btn.className = "node-filter-btn px-3 py-1.5 rounded-lg text-rbi-caption font-bold bg-surface text-muted active:scale-95 whitespace-nowrap border border-surface";
     });
-    btnElement.className = "node-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold bg-indigo-600 text-white shadow-sm active:scale-95 whitespace-nowrap border border-indigo-600";
+    btnElement.className = "node-filter-btn px-3 py-1.5 rounded-lg text-rbi-caption font-bold bg-brand text-white shadow-sm active:scale-95 whitespace-nowrap border border-brand";
     window.renderNodesList();
 }
 
@@ -2738,8 +2760,8 @@ window.setKnowledgeViewMode = function (scope, mode) {
     }[scope];
     var sel = selId ? document.getElementById(selId) : null;
     if (sel && sel.value !== mode) sel.value = mode;
-    var act = 'px-2.5 py-1 rounded-full text-[9px] font-black uppercase transition-all bg-white dark:bg-slate-800 text-indigo-600 shadow-sm';
-    var inact = 'px-2.5 py-1 rounded-full text-[9px] font-black uppercase transition-all text-slate-500 dark:text-slate-400';
+    var act = 'px-2.5 py-1 rounded-full text-rbi-caption font-black uppercase transition-all bg-surface text-brand shadow-sm';
+    var inact = 'px-2.5 py-1 rounded-full text-rbi-caption font-black uppercase transition-all text-muted';
     document.querySelectorAll('[data-kb-view-scope="' + scope + '"][data-kb-view-toggle]').forEach(function (btn) {
         btn.className = btn.getAttribute('data-kb-view-toggle') === mode ? act : inact;
     });
@@ -2757,9 +2779,9 @@ window.setKnowledgeViewMode = function (scope, mode) {
 window.kbViewModeToggleHtml = function (scope) {
     scope = scope || 'twi';
     var mode = window.getKnowledgeViewMode(scope);
-    var act = 'px-2.5 py-1 rounded-full text-[9px] font-black uppercase transition-all bg-white dark:bg-slate-800 text-indigo-600 shadow-sm';
-    var inact = 'px-2.5 py-1 rounded-full text-[9px] font-black uppercase transition-all text-slate-500 dark:text-slate-400';
-    return '<div class="flex items-center bg-slate-200 dark:bg-slate-700 p-0.5 rounded-full shadow-inner border border-slate-300 dark:border-slate-600 shrink-0" onclick="event.stopPropagation();">'
+    var act = 'px-2.5 py-1 rounded-full text-rbi-caption font-black uppercase transition-all bg-surface text-brand shadow-sm';
+    var inact = 'px-2.5 py-1 rounded-full text-rbi-caption font-black uppercase transition-all text-muted';
+    return '<div class="flex items-center bg-surface p-0.5 rounded-full shadow-inner border border-surface shrink-0" onclick="event.stopPropagation();">'
         + '<button type="button" data-kb-view-scope="' + scope + '" data-kb-view-toggle="cards" onclick="window.setKnowledgeViewMode(\'' + scope + '\',\'cards\')" class="' + (mode === 'cards' ? act : inact) + '">Карточки</button>'
         + '<button type="button" data-kb-view-scope="' + scope + '" data-kb-view-toggle="list" onclick="window.setKnowledgeViewMode(\'' + scope + '\',\'list\')" class="' + (mode === 'list' ? act : inact) + '">Список</button>'
         + '</div>';
@@ -2779,8 +2801,8 @@ window.renderTwiList = function () {
     if (window.kbShowTwiWorker === undefined) window.kbShowTwiWorker = true;
     if (window.kbShowTwiPdf === undefined) window.kbShowTwiPdf = true;
 
-    var chipOn = 'kb-type-chip px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all bg-indigo-600 text-white shadow-sm active:scale-95';
-    var chipOff = 'kb-type-chip px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700 active:scale-95';
+    var chipOn = 'kb-type-chip px-2.5 py-1 rounded-full text-rbi-caption font-black uppercase tracking-wider transition-all bg-brand text-white shadow-sm active:scale-95';
+    var chipOff = 'kb-type-chip px-2.5 py-1 rounded-full text-rbi-caption font-black uppercase tracking-wider transition-all bg-surface text-muted border border-surface active:scale-95';
     var syncTypeChip = function (id, on) {
         var el = document.getElementById(id);
         if (!el) return;
@@ -2807,21 +2829,21 @@ window.renderTwiList = function () {
                 <button class="absolute top-3 right-3 text-white/50 hover:text-white/100 transition-colors pointer-events-none">
                     <svg class="w-5 h-5 magic-arrow transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
-                <div class="flex items-center gap-2 font-black uppercase tracking-widest text-[11px] drop-shadow-md">
+                <div class="flex items-center gap-2 font-black uppercase tracking-widest text-rbi-label drop-shadow-md">
                     <span class="text-lg animate-pulse">✨</span> Магия TWI (Найдено: ${newMagicCandidates.length})
                 </div>
             </div>
             
             <div class="magic-content-wrapper px-3">
                 <div class="magic-content">
-                    <div class="text-[11px] font-medium text-indigo-100 mb-3 leading-snug">
+                    <div class="text-rbi-label font-medium text-white/90 mb-3 leading-snug">
                         Система нашла эталоны (OK) и брак (FAIL) для одних и тех же пунктов. За создание TWI-карты начислен <b class="text-yellow-300">Бонус XP!</b>
                     </div>
                     <div class="flex gap-2 overflow-x-auto no-scrollbar pb-3">
                         ${newMagicCandidates.map((m) => `
                             <div class="bg-white/10 border border-white/20 p-2.5 rounded-xl shrink-0 w-48 flex flex-col justify-between">
-                                <div class="text-[10px] font-bold leading-tight line-clamp-2 mb-3" title="${m.title}">${m.title}</div>
-                                <button onclick="window.createMagicTwi('${m.tmplKey}', '${m.itemId}', '${m.ok}', '${m.fail}', '${m.title.replace(/'/g, "\\'")}')" class="w-full bg-white text-indigo-600 py-2 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-sm transition-transform">Создать (+100 XP)</button>
+                                <div class="text-rbi-caption font-bold leading-tight line-clamp-2 mb-3" title="${m.title}">${m.title}</div>
+                                <button onclick="window.createMagicTwi('${m.tmplKey}', '${m.itemId}', '${m.ok}', '${m.fail}', '${m.title.replace(/'/g, "\\'")}')" class="w-full bg-white text-brand py-2 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm transition-transform">Создать (+100 XP)</button>
                             </div>
                         `).join('')}
                     </div>
@@ -2871,7 +2893,7 @@ window.renderTwiList = function () {
     var html = '';
 
     if (filtered.length === 0) {
-        html = `<div class="text-center py-10 text-slate-500 text-xs font-bold uppercase tracking-widest bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">В библиотеке пока пусто</div>`;
+        html = `<div class="text-center py-10 text-muted text-xs font-bold uppercase tracking-widest bg-surface rounded-xl border border-surface shadow-sm">В библиотеке пока пусто</div>`;
     } else {
         var grouped = {};
         filtered.forEach(function (c) {
@@ -2886,9 +2908,9 @@ window.renderTwiList = function () {
         for (var checklistName in grouped) {
             html += `
         <details class="mb-4 bg-transparent group [&_summary::-webkit-details-marker]:hidden">
-            <summary class="py-2.5 px-2 font-black text-slate-800 dark:text-white text-[12px] uppercase tracking-wider mb-1 border-b border-slate-200 dark:border-slate-700 cursor-pointer flex justify-between items-center select-none rounded-lg hover:bg-[var(--hover-bg)] transition-colors active:opacity-70">
-                <span class="truncate pr-4">${checklistName} <span class="text-[10px] text-slate-400 ml-1">(${grouped[checklistName].length})</span></span>
-                <span class="text-slate-400 shrink-0 transition-transform duration-300 group-open:rotate-180">
+            <summary class="py-2.5 px-2 font-black text-ink dark:text-white text-rbi-body uppercase tracking-wider mb-1 border-b border-surface cursor-pointer flex justify-between items-center select-none rounded-lg hover:bg-[var(--hover-bg)] transition-colors active:opacity-70">
+                <span class="truncate pr-4">${checklistName} <span class="text-rbi-caption text-muted ml-1">(${grouped[checklistName].length})</span></span>
+                <span class="text-muted shrink-0 transition-transform duration-300 group-open:rotate-180">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
                 </span>
             </summary>
@@ -2905,7 +2927,7 @@ window.renderTwiList = function () {
                     typeText = 'Пошаговая'; typeColor = 'text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-800';
                 } else if (card.type === 'PDF') {
                     typeIcon = `<svg class="w-8 h-8 opacity-40 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"></path></svg>`;
-                    typeText = 'Регламент'; typeColor = 'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800';
+                    typeText = 'Регламент'; typeColor = 'text-danger bg-danger-soft border-danger-soft';
                 }
 
                 var infoText = '';
@@ -2923,20 +2945,20 @@ window.renderTwiList = function () {
                 var previewHtml = '';
                 if (card.type === 'PDF') {
                     previewHtml = `
-                <div class="w-full h-full flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 relative">
-                    <div class="w-10 h-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between p-1.5 relative overflow-hidden">
-                        <div class="absolute top-0 left-0 right-0 h-3.5 bg-red-500 flex items-center justify-center"><span class="text-[7px] text-white font-black tracking-widest">PDF</span></div>
+                <div class="w-full h-full flex flex-col items-center justify-center bg-surface relative">
+                    <div class="w-10 h-12 bg-surface rounded-lg shadow-sm border border-surface flex flex-col justify-between p-1.5 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 right-0 h-3.5 bg-danger flex items-center justify-center"><span class="text-[7px] text-white font-black tracking-widest">PDF</span></div>
                         <div class="space-y-1 mt-4">
-                            <div class="h-0.5 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
-                            <div class="h-0.5 bg-slate-200 dark:bg-slate-700 rounded w-5/6"></div>
-                            <div class="h-0.5 bg-slate-200 dark:bg-slate-700 rounded w-4/6"></div>
+                            <div class="h-0.5 bg-surface rounded w-full"></div>
+                            <div class="h-0.5 bg-surface rounded w-5/6"></div>
+                            <div class="h-0.5 bg-surface rounded w-4/6"></div>
                         </div>
                     </div>
                 </div>`;
                 } else {
                     previewHtml = previewImg
                         ? `<img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(previewImg, { preferThumb: true }) : ('src="' + (window.getPhotoThumbSrc || window.getPhotoSrc)(previewImg) + '"')} class="w-full h-full object-cover" loading="lazy">`
-                        : `<div class="w-full h-full flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 ${typeColor}">${typeIcon}</div>`;
+                        : `<div class="w-full h-full flex flex-col items-center justify-center bg-surface ${typeColor}">${typeIcon}</div>`;
                 }
 
                 var isOwner = !card.id.startsWith('sys_') && (!card.owner || card.owner === currentEngineer);
@@ -2949,19 +2971,19 @@ window.renderTwiList = function () {
                         : `<div class="w-full h-full flex items-center justify-center ${typeColor}">${typeIcon.replace('w-8 h-8', 'w-5 h-5').replace(' mb-1', '')}</div>`;
                     html += `
             <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm flex items-center gap-2.5 p-2 active:scale-[0.99] transition-transform relative cursor-pointer" onclick="openTwiViewer('${card.id}')">
-                <div class="w-11 h-11 rounded-lg overflow-hidden shrink-0 border border-[var(--card-border)] bg-slate-50 dark:bg-slate-900">${thumb}</div>
+                <div class="w-11 h-11 rounded-lg overflow-hidden shrink-0 border border-[var(--card-border)] bg-surface">${thumb}</div>
                 <div class="min-w-0 flex-1">
-                    <div class="text-[12px] font-bold text-slate-800 dark:text-white truncate leading-tight">${card.title}${isSystem ? ' <span class="text-[8px] font-black text-indigo-500">СИС</span>' : ''}</div>
-                    <div class="text-[9px] font-bold text-slate-400 truncate mt-0.5">${typeText} · ${infoText} · ${card.owner ? card.owner.split(' ')[0] : 'Система'}</div>
+                    <div class="text-rbi-body font-bold text-ink dark:text-white truncate leading-tight">${card.title}${isSystem ? ' <span class="text-rbi-caption font-black text-brand">СИС</span>' : ''}</div>
+                    <div class="text-rbi-caption font-bold text-muted truncate mt-0.5">${typeText} · ${infoText} · ${card.owner ? card.owner.split(' ')[0] : 'Система'}</div>
                 </div>
-                <button onclick="event.stopPropagation(); openUniversalActionSheet('${card.id}', 'twi', '${safeTitle}', ${isOwner})" class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-[var(--hover-bg)] active:scale-90">
+                <button onclick="event.stopPropagation(); openUniversalActionSheet('${card.id}', 'twi', '${safeTitle}', ${isOwner})" class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-muted hover:bg-[var(--hover-bg)] active:scale-90">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
                 </button>
             </div>`;
                 } else {
                 html += `
             <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm overflow-hidden flex flex-col active:scale-[0.98] transition-transform relative cursor-pointer" onclick="openTwiViewer('${card.id}')">
-                ${isSystem ? '<div class="absolute top-2 left-2 bg-indigo-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-md z-10">СИСТЕМА</div>' : ''}
+                ${isSystem ? '<div class="absolute top-2 left-2 bg-brand text-white text-rbi-caption font-black px-1.5 py-0.5 rounded shadow-md z-10">СИСТЕМА</div>' : ''}
                 
                 <div class="h-28 sm:h-32 border-b border-[var(--card-border)] relative">
                     ${previewHtml}
@@ -2971,15 +2993,15 @@ window.renderTwiList = function () {
                 </div>
                 
                 <div class="p-3 flex flex-col flex-1">
-                    <div class="text-[8px] font-black px-1.5 py-0.5 rounded w-fit mb-1.5 uppercase border ${typeColor} truncate max-w-full">${typeText}</div>
-                    <div class="text-[12px] font-bold text-slate-800 dark:text-white leading-tight line-clamp-2 mb-2">${card.title}</div>
+                    <div class="text-rbi-caption font-black px-1.5 py-0.5 rounded w-fit mb-1.5 uppercase border ${typeColor} truncate max-w-full">${typeText}</div>
+                    <div class="text-rbi-body font-bold text-ink dark:text-white leading-tight line-clamp-2 mb-2">${card.title}</div>
                     
                     <div class="mt-auto border-t border-[var(--card-border)] pt-2 flex justify-between items-center">
-                        <div class="text-[9px] font-bold text-[var(--text-muted)] truncate pr-2">
+                        <div class="text-rbi-caption font-bold text-[var(--text-muted)] truncate pr-2">
                             <svg class="w-3 h-3 inline-block mr-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                             ${card.owner ? card.owner.split(' ')[0] : 'Система'}
                         </div>
-                        <div class="text-[9px] font-black text-slate-400">${infoText}</div>
+                        <div class="text-rbi-caption font-black text-muted">${infoText}</div>
                     </div>
                 </div>
             </div>`;
@@ -3224,14 +3246,32 @@ window.saveTwiCard = async function () {
 
     if (window.currentTwiType === 'INSPECTOR' && !window.currentEditingTwiId) {
         var itemId = document.getElementById('twi-item-select').value;
-        var existingCard = window.customTwiCards.find(function (c) {
-            return c.checklistKey === checklistKey &&
-                String(c.itemId) === String(itemId) &&
-                c.type === 'INSPECTOR' &&
-                !c._deleted;
-        });
-        if (existingCard) {
-            return showToast('⚠️ TWI-карта для этого пункта уже создана другим инженером! Обновите базу.');
+        // P2-0023: одно правило уникальности — по ВСЕМ картам (память + база устройства, и скрытые фильтром).
+        // Своя карта → открываем её; раньше показывался отказ «создана другим инженером» и на свою.
+        var allCards = (window.customTwiCards || []).slice();
+        try {
+            var stTwi = _storage();
+            var storedTwi = await stTwi.getAll((stTwi.stores ? stTwi.stores() : STORES).TWI_CARDS);
+            if (Array.isArray(storedTwi)) allCards = allCards.concat(storedTwi);
+        } catch (e) { /* только память */ }
+        var me = _getSetting('engineerName') || '';
+        var conflict = window.RbiSyncMergePolicy
+            ? window.RbiSyncMergePolicy.findTwiConflict(allCards, {
+                checklistKey: checklistKey, itemId: itemId, me: me,
+                canEdit: function (owner) { return rbi_canDeleteKnowledgeItem(owner); }
+            })
+            : { action: 'none' };
+        if (conflict.action !== 'none') window._rbiMagicTwiPending = false;
+        if (conflict.action === 'open') {
+            if (!(window.customTwiCards || []).some(function (c) { return String(c.id) === String(conflict.card.id); })) {
+                window.customTwiCards.push(conflict.card);
+            }
+            showToast('ℹ️ Карта для этого пункта уже есть — открыта для правки');
+            window.openTwiConstructor(conflict.card.id);
+            return;
+        }
+        if (conflict.action === 'refuse') {
+            return showToast('⚠️ Карта для этого пункта уже есть (автор: ' + (conflict.card.owner || '—') + '). Попросите автора или руководителя дополнить её.');
         }
     }
 
@@ -3382,15 +3422,15 @@ window.renderDocsList = function () {
         filtersBlock.innerHTML = `
         <div class="flex justify-between items-center mb-3">
             <label class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                <span class="text-[10px] font-black uppercase tracking-widest ${window.docOwnerFilter === 'MY' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}">Только мои</span>
+                <span class="text-rbi-caption font-black uppercase tracking-widest ${window.docOwnerFilter === 'MY' ? 'text-brand' : 'text-muted'}">Только мои</span>
                 <div class="relative">
                     <input type="checkbox" class="sr-only peer" onchange="window.docOwnerFilter = this.checked ? 'MY' : 'ALL'; renderDocsList()" ${window.docOwnerFilter === 'MY' ? 'checked' : ''}>
-                    <div class="w-8 h-4 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-500"></div>
+                    <div class="w-8 h-4 bg-surface rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-brand"></div>
                 </div>
             </label>
             <div class="flex items-center gap-2">
                 <div id="docs-view-mode-toggle" class="shrink-0"></div>
-                <button type="button" onclick="downloadMissingCloudFiles()" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-500 active:scale-95 shadow-sm" title="Скачать всё для офлайна" aria-label="Скачать всё для офлайна">
+                <button type="button" onclick="downloadMissingCloudFiles()" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-surface border border-surface text-brand active:scale-95 shadow-sm" title="Скачать всё для офлайна" aria-label="Скачать всё для офлайна">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 </button>
             </div>
@@ -3398,22 +3438,22 @@ window.renderDocsList = function () {
         
         <div class="flex justify-between items-center mb-2">
             <div class="relative flex-1 mr-2">
-                <span class="absolute left-3 top-2.5 text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></span>
-                <input type="text" id="doc-search-input" class="input-base pl-9 text-[11px]" placeholder="Поиск ГОСТ, СП..." oninput="renderDocsList()" value="${searchInput}">
+                <span class="absolute left-3 top-2.5 text-muted"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></span>
+                <input type="text" id="doc-search-input" class="input-base pl-9 text-rbi-label" placeholder="Поиск ГОСТ, СП..." oninput="renderDocsList()" value="${searchInput}">
             </div>
-            <button onclick="openAiDocChat()" class="bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:border-indigo-800 dark:text-indigo-400 px-3 py-2 rounded-lg shadow-sm active:scale-95 text-[10px] font-black uppercase whitespace-nowrap mr-2 flex items-center gap-1">
+            <button onclick="openAiDocChat()" class="bg-brand-soft text-brand border border-brand-soft px-3 py-2 rounded-lg shadow-sm active:scale-95 text-rbi-caption font-black uppercase whitespace-nowrap mr-2 flex items-center gap-1">
                 🤖 Спросить ИИ
             </button>
-            <button onclick="openAddDocModal()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg shadow-md active:scale-95 text-[10px] font-black uppercase whitespace-nowrap flex items-center gap-1">
+            <button onclick="openAddDocModal()" class="bg-brand text-white px-3 py-2 rounded-lg shadow-md active:scale-95 text-rbi-caption font-black uppercase whitespace-nowrap flex items-center gap-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg> Свой НД
             </button>
         </div>
         
         <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 border-t border-[var(--card-border)] pt-2" id="doc-filters-container">
-            <button onclick="filterDocs('ALL', this)" class="doc-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold ${currentDocFilter === 'ALL' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'} active:scale-95 whitespace-nowrap border">Все</button>
-            <button onclick="filterDocs('СП', this)" class="doc-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold ${currentDocFilter === 'СП' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'} active:scale-95 whitespace-nowrap border">СП</button>
-            <button onclick="filterDocs('ГОСТ', this)" class="doc-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold ${currentDocFilter === 'ГОСТ' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'} active:scale-95 whitespace-nowrap border">ГОСТ</button>
-            <button onclick="filterDocs('ПРОЕКТ', this)" class="doc-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold ${currentDocFilter === 'ПРОЕКТ' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'} active:scale-95 whitespace-nowrap border">Проект / РД</button>
+            <button onclick="filterDocs('ALL', this)" class="doc-filter-btn px-3 py-1.5 rounded-lg text-rbi-caption font-bold ${currentDocFilter === 'ALL' ? 'bg-brand text-white border-brand shadow-sm' : 'bg-surface text-muted border-surface'} active:scale-95 whitespace-nowrap border">Все</button>
+            <button onclick="filterDocs('СП', this)" class="doc-filter-btn px-3 py-1.5 rounded-lg text-rbi-caption font-bold ${currentDocFilter === 'СП' ? 'bg-brand text-white border-brand shadow-sm' : 'bg-surface text-muted border-surface'} active:scale-95 whitespace-nowrap border">СП</button>
+            <button onclick="filterDocs('ГОСТ', this)" class="doc-filter-btn px-3 py-1.5 rounded-lg text-rbi-caption font-bold ${currentDocFilter === 'ГОСТ' ? 'bg-brand text-white border-brand shadow-sm' : 'bg-surface text-muted border-surface'} active:scale-95 whitespace-nowrap border">ГОСТ</button>
+            <button onclick="filterDocs('ПРОЕКТ', this)" class="doc-filter-btn px-3 py-1.5 rounded-lg text-rbi-caption font-bold ${currentDocFilter === 'ПРОЕКТ' ? 'bg-brand text-white border-brand shadow-sm' : 'bg-surface text-muted border-surface'} active:scale-95 whitespace-nowrap border">Проект / РД</button>
         </div>
     `;
     }
@@ -3445,7 +3485,7 @@ window.renderDocsList = function () {
     });
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-10 text-slate-500 text-[11px] font-bold uppercase tracking-widest bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm">Документы не найдены</div>`;
+        container.innerHTML = `<div class="text-center py-10 text-muted text-rbi-label font-bold uppercase tracking-widest bg-surface rounded-xl border border-dashed border-surface shadow-sm">Документы не найдены</div>`;
         return;
     }
 
@@ -3461,9 +3501,9 @@ window.renderDocsList = function () {
     Object.keys(grouped).sort().forEach(function (type) {
         html += `
     <details class="mb-4 bg-transparent group [&_summary::-webkit-details-marker]:hidden">
-        <summary class="py-2.5 px-2 font-black text-slate-800 dark:text-white text-[12px] uppercase tracking-wider mb-1 border-b border-slate-200 dark:border-slate-700 cursor-pointer flex justify-between items-center select-none rounded-lg hover:bg-[var(--hover-bg)] transition-colors active:opacity-70">
-            <span class="truncate pr-4">${type} <span class="text-[10px] text-slate-400 ml-1">(${grouped[type].length})</span></span>
-            <span class="text-slate-400 shrink-0 transition-transform duration-300 group-open:rotate-180">
+        <summary class="py-2.5 px-2 font-black text-ink dark:text-white text-rbi-body uppercase tracking-wider mb-1 border-b border-surface cursor-pointer flex justify-between items-center select-none rounded-lg hover:bg-[var(--hover-bg)] transition-colors active:opacity-70">
+            <span class="truncate pr-4">${type} <span class="text-rbi-caption text-muted ml-1">(${grouped[type].length})</span></span>
+            <span class="text-muted shrink-0 transition-transform duration-300 group-open:rotate-180">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
             </span>
         </summary>
@@ -3473,35 +3513,35 @@ window.renderDocsList = function () {
         grouped[type].forEach(function (doc) {
             var isSystem = String(doc.id).startsWith('sys_');
             var isOwner = !isSystem && (!doc.owner || doc.owner === currentEngineer);
-            var tagColor = 'text-indigo-700 bg-indigo-50 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400';
+            var tagColor = 'text-brand bg-brand-soft border-brand-soft';
             var infoText = isSystem ? 'Системный' : (doc.pdfSize ? 'PDF: ' + doc.pdfSize : 'Без файла');
             var safeCode = String(doc.code || '').replace(/'/g, "\\'");
             var menuBtn = !isSystem
-                ? `<button onclick="event.stopPropagation(); openUniversalActionSheet('${doc.id}', 'doc', '${safeCode}', ${isOwner})" class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-[var(--hover-bg)] active:scale-90"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>`
+                ? `<button onclick="event.stopPropagation(); openUniversalActionSheet('${doc.id}', 'doc', '${safeCode}', ${isOwner})" class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-muted hover:bg-[var(--hover-bg)] active:scale-90"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>`
                 : '';
 
             if (isListView) {
                 html += `
         <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm flex items-center gap-2.5 p-2 active:scale-[0.99] transition-transform relative cursor-pointer" onclick="openDocViewer('${doc.id}')">
-            <div class="w-10 h-10 rounded-lg shrink-0 bg-slate-50 dark:bg-slate-900 border border-[var(--card-border)] flex items-center justify-center"><span class="text-[8px] font-black text-red-500">DOC</span></div>
+            <div class="w-10 h-10 rounded-lg shrink-0 bg-surface border border-[var(--card-border)] flex items-center justify-center"><span class="text-rbi-caption font-black text-danger">DOC</span></div>
             <div class="min-w-0 flex-1">
-                <div class="text-[12px] font-black text-slate-800 dark:text-white truncate">${doc.code}${isSystem ? ' <span class="text-[8px] font-black text-indigo-500">СИС</span>' : ''}</div>
-                <div class="text-[9px] font-bold text-slate-400 truncate mt-0.5">${doc.type} · ${doc.title}</div>
+                <div class="text-rbi-body font-black text-ink dark:text-white truncate">${doc.code}${isSystem ? ' <span class="text-rbi-caption font-black text-brand">СИС</span>' : ''}</div>
+                <div class="text-rbi-caption font-bold text-muted truncate mt-0.5">${doc.type} · ${doc.title}</div>
             </div>
             ${menuBtn}
         </div>`;
             } else {
             html += `
         <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm overflow-hidden flex flex-col active:scale-[0.98] transition-transform relative cursor-pointer" onclick="openDocViewer('${doc.id}')">
-            ${isSystem ? '<div class="absolute top-2 left-2 bg-indigo-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-md z-10">СИС</div>' : ''}
+            ${isSystem ? '<div class="absolute top-2 left-2 bg-brand text-white text-rbi-caption font-black px-1.5 py-0.5 rounded shadow-md z-10">СИС</div>' : ''}
             
-            <div class="h-24 border-b border-[var(--card-border)] bg-slate-50 dark:bg-slate-900 flex items-center justify-center relative">
-                <div class="w-10 h-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between p-1.5 relative overflow-hidden">
-                    <div class="absolute top-0 left-0 right-0 h-3.5 bg-red-500 flex items-center justify-center"><span class="text-[6px] text-white font-black tracking-widest">DOC</span></div>
+            <div class="h-24 border-b border-[var(--card-border)] bg-surface flex items-center justify-center relative">
+                <div class="w-10 h-12 bg-surface rounded-lg shadow-sm border border-surface flex flex-col justify-between p-1.5 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 right-0 h-3.5 bg-danger flex items-center justify-center"><span class="text-[6px] text-white font-black tracking-widest">DOC</span></div>
                     <div class="space-y-1 mt-4">
-                        <div class="h-0.5 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
-                        <div class="h-0.5 bg-slate-200 dark:bg-slate-700 rounded w-5/6"></div>
-                        <div class="h-0.5 bg-slate-200 dark:bg-slate-700 rounded w-4/6"></div>
+                        <div class="h-0.5 bg-surface rounded w-full"></div>
+                        <div class="h-0.5 bg-surface rounded w-5/6"></div>
+                        <div class="h-0.5 bg-surface rounded w-4/6"></div>
                     </div>
                 </div>
                 
@@ -3512,16 +3552,16 @@ window.renderDocsList = function () {
             </div>
             
             <div class="p-3 flex flex-col flex-1">
-                <div class="text-[8px] font-black px-1.5 py-0.5 rounded w-fit mb-1.5 uppercase border ${tagColor} truncate max-w-full">${doc.type}</div>
-                <div class="text-[12px] font-black text-slate-800 dark:text-white leading-tight mb-1 truncate">${doc.code}</div>
-                <div class="text-[10px] font-medium text-[var(--text-muted)] leading-snug line-clamp-2 mb-2">${doc.title}</div>
+                <div class="text-rbi-caption font-black px-1.5 py-0.5 rounded w-fit mb-1.5 uppercase border ${tagColor} truncate max-w-full">${doc.type}</div>
+                <div class="text-rbi-body font-black text-ink dark:text-white leading-tight mb-1 truncate">${doc.code}</div>
+                <div class="text-rbi-caption font-medium text-[var(--text-muted)] leading-snug line-clamp-2 mb-2">${doc.title}</div>
                 
                 <div class="mt-auto border-t border-[var(--card-border)] pt-2 flex justify-between items-center">
-                    <div class="text-[9px] font-bold text-[var(--text-muted)] truncate pr-2">
+                    <div class="text-rbi-caption font-bold text-[var(--text-muted)] truncate pr-2">
                         <svg class="w-3 h-3 inline-block mr-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                         ${isSystem ? 'Система' : (doc.owner ? doc.owner.split(' ')[0] : 'Инженер')}
                     </div>
-                    <div class="text-[9px] font-black text-slate-400">${infoText}</div>
+                    <div class="text-rbi-caption font-black text-muted">${infoText}</div>
                 </div>
             </div>
         </div>`;
@@ -3565,9 +3605,9 @@ function filterDocs(type, btnElement) {
     window.currentDocFilter = currentDocFilter;
     const container = document.getElementById('doc-filters-container');
     container.querySelectorAll('.doc-filter-btn').forEach(btn => {
-        btn.className = "doc-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 active:scale-95 whitespace-nowrap border border-slate-200 dark:border-slate-700";
+        btn.className = "doc-filter-btn px-3 py-1.5 rounded-lg text-rbi-caption font-bold bg-surface text-muted active:scale-95 whitespace-nowrap border border-surface";
     });
-    btnElement.className = "doc-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold bg-indigo-600 text-white shadow-sm active:scale-95 whitespace-nowrap border border-indigo-600";
+    btnElement.className = "doc-filter-btn px-3 py-1.5 rounded-lg text-rbi-caption font-bold bg-brand text-white shadow-sm active:scale-95 whitespace-nowrap border border-brand";
     window.renderDocsList();
 }
 
@@ -4136,15 +4176,15 @@ window.renderNodesList = function () {
         filtersBlock.innerHTML = `
             <div class="flex justify-between items-center mb-3">
                 <label class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                    <span class="text-[10px] font-black uppercase tracking-widest ${window.nodeOwnerFilter === 'MY' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}">Только мои</span>
+                    <span class="text-rbi-caption font-black uppercase tracking-widest ${window.nodeOwnerFilter === 'MY' ? 'text-brand' : 'text-muted'}">Только мои</span>
                     <div class="relative">
                         <input type="checkbox" class="sr-only peer" onchange="window.nodeOwnerFilter = this.checked ? 'MY' : 'ALL'; renderNodesList()" ${window.nodeOwnerFilter === 'MY' ? 'checked' : ''}>
-                        <div class="w-8 h-4 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-500"></div>
+                        <div class="w-8 h-4 bg-surface rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-brand"></div>
                     </div>
                 </label>
                 <div class="flex items-center gap-2">
                     <div id="nodes-view-mode-toggle" class="shrink-0"></div>
-                    <button type="button" onclick="downloadMissingCloudFiles()" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-500 active:scale-95 shadow-sm" title="Скачать всё для офлайна" aria-label="Скачать всё для офлайна">
+                    <button type="button" onclick="downloadMissingCloudFiles()" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-surface border border-surface text-brand active:scale-95 shadow-sm" title="Скачать всё для офлайна" aria-label="Скачать всё для офлайна">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     </button>
                 </div>
@@ -4181,7 +4221,7 @@ window.renderNodesList = function () {
     });
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs font-bold uppercase tracking-widest bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">Узлы не найдены</div>`;
+        container.innerHTML = `<div class="text-center py-10 text-muted text-xs font-bold uppercase tracking-widest bg-surface rounded-xl border border-surface shadow-sm">Узлы не найдены</div>`;
         return;
     }
 
@@ -4198,9 +4238,9 @@ window.renderNodesList = function () {
     for (var cat in grouped) {
         html += `
     <details class="mb-4 bg-transparent group [&_summary::-webkit-details-marker]:hidden">
-        <summary class="py-2.5 px-2 font-black text-slate-800 dark:text-white text-[12px] uppercase tracking-wider mb-1 border-b border-slate-200 dark:border-slate-700 cursor-pointer flex justify-between items-center select-none rounded-lg hover:bg-[var(--hover-bg)] transition-colors active:opacity-70">
-            <span class="truncate pr-4">${cat} <span class="text-[10px] text-slate-400 ml-1">(${grouped[cat].length})</span></span>
-            <span class="text-slate-400 shrink-0 transition-transform duration-300 group-open:rotate-180">
+        <summary class="py-2.5 px-2 font-black text-ink dark:text-white text-rbi-body uppercase tracking-wider mb-1 border-b border-surface cursor-pointer flex justify-between items-center select-none rounded-lg hover:bg-[var(--hover-bg)] transition-colors active:opacity-70">
+            <span class="truncate pr-4">${cat} <span class="text-rbi-caption text-muted ml-1">(${grouped[cat].length})</span></span>
+            <span class="text-muted shrink-0 transition-transform duration-300 group-open:rotate-180">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
             </span>
         </summary>
@@ -4220,17 +4260,17 @@ window.renderNodesList = function () {
 
             if (hasPdfAttachment || isOldPdf) {
                 previewHtml = `
-                <div class="w-full h-full flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 relative p-2">
-                    <div class="w-12 h-16 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-red-200 dark:border-red-800 flex flex-col justify-between p-1.5 relative overflow-hidden">
-                        <div class="absolute top-0 left-0 right-0 h-4 bg-red-500 flex items-center justify-center"><span class="text-[7px] text-white font-black tracking-widest">PDF</span></div>
+                <div class="w-full h-full flex flex-col items-center justify-center bg-surface relative p-2">
+                    <div class="w-12 h-16 bg-surface rounded-lg shadow-md border border-danger-soft flex flex-col justify-between p-1.5 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 right-0 h-4 bg-danger flex items-center justify-center"><span class="text-[7px] text-white font-black tracking-widest">PDF</span></div>
                         <div class="space-y-1.5 mt-5">
-                            <div class="h-1 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
-                            <div class="h-1 bg-slate-200 dark:bg-slate-700 rounded w-5/6"></div>
-                            <div class="h-1 bg-slate-200 dark:bg-slate-700 rounded w-4/6"></div>
+                            <div class="h-1 bg-surface rounded w-full"></div>
+                            <div class="h-1 bg-surface rounded w-5/6"></div>
+                            <div class="h-1 bg-surface rounded w-4/6"></div>
                         </div>
                     </div>
                 </div>`;
-                listThumb = '<span class="text-[8px] font-black text-red-500">PDF</span>';
+                listThumb = '<span class="text-rbi-caption font-black text-danger">PDF</span>';
             } else if (node.attachments && node.attachments.length > 0 && node.attachments[0].type === 'image') {
                 previewHtml = `<img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(node.attachments[0].url, { preferThumb: true }) : ('src="' + (window.getPhotoThumbSrc || window.getPhotoSrc)(node.attachments[0].url) + '"')} class="w-full h-full object-contain p-2" loading="lazy">`;
                 listThumb = `<img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(node.attachments[0].url, { preferThumb: true }) : ('src="' + (window.getPhotoThumbSrc || window.getPhotoSrc)(node.attachments[0].url) + '"')} class="w-full h-full object-cover" loading="lazy">`;
@@ -4238,30 +4278,30 @@ window.renderNodesList = function () {
                 previewHtml = `<img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(node.img, { preferThumb: true }) : ('src="' + (window.getPhotoThumbSrc || window.getPhotoSrc)(node.img) + '"')} class="w-full h-full object-contain p-2" loading="lazy">`;
                 listThumb = `<img ${(typeof window.rbiBuildPhotoImgAttrs === 'function') ? window.rbiBuildPhotoImgAttrs(node.img, { preferThumb: true }) : ('src="' + (window.getPhotoThumbSrc || window.getPhotoSrc)(node.img) + '"')} class="w-full h-full object-cover" loading="lazy">`;
             } else {
-                previewHtml = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-900"><svg class="w-8 h-8 opacity-40 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"></path></svg></div>`;
-                listThumb = '<span class="text-[8px] font-black text-slate-400">УЗЕЛ</span>';
+                previewHtml = `<div class="w-full h-full flex flex-col items-center justify-center text-muted bg-surface"><svg class="w-8 h-8 opacity-40 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"></path></svg></div>`;
+                listThumb = '<span class="text-rbi-caption font-black text-muted">УЗЕЛ</span>';
             }
 
             var menuBtn = !isSystem
-                ? `<button onclick="event.stopPropagation(); openUniversalActionSheet('${node.id}', 'node', '${safeNodeTitle}', ${isOwner})" class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-[var(--hover-bg)] active:scale-90"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>`
+                ? `<button onclick="event.stopPropagation(); openUniversalActionSheet('${node.id}', 'node', '${safeNodeTitle}', ${isOwner})" class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-muted hover:bg-[var(--hover-bg)] active:scale-90"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>`
                 : '';
 
             if (isListView) {
                 html += `
         <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm flex items-center gap-2.5 p-2 active:scale-[0.99] transition-transform relative cursor-pointer" onclick="openNodeViewer('${node.id}')">
-            <div class="w-11 h-11 rounded-lg overflow-hidden shrink-0 border border-[var(--card-border)] bg-slate-50 dark:bg-slate-900 flex items-center justify-center">${listThumb}</div>
+            <div class="w-11 h-11 rounded-lg overflow-hidden shrink-0 border border-[var(--card-border)] bg-surface flex items-center justify-center">${listThumb}</div>
             <div class="min-w-0 flex-1">
-                <div class="text-[12px] font-bold text-slate-800 dark:text-white truncate">${nodeTitle}${isSystem ? ' <span class="text-[8px] font-black text-indigo-500">СИС</span>' : ''}</div>
-                <div class="text-[9px] font-bold text-slate-400 truncate mt-0.5">${node.category || ''} · ${isSystem ? 'Система' : (node.owner ? node.owner.split(' ')[0] : 'Инженер')}</div>
+                <div class="text-rbi-body font-bold text-ink dark:text-white truncate">${nodeTitle}${isSystem ? ' <span class="text-rbi-caption font-black text-brand">СИС</span>' : ''}</div>
+                <div class="text-rbi-caption font-bold text-muted truncate mt-0.5">${node.category || ''} · ${isSystem ? 'Система' : (node.owner ? node.owner.split(' ')[0] : 'Инженер')}</div>
             </div>
             ${menuBtn}
         </div>`;
             } else {
             html += `
         <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm overflow-hidden flex flex-col active:scale-[0.98] transition-transform relative cursor-pointer" onclick="openNodeViewer('${node.id}')">
-            ${isSystem ? '<div class="absolute top-2 left-2 bg-indigo-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-md z-10">СИС</div>' : ''}
+            ${isSystem ? '<div class="absolute top-2 left-2 bg-brand text-white text-rbi-caption font-black px-1.5 py-0.5 rounded shadow-md z-10">СИС</div>' : ''}
             
-            <div class="h-28 sm:h-32 border-b border-[var(--card-border)] bg-slate-50 dark:bg-slate-900 relative">
+            <div class="h-28 sm:h-32 border-b border-[var(--card-border)] bg-surface relative">
                 ${previewHtml}
                 ${!isSystem ? `
                 <button onclick="event.stopPropagation(); openUniversalActionSheet('${node.id}', 'node', '${safeNodeTitle}', ${isOwner})" class="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white active:scale-90 transition-transform shadow-md border border-white/20">
@@ -4270,11 +4310,11 @@ window.renderNodesList = function () {
             </div>
             
             <div class="p-3 flex flex-col flex-1">
-                <div class="text-[8px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 px-1.5 py-0.5 rounded w-fit mb-1.5 uppercase truncate max-w-full">${node.category}</div>
-                <div class="text-[12px] font-bold text-slate-800 dark:text-white leading-tight line-clamp-2 mb-2">${nodeTitle}</div>
+                <div class="text-rbi-caption font-black text-brand bg-brand-soft border border-brand-soft px-1.5 py-0.5 rounded w-fit mb-1.5 uppercase truncate max-w-full">${node.category}</div>
+                <div class="text-rbi-body font-bold text-ink dark:text-white leading-tight line-clamp-2 mb-2">${nodeTitle}</div>
                 
                 <div class="mt-auto border-t border-[var(--card-border)] pt-2 flex justify-between items-center">
-                    <div class="text-[9px] font-bold text-[var(--text-muted)] truncate pr-2">
+                    <div class="text-rbi-caption font-bold text-[var(--text-muted)] truncate pr-2">
                         <svg class="w-3 h-3 inline-block mr-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                         ${isSystem ? 'Система' : (node.owner ? node.owner.split(' ')[0] : 'Инженер')}
                     </div>
@@ -4394,45 +4434,45 @@ window.saveCustomDoc          = saveCustomDoc;
 function renderNodeViewerOverlayMarkup() {
     return `
     <div id="node-viewer-overlay"
-        class="fixed inset-0 bg-slate-900/90 z-[2500] hidden flex-col transition-opacity duration-300 opacity-0"
+        class="fixed inset-0 bg-surface/90 z-[2500] hidden flex-col transition-opacity duration-300 opacity-0"
         data-knowledge-action="closeNodeViewer">
         <div class="bg-[var(--bg-main)] w-full h-full max-w-2xl mx-auto flex flex-col shadow-2xl overflow-hidden relative"
             onclick="event.stopPropagation()">
             <div
-                class="bg-indigo-600 text-white p-4 flex justify-between items-center shadow-md z-10 sticky top-0 shrink-0">
+                class="bg-brand text-white p-4 flex justify-between items-center shadow-md z-10 sticky top-0 shrink-0">
                 <div class="flex flex-col min-w-0 pr-4">
                     <div class="flex items-center gap-2 mb-0.5">
                         <span
-                            class="bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-white/30"
+                            class="bg-white/20 px-1.5 py-0.5 rounded text-rbi-caption font-black uppercase tracking-widest border border-white/30"
                             id="viewer-node-badge">ТИП</span>
-                        <span class="text-[10px] font-bold text-indigo-200 uppercase tracking-widest truncate"
+                        <span class="text-rbi-caption font-bold text-white/80 uppercase tracking-widest truncate"
                             id="viewer-node-category">Категория</span>
                     </div>
                     <span class="text-sm font-black truncate leading-tight" id="viewer-node-title">Название Узла</span>
                 </div>
                 <button data-knowledge-action="closeNodeViewer"
-                    class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center font-black active:scale-90 border border-indigo-400 shrink-0">
+                    class="w-8 h-8 bg-brand rounded-full flex items-center justify-center font-black active:scale-90 border border-brand shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div class="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900" id="viewer-node-content">
+            <div class="flex-1 overflow-y-auto custom-scrollbar bg-surface" id="viewer-node-content">
                 <div id="viewer-node-attachments"
-                    class="w-full bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm p-3 space-y-3">
+                    class="w-full bg-surface border-b border-surface shadow-sm p-3 space-y-3">
                     <!-- Сюда JS загрузит картинки и PDF -->
                 </div>
                 <div class="p-4 space-y-4">
                     <div
-                        class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Описание</div>
+                        class="bg-surface rounded-xl p-4 shadow-sm border border-surface">
+                        <div class="text-rbi-caption font-black text-muted uppercase tracking-widest mb-2">Описание</div>
                         <div id="viewer-node-desc"
-                            class="text-[12px] font-medium leading-relaxed text-slate-700 dark:text-slate-300"></div>
+                            class="text-rbi-body font-medium leading-relaxed text-ink"></div>
                     </div>
                     <div
-                        class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        class="bg-surface rounded-xl shadow-sm border border-surface overflow-hidden">
                         <div
-                            class="bg-slate-50 dark:bg-slate-900/50 p-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                            class="bg-surface p-3 text-rbi-caption font-black text-muted uppercase tracking-widest border-b border-surface flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
@@ -4440,7 +4480,7 @@ function renderNodeViewerOverlayMarkup() {
                             </svg> Спецификация материалов
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left text-[11px]">
+                            <table class="w-full text-left text-rbi-label">
                                 <tbody id="viewer-node-materials"
                                     class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
                             </table>
@@ -4457,50 +4497,50 @@ function renderNodeViewerOverlayMarkup() {
 function renderTwiViewerOverlayMarkup() {
     return `
     <div id="twi-viewer-overlay"
-        class="fixed inset-0 bg-slate-900/90 z-[2500] hidden flex-col transition-opacity duration-300 opacity-0"
+        class="fixed inset-0 bg-surface/90 z-[2500] hidden flex-col transition-opacity duration-300 opacity-0"
         data-knowledge-action="closeTwiViewer">
         <div class="bg-[var(--bg-main)] w-full h-full max-w-2xl mx-auto flex flex-col shadow-2xl overflow-hidden relative"
             onclick="event.stopPropagation()">
             <div
-                class="bg-indigo-600 text-white p-4 flex justify-between items-center shadow-md z-10 sticky top-0 shrink-0">
+                class="bg-brand text-white p-4 flex justify-between items-center shadow-md z-10 sticky top-0 shrink-0">
                 <div class="flex flex-col min-w-0 pr-4">
                     <div class="flex items-center gap-2 mb-0.5">
                         <span
-                            class="bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-white/30"
+                            class="bg-white/20 px-1.5 py-0.5 rounded text-rbi-caption font-black uppercase tracking-widest border border-white/30"
                             id="viewer-twi-badge">ТИП</span>
-                        <span class="text-[10px] font-bold text-indigo-200 uppercase tracking-widest truncate"
+                        <span class="text-rbi-caption font-bold text-white/80 uppercase tracking-widest truncate"
                             id="viewer-twi-checklist">Вид работ</span>
                     </div>
                     <span class="text-sm font-black truncate leading-tight" id="viewer-twi-title">Название
                         Инструкции</span>
                 </div>
                 <button data-knowledge-action="closeTwiViewer"
-                    class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center active:scale-90 shrink-0 border border-indigo-400">
+                    class="w-8 h-8 bg-brand rounded-full flex items-center justify-center active:scale-90 shrink-0 border border-brand">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
             <div id="viewer-twi-info-panel"
-                class="hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex gap-6 text-[11px] font-bold text-slate-600 dark:text-slate-300 shadow-sm z-10 shrink-0">
-                <div class="flex items-center gap-1.5"><svg class="w-4 h-4 text-slate-400" fill="none"
+                class="hidden bg-surface border-b border-surface px-4 py-3 flex gap-6 text-rbi-label font-bold text-muted shadow-sm z-10 shrink-0">
+                <div class="flex items-center gap-1.5"><svg class="w-4 h-4 text-muted" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg> <span id="viewer-twi-time">0 мин</span></div>
-                <div class="flex items-center gap-1.5"><svg class="w-4 h-4 text-slate-400" fill="none"
+                <div class="flex items-center gap-1.5"><svg class="w-4 h-4 text-muted" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
                         </path>
                     </svg> <span id="viewer-twi-steps-count">0 шагов</span></div>
             </div>
-            <div class="flex-1 overflow-y-auto p-0 md:p-4 custom-scrollbar bg-slate-50 dark:bg-slate-900 relative"
+            <div class="flex-1 overflow-y-auto p-0 md:p-4 custom-scrollbar bg-surface relative"
                 id="viewer-twi-content"></div>
             <div id="viewer-twi-footer"
-                class="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shrink-0 flex gap-2">
+                class="p-3 bg-surface border-t border-surface shrink-0 flex gap-2">
                 <button data-knowledge-action="showTwiPrintOptions"
-                    class="w-12 h-12 bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-xl flex items-center justify-center active:scale-95 border border-slate-200 dark:border-slate-600 shrink-0 shadow-sm"
+                    class="w-12 h-12 bg-surface text-muted rounded-xl flex items-center justify-center active:scale-95 border border-surface shrink-0 shadow-sm"
                     title="Печать / PDF">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -4511,10 +4551,10 @@ function renderTwiViewerOverlayMarkup() {
                 <button id="viewer-twi-word-btn" type="button" data-knowledge-action="rbi_exportTwiDocx"
                     class="hidden w-12 h-12 bg-sky-600 text-white rounded-xl flex items-center justify-center active:scale-95 shadow-md shrink-0"
                     title="Скачать Word">
-                    <span class="text-[10px] font-black uppercase tracking-wider">Word</span>
+                    <span class="text-rbi-caption font-black uppercase tracking-wider">Word</span>
                 </button>
                 <button data-knowledge-action="closeTwiViewer"
-                    class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-[12px] uppercase tracking-widest active:scale-95 shadow-md flex items-center justify-center gap-2">
+                    class="flex-1 bg-brand text-white py-3 rounded-xl font-black text-rbi-body uppercase tracking-widest active:scale-95 shadow-md flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
                     </svg> Прочитано
@@ -4528,21 +4568,21 @@ function renderTwiViewerOverlayMarkup() {
 function renderTwiActionSheetMarkup() {
     return `
     <div id="twi-action-sheet"
-        class="fixed inset-0 bg-slate-900/60 z-[3500] hidden items-end justify-center p-2 sm:p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0"
+        class="fixed inset-0 bg-surface/60 z-[3500] hidden items-end justify-center p-2 sm:p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0"
         data-knowledge-action="closeTwiActionSheet">
-        <div class="bg-[var(--card-bg)] w-full max-w-md rounded-3xl shadow-2xl transition-transform duration-300 transform translate-y-full mb-[20px] sm:mb-0 border border-slate-200/50 dark:border-slate-700/50 overflow-hidden flex flex-col"
+        <div class="bg-[var(--card-bg)] w-full max-w-md rounded-3xl shadow-2xl transition-transform duration-300 transform translate-y-full mb-[20px] sm:mb-0 border border-surface/50 overflow-hidden flex flex-col"
             onclick="event.stopPropagation()">
-            <div class="p-4 border-b border-slate-100 dark:border-slate-800 bg-[var(--hover-bg)] shrink-0">
-                <h3 class="font-black text-[13px] uppercase tracking-tight text-slate-800 dark:text-white flex items-center gap-2"
+            <div class="p-4 border-b border-surface bg-[var(--hover-bg)] shrink-0">
+                <h3 class="font-black text-rbi-body uppercase tracking-tight text-ink dark:text-white flex items-center gap-2"
                     id="twi-action-title">
                     Действия с картой
                 </h3>
             </div>
             <div class="p-2 space-y-1">
                 <button data-knowledge-action="handleTwiAction" data-action-arg="view"
-                    class="w-full flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-700 dark:text-slate-300 active:scale-95">
+                    class="w-full flex items-center gap-3 p-3 hover:bg-surface rounded-xl transition-colors text-ink active:scale-95">
                     <div
-                        class="w-8 h-8 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-lg flex items-center justify-center shrink-0">
+                        class="w-8 h-8 bg-brand-soft text-brand rounded-lg flex items-center justify-center shrink-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z">
                             </path>
@@ -4551,22 +4591,22 @@ function renderTwiActionSheetMarkup() {
                             </path>
                         </svg>
                     </div>
-                    <span class="text-[12px] font-bold">Смотреть</span>
+                    <span class="text-rbi-body font-bold">Смотреть</span>
                 </button>
                 <button data-knowledge-action="handleTwiAction" data-action-arg="edit"
-                    class="w-full flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-700 dark:text-slate-300 active:scale-95">
+                    class="w-full flex items-center gap-3 p-3 hover:bg-surface rounded-xl transition-colors text-ink active:scale-95">
                     <div
-                        class="w-8 h-8 bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 rounded-lg flex items-center justify-center shrink-0">
+                        class="w-8 h-8 bg-surface text-muted rounded-lg flex items-center justify-center shrink-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125">
                             </path>
                         </svg>
                     </div>
-                    <span class="text-[12px] font-bold">Редактировать</span>
+                    <span class="text-rbi-body font-bold">Редактировать</span>
                 </button>
                 <button data-knowledge-action="handleTwiAction" data-action-arg="duplicate"
-                    class="w-full flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-700 dark:text-slate-300 active:scale-95">
+                    class="w-full flex items-center gap-3 p-3 hover:bg-surface rounded-xl transition-colors text-ink active:scale-95">
                     <div
                         class="w-8 h-8 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg flex items-center justify-center shrink-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -4575,20 +4615,20 @@ function renderTwiActionSheetMarkup() {
                             </path>
                         </svg>
                     </div>
-                    <span class="text-[12px] font-bold">Дублировать</span>
+                    <span class="text-rbi-body font-bold">Дублировать</span>
                 </button>
-                <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+                <div class="border-t border-surface my-1"></div>
                 <button data-knowledge-action="handleTwiAction" data-action-arg="delete"
-                    class="w-full flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors text-red-600 dark:text-red-400 active:scale-95">
+                    class="w-full flex items-center gap-3 p-3 hover:bg-danger-soft rounded-xl transition-colors text-danger active:scale-95">
                     <div
-                        class="w-8 h-8 bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-500 rounded-lg flex items-center justify-center shrink-0">
+                        class="w-8 h-8 bg-danger-soft text-danger rounded-lg flex items-center justify-center shrink-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
                             </path>
                         </svg>
                     </div>
-                    <span class="text-[12px] font-bold">Удалить</span>
+                    <span class="text-rbi-body font-bold">Удалить</span>
                 </button>
             </div>
         </div>
@@ -4599,13 +4639,13 @@ function renderTwiActionSheetMarkup() {
 function renderAddDocModalOverlayMarkup() {
     return `
     <div id="add-doc-modal-overlay"
-        class="fixed inset-0 bg-slate-900/80 z-[2000] hidden items-center justify-center p-4 backdrop-blur-sm"
+        class="fixed inset-0 bg-surface/80 z-[2000] hidden items-center justify-center p-4 backdrop-blur-sm"
         data-knowledge-action="closeAddDocModal">
         <div class="bg-[var(--card-bg)] w-full max-w-md p-6 rounded-2xl shadow-2xl transition-transform border border-[var(--card-border)]"
             onclick="event.stopPropagation()">
             <div
-                class="font-black text-[13px] uppercase tracking-tight mb-4 border-b border-[var(--card-border)] pb-3 flex items-center gap-2 text-slate-800 dark:text-white">
-                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                class="font-black text-rbi-body uppercase tracking-tight mb-4 border-b border-[var(--card-border)] pb-3 flex items-center gap-2 text-ink dark:text-white">
+                <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                     stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
@@ -4617,7 +4657,7 @@ function renderAddDocModalOverlayMarkup() {
             <div class="space-y-4 mb-6">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block">Тип документа
+                        <label class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block">Тип документа
                             *</label>
                         <select id="new-doc-type" class="input-base">
                             <option value="СП">СП</option>
@@ -4630,37 +4670,37 @@ function renderAddDocModalOverlayMarkup() {
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block">Шифр
+                        <label class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block">Шифр
                             *</label>
                         <input type="text" id="new-doc-code" class="input-base" placeholder="СТО-12345">
                     </div>
                 </div>
                 <div>
-                    <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block">Название
+                    <label class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block">Название
                         документа *</label>
                     <textarea id="new-doc-title" class="input-base h-16 resize-none"
                         placeholder="Полное наименование..."></textarea>
                 </div>
 
                 <div class="pt-2 border-t border-[var(--card-border)]">
-                    <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2 block">Вложенный файл
+                    <label class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-2 block">Вложенный файл
                         (PDF)</label>
                     <div id="doc-pdf-preview"
-                        class="hidden mb-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl flex justify-between items-center shadow-inner"
+                        class="hidden mb-3 bg-surface border border-surface p-3 rounded-xl flex justify-between items-center shadow-inner"
                         data-pdf="">
                         <div class="min-w-0 pr-3">
-                            <div class="text-[11px] font-black text-slate-800 dark:text-white truncate"
+                            <div class="text-rbi-label font-black text-ink dark:text-white truncate"
                                 id="doc-pdf-name">doc.pdf</div>
-                            <div class="text-[9px] font-bold text-slate-500" id="doc-pdf-size">1.2 MB</div>
+                            <div class="text-rbi-caption font-bold text-muted" id="doc-pdf-size">1.2 MB</div>
                         </div>
                         <button data-knowledge-action="removeDocPdf"
-                            class="w-8 h-8 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-red-500 font-black shadow-sm border border-slate-200 dark:border-slate-700 active:scale-90"><svg
+                            class="w-8 h-8 bg-surface rounded-full flex items-center justify-center text-danger font-black shadow-sm border border-surface active:scale-90"><svg
                                 class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                             </svg></button>
                     </div>
                     <button id="doc-pdf-upload-btn" onclick="document.getElementById('doc-pdf-input').click()"
-                        class="w-full bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-[10px] font-bold uppercase active:scale-95 transition-colors flex justify-center items-center gap-2">
+                        class="w-full bg-surface text-muted py-3 rounded-xl border border-dashed border-surface text-rbi-caption font-bold uppercase active:scale-95 transition-colors flex justify-center items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5">
@@ -4673,9 +4713,9 @@ function renderAddDocModalOverlayMarkup() {
 
             <div class="flex gap-2">
                 <button data-knowledge-action="closeAddDocModal"
-                    class="flex-1 bg-slate-100 text-slate-600 py-3.5 rounded-xl font-bold text-[11px] uppercase shadow-sm active:scale-95 dark:bg-slate-800 dark:text-slate-300">Отмена</button>
+                    class="flex-1 bg-surface text-muted py-3.5 rounded-xl font-bold text-rbi-label uppercase shadow-sm active:scale-95">Отмена</button>
                 <button data-knowledge-action="saveCustomDoc"
-                    class="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-[11px] uppercase shadow-md active:scale-95">Сохранить</button>
+                    class="flex-1 bg-brand text-white py-3.5 rounded-xl font-bold text-rbi-label uppercase shadow-md active:scale-95">Сохранить</button>
             </div>
         </div>
     </div>
@@ -4685,31 +4725,31 @@ function renderAddDocModalOverlayMarkup() {
 function renderItemHelpModalOverlayMarkup() {
     return `
     <div id="item-help-modal-overlay"
-        class="fixed inset-0 bg-slate-900/70 z-[2400] hidden items-end justify-center p-0 sm:p-4 backdrop-blur-sm"
+        class="fixed inset-0 bg-surface/70 z-[2400] hidden items-end justify-center p-0 sm:p-4 backdrop-blur-sm"
         data-knowledge-action="closeItemHelpMenu">
         <div class="bg-[var(--card-bg)] w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl transition-transform transform translate-y-full flex flex-col max-h-[85vh]"
             id="item-help-modal-content" onclick="event.stopPropagation()">
             <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center shrink-0">
                 <div class="flex flex-col min-w-0 pr-4">
                     <span
-                        class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1 flex items-center gap-1">
+                        class="text-rbi-caption font-black text-brand uppercase tracking-widest mb-1 flex items-center gap-1">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                         Справка и Инструкции
                     </span>
-                    <span class="text-[13px] font-bold text-slate-800 dark:text-white truncate leading-tight"
+                    <span class="text-rbi-body font-bold text-ink dark:text-white truncate leading-tight"
                         id="help-modal-title">Название пункта</span>
                 </div>
                 <button data-knowledge-action="closeItemHelpMenu"
-                    class="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 active:scale-90 shrink-0">
+                    class="w-8 h-8 bg-surface rounded-full flex items-center justify-center text-muted active:scale-90 shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3 bg-slate-50 dark:bg-slate-900/50"
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3 bg-surface"
                 id="help-modal-list"></div>
         </div>
     </div>
@@ -4719,13 +4759,13 @@ function renderItemHelpModalOverlayMarkup() {
 function renderNodeSelectorModalMarkup() {
     return `
     <div id="node-selector-modal"
-        class="fixed inset-0 bg-slate-900/70 z-[4000] hidden flex-col items-center justify-end sm:justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0"
+        class="fixed inset-0 bg-surface/70 z-[4000] hidden flex-col items-center justify-end sm:justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0"
         data-knowledge-action="closeNodeSelectorModal">
-        <div class="bg-[var(--bg-main)] w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl transition-transform transform translate-y-full sm:translate-y-4 sm:scale-95 flex flex-col max-h-[85vh] border border-slate-200/50 dark:border-slate-700/50"
+        <div class="bg-[var(--bg-main)] w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl transition-transform transform translate-y-full sm:translate-y-4 sm:scale-95 flex flex-col max-h-[85vh] border border-surface/50"
             onclick="event.stopPropagation()">
-            <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
+            <div class="p-4 border-b border-surface flex justify-between items-center shrink-0">
                 <div
-                    class="font-black text-[13px] uppercase tracking-tight text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                    class="font-black text-rbi-body uppercase tracking-tight text-brand flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244">
@@ -4734,13 +4774,13 @@ function renderNodeSelectorModalMarkup() {
                     Привязать технический узел
                 </div>
                 <button data-knowledge-action="closeNodeSelectorModal"
-                    class="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 active:scale-90 shadow-sm border border-slate-200 dark:border-slate-600">
+                    class="w-8 h-8 bg-surface rounded-full flex items-center justify-center text-muted active:scale-90 shadow-sm border border-surface">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2 bg-slate-50 dark:bg-slate-900/50"
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2 bg-surface"
                 id="node-selector-list"></div>
         </div>
     </div>

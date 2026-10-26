@@ -121,7 +121,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 img.src = ph;
                 img.setAttribute('data-local-src', ref);
             }
-            if (typeof PhotoManager !== 'undefined' && typeof PhotoManager.clearMemory === 'function') {
+            // P2-0023: отзываем только адреса, которых больше нет на странице. Фото без
+            // data-photo-ref (эталоны, разборы) держат свой адрес — иначе ломаются после возврата.
+            if (typeof PhotoManager !== 'undefined' && typeof PhotoManager.sweepUnusedUrls === 'function') {
+                PhotoManager.sweepUnusedUrls({ force: true });
+            } else if (typeof PhotoManager !== 'undefined' && typeof PhotoManager.clearMemory === 'function') {
                 PhotoManager.clearMemory();
             }
         }
@@ -285,50 +289,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         initHorizontalMouseScroll();
-        // ОПТИМИЗАЦИЯ: Ленивая загрузка фото через IntersectionObserver и легкий MutationObserver
-        // ОПТИМИЗАЦИЯ: Умная ленивая загрузка фото без утечек памяти
-        let localImgObserver = null;
-
-        function initImageObserver() {
-            if (localImgObserver) localImgObserver.disconnect(); // Убиваем старого наблюдателя, чтобы не текла память
-
-            localImgObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach(async entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
-                        const src = img.getAttribute('data-local-src');
-                        if (src) {
-                            observer.unobserve(img); // Перестаем следить после загрузки
-                            const preferThumb = img.getAttribute('data-prefer-thumb') === '1';
-                            const realUrl = await PhotoManager.getAsyncUrl(
-                                src,
-                                preferThumb ? { preferThumb: true } : undefined
-                            );
-                            if (realUrl) {
-                                img.src = realUrl;
-                                img.removeAttribute('data-local-src');
-                            } else {
-                                // Офлайн / нет в IDB — не оставляем битый https в src
-                                img.src = (/^https?:\/\//i.test(String(src)) && !navigator.onLine)
-                                    ? (window.rbiPhotoCloudPlaceholder || window.rbiPhotoPlaceholder || img.src)
-                                    : (window.rbiPhotoPlaceholder || img.src);
-                            }
-                        }
-                    }
-                });
-            }, { rootMargin: "200px" });
-        }
-
-        initImageObserver();
-
+        // P2-0023: ленивая загрузка фото — один механизм window.RbiPhotoLoader
+        // (storage-photo-loader.js): только видимые, ≤4 разом, без лимита 80 адресов.
         let imgDebounceTimer = null;
         const observeLocalSrcImgs = () => {
-            if (!localImgObserver) return;
-            const pending = Array.from(document.querySelectorAll('img[data-local-src]'))
-                .filter(img => !img.closest('[data-no-observe]'));
-            for (let i = 0; i < pending.length; i++) {
-                localImgObserver.observe(pending[i]);
-            }
+            if (window.RbiPhotoLoader) window.RbiPhotoLoader.observeAll(document);
         };
         window.rbiObserveLocalSrcImgs = observeLocalSrcImgs;
         const domObserver = new MutationObserver((mutations) => {
@@ -341,8 +306,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (hasNewNodes) {
                 clearTimeout(imgDebounceTimer);
                 imgDebounceTimer = setTimeout(() => {
-                    initImageObserver(); // Перезапускаем чистого наблюдателя
-
                     const imgs = Array.from(document.querySelectorAll(
                         'img[src^="local://"]:not([data-local-src]), img[src^="cloud://"]:not([data-local-src])'
                     )).filter(img => !img.closest('[data-no-observe]'));

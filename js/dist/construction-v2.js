@@ -1154,6 +1154,7 @@ class PlanViewer {
       }
     }
     if (this.destroyed) return;
+    if (!buf) throw new Error("PDF данные недоступны");
     const pdf = await pdfjs.getDocument({ data: buf }).promise;
     const page = await pdf.getPage(1);
     const hostW = Math.max(this.host.clientWidth || 640, 320);

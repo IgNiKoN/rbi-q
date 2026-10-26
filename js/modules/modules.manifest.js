@@ -18,6 +18,8 @@ import { ConstructionManifest } from './construction/construction.manifest.js';
 import { ConstructionV2Manifest } from './construction-v2/construction-v2.manifest.js';
 import { GameManifest }         from './quality/features/gamification/game.manifest.js';
 import { AIManifest }           from './quality/features/ai/ai.manifest.js';
+import { PlanfactManifest }     from './planfact/planfact.manifest.js';
+import { CompanyManifest }      from './company/company.manifest.js';
 
 export const ModulesManifest = [
     QualityManifest,
@@ -27,8 +29,15 @@ export const ModulesManifest = [
     ConstructionManifest,
     ConstructionV2Manifest,
     GameManifest,
-    AIManifest
+    AIManifest,
+    PlanfactManifest,
+    CompanyManifest
 ];
+
+/** Модуль выключен флагом manifest.enabled === false (по умолчанию включён). */
+export function isModuleEnabled(manifest) {
+    return !!manifest && manifest.enabled !== false;
+}
 
 export function getModuleManifest(id) {
     return ModulesManifest.find(function (m) { return m.id === id; }) || null;

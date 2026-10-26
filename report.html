@@ -349,11 +349,9 @@
 
     <div id="report-root" style="display:none;"></div>
 
+    <script src="./js/services/config.service.js"></script>
     <script>
-        const APP_CONFIG = {
-            SUPABASE_URL: 'https://api.rbi-q.ru',
-            SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc3NTA3MjAwLCJleHAiOjE5MzUyNzM2MDB9.f2s_pInfJu74ptaavpJx7J3I6Arwavcjnkzl1z39wPk'
-        };
+        const APP_CONFIG = window.APP_CONFIG;
 
         function showStatus(title, text) {
             document.getElementById('status').style.display = 'flex';
@@ -506,6 +504,11 @@
 
             if (!token) {
                 showStatus('Отчёт не найден', 'В ссылке отсутствует токен отчёта.');
+                return;
+            }
+
+            if (!APP_CONFIG.SUPABASE_URL || !APP_CONFIG.SUPABASE_KEY) {
+                showStatus('Облако отключено', APP_CONFIG.CLOUD_DISABLED_MESSAGE);
                 return;
             }
 

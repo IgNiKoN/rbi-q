@@ -101,50 +101,50 @@ function mountAiDocChatView() {
     <div id="ai-doc-chat-view"
         class="hidden bg-[var(--bg-main)] fixed inset-0 z-[2100] h-[100dvh] max-h-[100dvh] flex flex-col">
         <div
-            class="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-3 py-3 shadow-sm shrink-0 flex items-center gap-2">
+            class="bg-white/95 backdrop-blur-md border-b border-surface px-3 py-3 shadow-sm shrink-0 flex items-center gap-2">
             <button type="button" data-action="closeAiDocChat"
-                class="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 active:scale-95 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg shrink-0">
+                class="text-rbi-label font-bold text-muted flex items-center gap-1 active:scale-95 bg-surface px-3 py-2 rounded-lg shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
                 </svg> ${_t('quality.ai.btn.back', 'Назад')}
             </button>
             <div class="min-w-0 flex-1">
-                <div class="font-black text-[12px] uppercase tracking-tight text-slate-800 dark:text-white truncate">${_t('quality.ai.title.doc_chat', 'База знаний (AI)')}</div>
-                <div id="ai-doc-chat-status" class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold truncate">${_t('quality.ai.status.search_norms', 'Поиск по загруженным нормативам')}</div>
+                <div class="font-black text-rbi-body uppercase tracking-tight text-ink truncate">${_t('quality.ai.title.doc_chat', 'База знаний (AI)')}</div>
+                <div id="ai-doc-chat-status" class="text-rbi-caption text-brand font-bold truncate">${_t('quality.ai.status.search_norms', 'Поиск по загруженным нормативам')}</div>
             </div>
         </div>
         <div class="px-3 pt-2 shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
-                <label class="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-1">${_t('quality.ai.label.work_type', 'Вид работ (чек-лист)')}</label>
-                <select id="ai-doc-template-filter" class="input-base text-[11px] w-full !py-2.5">
+                <label class="text-rbi-caption font-black text-[var(--text-muted)] uppercase tracking-widest block mb-1">${_t('quality.ai.label.work_type', 'Вид работ (чек-лист)')}</label>
+                <select id="ai-doc-template-filter" class="input-base text-rbi-label w-full !py-2.5">
                     <option value="">${_t('quality.ai.option.all_work_types', 'Все виды работ')}</option>
                 </select>
             </div>
             <div>
-                <label class="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-1">${_t('quality.ai.label.pdf_doc', 'Документ PDF')}</label>
-                <select id="ai-doc-filter" class="input-base text-[11px] w-full !py-2.5">
+                <label class="text-rbi-caption font-black text-[var(--text-muted)] uppercase tracking-widest block mb-1">${_t('quality.ai.label.pdf_doc', 'Документ PDF')}</label>
+                <select id="ai-doc-filter" class="input-base text-rbi-label w-full !py-2.5">
                     <option value="">${_t('quality.ai.option.all_docs', 'Все документы')}</option>
                 </select>
             </div>
         </div>
         <div id="ai-doc-chips" class="px-3 pt-2 shrink-0 flex flex-wrap gap-1.5 hidden"></div>
         <div id="ai-chat-history"
-            class="flex-1 min-h-0 overflow-y-auto p-3 custom-scrollbar bg-slate-50 dark:bg-slate-900/40 space-y-3">
+            class="flex-1 min-h-0 overflow-y-auto p-3 custom-scrollbar bg-surface space-y-3">
             <div class="flex gap-2 w-full max-w-[95%]">
-                <div class="w-7 h-7 bg-indigo-200 dark:bg-indigo-800 rounded-full flex items-center justify-center text-[11px] shrink-0">🤖</div>
-                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-2xl rounded-tl-none text-[13px] text-slate-700 dark:text-slate-300 shadow-sm leading-relaxed">
+                <div class="w-7 h-7 bg-brand-soft rounded-full flex items-center justify-center text-rbi-label shrink-0">🤖</div>
+                <div class="bg-surface border border-surface p-3 rounded-2xl rounded-tl-none text-rbi-body text-ink shadow-sm leading-relaxed">
                     ${_t('quality.ai.welcome.doc_chat', 'Можно простым языком: «стены кривые по монолиту», «сколько мм можно». Сначала чек-листы, потом PDF; ниже ответа — источники.')}
                 </div>
             </div>
         </div>
-        <div class="shrink-0 border-t border-[var(--card-border)] bg-white dark:bg-slate-800 p-3 flex gap-2"
+        <div class="shrink-0 border-t border-[var(--card-border)] bg-surface p-3 flex gap-2"
             style="padding-bottom: max(12px, env(safe-area-inset-bottom));">
             <textarea id="ai-chat-input"
-                class="flex-1 bg-[var(--hover-bg)] border border-[var(--card-border)] rounded-xl p-3 text-[13px] outline-none resize-none min-h-[64px] max-h-32 text-slate-800 dark:text-white"
+                class="flex-1 bg-[var(--hover-bg)] border border-[var(--card-border)] rounded-xl p-3 text-rbi-body outline-none resize-none min-h-[64px] max-h-32 text-ink"
                 placeholder="${_t('quality.ai.placeholder.chat', 'Например: стены кривые по монолиту…')}"
                 rows="2"></textarea>
             <button type="button" data-action="askAiDocQuestion" id="ai-chat-send-btn"
-                class="w-12 min-h-[64px] bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md active:scale-95 shrink-0 self-end">
+                class="w-12 min-h-[64px] bg-brand text-white rounded-xl flex items-center justify-center shadow-md active:scale-95 shrink-0 self-end">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                 </svg>

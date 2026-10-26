@@ -15,7 +15,6 @@ import { mountProjectIdBackfillUI } from './features/project-id-backfill-ui.js';
 import { mountCloudDeletedPurgeUI } from './features/cloud-deleted-purge-ui.js';
 import { mountCloudOrphanUrlsUI } from './features/cloud-orphan-urls-ui.js';
 import { mountRoleMatrixUI } from './features/role-matrix-ui.js';
-import { mountEnabledModulesUI } from './features/enabled-modules-ui.js';
 import { mountOfficialTemplatesUI } from './features/official-templates-ui.js';
 
 var SettingsRender = {
@@ -31,8 +30,8 @@ var SettingsRender = {
                 class="sticky-top-panel bg-[var(--card-border)]/80 backdrop-blur-md p-3 rounded-xl border border-[var(--card-border)] shadow-sm mb-4 z-40 flex flex-col gap-2.5">
                 <div class="flex justify-between items-center gap-2">
                     <h2
-                        class="text-[13px] font-black uppercase tracking-tight text-slate-800 dark:text-white flex items-center gap-1.5 min-w-0">
-                        <svg class="w-5 h-5 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        class="text-rbi-body font-black uppercase tracking-tight text-ink dark:text-white flex items-center gap-1.5 min-w-0">
+                        <svg class="w-5 h-5 text-brand shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
@@ -44,7 +43,7 @@ var SettingsRender = {
                     </h2>
                     <div class="flex items-center gap-2 shrink-0">
                         <button data-game-action="gameOpenManagerPanelAuth"
-                            class="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full text-slate-500 active:scale-95 shadow-sm border border-slate-200 dark:border-slate-700"
+                            class="w-8 h-8 flex items-center justify-center bg-surface rounded-full text-muted active:scale-95 shadow-sm border border-surface"
                             title="Панель Руководителя" data-i18n="settings.chrome.manager_panel" data-i18n-attr="title">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -53,26 +52,30 @@ var SettingsRender = {
                             </svg>
                         </button>
                         <button data-settings-action="resetSettingsToDefault" data-i18n="settings.reset_defaults"
-                            class="text-[9px] font-black text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg uppercase tracking-widest border border-red-100 dark:border-red-800/50 shadow-sm active:scale-95 transition-colors">По умолчанию</button>
+                            class="text-rbi-caption font-black text-danger bg-danger-soft px-3 py-2 rounded-lg uppercase tracking-widest border border-danger-soft shadow-sm active:scale-95 transition-colors">По умолчанию</button>
                     </div>
                 </div>
                 <div class="relative min-w-0">
                     <div id="settings-subnav" class="flex flex-nowrap gap-1 p-1 rounded-xl bg-[var(--card-bg)] border border-[var(--card-border)] overflow-x-auto no-scrollbar" role="tablist" aria-label="Подразделы настроек" data-i18n="settings.subnav_aria" data-i18n-attr="aria-label">
                         <button type="button" data-settings-subsection="platform" role="tab" data-i18n="settings.section.platform"
-                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors truncate">Платформа</button>
+                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Платформа</button>
+                        <button type="button" data-settings-subsection="company" role="tab" id="settings-subnav-company" hidden
+                            class="settings-subnav-btn flex-1 min-w-[5.5rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Компания</button>
+                        <button type="button" data-settings-subsection="platform-admin" role="tab" id="settings-subnav-platform-admin" hidden
+                            class="settings-subnav-btn flex-1 min-w-[7.5rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Админ платформы</button>
                         <button type="button" data-settings-subsection="admin" role="tab" id="settings-subnav-admin"
-                            class="settings-subnav-btn flex-1 min-w-[5.5rem] px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors truncate inline-flex items-center justify-center gap-1">
+                            class="settings-subnav-btn flex-1 min-w-[5.5rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate inline-flex items-center justify-center gap-1">
                             <svg class="w-3 h-3 shrink-0 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                            <span data-i18n="settings.section.admin">Админ</span>
+                            <span data-i18n="settings.section.admin">Админ Качества</span>
                         </button>
                         <button type="button" data-settings-subsection="quality" role="tab" data-i18n="settings.section.quality"
-                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors truncate">Качество</button>
+                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Качество</button>
                         <button type="button" data-settings-subsection="construction" role="tab" data-i18n="settings.section.construction"
-                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors truncate">Стройконтроль</button>
+                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Стройконтроль</button>
                     </div>
                     <!-- Подсказка скролла (только визуал, не кликабельна; на md+ скрыта) -->
                     <div class="settings-subnav-scroll-hint pointer-events-none absolute inset-y-1 right-1 w-7 rounded-r-lg bg-gradient-to-l from-[var(--card-bg)] via-[var(--card-bg)]/80 to-transparent flex items-center justify-end pr-0.5 md:hidden" aria-hidden="true">
-                        <svg class="w-3.5 h-3.5 text-slate-400/70 dark:text-slate-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                        <svg class="w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
                         </svg>
                     </div>
@@ -81,12 +84,27 @@ var SettingsRender = {
 
             <div class="settings-panels">
             <div id="settings-panel-platform" data-settings-panel="platform" class="space-y-3">
+                <!-- P2-0013: кто вошёл в Platform 2.0 (почта) и «Выйти»; рисует _syncP2Account по состоянию входа платформы -->
+                <div id="settings-p2-account"
+                    class="hidden bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex-wrap items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div id="settings-p2-account-title" class="text-rbi-caption font-black uppercase tracking-widest text-muted">Как вы вошли</div>
+                        <div id="settings-p2-account-who" class="text-rbi-body font-bold truncate"></div>
+                        <div id="settings-p2-company" class="mt-2"></div>
+                    </div>
+                    <button type="button" id="settings-p2-signout"
+                        class="min-h-[40px] px-4 rounded-xl border border-[var(--card-border)] font-black text-rbi-caption uppercase tracking-widest active:scale-95">Выйти</button>
+                    <button type="button" id="settings-p2-login"
+                        class="hidden min-h-[40px] px-4 rounded-xl border border-[var(--card-border)] font-black text-rbi-caption uppercase tracking-widest active:scale-95">Войти по почте</button>
+                </div>
+                <!-- P2-0028: «Мой профиль» (ФИО, «Сменить пароль») — рисует platform2.renderMyProfile при входе по почте -->
+                <div id="settings-p2-profile"></div>
                 <!-- СИНХРОНИЗАЦИЯ КОМАНДЫ -->
                 <details
-                    class="bg-[var(--card-bg)] border border-indigo-200 dark:border-indigo-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden"
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden"
                     open>
                     <summary
-                        class="p-4 font-black text-[12px] text-indigo-700 dark:text-indigo-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 transition-colors select-none group-open:border-b border-indigo-200 dark:border-indigo-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -95,49 +113,32 @@ var SettingsRender = {
                             </svg>
                             <span data-i18n="settings.accordion.sync">Синхронизация Команды</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-indigo-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
                     </summary>
                     <div id="sync-settings-block"></div>
                 </details>
 
-                <!-- МОДУЛИ ПЛАТФОРМЫ (§37.2 Block 3) — admin-only -->
-                <details id="settings-enabled-modules-section"
-                    class="bg-[var(--card-bg)] border border-indigo-200 dark:border-indigo-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
-                    <summary
-                        class="p-4 font-black text-[12px] text-indigo-700 dark:text-indigo-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 transition-colors select-none group-open:border-b border-indigo-200 dark:border-indigo-800 rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.enabled_modules">Модули платформы</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-indigo-400">▼</span>
-                    </summary>
-                    <div id="settings-enabled-modules-root"></div>
-                </details>
-
                 <!-- AI АССИСТЕНТ -->
                 <details
-                    class="bg-[var(--card-bg)] border border-indigo-200 dark:border-indigo-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-indigo-700 dark:text-indigo-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 transition-colors select-none group-open:border-b border-indigo-200 dark:border-indigo-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z">
                                 </path>
                             </svg>
                             <span data-i18n="settings.accordion.ai">AI-ассистент (DeepSeek)</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-indigo-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
                     </summary>
                     <div class="rounded-b-2xl overflow-hidden">
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.ai.enable">Включить AI</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.ai.enable_hint">Интеллектуальные подсказки и аналитика</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.ai.enable_hint">Интеллектуальные подсказки и аналитика</div>
+                                <div id="set-ai-company-off" class="text-rbi-caption text-[var(--text-muted)] mt-1 hidden" data-i18n="settings.body.ai.company_off">ИИ-помощник выключен для вашей компании. Включает администратор платформы.</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-ai-enabled"
                                     data-settings-action="toggleSetting" data-settings-action-key="aiEnabled" data-settings-action-val-type="element" data-action-event="change"><span
@@ -147,57 +148,30 @@ var SettingsRender = {
                             <div class="p-4 bg-[var(--hover-bg)]">
                                 <div class="font-bold text-sm mb-3" data-i18n="settings.body.ai.mode_title">Способ вызова нейросети</div>
                                 <div class="flex flex-col gap-3">
-                                    <!-- Режим 1: По роли -->
+                                    <!-- Режим 1: По учётке (P2-0034: сервер решает по входу и галочке «ИИ-помощник» в роли) -->
                                     <label
                                         class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                                        <input type="radio" name="ai-mode" value="role"
-                                            class="w-4 h-4 accent-indigo-600" data-action="changeAiMode" data-action-arg="role" data-action-event="change">
+                                        <input type="radio" name="ai-mode" value="account"
+                                            class="w-4 h-4 accent-indigo-600" data-action="changeAiMode" data-action-arg="account" data-action-event="change">
                                         <span
-                                            class="text-[12px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                            class="text-rbi-body font-bold text-ink flex items-center gap-1">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
                                                 </path>
-                                            </svg> <span data-i18n="settings.body.ai.mode_role">Автоматически (По роли)</span>
+                                            </svg> <span data-i18n="settings.body.ai.mode_account">По учётке</span>
                                         </span>
                                     </label>
 
-                                    <!-- Режим 2: Корпоративный пароль -->
-                                    <label
-                                        class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                                        <input type="radio" name="ai-mode" value="corporate"
-                                            class="w-4 h-4 accent-indigo-600"
-                                            data-action="changeAiMode" data-action-arg="corporate" data-action-event="change">
-                                        <span
-                                            class="text-[12px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-                                                </path>
-                                            </svg> <span data-i18n="settings.body.ai.mode_corporate">Через корпоративный пароль</span>
-                                        </span>
-                                    </label>
-                                    <div id="corporate-pwd-field"
-                                        class="hidden bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner ml-6">
-                                        <form onsubmit="event.preventDefault();">
-                                            <!-- ВСТАВКА: Скрытый логин -->
-                                            <input type="text" autocomplete="username" style="display:none;" value="admin">
-                                            
-                                            <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.body.ai.corp_pwd_label">Пароль доступа к ИИ</label>
-                                            <input type="password" id="set-ai-corp-pwd" autocomplete="new-password" class="input-base font-mono text-[10px] bg-slate-50 dark:bg-slate-900" placeholder="Введите пароль..." data-i18n="settings.body.ai.corp_pwd_ph" data-i18n-attr="placeholder" data-settings-action="toggleSetting" data-settings-action-key="aiCorpPwd" data-settings-action-val-type="element" data-action-event="change">
-                                        </form>
-                                    </div>
-
-                                    <!-- Режим 3: Личный ключ -->
+                                    <!-- Режим 2: Личный ключ -->
                                     <label
                                         class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
                                         <input type="radio" name="ai-mode" value="personal"
                                             class="w-4 h-4 accent-indigo-600"
                                             data-action="changeAiMode" data-action-arg="personal" data-action-event="change">
                                         <span
-                                            class="text-[12px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                            class="text-rbi-body font-bold text-ink flex items-center gap-1">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -208,14 +182,14 @@ var SettingsRender = {
                                     </label>
                                     
                                     <div id="personal-key-field"
-                                        class="hidden bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner ml-6">
+                                        class="hidden bg-surface p-3 rounded-xl border border-surface shadow-inner ml-6">
                                         <form onsubmit="event.preventDefault();">
                                             <!-- ВСТАВКА: Скрытый логин -->
                                             <input type="text" autocomplete="username" style="display:none;" value="admin">
                                             
-                                            <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.body.ai.api_key_label">API-ключ DeepSeek</label>
-                                            <input type="password" id="set-ai-key" autocomplete="new-password" class="input-base font-mono text-[10px] bg-slate-50 dark:bg-slate-900" placeholder="sk-..." data-i18n="settings.body.ai.api_key_ph" data-i18n-attr="placeholder" data-settings-action="toggleSetting" data-settings-action-key="apiKey" data-settings-action-val-type="element" data-action-event="change">
-                                            <div class="text-[8px] text-slate-400 mt-1.5 leading-snug" data-i18n="settings.body.ai.device_only">Сохраняется только на вашем устройстве.</div>
+                                            <label class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.body.ai.api_key_label">API-ключ DeepSeek</label>
+                                            <input type="password" id="set-ai-key" autocomplete="new-password" class="input-base font-mono text-rbi-caption bg-surface" placeholder="sk-..." data-i18n="settings.body.ai.api_key_ph" data-i18n-attr="placeholder" data-settings-action="toggleSetting" data-settings-action-key="apiKey" data-settings-action-val-type="element" data-action-event="change">
+                                            <div class="text-rbi-caption text-muted mt-1.5 leading-snug" data-i18n="settings.body.ai.device_only">Сохраняется только на вашем устройстве.</div>
                                         </form>
                                     </div>
                                 </div>
@@ -226,24 +200,24 @@ var SettingsRender = {
 
                 <!-- БРЕНДИРОВАНИЕ -->
                 <details
-                    class="bg-[var(--card-bg)] border border-indigo-200 dark:border-indigo-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-indigo-700 dark:text-indigo-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 transition-colors select-none group-open:border-b border-indigo-200 dark:border-indigo-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01">
                                 </path>
                             </svg>
                             <span data-i18n="settings.accordion.branding">Брендирование (PRO)</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-indigo-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
                     </summary>
                     <div>
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.branding.color">Фирменный цвет</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.color_hint">Цвет акцентов в PDF</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.color_hint">Цвет акцентов в PDF</div>
                             </div>
                             <input type="color" id="set-brand-color"
                                 class="w-10 h-10 p-0 border-0 rounded cursor-pointer"
@@ -253,10 +227,10 @@ var SettingsRender = {
                             <div class="flex justify-between items-center mb-2">
                                 <div>
                                     <div class="font-bold text-sm" data-i18n="settings.body.branding.logo">Логотип компании</div>
-                                    <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.logo_hint">Отобразится в шапке отчетов</div>
+                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.logo_hint">Отобразится в шапке отчетов</div>
                                 </div>
                                 <button onclick="document.getElementById('brand-logo-upload').click()"
-                                    class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg text-[10px] font-bold active:scale-95 border border-indigo-200" data-i18n="settings.body.branding.upload">Загрузить</button>
+                                    class="bg-brand-soft text-brand px-3 py-1.5 rounded-lg text-rbi-caption font-bold active:scale-95 border border-brand-soft" data-i18n="settings.body.branding.upload">Загрузить</button>
                                 <input type="file" id="brand-logo-upload" accept="image/png, image/jpeg" class="hidden"
                                     data-settings-action="handleLogoUpload" data-settings-action-val-type="event" data-action-event="change">
                             </div>
@@ -264,7 +238,7 @@ var SettingsRender = {
                                 class="hidden mt-3 border border-[var(--card-border)] rounded-lg p-2 bg-[var(--card-bg)] flex justify-between items-center shadow-inner">
                                 <img id="brand-logo-img" src="" class="h-10 max-w-[60%] object-contain bg-transparent">
                                 <button data-settings-action="removeBrandLogo"
-                                    class="text-red-500 text-[10px] font-bold px-3 py-1.5 bg-[var(--card-bg)] rounded border border-red-200 dark:border-red-800 shadow-sm active:scale-90" data-i18n="settings.body.branding.remove">Удалить</button>
+                                    class="text-danger text-rbi-caption font-bold px-3 py-1.5 bg-[var(--card-bg)] rounded border border-danger-soft shadow-sm active:scale-90" data-i18n="settings.body.branding.remove">Удалить</button>
                             </div>
                             <!-- УПРАВЛЕНИЕ КОРПОРАТИВНЫМ СТИЛЕМ -->
                             <div id="corp-branding-controls" class="mt-3"></div>
@@ -276,23 +250,23 @@ var SettingsRender = {
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01">
                                 </path>
                             </svg>
                             <span data-i18n="settings.accordion.interface">Интерфейс и управление</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-slate-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
                     </summary>
                     <div>
                         <!-- Настройки внешнего вида -->
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.theme">Тема приложения</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.theme_hint">Цветовая схема</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.theme_hint">Цветовая схема</div>
                             </div>
                             <select id="set-theme" class="input-base w-52" data-settings-action="toggleSetting" data-settings-action-key="theme" data-settings-action-val-type="element" data-action-event="change">
                                 <option value="rbi-auto-v3" data-i18n="settings.opt.theme.rbi_auto_v3">RBI · Авто</option>
@@ -312,18 +286,19 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.language">Язык интерфейса</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.language_hint">Оболочка и панели настроек. Чек-листы и контент data/* пока без перевода</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.language_hint">Оболочка и панели настроек. Чек-листы и контент data/* пока без перевода</div>
                             </div>
                             <select id="set-locale" class="input-base w-40">
                                 <option value="ru" data-i18n="settings.locale.ru">Русский</option>
                                 <option value="en" data-i18n="settings.locale.en">English</option>
                                 <option value="sr-Latn" data-i18n="settings.locale.sr-Latn">Srpski (latinica)</option>
+                                <option value="ka" data-i18n="settings.locale.ka">ქართული</option>
                             </select>
                         </div>
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.font_size">Масштаб интерфейса</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.font_size_hint">Размер шрифта и кнопок</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.font_size_hint">Размер шрифта и кнопок</div>
                             </div>
                             <select id="set-fontsize" class="input-base w-32"
                                 data-settings-action="toggleSetting" data-settings-action-key="fontSize" data-settings-action-val-type="element" data-action-event="change">
@@ -336,7 +311,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.nav_pos">Позиция меню</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.nav_pos_hint">Где отображать кнопки вкладок</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.nav_pos_hint">Где отображать кнопки вкладок</div>
                             </div>
                             <select id="set-navpos" class="input-base w-32"
                                 data-settings-action="toggleSetting" data-settings-action-key="navPosition" data-settings-action-val-type="element" data-action-event="change">
@@ -348,7 +323,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.dashboard">Мини-дашборд</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.dashboard_hint">Отображение в шапке осмотра</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.dashboard_hint">Отображение в шапке осмотра</div>
                             </div>
                             <select id="set-dashmode" class="input-base w-32"
                                 data-settings-action="toggleSetting" data-settings-action-key="dashboardMode" data-settings-action-val-type="element" data-action-event="change">
@@ -360,7 +335,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center gap-3">
                             <div class="min-w-0">
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.filters_scroll">Фильтры при скролле</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.filters_scroll_hint">Авто: как шапка Осмотра — свернуть при скролле вниз, развернуть у верха. Ручное — только по клику</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.filters_scroll_hint">Авто: как шапка Осмотра — свернуть при скролле вниз, развернуть у верха. Ручное — только по клику</div>
                             </div>
                             <select id="set-auto-collapse-filters" class="input-base w-36 shrink-0"
                                 data-settings-action="toggleSetting" data-settings-action-key="autoCollapseFilters" data-settings-action-val-type="element" data-action-event="change">
@@ -371,7 +346,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center gap-3">
                             <div class="min-w-0">
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.motion">Анимации интерфейса</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.motion_hint">Hover, пружины тостов/модалок, скелетоны. Система «уменьшить движение» тоже учитывается</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.motion_hint">Hover, пружины тостов/модалок, скелетоны. Система «уменьшить движение» тоже учитывается</div>
                             </div>
                             <label class="toggle-switch shrink-0"><input type="checkbox" id="set-ui-motion"
                                     data-settings-action="toggleSetting" data-settings-action-key="uiMotionEnabled" data-settings-action-val-type="element" data-action-event="change"><span
@@ -380,7 +355,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center gap-3">
                             <div class="min-w-0">
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.overscroll">Блокировка обновления свайпом</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.overscroll_hint">Для Android: жёстко режет pull-to-refresh у верхнего края. Пружина/свечение по краям пропадёт</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.overscroll_hint">Для Android: жёстко режет pull-to-refresh у верхнего края. Пружина/свечение по краям пропадёт</div>
                             </div>
                             <label class="toggle-switch shrink-0"><input type="checkbox" id="set-hard-overscroll"
                                     data-settings-action="toggleSetting" data-settings-action-key="hardOverscrollLock" data-settings-action-val-type="element" data-action-event="change"><span
@@ -392,7 +367,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.push">Push-уведомления</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.push_hint">Оповещения о новых задачах СК</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.push_hint">Оповещения о новых задачах СК</div>
                             </div>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="set-push-notifications"
@@ -403,7 +378,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.swipe">Свайпы (Вправо/Влево)</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.swipe_hint">Управление жестами в Осмотре</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.swipe_hint">Управление жестами в Осмотре</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-swipe"
                                     data-settings-action="toggleSetting" data-settings-action-key="swipeEnabled" data-settings-action-val-type="element" data-action-event="change"><span
@@ -412,7 +387,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.collapse_ok">Схлопывать OK</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.collapse_ok_hint">Сворачивать пройденные карточки</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.collapse_ok_hint">Сворачивать пройденные карточки</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-collapse"
                                     data-settings-action="toggleSetting" data-settings-action-key="autoCollapseOk" data-settings-action-val-type="element" data-action-event="change"><span
@@ -421,7 +396,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.groups_collapsed">Группы свернуты</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.groups_collapsed_hint">Изначально скрывать пункты этапов</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.groups_collapsed_hint">Изначально скрывать пункты этапов</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-groups-col"
                                     data-settings-action="toggleSetting" data-settings-action-key="defaultGroupsCollapsed" data-settings-action-val-type="element" data-action-event="change"><span
@@ -430,7 +405,7 @@ var SettingsRender = {
                         <div class="p-4 flex justify-between items-center rounded-b-2xl">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.fast_mode">Быстрый режим</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.fast_mode_hint">Скрыть тексты нормативов</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.fast_mode_hint">Скрыть тексты нормативов</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-fast"
                                     data-settings-action="toggleSetting" data-settings-action-key="fastMode" data-settings-action-val-type="element" data-action-event="change"><span
@@ -443,31 +418,31 @@ var SettingsRender = {
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
                                 </path>
                             </svg>
                             <span data-i18n="settings.accordion.storage">Хранилище и Резервные копии</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-slate-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
                     </summary>
-                    <div class="bg-white dark:bg-slate-800 rounded-b-2xl">
+                    <div class="bg-surface rounded-b-2xl">
 
                         <!-- Память устройства -->
                         <div class="p-4 border-b border-[var(--card-border)]">
                             <div class="flex justify-between items-center mb-3">
                                 <div class="font-bold text-sm" data-i18n="settings.body.storage.indexeddb">Хранилище (IndexedDB)</div>
-                                <div class="text-xs font-black text-indigo-600 dark:text-indigo-400"
+                                <div class="text-xs font-black text-brand"
                                     id="storage-percent">--%</div>
                             </div>
-                            <div class="w-full h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mb-2">
-                                <div id="storage-bar" class="h-full bg-indigo-500 transition-all" style="width: 0%">
+                            <div class="w-full h-3 bg-surface rounded-full overflow-hidden mb-2">
+                                <div id="storage-bar" class="h-full bg-brand transition-all" style="width: 0%">
                                 </div>
                             </div>
-                            <div class="flex justify-between text-[10px] text-[var(--text-muted)] font-bold mb-4">
+                            <div class="flex justify-between text-rbi-caption text-[var(--text-muted)] font-bold mb-4">
                                 <span><span data-i18n="settings.body.storage.used_prefix">Исп:</span> <span id="storage-used">--</span> <span data-i18n="settings.opt.mb">МБ</span></span>
                                 <span><span data-i18n="settings.body.storage.free_prefix">Свободно:</span> <span id="storage-free">--</span> <span data-i18n="settings.opt.mb">МБ</span></span>
                             </div>
@@ -475,55 +450,55 @@ var SettingsRender = {
                             <div class="flex justify-between items-center mb-4">
                                 <div>
                                     <div class="font-bold text-sm" data-i18n="settings.body.storage.auto_cache">Авто-кэш облачных файлов</div>
-                                    <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.storage.auto_cache_hint">Сохранять фото и PDF для офлайна</div>
+                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.storage.auto_cache_hint">Сохранять фото и PDF для офлайна</div>
                                 </div>
                                 <label class="toggle-switch"><input type="checkbox" id="set-autocache"
                                         data-settings-action="toggleSetting" data-settings-action-key="autoCacheCloudFiles" data-settings-action-val-type="element" data-action-event="change"><span
                                         class="toggle-slider"></span></label>
                             </div>
 
-                            <div id="offline-cache-progress" class="hidden mb-3 text-[10px] font-bold text-slate-500 dark:text-slate-400"></div>
+                            <div id="offline-cache-progress" class="hidden mb-3 text-rbi-caption font-bold text-muted"></div>
 
                             <div class="grid grid-cols-1 gap-2 mb-3">
                                 <button type="button" data-settings-action="downloadOfflineCacheScope" data-action-arg="days30"
-                                    class="w-full bg-slate-50 text-slate-700 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 py-2.5 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-colors">
+                                    class="w-full bg-surface text-ink border border-surface py-2.5 rounded-xl font-black text-rbi-caption uppercase active:scale-95 transition-colors">
                                     <span data-i18n="settings.body.storage.dl_30d">Скачать последние 30 дней</span>
                                 </button>
                                 <button type="button" data-settings-action="downloadOfflineCacheScope" data-action-arg="knowledge"
-                                    class="w-full bg-slate-50 text-slate-700 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 py-2.5 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-colors">
+                                    class="w-full bg-surface text-ink border border-surface py-2.5 rounded-xl font-black text-rbi-caption uppercase active:scale-95 transition-colors">
                                     <span data-i18n="settings.body.storage.dl_knowledge">Скачать только базу знаний</span>
                                 </button>
                                 <button type="button" data-settings-action="downloadOfflineCacheScope" data-action-arg="reports"
-                                    class="w-full bg-slate-50 text-slate-700 dark:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 py-2.5 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-colors">
+                                    class="w-full bg-surface text-ink border border-surface py-2.5 rounded-xl font-black text-rbi-caption uppercase active:scale-95 transition-colors">
                                     <span data-i18n="settings.body.storage.dl_reports">Скачать отчёты на устройство</span>
                                 </button>
                             </div>
 
                             <div class="grid grid-cols-3 gap-2 mb-3">
                                 <button data-settings-action="clearPdfCache"
-                                    class="bg-slate-50 text-slate-600 dark:bg-slate-700 dark:text-slate-300 py-3 rounded-xl font-bold text-[10px] uppercase border border-slate-200 dark:border-slate-600 active:scale-95 transition-colors flex items-center justify-center gap-2">
+                                    class="bg-surface text-muted py-3 rounded-xl font-bold text-rbi-caption uppercase border border-surface active:scale-95 transition-colors flex items-center justify-center gap-2">
                                     <span data-i18n="settings.body.storage.clear_cache">Очистить кэш</span>
                                 </button>
                                 <button data-settings-action="previewStorageCleanup"
-                                    class="w-full mt-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 text-[11px] font-black uppercase active:scale-95 transition-transform">
+                                    class="w-full mt-2 bg-surface text-ink border border-surface rounded-xl py-2.5 text-rbi-label font-black uppercase active:scale-95 transition-transform">
                                     <span data-i18n="settings.body.storage.preview_cleanup">Проверить автоочистку</span>
                                 </button>
                                 <button onclick="emptyTrashBin()"
-                                    class="bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400 py-3 rounded-xl font-bold text-[10px] uppercase border border-orange-200 dark:border-orange-800/50 active:scale-95 transition-colors flex items-center justify-center gap-2">
+                                    class="bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400 py-3 rounded-xl font-bold text-rbi-caption uppercase border border-orange-200 dark:border-orange-800/50 active:scale-95 transition-colors flex items-center justify-center gap-2">
                                     <span data-i18n="settings.body.storage.empty_trash">Очистить мусор</span>
                                 </button>
                             </div>
 
                             <!-- RBI NEW: управление файловым кэшем -->
                             <div
-                                class="mt-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40">
+                                class="mt-3 p-3 rounded-xl border border-surface bg-surface">
                                 <div class="flex items-center justify-between gap-3 mb-3">
                                     <div>
                                         <div
-                                            class="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                                            class="text-rbi-label font-black text-ink uppercase tracking-wider">
                                             <span data-i18n="settings.body.storage.auto_cleanup">Автоочистка файлового кэша</span>
                                         </div>
-                                        <div class="text-[10px] text-slate-500 dark:text-slate-400 leading-snug mt-1" data-i18n="settings.body.storage.auto_cleanup_hint">
+                                        <div class="text-rbi-caption text-muted leading-snug mt-1" data-i18n="settings.body.storage.auto_cleanup_hint">
                                             Удаляет только локальные копии файлов, которые уже есть в облаке. Проверки и несинхронизированные фото не удаляются.
                                         </div>
                                     </div>
@@ -532,26 +507,26 @@ var SettingsRender = {
                                         <input type="checkbox" id="set-storage-auto-cleanup" class="sr-only peer"
                                             data-settings-action="saveSettings" data-settings-action-key="storageAutoCleanupEnabled" data-settings-action-val-type="checked" data-action-event="change">
                                         <div
-                                            class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5">
+                                            class="w-11 h-6 bg-surface peer-focus:outline-none rounded-full peer peer-checked:bg-brand after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5">
                                         </div>
                                     </label>
                                 </div>
 
-                                <label class="text-[10px] font-black text-slate-500 uppercase block mb-1">
+                                <label class="text-rbi-caption font-black text-muted uppercase block mb-1">
                                     <span data-i18n="settings.body.storage.cleanup_threshold">Порог автоочистки</span>
                                 </label>
-                                <select id="set-storage-cleanup-threshold" class="input-base text-[11px] mb-3"
+                                <select id="set-storage-cleanup-threshold" class="input-base text-rbi-label mb-3"
                                     data-settings-action="saveSettings" data-settings-action-key="storageCleanupThresholdPercent" data-settings-action-val-type="int" data-action-event="change">
                                     <option value="60" data-i18n="settings.opt.cleanup.soft">Мягко: при заполнении 60%</option>
                                     <option value="80" data-i18n="settings.opt.cleanup.std">Стандарт: при заполнении 80%</option>
                                     <option value="90" data-i18n="settings.opt.cleanup.eco">Экономно: при заполнении 90%</option>
                                 </select>
 
-                                <label class="text-[10px] font-black text-slate-500 uppercase block mb-1">
+                                <label class="text-rbi-caption font-black text-muted uppercase block mb-1">
                                     <span data-i18n="settings.body.storage.ttl_photos">Хранить локальные копии фото проверок</span>
                                 </label>
 
-                                <select id="set-storage-photo-ttl" class="input-base text-[11px]"
+                                <select id="set-storage-photo-ttl" class="input-base text-rbi-label"
                                     data-settings-action="saveSettings" data-settings-action-key="storageInspectionPhotoTtlDays" data-settings-action-val-type="int" data-action-event="change">
                                     <option value="30" data-i18n="settings.opt.days.30">30 дней</option>
                                     <option value="60" data-i18n="settings.opt.days.60">60 дней</option>
@@ -559,40 +534,40 @@ var SettingsRender = {
                                     <option value="180" data-i18n="settings.opt.days.180">180 дней</option>
                                 </select>
                                 <div class="grid grid-cols-1 gap-2 mt-3">
-                                    <label class="text-[10px] font-black text-slate-500 uppercase block">
+                                    <label class="text-rbi-caption font-black text-muted uppercase block">
                                         <span data-i18n="settings.body.storage.ttl_reports">Хранить PDF-отчеты локально</span>
                                     </label>
-                                    <select id="set-storage-report-ttl" class="input-base text-[11px]"
+                                    <select id="set-storage-report-ttl" class="input-base text-rbi-label"
                                         data-settings-action="saveSettings" data-settings-action-key="storageReportTtlDays" data-settings-action-val-type="int" data-action-event="change">
                                         <option value="7" data-i18n="settings.opt.days.7">7 дней</option>
                                         <option value="30" data-i18n="settings.opt.days.30">30 дней</option>
                                         <option value="60" data-i18n="settings.opt.days.60">60 дней</option>
                                     </select>
 
-                                    <label class="text-[10px] font-black text-slate-500 uppercase block">
+                                    <label class="text-rbi-caption font-black text-muted uppercase block">
                                         <span data-i18n="settings.body.storage.ttl_docs">Хранить документы базы знаний</span>
                                     </label>
-                                    <select id="set-storage-doc-ttl" class="input-base text-[11px]"
+                                    <select id="set-storage-doc-ttl" class="input-base text-rbi-label"
                                         data-settings-action="saveSettings" data-settings-action-key="storageDocTtlDays,storageKnowledgeFileTtlDays" data-settings-action-val-type="int" data-action-event="change">
                                         <option value="30" data-i18n="settings.opt.days.30">30 дней</option>
                                         <option value="60" data-i18n="settings.opt.days.60">60 дней</option>
                                         <option value="90" data-i18n="settings.opt.days.90">90 дней</option>
                                     </select>
 
-                                    <label class="text-[10px] font-black text-slate-500 uppercase block">
+                                    <label class="text-rbi-caption font-black text-muted uppercase block">
                                         <span data-i18n="settings.body.storage.ttl_twi">Хранить TWI и тех. узлы</span>
                                     </label>
-                                    <select id="set-storage-twi-node-ttl" class="input-base text-[11px]"
+                                    <select id="set-storage-twi-node-ttl" class="input-base text-rbi-label"
                                         data-settings-action="saveSettings" data-settings-action-key="storageTwiTtlDays,storageNodeTtlDays" data-settings-action-val-type="int" data-action-event="change">
                                         <option value="60" data-i18n="settings.opt.days.60">60 дней</option>
                                         <option value="90" data-i18n="settings.opt.days.90">90 дней</option>
                                         <option value="180" data-i18n="settings.opt.days.180">180 дней</option>
                                     </select>
 
-                                    <label class="text-[10px] font-black text-slate-500 uppercase block">
+                                    <label class="text-rbi-caption font-black text-muted uppercase block">
                                         <span data-i18n="settings.body.storage.ttl_practices">Хранить практики локально</span>
                                     </label>
-                                    <select id="set-storage-practice-ttl" class="input-base text-[11px]"
+                                    <select id="set-storage-practice-ttl" class="input-base text-rbi-label"
                                         data-settings-action="saveSettings" data-settings-action-key="storagePracticeTtlDays" data-settings-action-val-type="int" data-action-event="change">
                                         <option value="30" data-i18n="settings.opt.days.30">30 дней</option>
                                         <option value="60" data-i18n="settings.opt.days.60">60 дней</option>
@@ -602,7 +577,7 @@ var SettingsRender = {
                             </div>
 
                             <button data-settings-action="downloadOfflineCacheScope" data-action-arg="all"
-                                class="w-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 py-3 rounded-xl font-black text-[11px] uppercase active:scale-95 transition-colors flex items-center justify-center gap-2 mb-2">
+                                class="w-full bg-brand-soft text-brand border border-brand-soft py-3 rounded-xl font-black text-rbi-label uppercase active:scale-95 transition-colors flex items-center justify-center gap-2 mb-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                     stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -626,37 +601,37 @@ var SettingsRender = {
                         </div>
 
                         <!-- Ручной экспорт -->
-                        <div class="p-4 border-b border-[var(--card-border)] bg-slate-50 dark:bg-slate-900/30">
+                        <div class="p-4 border-b border-[var(--card-border)] bg-surface">
                             <div class="font-bold text-sm mb-3" data-i18n="settings.body.storage.backups_title">Резервные копии (Ручная выгрузка)</div>
                             <div class="grid grid-cols-2 gap-2 mb-3">
                                 <div data-reports-action="handleDataExport" data-action-arg="json" data-reports-action-arg2="incremental"
-                                    class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform cursor-pointer hover:border-indigo-300">
-                                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor"
+                                    class="bg-surface border border-surface rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform cursor-pointer hover:border-brand-soft">
+                                    <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15">
                                         </path>
                                     </svg>
                                     <div
-                                        class="text-[10px] font-black text-slate-800 dark:text-white uppercase text-center leading-tight whitespace-pre-line" data-i18n="settings.body.storage.export_incremental">Только
+                                        class="text-rbi-caption font-black text-ink dark:text-white uppercase text-center leading-tight whitespace-pre-line" data-i18n="settings.body.storage.export_incremental">Только
 Новое</div>
                                 </div>
                                 <div data-reports-action="handleDataExport" data-action-arg="json" data-reports-action-arg2="full"
-                                    class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform cursor-pointer hover:border-indigo-300">
-                                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor"
+                                    class="bg-surface border border-surface rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform cursor-pointer hover:border-brand-soft">
+                                    <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                             d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z">
                                         </path>
                                     </svg>
                                     <div
-                                        class="text-[10px] font-black text-slate-800 dark:text-white uppercase text-center leading-tight whitespace-pre-line" data-i18n="settings.body.storage.export_full">Вся
+                                        class="text-rbi-caption font-black text-ink dark:text-white uppercase text-center leading-tight whitespace-pre-line" data-i18n="settings.body.storage.export_full">Вся
 База</div>
                                 </div>
                             </div>
                             <div class="flex gap-2">
                                 <button data-reports-action="triggerDataImport"
-                                    class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-3 rounded-xl font-bold text-[10px] uppercase shadow-sm active:scale-95 flex items-center justify-center gap-1.5 transition-colors hover:bg-slate-50">
-                                    <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor"
+                                    class="flex-1 bg-surface border border-surface py-3 rounded-xl font-bold text-rbi-caption uppercase shadow-sm active:scale-95 flex items-center justify-center gap-1.5 transition-colors hover:bg-surface">
+                                    <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                             d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5">
@@ -664,7 +639,7 @@ var SettingsRender = {
                                     </svg> <span data-i18n="settings.body.storage.import_file">Загрузить файл</span>
                                 </button>
                                 <button data-reports-action="openShareModal"
-                                    class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-[10px] uppercase shadow-sm active:scale-95 flex items-center justify-center gap-1.5 transition-colors hover:bg-indigo-700">
+                                    class="flex-1 bg-brand text-white py-3 rounded-xl font-bold text-rbi-caption uppercase shadow-sm active:scale-95 flex items-center justify-center gap-1.5 transition-colors hover:bg-brand">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                         stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -680,11 +655,11 @@ var SettingsRender = {
                             <div class="flex justify-between items-center mb-3">
                                 <div class="font-bold text-sm" data-i18n="settings.body.storage.backup_history">История выгрузок</div>
                                 <button data-reports-action="clearBackupRegistry"
-                                    class="text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded border border-red-100 dark:border-red-800/50 active:scale-95" data-i18n="settings.body.storage.clear_history">Очистить</button>
+                                    class="text-rbi-caption font-bold text-danger bg-danger-soft px-2 py-1 rounded border border-danger-soft active:scale-95" data-i18n="settings.body.storage.clear_history">Очистить</button>
                             </div>
                             <div
-                                class="overflow-x-auto custom-scrollbar max-h-32 border border-slate-100 dark:border-slate-700 rounded-lg">
-                                <table class="w-full text-left text-[9px]">
+                                class="overflow-x-auto custom-scrollbar max-h-32 border border-surface rounded-lg">
+                                <table class="w-full text-left text-rbi-caption">
                                     <tbody id="rbi-backup-registry-list"
                                         class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
                                 </table>
@@ -695,8 +670,8 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] bg-[var(--hover-bg)]">
                             <div class="flex justify-between items-center mb-3">
                                 <div>
-                                    <div class="font-bold text-sm text-indigo-700 dark:text-indigo-400" data-i18n="settings.body.storage.auto_backup">Автоматический бэкап</div>
-                                    <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.storage.auto_backup_hint">Регулярно сохранять базу устройства</div>
+                                    <div class="font-bold text-sm text-brand" data-i18n="settings.body.storage.auto_backup">Автоматический бэкап</div>
+                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.storage.auto_backup_hint">Регулярно сохранять базу устройства</div>
                                 </div>
                                 <label class="toggle-switch"><input type="checkbox" id="set-autobackup"
                                         data-settings-action="toggleSetting" data-settings-action-key="autoBackupEnabled" data-settings-action-val-type="element" data-action-event="change"><span
@@ -723,7 +698,7 @@ var SettingsRender = {
                             <div class="flex justify-between items-center mb-3">
                                 <div>
                                     <div class="font-bold text-sm text-orange-700 dark:text-orange-400" data-i18n="settings.body.storage.manager_send">Отправка руководителю</div>
-                                    <div class="text-[10px] text-orange-600 dark:text-orange-500 mt-1" data-i18n="settings.body.storage.manager_send_hint">Авто-вызов меню «Поделиться» с инкрементом</div>
+                                    <div class="text-rbi-caption text-orange-600 dark:text-orange-500 mt-1" data-i18n="settings.body.storage.manager_send_hint">Авто-вызов меню «Поделиться» с инкрементом</div>
                                 </div>
                                 <label class="toggle-switch"><input type="checkbox" id="set-automanager"
                                         data-settings-action="toggleSetting" data-settings-action-key="autoManagerEnabled" data-settings-action-val-type="element" data-action-event="change"><span
@@ -744,7 +719,7 @@ var SettingsRender = {
                                 </select>
                             </div>
                             <button data-reports-action="triggerManagerShareManual"
-                                class="w-full bg-orange-500 text-white py-3 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-sm active:scale-95 transition-transform flex justify-center items-center gap-2">
+                                class="w-full bg-orange-500 text-white py-3 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-sm active:scale-95 transition-transform flex justify-center items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                     stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -760,7 +735,7 @@ var SettingsRender = {
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="2">
@@ -770,16 +745,16 @@ var SettingsRender = {
                             </svg>
                             <span data-i18n="settings.accordion.feedback">Обратная связь (Идеи)</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-slate-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
                     </summary>
-                    <div class="p-4 bg-white dark:bg-slate-800 rounded-b-2xl">
+                    <div class="p-4 bg-surface rounded-b-2xl">
                         <div class="mb-4 border-b border-[var(--card-border)] pb-4">
                             <label
-                                class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2 block" data-i18n="settings.body.feedback.label">Предложить улучшение / Сообщить об ошибке</label>
-                            <textarea id="feedback-input-text" class="input-base text-[12px] h-20 resize-none mb-2"
+                                class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-2 block" data-i18n="settings.body.feedback.label">Предложить улучшение / Сообщить об ошибке</label>
+                            <textarea id="feedback-input-text" class="input-base text-rbi-body h-20 resize-none mb-2"
                                 placeholder="Опишите, чего не хватает или что работает не так..." data-i18n="settings.body.feedback.ph" data-i18n-attr="placeholder"></textarea>
                             <button id="feedback-submit-btn" data-settings-action="rbi_submitFeedback"
-                                class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
+                                class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                     stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -787,7 +762,7 @@ var SettingsRender = {
                                 </svg> <span data-i18n="settings.body.feedback.submit">Отправить разработчику</span>
                             </button>
                         </div>
-                        <div class="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3" data-i18n="settings.body.feedback.backlog">
+                        <div class="text-rbi-caption font-black text-[var(--text-muted)] uppercase tracking-widest mb-3" data-i18n="settings.body.feedback.backlog">
                             Бэклог команды</div>
                         <div id="feedback-list-container"
                             class="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
@@ -799,11 +774,11 @@ var SettingsRender = {
                 <!-- ОНБОРДИНГ ПЛАТФОРМЫ -->
                 <div class="bg-[var(--card-bg)] border border-emerald-200 dark:border-emerald-800 rounded-2xl shadow-sm p-4 flex justify-between items-center gap-3 mb-3">
                     <div class="min-w-0">
-                        <div class="font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight" data-i18n="settings.body.feedback.onboarding">Онбординг платформы</div>
-                        <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.onboarding_hint">Полный интерактивный тур по RBI Platform · Construction OS (Осмотр, Инженер, Аналитика, БЗ, СК, настройки)</div>
+                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight" data-i18n="settings.body.feedback.onboarding">Онбординг платформы</div>
+                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.onboarding_hint">Полный интерактивный тур по RBI Platform · Construction OS (Осмотр, Инженер, Аналитика, БЗ, СК, настройки)</div>
                     </div>
                     <button type="button" data-settings-action="startInteractiveTutorial"
-                        class="shrink-0 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.onboarding_start">
+                        class="shrink-0 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.onboarding_start">
                         Старт
                     </button>
                 </div>
@@ -811,10 +786,10 @@ var SettingsRender = {
                  <!-- ИСТОРИЯ ИЗМЕНЕНИЙ (CHANGELOG) -->
                 <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex justify-between items-center mb-3">
                     <div>
-                        <div class="font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight" data-i18n="settings.body.feedback.changelog">История обновлений</div>
-                        <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.changelog_hint">Что нового в версиях (Changelog)</div>
+                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight" data-i18n="settings.body.feedback.changelog">История обновлений</div>
+                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.changelog_hint">Что нового в версиях (Changelog)</div>
                     </div>
-                    <button data-settings-action="rbi_openChangelogModal" class="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.changelog_read">
+                    <button data-settings-action="rbi_openChangelogModal" class="bg-brand-soft text-brand border border-brand-soft px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.changelog_read">
                         Читать
                     </button>
                 </div>
@@ -823,7 +798,7 @@ var SettingsRender = {
                 <details id="ai-optimizer-settings"
                     class="bg-[var(--card-bg)] border border-purple-200 dark:border-purple-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-purple-700 dark:text-purple-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-purple-50 dark:bg-purple-900/20 transition-colors select-none group-open:border-b border-purple-200 dark:border-purple-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-purple-700 dark:text-purple-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-purple-50 dark:bg-purple-900/20 transition-colors select-none group-open:border-b border-purple-200 dark:border-purple-800 rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -834,19 +809,19 @@ var SettingsRender = {
                         </span>
                         <span class="transition-transform group-open:rotate-180 text-purple-400">▼</span>
                     </summary>
-                    <div class="p-4 bg-white dark:bg-slate-800 rounded-b-2xl">
-                        <div class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed mb-3" data-i18n="settings.body.ai_optimizer.body">
+                    <div class="p-4 bg-surface rounded-b-2xl">
+                        <div class="text-rbi-label text-muted leading-relaxed mb-3" data-i18n="settings.body.ai_optimizer.body">
                             Система проанализирует весь накопленный массив проверок и предложит корректировку математической модели: жесткость порогов (Красная/Зеленая зоны), веса рисков и правило «Стеклянного потолка».
                         </div>
                         <button data-action="runSelfLearningAi"
-                            class="w-full bg-purple-600 text-white py-3 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
+                            class="w-full bg-purple-600 text-white py-3 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z">
                                 </path>
                             </svg> <span data-i18n="settings.body.ai_optimizer.run">Запустить анализ базы</span>
                         </button>
                         <div id="ai-self-learning-result"
-                            class="hidden mt-4 p-3 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-xl text-[11px] text-slate-800 dark:text-slate-200 leading-relaxed font-medium whitespace-pre-wrap shadow-inner">
+                            class="hidden mt-4 p-3 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-xl text-rbi-label text-ink leading-relaxed font-medium whitespace-pre-wrap shadow-inner">
                         </div>
                     </div>
                 </details>
@@ -855,12 +830,12 @@ var SettingsRender = {
                 <div
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex justify-between items-center mb-3">
                     <div>
-                        <div class="font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight">
+                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight">
                             <span data-i18n="settings.body.feedback.methodology">Методология RBI</span></div>
-                        <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.methodology_hint">Формулы, логика ИКО и ответы на вопросы</div>
+                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.methodology_hint">Формулы, логика ИКО и ответы на вопросы</div>
                     </div>
                     <button data-knowledge-action="openFaqModal"
-                        class="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.open_faq">
+                        class="bg-brand-soft text-brand border border-brand-soft px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.open_faq">
                         Открыть FAQ
                     </button>
                 </div>
@@ -869,28 +844,30 @@ var SettingsRender = {
 
                 <div class="flex flex-col gap-3 items-center mt-4 mb-6">
                     <button data-shell-action="checkForUpdates"
-                        class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg hover:bg-indigo-100 border border-indigo-200 transition-colors uppercase shadow-sm flex items-center gap-1.5">
+                        class="text-rbi-caption font-bold text-brand bg-brand-soft px-4 py-2 rounded-lg hover:bg-brand-soft border border-brand-soft transition-colors uppercase shadow-sm flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                         <span data-i18n="settings.body.feedback.check_updates">Проверить обновления</span>
                     </button>
                     <button data-settings-action="fullFactoryReset"
-                        class="text-[10px] font-bold text-red-500 bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 border border-red-200 transition-colors uppercase shadow-sm" data-i18n="settings.body.feedback.factory_reset">⚠️ Полный сброс (Удалить всё)</button>
+                        class="text-rbi-caption font-bold text-danger bg-danger-soft px-4 py-2 rounded-lg hover:bg-danger-soft border border-danger-soft transition-colors uppercase shadow-sm" data-i18n="settings.body.feedback.factory_reset">⚠️ Полный сброс (Удалить всё)</button>
                 </div>
 
-                <div class="text-center text-[10px] text-[var(--text-muted)] pb-10">
+                <div class="text-center text-rbi-caption text-[var(--text-muted)] pb-10">
                     <button data-settings-action="showAboutApp"
-                        class="font-bold text-indigo-500 mb-2 flex items-center justify-center gap-1 mx-auto"><svg
+                        class="font-bold text-brand mb-2 flex items-center justify-center gap-1 mx-auto"><svg
                             class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg> <span data-i18n="settings.body.feedback.about">О платформе</span></button><br>
-                    <span class="font-black text-slate-600 dark:text-slate-300 tracking-wide">RBI Platform</span><br>
+                    <span class="font-black text-muted tracking-wide">RBI Platform</span><br>
                     <span data-i18n="settings.body.feedback.about_tagline">Construction OS · ОС управления строительством</span><br>
                     Developed by Igor Kondratiev
                 </div>
             </div>
+            <div id="settings-panel-company" data-settings-panel="company" hidden></div>
+            <div id="settings-panel-platform-admin" data-settings-panel="platform-admin" hidden></div>
             <div id="settings-panel-admin" data-settings-panel="admin" class="space-y-3" hidden>
-                <p class="text-[10px] text-[var(--text-muted)] leading-snug px-1" data-i18n="settings.admin.intro">
+                <p class="text-rbi-caption text-[var(--text-muted)] leading-snug px-1" data-i18n="settings.admin.intro">
                     Единая админка платформы: справочники, очереди заявок, команда и права.
                     Объекты — SoT в «Объекты и планы»; инженеры привязываются к UUID этих объектов.
                 </p>
@@ -899,7 +876,7 @@ var SettingsRender = {
                 <details id="location-directory-section"
                     class="bg-[var(--card-bg)] border border-teal-200 dark:border-teal-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-teal-700 dark:text-teal-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-teal-50 dark:bg-teal-900/20 transition-colors select-none group-open:border-b border-teal-200 dark:border-teal-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-teal-700 dark:text-teal-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-teal-50 dark:bg-teal-900/20 transition-colors select-none group-open:border-b border-teal-200 dark:border-teal-800 rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -917,10 +894,10 @@ var SettingsRender = {
                 <details id="admin-object-requests-section"
                     class="bg-[var(--card-bg)] border border-orange-200 dark:border-orange-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-orange-700 dark:text-orange-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-orange-50 dark:bg-orange-900/20 transition-colors select-none group-open:border-b border-orange-200 dark:border-orange-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-orange-700 dark:text-orange-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-orange-50 dark:bg-orange-900/20 transition-colors select-none group-open:border-b border-orange-200 dark:border-orange-800 rounded-2xl group-open:rounded-b-none">
                         <span data-i18n="settings.accordion.object_requests">Заявки на объекты</span>
                         <button type="button" onclick="event.preventDefault(); event.stopPropagation(); (window.RBI&&window.RBI.services&&window.RBI.services.objects&&window.RBI.services.objects.loadRequests());"
-                            class="bg-white dark:bg-slate-800 text-orange-600 border border-orange-200 dark:border-orange-700 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
+                            class="bg-surface text-orange-600 border border-orange-200 dark:border-orange-700 px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
                     </summary>
                     <div id="obj-requests-list" class="p-3 max-h-[40vh] overflow-y-auto custom-scrollbar bg-[var(--hover-bg)] rounded-b-2xl">
                         <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
@@ -929,9 +906,9 @@ var SettingsRender = {
 
                 <!-- СПРАВОЧНИК ПОДРЯДЧИКОВ -->
                 <details id="contractor-directory-section"
-                    class="bg-[var(--card-bg)] border border-indigo-200 dark:border-indigo-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-indigo-700 dark:text-indigo-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 transition-colors select-none group-open:border-b border-indigo-200 dark:border-indigo-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -940,7 +917,7 @@ var SettingsRender = {
                             </svg>
                             <span data-i18n="settings.accordion.contractors">Справочник подрядчиков</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-indigo-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
                     </summary>
                     <div id="contractor-directory-root"></div>
                 </details>
@@ -949,10 +926,10 @@ var SettingsRender = {
                 <details id="admin-contractor-requests-section"
                     class="bg-[var(--card-bg)] border border-yellow-200 dark:border-yellow-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-yellow-700 dark:text-yellow-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-yellow-50 dark:bg-yellow-900/20 transition-colors select-none group-open:border-b border-yellow-200 dark:border-yellow-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-yellow-700 dark:text-yellow-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-yellow-50 dark:bg-yellow-900/20 transition-colors select-none group-open:border-b border-yellow-200 dark:border-yellow-800 rounded-2xl group-open:rounded-b-none">
                         <span data-i18n="settings.accordion.contractor_requests">Заявки на подрядчиков</span>
                         <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if (typeof gameLoadContractorRequests === 'function') gameLoadContractorRequests();"
-                            class="bg-white dark:bg-slate-800 text-yellow-600 border border-yellow-200 dark:border-yellow-700 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
+                            class="bg-surface text-yellow-600 border border-yellow-200 dark:border-yellow-700 px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
                     </summary>
                     <div id="manager-contractor-requests-list" class="p-3 max-h-[40vh] overflow-y-auto custom-scrollbar bg-[var(--hover-bg)] rounded-b-2xl">
                         <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
@@ -963,14 +940,14 @@ var SettingsRender = {
                 <details id="admin-team-section"
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span data-i18n="settings.accordion.team">Команда (доступы и объекты)</span>
                         <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if (typeof gameLoadRoles === 'function') gameLoadRoles();"
-                            class="bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 border border-[var(--card-border)] px-3 py-1.5 rounded-lg text-[9px] font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
+                            class="bg-surface text-brand border border-[var(--card-border)] px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
                     </summary>
                     <div class="p-3 bg-[var(--hover-bg)] rounded-b-2xl space-y-3">
                         <details class="group/sub [&_summary::-webkit-details-marker]:hidden">
-                            <summary class="text-[10px] font-black uppercase text-orange-500 mb-2 cursor-pointer flex justify-between items-center select-none bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border border-orange-100 dark:border-orange-800">
+                            <summary class="text-rbi-caption font-black uppercase text-orange-500 mb-2 cursor-pointer flex justify-between items-center select-none bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border border-orange-100 dark:border-orange-800">
                                 <span data-i18n="settings.accordion.access_requests">Заявки на доступ</span>
                                 <span class="text-orange-400">▼</span>
                             </summary>
@@ -979,9 +956,9 @@ var SettingsRender = {
                             </div>
                         </details>
                         <details class="group/sub [&_summary::-webkit-details-marker]:hidden">
-                            <summary class="text-[10px] font-black uppercase text-slate-500 mb-2 cursor-pointer flex justify-between items-center select-none bg-slate-100 dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <summary class="text-rbi-caption font-black uppercase text-muted mb-2 cursor-pointer flex justify-between items-center select-none bg-surface p-2 rounded-lg border border-surface">
                                 <span data-i18n="settings.accordion.active_users">Активные пользователи</span>
-                                <span class="text-slate-400">▼</span>
+                                <span class="text-muted">▼</span>
                             </summary>
                             <div id="manager-team-list" class="space-y-2">
                                 <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
@@ -993,9 +970,9 @@ var SettingsRender = {
 
                 <!-- РОЛИ И ПРАВА -->
                 <details id="settings-role-matrix-section"
-                    class="bg-[var(--card-bg)] border border-indigo-200 dark:border-indigo-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-indigo-700 dark:text-indigo-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 transition-colors select-none group-open:border-b border-indigo-200 dark:border-indigo-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -1004,7 +981,7 @@ var SettingsRender = {
                             </svg>
                             <span data-i18n="settings.accordion.roles">Роли и права</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-indigo-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
                     </summary>
                     <div id="settings-role-matrix-root"></div>
                 </details>
@@ -1013,7 +990,7 @@ var SettingsRender = {
                 <details id="cloud-deleted-purge-section"
                     class="bg-[var(--card-bg)] border border-rose-200 dark:border-rose-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-rose-800 dark:text-rose-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-rose-50 dark:bg-rose-900/20 transition-colors select-none group-open:border-b border-rose-200 dark:border-rose-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-rose-800 dark:text-rose-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-rose-50 dark:bg-rose-900/20 transition-colors select-none group-open:border-b border-rose-200 dark:border-rose-800 rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -1031,7 +1008,7 @@ var SettingsRender = {
                 <details id="cloud-orphan-urls-section"
                     class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-amber-800 dark:text-amber-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-amber-800 dark:text-amber-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -1049,7 +1026,7 @@ var SettingsRender = {
                 <details id="contractor-id-backfill-section"
                     class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-amber-800 dark:text-amber-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-amber-800 dark:text-amber-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -1068,7 +1045,7 @@ var SettingsRender = {
                 <details id="settings-official-templates-section"
                     class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-amber-700 dark:text-amber-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-amber-700 dark:text-amber-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -1080,7 +1057,7 @@ var SettingsRender = {
                         <span class="transition-transform group-open:rotate-180 text-amber-400">▼</span>
                     </summary>
                     <div class="p-3">
-                        <p class="text-[10px] text-[var(--text-muted)] leading-relaxed mb-2" data-i18n="settings.official_templates.intro">
+                        <p class="text-rbi-caption text-[var(--text-muted)] leading-relaxed mb-2" data-i18n="settings.official_templates.intro">
                             Назначьте команде официальную (изменённую компанией) версию системного вида работ — синхронизируется на все устройства.
                         </p>
                         <div id="settings-official-templates-root"></div>
@@ -1092,20 +1069,20 @@ var SettingsRender = {
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                             </svg>
                             <span data-i18n="settings.accordion.knowledge">База знаний</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-slate-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
                     </summary>
                     <div>
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.knowledge.twi">TWI</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
                             </div>
                             <select id="set-kb-view-twi" class="input-base w-36"
                                 data-settings-action="toggleSetting" data-settings-action-key="knowledgeViewModeTwi" data-settings-action-val-type="element" data-action-event="change">
@@ -1116,7 +1093,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.knowledge.docs">Нормативы (НД)</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
                             </div>
                             <select id="set-kb-view-docs" class="input-base w-36"
                                 data-settings-action="toggleSetting" data-settings-action-key="knowledgeViewModeDocs" data-settings-action-val-type="element" data-action-event="change">
@@ -1127,7 +1104,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.knowledge.nodes">Узлы</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
                             </div>
                             <select id="set-kb-view-nodes" class="input-base w-36"
                                 data-settings-action="toggleSetting" data-settings-action-key="knowledgeViewModeNodes" data-settings-action-val-type="element" data-action-event="change">
@@ -1138,7 +1115,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.knowledge.practices">Практики</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
                             </div>
                             <select id="set-kb-view-practices" class="input-base w-36"
                                 data-settings-action="toggleSetting" data-settings-action-key="knowledgeViewModePractices" data-settings-action-val-type="element" data-action-event="change">
@@ -1149,7 +1126,7 @@ var SettingsRender = {
                         <div class="p-4 flex justify-between items-center rounded-b-2xl">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.knowledge.reports">Отчёты</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.knowledge.view_hint">Карточки или список</div>
                             </div>
                             <select id="set-kb-view-reports" class="input-base w-36"
                                 data-settings-action="toggleSetting" data-settings-action-key="knowledgeViewModeReports" data-settings-action-val-type="element" data-action-event="change">
@@ -1164,7 +1141,7 @@ var SettingsRender = {
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -1172,13 +1149,13 @@ var SettingsRender = {
                             </svg>
                             <span data-i18n="settings.accordion.archives">Отображение архивов</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-slate-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
                     </summary>
                     <div>
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center gap-3">
                             <div class="min-w-0">
                                 <div class="font-bold text-sm" data-i18n="settings.body.archives.meetings">Совещания</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.archives.view_hint">Карточки или список по умолчанию</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.archives.view_hint">Карточки или список по умолчанию</div>
                             </div>
                             <select id="set-kb-view-meetings" class="input-base w-36 shrink-0"
                                 data-settings-action="toggleSetting" data-settings-action-key="knowledgeViewModeMeetings" data-settings-action-val-type="element" data-action-event="change">
@@ -1189,7 +1166,7 @@ var SettingsRender = {
                         <div class="p-4 flex justify-between items-center gap-3 rounded-b-2xl">
                             <div class="min-w-0">
                                 <div class="font-bold text-sm" data-i18n="settings.body.archives.fmea">FMEA</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.archives.view_hint">Карточки или список по умолчанию</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.archives.view_hint">Карточки или список по умолчанию</div>
                             </div>
                             <select id="set-kb-view-fmea" class="input-base w-36 shrink-0"
                                 data-settings-action="toggleSetting" data-settings-action-key="knowledgeViewModeFmea" data-settings-action-val-type="element" data-action-event="change">
@@ -1204,22 +1181,22 @@ var SettingsRender = {
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden">
                     <summary
-                        class="p-4 font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
                                 </path>
                             </svg>
                             <span data-i18n="settings.accordion.analytics_viz">Визуализация Аналитики</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-slate-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
                     </summary>
                     <div>
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.analytics_viz.ai">AI-Анализ (Детализация)</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.ai_hint">Отображать смарт-заключение</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.ai_hint">Отображать смарт-заключение</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-ana-ai"
                                     data-settings-action="toggleSetting" data-settings-action-key="anaEngAi" data-settings-action-val-type="element" data-action-event="change"><span
@@ -1228,7 +1205,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.analytics_viz.photos">Галереи фото (Детализация)</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.photos_hint">Ленты эталонов и брака</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.photos_hint">Ленты эталонов и брака</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-ana-photos"
                                     data-settings-action="toggleSetting" data-settings-action-key="anaEngPhotos" data-settings-action-val-type="element" data-action-event="change"><span
@@ -1237,7 +1214,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.analytics_viz.pareto">Графики Парето</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.pareto_hint">Причины брака и структура</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.pareto_hint">Причины брака и структура</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-ana-pareto"
                                     data-settings-action="toggleSetting" data-settings-action-key="anaEngPareto" data-settings-action-val-type="element" data-action-event="change"><span
@@ -1246,7 +1223,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.analytics_viz.top5">Топ-5 Дефектов (Сводка)</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.top5_hint">Антирейтинг нарушений B2 и B3</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.top5_hint">Антирейтинг нарушений B2 и B3</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-ana-top"
                                     data-settings-action="toggleSetting" data-settings-action-key="anaOpTopDefects" data-settings-action-val-type="element" data-action-event="change"><span
@@ -1255,7 +1232,7 @@ var SettingsRender = {
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.analytics_viz.trend">Тренд объекта (Сводка)</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.trend_hint">Глобальный график УрК</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.trend_hint">Глобальный график УрК</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-ana-trend"
                                     data-settings-action="toggleSetting" data-settings-action-key="anaOpTrend" data-settings-action-val-type="element" data-action-event="change"><span
@@ -1264,7 +1241,7 @@ var SettingsRender = {
                         <div class="p-4 flex justify-between items-center">
                             <div>
                                 <div class="font-bold text-sm" data-i18n="settings.body.analytics_viz.leaders">Лидеры / Аутсайдеры (Сводка)</div>
-                                <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.leaders_hint">Блоки зон риска и качества</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.analytics_viz.leaders_hint">Блоки зон риска и качества</div>
                             </div>
                             <label class="toggle-switch"><input type="checkbox" id="set-ana-leader"
                                     data-settings-action="toggleSetting" data-settings-action-key="anaOpLeader" data-settings-action-val-type="element" data-action-event="change"><span
@@ -1277,9 +1254,9 @@ var SettingsRender = {
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
@@ -1287,7 +1264,7 @@ var SettingsRender = {
                             </svg>
                             <span data-i18n="settings.accordion.schedule">Расписание рутинных задач</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-slate-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
                     </summary>
                     <div>
                         <div
@@ -1332,22 +1309,22 @@ var SettingsRender = {
 
                 <!-- АВТО-ОТЧЕТЫ (Качество) -->
                 <details
-                    class="bg-[var(--card-bg)] border border-indigo-200 dark:border-indigo-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-[12px] text-indigo-700 dark:text-indigo-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 transition-colors select-none group-open:border-b border-indigo-200 dark:border-indigo-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                             <span data-i18n="settings.accordion.auto_reports">Авто-отчеты (PRO)</span>
                         </span>
-                        <span class="transition-transform group-open:rotate-180 text-indigo-400">▼</span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
                     </summary>
                         <div class="p-4 bg-[var(--hover-bg)] rounded-b-2xl">
                             <div class="flex justify-between items-center mb-3">
                                 <div>
-                                    <div class="font-bold text-sm text-indigo-700 dark:text-indigo-400" data-i18n="settings.body.auto_reports.enable">Фоновые отчеты</div>
-                                    <div class="text-[10px] text-[var(--text-muted)] mt-1" data-i18n="settings.body.auto_reports.enable_hint">Авто-генерация без зависаний</div>
+                                    <div class="font-bold text-sm text-brand" data-i18n="settings.body.auto_reports.enable">Фоновые отчеты</div>
+                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.auto_reports.enable_hint">Авто-генерация без зависаний</div>
                                 </div>
                                 <label class="toggle-switch"><input type="checkbox" id="set-auto-report"
                                         data-settings-action="toggleSetting" data-settings-action-key="autoReportEnabled" data-settings-action-val-type="element" data-action-event="change"><span
@@ -1355,13 +1332,13 @@ var SettingsRender = {
                             </div>
                             <div class="grid grid-cols-2 gap-3 mt-3">
                                 <div>
-                                    <div class="text-[10px] font-bold text-slate-500 uppercase mb-1" data-i18n="settings.body.auto_reports.day">День месяца</div>
+                                    <div class="text-rbi-caption font-bold text-muted uppercase mb-1" data-i18n="settings.body.auto_reports.day">День месяца</div>
                                     <input type="number" id="set-auto-report-day" class="input-base text-center !py-2"
                                         min="1" max="28" data-settings-action="toggleSetting" data-settings-action-key="autoReportDay" data-settings-action-val-type="element" data-action-event="change">
                                 </div>
                                 <div>
-                                    <div class="text-[10px] font-bold text-slate-500 uppercase mb-1" data-i18n="settings.body.auto_reports.type">Тип отчета</div>
-                                    <select id="set-auto-report-type" class="input-base !py-2 text-[11px]"
+                                    <div class="text-rbi-caption font-bold text-muted uppercase mb-1" data-i18n="settings.body.auto_reports.type">Тип отчета</div>
+                                    <select id="set-auto-report-type" class="input-base !py-2 text-rbi-label"
                                         data-settings-action="toggleSetting" data-settings-action-key="autoReportType" data-settings-action-val-type="element" data-action-event="change">
                                         <option value="global_onepager" data-i18n="settings.opt.report.company">По Компании</option>
                                         <option value="onepager" data-i18n="settings.opt.report.objects">По Объектам</option>
@@ -1372,17 +1349,17 @@ var SettingsRender = {
                 </details>
 
                 <!-- КНОПКА КОНСТРУКТОРА PDF (Качество) -->
-                <div class="bg-[var(--card-bg)] border border-indigo-200 dark:border-indigo-800 rounded-2xl shadow-sm mb-3 overflow-hidden">
+                <div class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm mb-3 overflow-hidden">
                     <!-- НОВАЯ КНОПКА: КОНСТРУКТОР ШАБЛОНОВ -->
                     <div
-                        class="p-4 flex justify-between items-center bg-indigo-50/30 dark:bg-indigo-900/10">
+                        class="p-4 flex justify-between items-center bg-brand-soft">
                         <div>
-                            <div class="font-bold text-sm text-indigo-800 dark:text-indigo-300" data-i18n="settings.body.auto_reports.pdf_templates">Шаблоны отчетов (PDF)</div>
-                            <div class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-1" data-i18n="settings.body.auto_reports.pdf_templates_hint">Настройка блоков и дизайна</div>
+                            <div class="font-bold text-sm text-brand" data-i18n="settings.body.auto_reports.pdf_templates">Шаблоны отчетов (PDF)</div>
+                            <div class="text-rbi-caption text-brand mt-1" data-i18n="settings.body.auto_reports.pdf_templates_hint">Настройка блоков и дизайна</div>
                         </div>
 
                         <button data-reports-action="openPdfTemplateModal"
-                            class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md flex items-center gap-1.5">
+                            class="bg-brand text-white px-4 py-2 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-md flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -1397,17 +1374,17 @@ var SettingsRender = {
             <div id="settings-panel-construction" data-settings-panel="construction" class="space-y-3" hidden>
                 <!-- СТРОЙКОНТРОЛЬ: пока нет отдельных настроек -->
                 <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-5 mb-3">
-                    <div class="font-black text-[12px] text-slate-800 dark:text-white uppercase tracking-tight mb-2" data-i18n="settings.construction.empty_title">Стройконтроль</div>
-                    <p class="text-[12px] text-[var(--text-muted)] leading-relaxed mb-4" data-i18n="settings.construction.empty_body">
+                    <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight mb-2" data-i18n="settings.construction.empty_title">Стройконтроль</div>
+                    <p class="text-rbi-body text-[var(--text-muted)] leading-relaxed mb-4" data-i18n="settings.construction.empty_body">
                         Отдельных настроек модуля стройконтроля пока нет. Справочник объектов и планов — общий для платформы.
                     </p>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" data-settings-subsection-goto="admin"
-                            class="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 px-3 py-2 rounded-lg active:scale-95 transition-transform" data-i18n="settings.construction.goto_locations">
+                            class="text-rbi-caption font-black uppercase tracking-widest text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 px-3 py-2 rounded-lg active:scale-95 transition-transform" data-i18n="settings.construction.goto_locations">
                             Объекты и планы →
                         </button>
                         <a href="#/construction-v2"
-                            class="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 rounded-lg active:scale-95 transition-transform" data-i18n="settings.construction.open_module">
+                            class="text-rbi-caption font-black uppercase tracking-widest text-brand bg-brand-soft border border-brand-soft px-3 py-2 rounded-lg active:scale-95 transition-transform" data-i18n="settings.construction.open_module">
                             Открыть стройконтроль
                         </a>
                     </div>
@@ -1417,15 +1394,15 @@ var SettingsRender = {
             </div>
             <!-- === КОНСТРУКТОР PDF-ШАБЛОНОВ (PRO) === -->
             <div id="pdf-template-modal"
-                class="fixed inset-0 bg-slate-900/80 z-[7000] hidden items-start justify-center p-2 sm:p-4 backdrop-blur-sm overflow-y-auto"
+                class="fixed inset-0 bg-surface z-[7000] hidden items-start justify-center p-2 sm:p-4 backdrop-blur-sm overflow-y-auto"
                 data-reports-action="closePdfTemplateModal">
                 <div class="bg-[var(--bg-main)] w-full max-w-3xl mt-4 mb-10 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-[var(--card-border)]"
                     onclick="event.stopPropagation()">
 
                     <!-- Шапка -->
                     <div
-                        class="p-4 bg-indigo-600 border-b border-indigo-700 flex justify-between items-center sticky top-0 z-20 shadow-md">
-                        <h3 class="font-black text-[14px] uppercase tracking-tight text-white flex items-center gap-2">
+                        class="p-4 bg-brand border-b border-brand flex justify-between items-center sticky top-0 z-20 shadow-md">
+                        <h3 class="font-black text-rbi-title uppercase tracking-tight text-white flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
@@ -1433,7 +1410,7 @@ var SettingsRender = {
                             <span data-i18n="settings.pdf.title">Конструктор PDF отчетов</span>
                         </h3>
                         <button data-reports-action="closePdfTemplateModal"
-                            class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-sm border border-indigo-400 active:scale-90 transition-transform">✕</button>
+                            class="w-8 h-8 bg-brand rounded-full flex items-center justify-center text-white shadow-sm border border-brand active:scale-90 transition-transform">✕</button>
                     </div>
 
                     <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
@@ -1441,9 +1418,9 @@ var SettingsRender = {
                         <!-- Список сохраненных шаблонов -->
                         <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-4 shadow-sm">
                             <div class="flex justify-between items-center mb-3">
-                                <div class="text-[11px] font-black uppercase text-slate-500" data-i18n="settings.pdf.your_templates">Ваши шаблоны</div>
+                                <div class="text-rbi-label font-black uppercase text-muted" data-i18n="settings.pdf.your_templates">Ваши шаблоны</div>
                                 <button data-reports-action="createNewPdfTemplate"
-                                    class="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg active:scale-95 transition-colors" data-i18n="settings.pdf.create_new">+
+                                    class="text-rbi-caption font-bold bg-brand-soft text-brand border border-brand-soft px-3 py-1.5 rounded-lg active:scale-95 transition-colors" data-i18n="settings.pdf.create_new">+
                                     Создать новый</button>
                             </div>
                             <div id="pdf-templates-list"
@@ -1455,21 +1432,21 @@ var SettingsRender = {
                         <!-- Редактор (Изначально скрыт) -->
                         <div id="pdf-template-editor"
                             class="hidden space-y-4 border-t border-[var(--card-border)] pt-4">
-                            <div class="text-[12px] font-black uppercase text-indigo-600 dark:text-indigo-400" data-i18n="settings.pdf.editor_title">Настройка
+                            <div class="text-rbi-body font-black uppercase text-brand" data-i18n="settings.pdf.editor_title">Настройка
                                 шаблона</div>
 
                             <!-- Базовые настройки -->
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label
-                                        class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.pdf.name_label">Название
+                                        class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.pdf.name_label">Название
                                         шаблона *</label>
                                     <input type="text" id="pdf-tmpl-name" class="input-base"
                                         placeholder="Например: Стандартный One-Pager" data-i18n="settings.pdf.name_ph" data-i18n-attr="placeholder">
                                 </div>
                                 <div>
                                     <label
-                                        class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.pdf.type_label">Тип
+                                        class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.pdf.type_label">Тип
                                         отчета</label>
                                     <select id="pdf-tmpl-type" class="input-base">
                                         <option value="onepager" data-i18n="settings.pdf.type_onepager">Сводка по Объекту</option>
@@ -1483,8 +1460,8 @@ var SettingsRender = {
                                 class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-[var(--hover-bg)] p-3 rounded-xl border border-[var(--card-border)]">
                                 <div>
                                     <label
-                                        class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.pdf.columns">Колонки</label>
-                                    <select id="pdf-tmpl-layout" class="input-base text-[11px] !py-1.5">
+                                        class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.pdf.columns">Колонки</label>
+                                    <select id="pdf-tmpl-layout" class="input-base text-rbi-label !py-1.5">
                                         <option value="two_uneven" data-i18n="settings.pdf.layout_uneven">Две (40% / 60%)</option>
                                         <option value="two_even" data-i18n="settings.pdf.layout_even">Две (50% / 50%)</option>
                                         <option value="one" data-i18n="settings.pdf.layout_one">Одна колонка (100%)</option>
@@ -1495,7 +1472,7 @@ var SettingsRender = {
                                         <input type="checkbox" id="pdf-tmpl-logo"
                                             class="w-4 h-4 accent-indigo-600 rounded">
                                         <span
-                                            class="text-[11px] font-bold text-slate-700 dark:text-slate-300" data-i18n="settings.pdf.show_logo">Показывать
+                                            class="text-rbi-label font-bold text-ink" data-i18n="settings.pdf.show_logo">Показывать
                                             логотип</span>
                                     </label>
                                 </div>
@@ -1503,7 +1480,7 @@ var SettingsRender = {
                                     <label class="flex items-center gap-2 cursor-pointer mt-3">
                                         <input type="checkbox" id="pdf-tmpl-qr"
                                             class="w-4 h-4 accent-indigo-600 rounded" checked>
-                                        <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300" data-i18n="settings.pdf.insert_qr">Вставить
+                                        <span class="text-rbi-label font-bold text-ink" data-i18n="settings.pdf.insert_qr">Вставить
                                             QR-код</span>
                                     </label>
                                 </div>
@@ -1511,15 +1488,15 @@ var SettingsRender = {
 
                             <!-- Текст в подвале -->
                             <div>
-                                <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.pdf.footer_label">Текст
+                                <label class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.pdf.footer_label">Текст
                                     в подвале (Footer)</label>
-                                <input type="text" id="pdf-tmpl-footer" class="input-base text-[11px]"
+                                <input type="text" id="pdf-tmpl-footer" class="input-base text-rbi-label"
                                     placeholder="Например: Конфиденциально. Только для внутреннего использования." data-i18n="settings.pdf.footer_ph" data-i18n-attr="placeholder">
                             </div>
 
                             <!-- DRAG AND DROP БЛОКИ -->
                             <div
-                                class="text-[10px] text-slate-500 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 leading-snug" data-i18n="settings.pdf.dnd_hint">
+                                class="text-rbi-caption text-muted bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 leading-snug" data-i18n="settings.pdf.dnd_hint">
                                 💡 Перетаскивайте блоки из левой колонки в правую, чтобы добавить их в отчет.
                                 Выстраивайте нужный порядок.
                             </div>
@@ -1527,8 +1504,8 @@ var SettingsRender = {
                             <div class="grid grid-cols-2 gap-4">
                                 <!-- Доступные блоки -->
                                 <div
-                                    class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 flex flex-col h-64">
-                                    <div class="text-[10px] font-black uppercase text-slate-400 mb-2 text-center" data-i18n="settings.pdf.hidden_blocks">
+                                    class="bg-surface p-3 rounded-xl border border-dashed border-surface flex flex-col h-64">
+                                    <div class="text-rbi-caption font-black uppercase text-muted mb-2 text-center" data-i18n="settings.pdf.hidden_blocks">
                                         Скрытые блоки</div>
                                     <div id="pdf-blocks-available"
                                         class="flex-1 overflow-y-auto space-y-2 custom-scrollbar p-1 min-h-[50px]">
@@ -1538,8 +1515,8 @@ var SettingsRender = {
 
                                 <!-- Активные блоки -->
                                 <div
-                                    class="bg-indigo-50 dark:bg-indigo-900/10 p-3 rounded-xl border border-indigo-200 dark:border-indigo-800 flex flex-col h-64 shadow-inner">
-                                    <div class="text-[10px] font-black uppercase text-indigo-500 mb-2 text-center" data-i18n="settings.pdf.active_blocks">
+                                    class="bg-brand-soft p-3 rounded-xl border border-brand-soft flex flex-col h-64 shadow-inner">
+                                    <div class="text-rbi-caption font-black uppercase text-brand mb-2 text-center" data-i18n="settings.pdf.active_blocks">
                                         Активные (В отчете)</div>
                                     <div id="pdf-blocks-active"
                                         class="flex-1 overflow-y-auto space-y-2 custom-scrollbar p-1 min-h-[50px]">
@@ -1551,9 +1528,9 @@ var SettingsRender = {
                             <!-- Сохранение -->
                             <div class="flex gap-2 pt-4 border-t border-[var(--card-border)]">
                                 <button data-reports-action="cancelPdfTemplateEdit"
-                                    class="flex-1 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 py-3.5 rounded-xl font-bold text-[11px] uppercase shadow-sm active:scale-95 border border-[var(--card-border)]" data-i18n="settings.pdf.cancel">Отмена</button>
+                                    class="flex-1 bg-surface text-muted py-3.5 rounded-xl font-bold text-rbi-label uppercase shadow-sm active:scale-95 border border-[var(--card-border)]" data-i18n="settings.pdf.cancel">Отмена</button>
                                 <button data-reports-action="savePdfTemplate"
-                                    class="flex-[2] bg-indigo-600 text-white py-3.5 rounded-xl font-black text-[11px] uppercase shadow-md active:scale-95 flex justify-center items-center gap-2">💾
+                                    class="flex-[2] bg-brand text-white py-3.5 rounded-xl font-black text-rbi-label uppercase shadow-md active:scale-95 flex justify-center items-center gap-2">💾
                                     <span data-i18n="settings.pdf.save">Сохранить шаблон</span></button>
                             </div>
 
@@ -1676,20 +1653,20 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         var controlsHtml = '';
 
         if (isAdmin) {
-            controlsHtml += '<div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg flex justify-between items-center mb-2 shadow-sm">' +
+            controlsHtml += '<div class="p-3 bg-brand-soft border border-brand-soft rounded-lg flex justify-between items-center mb-2 shadow-sm">' +
                 '<div>' +
-                '<div class="text-[10px] font-black text-indigo-700 dark:text-indigo-400 uppercase">' +
+                '<div class="text-rbi-caption font-black text-brand uppercase">' +
                 _settingsT('settings.body.branding.corp_team', 'Для всей команды') + '</div>' +
-                '<div class="text-[9px] text-slate-500">' +
+                '<div class="text-rbi-caption text-muted">' +
                 _settingsT('settings.body.branding.corp_team_hint', 'Сделать стилем компании') + '</div>' +
                 '</div>' +
-                '<button onclick="window.publishCorporateBranding()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-[9px] font-bold active:scale-95 shadow-md uppercase">' +
+                '<button onclick="window.publishCorporateBranding()" class="bg-brand text-white px-3 py-2 rounded-lg text-rbi-caption font-bold active:scale-95 shadow-md uppercase">' +
                 _settingsT('settings.body.branding.corp_publish', 'Опубликовать') + '</button>' +
                 '</div>';
         }
 
         if (_getSetting('isBrandingCustomized')) {
-            controlsHtml += '<button onclick="window.resetToCorporateBranding()" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 px-3 py-2.5 rounded-lg text-[10px] font-bold active:scale-95 shadow-sm uppercase flex items-center justify-center gap-2">' +
+            controlsHtml += '<button onclick="window.resetToCorporateBranding()" class="w-full bg-surface text-muted border border-surface px-3 py-2.5 rounded-lg text-rbi-caption font-bold active:scale-95 shadow-sm uppercase flex items-center justify-center gap-2">' +
                 '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>' +
                 _settingsT('settings.body.branding.corp_reset', 'Вернуть корпоративный стиль') +
                 '</button>';
@@ -1699,7 +1676,146 @@ console.log('[SettingsRender] settings.render.js markup mounted');
     }
 
     var SETTINGS_SUBSECTION_KEY = 'rbi.settings.subsection';
-    var SETTINGS_SUBSECTIONS = ['platform', 'admin', 'quality', 'construction'];
+    var SETTINGS_SUBSECTIONS = ['platform', 'company', 'platform-admin', 'admin', 'quality', 'construction'];
+
+    /** Platform 2.0: «Компания» (роли, сотрудники, журнал) — подраздел Настроек; виден, когда сервер подтвердил право (RBI.platformMenuAccess.company). */
+    function _companyAllowed() {
+        return !!(window.RBI && window.RBI.platformMenuAccess && window.RBI.platformMenuAccess.company === true);
+    }
+    /** P2-0013: «Администрирование платформы» — только администратору платформы (флаг по ответу сервера pf_my_platform; сервер проверяет каждый вызов). */
+    function _platformAdminAllowed() {
+        return !!(window.RBI && window.RBI.platformMenuAccess && window.RBI.platformMenuAccess.platformAdmin === true);
+    }
+    /** P2-0013: вошедшему почтой подразделы старого Quality (Админ, Качество, Стройконтроль) не показываются — они по старому входу. */
+    function _legacyAllowed() {
+        var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+        return !(sh && typeof sh.platformEntryMode === 'function' && sh.platformEntryMode() === 'email');
+    }
+    function _subsectionAllowed(key) {
+        if (key === 'company') return _companyAllowed();
+        if (key === 'platform-admin') return _platformAdminAllowed();
+        if (key === 'admin') return _legacyAllowed() || _isAdminGateOk();   // P2-0037: почта — по праву сервера (quality.manage)
+        if (key === 'quality' || key === 'construction') {   // P2-0016: почта — если модуль включён у компании
+            var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+            return sh && typeof sh.legacyModuleAllowed === 'function' ? sh.legacyModuleAllowed(key) : _legacyAllowed();
+        }
+        return true;
+    }
+    function _syncCompanyTab() {
+        var btn = document.getElementById('settings-subnav-company');
+        if (btn) btn.hidden = !_companyAllowed();
+        var pa = document.getElementById('settings-subnav-platform-admin');
+        if (pa) pa.hidden = !_platformAdminAllowed();
+        ['quality', 'construction'].forEach(function (k) {
+            var b = document.querySelector('[data-settings-subsection="' + k + '"]');
+            if (b) b.hidden = !_legacyAllowed();
+        });
+        var adm = document.getElementById('settings-subnav-admin');
+        if (adm && !_legacyAllowed()) {
+            adm.hidden = !_isAdminGateOk();
+            adm.classList.toggle('hidden', adm.hidden);
+            _syncAdminSectionsForEmail();
+        }
+        var cur = _getSettingsSubsection();
+        var curPanel = document.getElementById('settings-panel-' + cur);
+        if (curPanel && !curPanel.hidden && !_subsectionAllowed(cur)) _setSettingsSubsection('platform', { skipGate: true, fromRouter: true });
+    }
+    window.addEventListener('rbi:platform-access', _syncCompanyTab);
+    window.addEventListener('rbi:quality-access', _syncCompanyTab);   // P2-0037: права компании в Качестве пришли / сменились
+
+    /**
+     * P2-0013: «Настройки → Платформа» — как вы вошли (до переноса «Качества» в Platform 2.0 это два разных входа и две админки):
+     * почта — Platform 2.0 («План/Факт», «Админ платформы», «Компания»), «Выйти»; PIN — «Качество» / «Стройконтроль» («Админ Качества»),
+     * «Войти по почте»; демо — «Войти».
+     */
+    function _syncP2Account() {
+        var box = document.getElementById('settings-p2-account');
+        if (!box) return;
+        var p2 = window.RBI && window.RBI.platform2;
+        var st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
+        var mode = st ? st.mode : 'none';
+        var on = mode === 'email' || mode === 'pin' || mode === 'demo';
+        // класс, а не атрибут hidden: у блока раскладка flex, она перебивала hidden
+        box.classList.toggle('hidden', !on);
+        box.classList.toggle('flex', on);
+        if (!on) return;
+        var title = document.getElementById('settings-p2-account-title');
+        var who = document.getElementById('settings-p2-account-who');
+        var out = document.getElementById('settings-p2-signout');
+        var login = document.getElementById('settings-p2-login');
+        if (mode === 'email') {
+            var cur = (st.companies || []).filter(function (c) { return c.id === st.companyId; })[0];
+            var role = cur && cur.roles && cur.roles[0] ? cur.roles[0] : (st.isPlatformAdmin ? 'администратор платформы' : '');
+            if (title) title.textContent = 'Вы вошли по почте — Platform 2.0';
+            if (who) who.textContent = st.email + (cur ? ' \u00b7 ' + cur.name : '') + (role ? ' \u00b7 ' + role : '');
+            if (typeof p2.renderCompanySwitch === 'function') p2.renderCompanySwitch(document.getElementById('settings-p2-company'));
+        } else {
+            var prof = document.getElementById('settings-p2-profile');
+            if (prof) prof.replaceChildren();
+            if (title) title.textContent = mode === 'pin' ? 'Вы вошли по PIN — «Качество» и «Стройконтроль»' : 'Вы смотрите без входа (демо)';
+            if (who) who.textContent = mode === 'pin'
+                ? '«План/Факт» и «Админ платформы» — при входе по почте. Админ «Качества» — подраздел «Админ Качества».'
+                : 'Войдите, чтобы работать с данными.';
+            var sw = document.querySelector('#settings-p2-company select');
+            if (sw) sw.remove();
+        }
+        if (mode === 'email' && typeof p2.renderMyProfile === 'function') p2.renderMyProfile(document.getElementById('settings-p2-profile'));
+        if (out) out.classList.toggle('hidden', mode !== 'email');
+        if (login) {
+            login.classList.toggle('hidden', mode === 'email');
+            login.textContent = mode === 'pin' ? 'Войти по почте' : 'Войти';
+        }
+        if (out && !out.dataset.bound) {
+            out.dataset.bound = '1';
+            out.addEventListener('click', function () {
+                var api = window.RBI && window.RBI.platform2;
+                if (api && typeof api.signOut === 'function') api.signOut();
+            });
+        }
+        if (login && !login.dataset.bound) {
+            login.dataset.bound = '1';
+            login.addEventListener('click', function () {
+                var api = window.RBI && window.RBI.platform2;
+                if (api && typeof api.showLogin === 'function') api.showLogin();
+            });
+        }
+    }
+    window.addEventListener('rbi:platform-access', _syncP2Account);
+    /** P2-0031: модуль «ИИ-помощник» выключен у компании (вход по почте) — переключатель ИИ недоступен и выключен, пояснение вместо него. */
+    function _syncAiCompanyOff() {
+        var box = document.getElementById('set-ai-enabled');
+        if (!box) return;
+        var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+        var off = !!(sh && typeof sh.legacyModuleAllowed === 'function' && !sh.legacyModuleAllowed('ai'));
+        box.disabled = off;
+        var note = document.getElementById('set-ai-company-off');
+        if (note) note.classList.toggle('hidden', !off);
+        box.checked = !!_getSetting('aiEnabled');
+        var body = document.getElementById('ai-settings-body');
+        if (body) body.style.display = _getSetting('aiEnabled') ? 'block' : 'none';
+    }
+    window.addEventListener('rbi:platform-access', _syncAiCompanyOff);
+    /** «Администрирование платформы» — файл раздела скачивается только администратору платформы (js/dist/platform-admin/). */
+    var _platformAdminBundle = null;
+    function _mountPlatformAdminPanel(on) {
+        var panel = document.getElementById('settings-panel-platform-admin');
+        if (!panel) return;
+        if (!on || !_platformAdminAllowed()) {
+            if (_platformAdminBundle) _platformAdminBundle.then(function (m) { m.unmount(); }).catch(function () {});
+            return;
+        }
+        if (!_platformAdminBundle) {
+            _platformAdminBundle = import('../../dist/platform-admin/platform-admin.js').catch(function (e) { _platformAdminBundle = null; throw e; });
+        }
+        _platformAdminBundle.then(function (m) { if (_platformAdminAllowed() && panel.isConnected && !panel.hidden) m.mount(panel); })
+            .catch(function (e) { console.error('[settings] администрирование платформы не загрузилось', e); });
+    }
+    function _mountCompanyPanel(on) {
+        var host = window.RBI && window.RBI.platformPanels && window.RBI.platformPanels.company;
+        var panel = document.getElementById('settings-panel-company');
+        if (!host || !panel) return;
+        if (on) host.mount(panel); else host.unmount();
+    }
 
     function _normalizeSettingsSubsection(key) {
         if (key === 'directories') return 'admin';
@@ -1712,7 +1828,29 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             : false;
     }
 
+    /**
+     * P2-0037: «Админ Качества» при входе по почте — разделы по правам сервера (quality.my_access):
+     * справочник объектов и заявки на объекты — quality.objects.manage / construction.objects.manage (033c: Админ, не Зам.);
+     * «Команда» (→ «Компания → Сотрудники»), «Роли и права» (→ «Компания → Роли»), «Миграция данных» (разовые инструменты
+     * старой базы) — при почте скрыты (решение владельца 25.10.2026, карточка P2-0037).
+     */
+    var ADMIN_EMAIL_OBJECTS_SECTIONS = ['location-directory-section', 'admin-object-requests-section'];
+    var ADMIN_EMAIL_HIDDEN_SECTIONS = ['admin-team-section', 'settings-role-matrix-section', 'contractor-id-backfill-section'];
+    function _syncAdminSectionsForEmail() {
+        var has = typeof window.hasQualityServerAction === 'function' ? window.hasQualityServerAction : function () { return false; };
+        var objects = has('quality.objects.manage') || has('construction.objects.manage');
+        ADMIN_EMAIL_OBJECTS_SECTIONS.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.hidden = !objects;
+        });
+        ADMIN_EMAIL_HIDDEN_SECTIONS.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.hidden = true;
+        });
+    }
+
     function _canSeeAdminTab() {
+        if (!_legacyAllowed()) return _isAdminGateOk();
         try {
             var p = (window.RBI && window.RBI.services && window.RBI.services.permissions) || null;
             if (!p) return true;
@@ -1726,11 +1864,13 @@ console.log('[SettingsRender] settings.render.js markup mounted');
     }
 
     function _mountAdminOpsContent() {
+        var email = !_legacyAllowed();   // P2-0037: при почте — без «Команды», «Ролей и прав», «Миграции данных»
+        if (email) _syncAdminSectionsForEmail();
         var od = _objects();
         if (od && typeof od.loadRequests === 'function') {
             od.loadRequests();
         }
-        if (typeof window.gameLoadRoles === 'function') {
+        if (!email && typeof window.gameLoadRoles === 'function') {
             window.gameLoadRoles();
         }
         if (typeof window.gameLoadContractorRequests === 'function') {
@@ -1742,10 +1882,10 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         if (typeof mountContractorDirectoryUI === 'function') {
             mountContractorDirectoryUI().catch(function () {});
         }
-        if (typeof mountContractorIdBackfillUI === 'function') {
+        if (!email && typeof mountContractorIdBackfillUI === 'function') {
             mountContractorIdBackfillUI().catch(function () {});
         }
-        if (typeof mountProjectIdBackfillUI === 'function') {
+        if (!email && typeof mountProjectIdBackfillUI === 'function') {
             try { mountProjectIdBackfillUI(); } catch (_e) { /* ignore */ }
         }
         if (typeof mountCloudDeletedPurgeUI === 'function') {
@@ -1754,11 +1894,8 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         if (typeof mountCloudOrphanUrlsUI === 'function') {
             try { mountCloudOrphanUrlsUI(); } catch (_e) { /* ignore */ }
         }
-        if (typeof mountRoleMatrixUI === 'function') {
+        if (!email && typeof mountRoleMatrixUI === 'function') {
             mountRoleMatrixUI().catch(function () {});
-        }
-        if (typeof mountEnabledModulesUI === 'function') {
-            mountEnabledModulesUI().catch(function () {});
         }
     }
 
@@ -1774,6 +1911,8 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         opts = opts || {};
         key = _normalizeSettingsSubsection(key);
         if (SETTINGS_SUBSECTIONS.indexOf(key) === -1) key = 'platform';
+
+        if (!_subsectionAllowed(key)) key = 'platform';
 
         if (key === 'admin' && !opts.skipGate) {
             if (!_isAdminGateOk()) {
@@ -1799,16 +1938,17 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         root.querySelectorAll('[data-settings-subsection]').forEach(function (btn) {
             var active = btn.getAttribute('data-settings-subsection') === key;
             btn.setAttribute('aria-selected', active ? 'true' : 'false');
-            btn.classList.toggle('bg-indigo-600', active);
+            btn.classList.toggle('bg-brand', active);
             btn.classList.toggle('text-white', active);
             btn.classList.toggle('shadow-sm', active);
             btn.classList.toggle('bg-transparent', !active);
-            btn.classList.toggle('text-slate-600', !active);
-            btn.classList.toggle('dark:text-slate-300', !active);
+            btn.classList.toggle('text-muted', !active);
         });
         if (key === 'admin') {
             _mountAdminOpsContent();
         }
+        _mountCompanyPanel(key === 'company');
+        _mountPlatformAdminPanel(key === 'platform-admin');
         if (!opts.fromRouter && window.AppRouter && typeof window.AppRouter.navigateSub === 'function') {
             window.AppRouter.navigateSub('#/settings', key);
         }
@@ -1860,6 +2000,10 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         if (adminBtn) {
             adminBtn.classList.toggle('hidden', !_canSeeAdminTab());
         }
+        var companyBtn = document.getElementById('settings-subnav-company');
+        if (companyBtn) companyBtn.hidden = !_companyAllowed();
+        _syncCompanyTab();
+        _syncP2Account();
         var initial = null;
         if (window.AppRouter && typeof window.AppRouter.subTabIdFromPath === 'function') {
             var hash = window.location.hash || '';
@@ -1963,28 +2107,15 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         if (document.getElementById('set-task-month')) document.getElementById('set-task-month').value = _getSetting('taskMonthReportDay') || '1';
 
         // 3.5. AI-настройки
-        if (document.getElementById('set-ai-enabled')) {
-            document.getElementById('set-ai-enabled').checked = _getSetting('aiEnabled');
-            document.getElementById('ai-settings-body').style.display = _getSetting('aiEnabled') ? 'block' : 'none';
-        }
+        if (document.getElementById('set-ai-enabled')) _syncAiCompanyOff();
         if (document.getElementById('set-ai-key')) document.getElementById('set-ai-key').value = _getSetting('apiKey') || '';
-        if (document.getElementById('set-ai-corp-pwd')) document.getElementById('set-ai-corp-pwd').value = _getSetting('aiCorpPwd') || '';
 
         var aiModes = document.getElementsByName('ai-mode');
         if (aiModes.length > 0) {
-            var mode = _getSetting('aiAuthMode') || 'role';
-            document.getElementById('corporate-pwd-field').classList.add('hidden');
-            document.getElementById('personal-key-field').classList.add('hidden');
-
-            if (mode === 'role') {
-                aiModes[0].checked = true;
-            } else if (mode === 'corporate') {
-                aiModes[1].checked = true;
-                document.getElementById('corporate-pwd-field').classList.remove('hidden');
-            } else if (mode === 'personal') {
-                aiModes[2].checked = true;
-                document.getElementById('personal-key-field').classList.remove('hidden');
-            }
+            // P2-0034: два способа — «по учётке» и «свой ключ»; старые «по роли» / «корпоративный пароль» → «по учётке»
+            var isPersonal = _getSetting('aiAuthMode') === 'personal';
+            aiModes[isPersonal ? 1 : 0].checked = true;
+            document.getElementById('personal-key-field').classList.toggle('hidden', !isPersonal);
         }
 
         // 4. Автоматизация бэкапов
@@ -2057,11 +2188,6 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         if (typeof mountRoleMatrixUI === 'function') {
             mountRoleMatrixUI().catch(function (e) {
                 console.warn('[settings] role-matrix UI:', e);
-            });
-        }
-        if (typeof mountEnabledModulesUI === 'function') {
-            mountEnabledModulesUI().catch(function (e) {
-                console.warn('[settings] enabled-modules UI:', e);
             });
         }
         if (typeof mountOfficialTemplatesUI === 'function') {
@@ -2253,7 +2379,7 @@ console.log('[SettingsRender] settings.render.js markup mounted');
 
         var personalKeyBlock = document.getElementById('personal-key-field');
         if (personalKeyBlock) {
-            if (_getSetting('usePersonalKey')) personalKeyBlock.classList.remove('hidden');
+            if (_getSetting('aiAuthMode') === 'personal') personalKeyBlock.classList.remove('hidden');
             else personalKeyBlock.classList.add('hidden');
         }
 

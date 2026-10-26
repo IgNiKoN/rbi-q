@@ -5,7 +5,7 @@
  * вызывает init(ctx). Автозапуска при старте нет — только ручной вызов.
  */
 
-import { ModulesManifest, getModuleManifest } from '../modules/modules.manifest.js';
+import { ModulesManifest, getModuleManifest, isModuleEnabled } from '../modules/modules.manifest.js';
 
 window.RBI = window.RBI || {};
 
@@ -21,7 +21,9 @@ var MODULE_BASE_URLS = {
     'construction':    './js/modules/construction/',
     'construction-v2': './js/modules/construction-v2/',
     'game':            './js/modules/quality/features/gamification/',
-    'ai':              './js/modules/quality/features/ai/'
+    'ai':              './js/modules/quality/features/ai/',
+    'planfact':        './js/modules/planfact/',
+    'company':         './js/modules/company/'
 };
 
 window.RBI.moduleLoader = {
@@ -44,14 +46,16 @@ window.RBI.moduleLoader = {
      */
     getMenuItems: function () {
         return ModulesManifest
-            .filter(function (m) { return m.menu; })
+            .filter(function (m) { return m.menu && isModuleEnabled(m); })
             .map(function (m) {
                 return {
                     id:      m.id,
                     label:   m.menu.label  || m.title,
                     section: m.menu.section || null,
                     order:   m.menu.order  != null ? m.menu.order : 999,
-                    icon:    m.icon        || null
+                    icon:    m.icon        || null,
+                    path:    m.menu.path   || null,
+                    requiresAccess: m.menu.requiresAccess === true
                 };
             })
             .sort(function (a, b) { return a.order - b.order; });
@@ -80,6 +84,10 @@ window.RBI.moduleLoader = {
         if (!manifest) {
             console.error('[module-loader] loadModule: манифест не найден для id=' + id);
             return Promise.reject(new Error('module-loader: manifest not found: ' + id));
+        }
+        if (!isModuleEnabled(manifest)) {
+            console.log('[module-loader] loadModule: модуль выключен (enabled:false) id=' + id);
+            return Promise.reject(new Error('module-loader: module disabled: ' + id));
         }
         if (!manifest.entry) {
             console.error('[module-loader] loadModule: поле entry отсутствует в манифесте id=' + id);

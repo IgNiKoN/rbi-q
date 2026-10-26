@@ -50,7 +50,6 @@ import { mountProjectIdBackfillUI, ProjectIdBackfillUI } from './features/projec
 import { mountCloudDeletedPurgeUI, CloudDeletedPurgeUI } from './features/cloud-deleted-purge-ui.js';
 import { mountCloudOrphanUrlsUI, CloudOrphanUrlsUI } from './features/cloud-orphan-urls-ui.js';
 import { mountRoleMatrixUI, RoleMatrixUI } from './features/role-matrix-ui.js';
-import { mountEnabledModulesUI, EnabledModulesUI } from './features/enabled-modules-ui.js';
 import { mountOfficialTemplatesUI, OfficialTemplatesUI } from './features/official-templates-ui.js';
 // Side-effect: window.* из feature/render (раньше — статичные <script> в index.html)
 import './features/tutorial.js';
@@ -181,7 +180,6 @@ export const SettingsModule = {
     CloudDeletedPurgeUI,
     CloudOrphanUrlsUI,
     RoleMatrixUI,
-    EnabledModulesUI,
     OfficialTemplatesUI,
 
     /**

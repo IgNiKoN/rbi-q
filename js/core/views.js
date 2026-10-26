@@ -151,7 +151,7 @@ window.AppViews = {
         if (typeof window.ensureAuditMarkup === 'function') {
             try { window.ensureAuditMarkup(); } catch (_) { /* ignore */ }
         }
-        if (window.AppModeManager && window.AppModeManager.currentMode !== 'quality') window.AppModeManager.changeMode('quality');
+        if (window.AppModeManager && window.AppModeManager.currentMode !== 'quality') window.AppModeManager.changeMode('quality', { fromRoute: true });
         switchViewNode('tab-audit', true); // ТУТ TRUE (шапка нужна)
         // После teardown→remount options в fake/checklist select пустые —
         // идемпотентно перезаполнить (ensureAuditMarkup тоже чинит remount).
@@ -174,7 +174,7 @@ window.AppViews = {
         if (typeof window.ensureEngineerMarkup === 'function') {
             try { window.ensureEngineerMarkup(); } catch (_) { /* ignore */ }
         }
-        if (window.AppModeManager && window.AppModeManager.currentMode !== 'quality') window.AppModeManager.changeMode('quality');
+        if (window.AppModeManager && window.AppModeManager.currentMode !== 'quality') window.AppModeManager.changeMode('quality', { fromRoute: true });
         var tabEl = document.getElementById('tab-engineer');
         var alreadyMounted = !!(tabEl && tabEl.classList.contains('active') && tabEl.querySelector('#engineer-subtabs-block'));
         switchViewNode('tab-engineer', false); // ТУТ FALSE
@@ -259,7 +259,7 @@ window.AppViews = {
             return;
         }
 
-        if (window.AppModeManager && window.AppModeManager.currentMode !== 'quality') window.AppModeManager.changeMode('quality');
+        if (window.AppModeManager && window.AppModeManager.currentMode !== 'quality') window.AppModeManager.changeMode('quality', { fromRoute: true });
         switchViewNode('tab-analytics', false); // Шапка скрыта
 
         function _syncAnalyticsSubFromHash() {
@@ -446,7 +446,7 @@ window.AppViews = {
         if (typeof window.ensureConstructionMarkup === 'function') {
             try { window.ensureConstructionMarkup('tab-construction-defects'); } catch (_) { /* ignore */ }
         }
-        if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction') window.AppModeManager.changeMode('construction');
+        if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction') window.AppModeManager.changeMode('construction', { fromRoute: true });
         switchViewNode('tab-construction-defects', true); // ТУТ TRUE (нужна шапка с режимами)
         
         // Запуск логики отрисовки планов СК
@@ -458,7 +458,7 @@ window.AppViews = {
         if (typeof window.ensureConstructionMarkup === 'function') {
             try { window.ensureConstructionMarkup('tab-construction-acceptance'); } catch (_) { /* ignore */ }
         }
-        if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction') window.AppModeManager.changeMode('construction');
+        if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction') window.AppModeManager.changeMode('construction', { fromRoute: true });
         switchViewNode('tab-construction-acceptance', true); 
         if (window.ConstructionActions && typeof window.ConstructionActions.initAcceptance === 'function') window.ConstructionActions.initAcceptance(); 
     },
@@ -467,7 +467,7 @@ window.AppViews = {
     renderConstructionReports() { showModePlaceholder('construction_reports'); },
 
     renderConstructionReference() {
-        if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction') window.AppModeManager.changeMode('construction');
+        if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction') window.AppModeManager.changeMode('construction', { fromRoute: true });
         window.AppViews.renderReference();
     },
     
@@ -477,7 +477,7 @@ window.AppViews = {
             try { window.ensureConstructionMarkup('tab-transfer'); } catch (_) { /* ignore */ }
         }
         // Если мы не в Стройконтроле, переключаемся на Стройконтроль
-        if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction') window.AppModeManager.changeMode('construction');
+        if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction') window.AppModeManager.changeMode('construction', { fromRoute: true });
         
         switchViewNode('tab-transfer', true); 
         
@@ -492,8 +492,7 @@ window.AppViews = {
     // Новый construction-v2 (Vite) — параллельный тестовый контур, не legacy #/construction/*
     renderConstructionV2() {
         if (window.AppModeManager && window.AppModeManager.currentMode !== 'construction-v2') {
-            window.AppModeManager.changeMode('construction-v2');
-            return;
+            window.AppModeManager.changeMode('construction-v2', { fromRoute: true });   // P2-0011: остаться на открытом адресе
         }
         if (window.ConstructionV2Module && typeof window.ConstructionV2Module.showTab === 'function') {
             window.ConstructionV2Module.showTab();

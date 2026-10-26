@@ -130,20 +130,16 @@ function syncSubtabActive(subId) {
     btn.classList.remove(
       'bg-white',
       'shadow-sm',
-      'text-indigo-600',
-      'dark:bg-slate-700',
-      'dark:text-indigo-400'
+      'text-brand'
     );
     if (on) {
       if (deskChrome) {
-        btn.classList.add('text-indigo-600');
+        btn.classList.add('text-brand');
       } else {
         btn.classList.add(
           'bg-white',
           'shadow-sm',
-          'text-indigo-600',
-          'dark:bg-slate-700',
-          'dark:text-indigo-400'
+          'text-brand'
         );
       }
       btn.classList.remove('text-[var(--text-muted)]');

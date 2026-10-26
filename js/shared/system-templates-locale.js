@@ -2,7 +2,7 @@
 /* i18n v1.16: runtime-подмена title/group/n/t в window.SYSTEM_TEMPLATES по текущей локали.
    RU (data/system_templates.js) не редактируется — этот модуль мутирует те же 4 поля
    in-place при смене локали и восстанавливает RU из pristine-снэпшота при возврате на 'ru'.
-   Overlay-данные: data/system_templates.en.js / data/system_templates.sr-Latn.js (plain script,
+   Overlay-данные: data/system_templates.en.js / data/system_templates.sr-Latn.js / data/system_templates.ka.js (plain script,
    должны быть подключены раньше этого модуля и раньше/после SYSTEM_TEMPLATES — не важно порядок
    относительно overlay, важно что SYSTEM_TEMPLATES уже существует к моменту applySystemTemplatesLocale). */
 
@@ -32,6 +32,7 @@ function _snapshotPristine() {
 function _overlayFor(locale) {
     if (locale === 'en') return window.SYSTEM_TEMPLATES_LOCALE_EN;
     if (locale === 'sr-Latn') return window.SYSTEM_TEMPLATES_LOCALE_SR_LATN;
+    if (locale === 'ka') return window.SYSTEM_TEMPLATES_LOCALE_KA;
     return null;
 }
 

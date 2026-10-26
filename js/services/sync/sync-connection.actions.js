@@ -343,7 +343,7 @@ async function runCloudConnection() {
 
     if (!name || !code) return safeToast("⚠️ Имя и Код проекта обязательны!");
     if (!pin || pin.length < 4) return safeToast("⚠️ Укажите PIN минимум 4 цифры!");
-    if (!window.supabaseClient) return alert("❌ Ошибка: Ключи базы данных не настроены");
+    if (!window.supabaseClient) return safeToast("⚠️ " + ((window.APP_CONFIG && window.APP_CONFIG.CLOUD_DISABLED_MESSAGE) || "Ключи базы данных не настроены"));
 
     const { data: projData } = await window.supabaseClient
         .from('allowed_projects')

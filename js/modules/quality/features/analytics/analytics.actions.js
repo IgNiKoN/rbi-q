@@ -828,8 +828,22 @@ export const AnalyticsActions = {
     // Перенесено из analytics.legacy.js: глобальная функция вызова
     // «Магии TWI» из карточки дефекта аналитики.
     // =========================================================================
-    createMagicTwi(checklistKey, itemId, photoGood, photoBad, title) {
+    async createMagicTwi(checklistKey, itemId, photoGood, photoBad, title) {
         if (!window.RBI.services.knowledge.requireEditRight()) return;
+        // P2-0023 (правило владельца): на пункт — одна карта ТИВИ. Уже есть — показываем её, новую не начинаем.
+        if (typeof window.rbiFindExistingTwiCard === 'function') {
+            const existingTwi = await window.rbiFindExistingTwiCard(checklistKey, itemId);
+            if (existingTwi) {
+                window._rbiMagicTwiPending = false;
+                if (!(window.customTwiCards || []).some(c => String(c.id) === String(existingTwi.id))) {
+                    (window.customTwiCards = window.customTwiCards || []).push(existingTwi);
+                }
+                showToast('ℹ️ Карта ТИВИ для этого пункта уже есть — открыта');
+                if (typeof window.openTwiViewer === 'function') window.openTwiViewer(existingTwi.id);
+                if (typeof window.renderTwiList === 'function') window.renderTwiList();
+                return;
+            }
+        }
         // Флаг для saveTwiCard: начислить magic_creator (+100 XP), а не обычный create_twi
         window._rbiMagicTwiPending = true;
         switchTab('tab-reference');
