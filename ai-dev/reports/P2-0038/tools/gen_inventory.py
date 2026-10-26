@@ -84,9 +84,10 @@ OTHER=[
 ]
 dyn_start=len(rows)
 for r in DYN+OTHER: rows.append(r)
+CHECKED={1:'✅ 26.10 (этап 1)'}
 out=[]
 out.append('# P2-0038 — опись настроек («опись до, сверка после», решение владельца 8)\n')
-out.append('**Составлена:** 26.10.2026, до правок кода (ветка `task/P2-0038-settings-structure`, от `main` `5bae516`). Колонка «Проверено» заполняется по мере переноса.\n')
+out.append('**Составлена:** 26.10.2026, до правок кода (ветка `task/P2-0038-settings-structure`, от `main` `5bae516`). Колонка «Проверено» заполняется по мере переноса; метод проверки этапа 1 — в отчёте Исполнителя (каждый элемент найден по id/действию в новой вкладке + ручная проверка в оболочке).\n')
 out.append('## Метод подсчёта\n')
 out.append(f'- **Старая страница** `js/modules/settings/settings.render.js` (шаблон, строки 26–1553): все открывающие теги `<button>`, `<input>` (кроме скрытых `type=hidden` / `display:none`), `<select>`, `<textarea>`, `<a>` + 2 кликабельные плитки `div[data-reports-action=handleDataExport]` = **{static_n}** (подложка модалки PDF и `stopPropagation` — не элементы управления, не считаются). Скрипт подсчёта — в отчёте Исполнителя.')
 out.append(f'- **Экраны TS** (`src/platform/company/*.ts`): вызовы `h(\'button\'|\'input\'|\'select\'|\'textarea\'|\'a\'` = **{ts_n}** (`CompanyAudit.ts` — 0).')
@@ -94,11 +95,13 @@ out.append(f'- **Блоки, которые рисуются кодом** (пр�
 out.append(f'- **Итого строк: {len(rows)}.** Скрытые при входе по почте разделы Админа Качества («Команда», «Роли и права», «Миграция данных») — в списке «Убрано и почему».\n')
 out.append('Обозначения «Кто видит»: «все» — любой вошедший; `quality.manage` — администратор Качества компании (право сервера, замок админки); `security.roles.assign` — администратор компании; `is_platform_admin` — администратор платформы.\n')
 out.append('## Опись\n')
-out.append('| № | Где сейчас (файл:строка) | Что это | Личное / админ | Куда переезжает | Кто видит | Этап | Проверено |')
+out.append('| № | Где было до P2-0038 (файл:строка) | Что это | Личное / админ | Куда переезжает | Кто видит | Этап | Проверено |')
 out.append('|---|---|---|---|---|---|---|---|')
 for i,r in enumerate(rows,1):
     was,what,own,to,who,stage,flag=r
-    out.append(f'| {i} | {was} | {what} | {own} | {to}{" **?**" if flag else ""} | {who} | {stage} |  |')
+    chk=CHECKED.get(stage,'')
+    if stage==1 and 'убрано' in to: chk='убрано ✅ 26.10'
+    out.append(f'| {i} | {was} | {what} | {own} | {to}{" **?**" if flag else ""} | {who} | {stage} | {chk} |')
 out.append('\n## Спорные пункты «?» — решить на показе этапа 1\n')
 grp={}
 for i,r in enumerate(rows,1):

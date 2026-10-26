@@ -16,6 +16,7 @@ import { mountCloudDeletedPurgeUI } from './features/cloud-deleted-purge-ui.js';
 import { mountCloudOrphanUrlsUI } from './features/cloud-orphan-urls-ui.js';
 import { mountRoleMatrixUI } from './features/role-matrix-ui.js';
 import { mountOfficialTemplatesUI } from './features/official-templates-ui.js';
+import { SETTINGS_KEYS, ADMIN_KEYS, DEFAULT_KEY, settingsKeyFromHash, settingsPathForKey, settingsZoneForKey } from './settings.routes.js';
 
 var SettingsRender = {
     // =====================================================================
@@ -42,48 +43,41 @@ var SettingsRender = {
                         <span data-i18n="nav.settings">Настройки</span>
                     </h2>
                     <div class="flex items-center gap-2 shrink-0">
-                        <button data-game-action="gameOpenManagerPanelAuth"
-                            class="w-8 h-8 flex items-center justify-center bg-surface rounded-full text-muted active:scale-95 shadow-sm border border-surface"
-                            title="Панель Руководителя" data-i18n="settings.chrome.manager_panel" data-i18n-attr="title">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-                                </path>
-                            </svg>
-                        </button>
-                        <button data-settings-action="resetSettingsToDefault" data-i18n="settings.reset_defaults"
-                            class="text-rbi-caption font-black text-danger bg-danger-soft px-3 py-2 rounded-lg uppercase tracking-widest border border-danger-soft shadow-sm active:scale-95 transition-colors">По умолчанию</button>
                     </div>
                 </div>
                 <div class="relative min-w-0">
-                    <div id="settings-subnav" class="flex flex-nowrap gap-1 p-1 rounded-xl bg-[var(--card-bg)] border border-[var(--card-border)] overflow-x-auto no-scrollbar" role="tablist" aria-label="Подразделы настроек" data-i18n="settings.subnav_aria" data-i18n-attr="aria-label">
-                        <button type="button" data-settings-subsection="platform" role="tab" data-i18n="settings.section.platform"
-                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Платформа</button>
-                        <button type="button" data-settings-subsection="company" role="tab" id="settings-subnav-company" hidden
-                            class="settings-subnav-btn flex-1 min-w-[5.5rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Компания</button>
-                        <button type="button" data-settings-subsection="platform-admin" role="tab" id="settings-subnav-platform-admin" hidden
-                            class="settings-subnav-btn flex-1 min-w-[7.5rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Админ платформы</button>
-                        <button type="button" data-settings-subsection="admin" role="tab" id="settings-subnav-admin"
-                            class="settings-subnav-btn flex-1 min-w-[5.5rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate inline-flex items-center justify-center gap-1">
-                            <svg class="w-3 h-3 shrink-0 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                            <span data-i18n="settings.section.admin">Админ Качества</span>
-                        </button>
-                        <button type="button" data-settings-subsection="quality" role="tab" data-i18n="settings.section.quality"
-                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Качество</button>
-                        <button type="button" data-settings-subsection="construction" role="tab" data-i18n="settings.section.construction"
-                            class="settings-subnav-btn flex-1 min-w-[4.75rem] px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Стройконтроль</button>
-                    </div>
-                    <!-- Подсказка скролла (только визуал, не кликабельна; на md+ скрыта) -->
-                    <div class="settings-subnav-scroll-hint pointer-events-none absolute inset-y-1 right-1 w-7 rounded-r-lg bg-gradient-to-l from-[var(--card-bg)] via-[var(--card-bg)]/80 to-transparent flex items-center justify-end pr-0.5 md:hidden" aria-hidden="true">
-                        <svg class="w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
-                        </svg>
+                    <!-- P2-0038: две зоны — «Моё» (все) и «Администрирование» (Компания · Модули · Платформа, по правам сервера).
+                         Телефон: переключатель зон + подвкладки активной зоны; ПК: обе группы в левой колонке с заголовками. -->
+                    <div id="settings-subnav" class="settings-nav" data-active-zone="my" role="navigation" aria-label="Разделы настроек">
+                        <div id="settings-zone-switch" class="settings-zone-switch" role="tablist" hidden>
+                            <button type="button" data-settings-zone="my" role="tab" class="settings-zone-btn">Моё</button>
+                            <button type="button" data-settings-zone="admin" role="tab" class="settings-zone-btn">Администрирование</button>
+                        </div>
+                        <div class="settings-zone" data-settings-zone-group="my">
+                            <div class="settings-zone-title">Моё</div>
+                            <div class="settings-zone-tabs no-scrollbar" role="tablist">
+                                <button type="button" data-settings-subsection="my-profile" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Профиль и вход</button>
+                                <button type="button" data-settings-subsection="my-interface" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Интерфейс</button>
+                                <button type="button" data-settings-subsection="my-device" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Устройство и данные</button>
+                                <button type="button" data-settings-subsection="my-notifications" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Уведомления</button>
+                                <button type="button" data-settings-subsection="my-quality" role="tab" id="settings-subnav-my-quality" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Качество</button>
+                                <button type="button" data-settings-subsection="my-help" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Помощь</button>
+                            </div>
+                        </div>
+                        <div class="settings-zone" data-settings-zone-group="admin" id="settings-zone-admin" hidden>
+                            <div class="settings-zone-title">Администрирование</div>
+                            <div class="settings-zone-tabs no-scrollbar" role="tablist">
+                                <button type="button" data-settings-subsection="company" role="tab" id="settings-subnav-company" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Компания</button>
+                                <button type="button" data-settings-subsection="admin" role="tab" id="settings-subnav-admin" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Модули</button>
+                                <button type="button" data-settings-subsection="platform-admin" role="tab" id="settings-subnav-platform-admin" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Платформа</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="settings-panels">
-            <div id="settings-panel-platform" data-settings-panel="platform" class="space-y-3">
+            <div id="settings-panel-my-profile" data-settings-panel="my-profile" class="space-y-3">
                 <!-- P2-0013: кто вошёл в Platform 2.0 (почта) и «Выйти»; рисует _syncP2Account по состоянию входа платформы -->
                 <div id="settings-p2-account"
                     class="hidden bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex-wrap items-center justify-between gap-3">
@@ -99,156 +93,11 @@ var SettingsRender = {
                 </div>
                 <!-- P2-0028: «Мой профиль» (ФИО, «Сменить пароль») — рисует platform2.renderMyProfile при входе по почте -->
                 <div id="settings-p2-profile"></div>
-                <!-- СИНХРОНИЗАЦИЯ КОМАНДЫ -->
-                <details
-                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden"
-                    open>
-                    <summary
-                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.sync">Синхронизация Команды</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
-                    </summary>
-                    <div id="sync-settings-block"></div>
-                </details>
-
-                <!-- AI АССИСТЕНТ -->
-                <details
-                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.ai">AI-ассистент (DeepSeek)</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
-                    </summary>
-                    <div class="rounded-b-2xl overflow-hidden">
-                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.ai.enable">Включить AI</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.ai.enable_hint">Интеллектуальные подсказки и аналитика</div>
-                                <div id="set-ai-company-off" class="text-rbi-caption text-[var(--text-muted)] mt-1 hidden" data-i18n="settings.body.ai.company_off">ИИ-помощник выключен для вашей компании. Включает администратор платформы.</div>
-                            </div>
-                            <label class="toggle-switch"><input type="checkbox" id="set-ai-enabled"
-                                    data-settings-action="toggleSetting" data-settings-action-key="aiEnabled" data-settings-action-val-type="element" data-action-event="change"><span
-                                    class="toggle-slider"></span></label>
-                        </div>
-                        <div id="ai-settings-body" class="transition-all duration-300 hidden">
-                            <div class="p-4 bg-[var(--hover-bg)]">
-                                <div class="font-bold text-sm mb-3" data-i18n="settings.body.ai.mode_title">Способ вызова нейросети</div>
-                                <div class="flex flex-col gap-3">
-                                    <!-- Режим 1: По учётке (P2-0034: сервер решает по входу и галочке «ИИ-помощник» в роли) -->
-                                    <label
-                                        class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                                        <input type="radio" name="ai-mode" value="account"
-                                            class="w-4 h-4 accent-indigo-600" data-action="changeAiMode" data-action-arg="account" data-action-event="change">
-                                        <span
-                                            class="text-rbi-body font-bold text-ink flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
-                                                </path>
-                                            </svg> <span data-i18n="settings.body.ai.mode_account">По учётке</span>
-                                        </span>
-                                    </label>
-
-                                    <!-- Режим 2: Личный ключ -->
-                                    <label
-                                        class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                                        <input type="radio" name="ai-mode" value="personal"
-                                            class="w-4 h-4 accent-indigo-600"
-                                            data-action="changeAiMode" data-action-arg="personal" data-action-event="change">
-                                        <span
-                                            class="text-rbi-body font-bold text-ink flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
-                                                </path>
-                                            </svg> <span data-i18n="settings.body.ai.mode_personal">Мой персональный API-ключ</span>
-                                        </span>
-                                    </label>
-                                    
-                                    <div id="personal-key-field"
-                                        class="hidden bg-surface p-3 rounded-xl border border-surface shadow-inner ml-6">
-                                        <form onsubmit="event.preventDefault();">
-                                            <!-- ВСТАВКА: Скрытый логин -->
-                                            <input type="text" autocomplete="username" style="display:none;" value="admin">
-                                            
-                                            <label class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.body.ai.api_key_label">API-ключ DeepSeek</label>
-                                            <input type="password" id="set-ai-key" autocomplete="new-password" class="input-base font-mono text-rbi-caption bg-surface" placeholder="sk-..." data-i18n="settings.body.ai.api_key_ph" data-i18n-attr="placeholder" data-settings-action="toggleSetting" data-settings-action-key="apiKey" data-settings-action-val-type="element" data-action-event="change">
-                                            <div class="text-rbi-caption text-muted mt-1.5 leading-snug" data-i18n="settings.body.ai.device_only">Сохраняется только на вашем устройстве.</div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </details>
-
-                <!-- БРЕНДИРОВАНИЕ -->
-                <details
-                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.branding">Брендирование (PRO)</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
-                    </summary>
-                    <div>
-                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.branding.color">Фирменный цвет</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.color_hint">Цвет акцентов в PDF</div>
-                            </div>
-                            <input type="color" id="set-brand-color"
-                                class="w-10 h-10 p-0 border-0 rounded cursor-pointer"
-                                data-settings-action="toggleSetting" data-settings-action-key="brandColor" data-settings-action-val-type="element" data-action-event="change">
-                        </div>
-                        <div class="p-4 border-b border-[var(--card-border)]">
-                            <div class="flex justify-between items-center mb-2">
-                                <div>
-                                    <div class="font-bold text-sm" data-i18n="settings.body.branding.logo">Логотип компании</div>
-                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.logo_hint">Отобразится в шапке отчетов</div>
-                                </div>
-                                <button onclick="document.getElementById('brand-logo-upload').click()"
-                                    class="bg-brand-soft text-brand px-3 py-1.5 rounded-lg text-rbi-caption font-bold active:scale-95 border border-brand-soft" data-i18n="settings.body.branding.upload">Загрузить</button>
-                                <input type="file" id="brand-logo-upload" accept="image/png, image/jpeg" class="hidden"
-                                    data-settings-action="handleLogoUpload" data-settings-action-val-type="event" data-action-event="change">
-                            </div>
-                            <div id="brand-logo-preview"
-                                class="hidden mt-3 border border-[var(--card-border)] rounded-lg p-2 bg-[var(--card-bg)] flex justify-between items-center shadow-inner">
-                                <img id="brand-logo-img" src="" class="h-10 max-w-[60%] object-contain bg-transparent">
-                                <button data-settings-action="removeBrandLogo"
-                                    class="text-danger text-rbi-caption font-bold px-3 py-1.5 bg-[var(--card-bg)] rounded border border-danger-soft shadow-sm active:scale-90" data-i18n="settings.body.branding.remove">Удалить</button>
-                            </div>
-                            <!-- УПРАВЛЕНИЕ КОРПОРАТИВНЫМ СТИЛЕМ -->
-                            <div id="corp-branding-controls" class="mt-3"></div>
-                        </div>
-                    </div>
-                </details>
-
+            </div>
+            <div id="settings-panel-my-interface" data-settings-panel="my-interface" class="space-y-3" hidden>
                 <!-- ИНТЕРФЕЙС И ОФОРМЛЕНИЕ -->
                 <details
-                    class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3" open>
                     <summary
                         class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
@@ -320,18 +169,6 @@ var SettingsRender = {
                                 <option value="bottom" data-i18n="settings.opt.nav.bottom">Всегда снизу</option>
                             </select>
                         </div>
-                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.interface.dashboard">Мини-дашборд</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.dashboard_hint">Отображение в шапке осмотра</div>
-                            </div>
-                            <select id="set-dashmode" class="input-base w-32"
-                                data-settings-action="toggleSetting" data-settings-action-key="dashboardMode" data-settings-action-val-type="element" data-action-event="change">
-                                <option value="compact" data-i18n="settings.opt.dash.compact">Компактный</option>
-                                <option value="expanded" data-i18n="settings.opt.dash.expanded">Развернутый</option>
-                                <option value="hidden" data-i18n="settings.opt.dash.hidden">Отключить</option>
-                            </select>
-                        </div>
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center gap-3">
                             <div class="min-w-0">
                                 <div class="font-bold text-sm" data-i18n="settings.body.interface.filters_scroll">Фильтры при скролле</div>
@@ -361,59 +198,30 @@ var SettingsRender = {
                                     data-settings-action="toggleSetting" data-settings-action-key="hardOverscrollLock" data-settings-action-val-type="element" data-action-event="change"><span
                                     class="toggle-slider"></span></label>
                         </div>
-
-                        <!-- Настройки поведения -->
-                        <!-- Настройки уведомлений -->
-                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.interface.push">Push-уведомления</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.push_hint">Оповещения о новых задачах СК</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="set-push-notifications"
-                                    data-settings-action="togglePushSettings" data-settings-action-val-type="element" data-action-event="change">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.interface.swipe">Свайпы (Вправо/Влево)</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.swipe_hint">Управление жестами в Осмотре</div>
-                            </div>
-                            <label class="toggle-switch"><input type="checkbox" id="set-swipe"
-                                    data-settings-action="toggleSetting" data-settings-action-key="swipeEnabled" data-settings-action-val-type="element" data-action-event="change"><span
-                                    class="toggle-slider"></span></label>
-                        </div>
-                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.interface.collapse_ok">Схлопывать OK</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.collapse_ok_hint">Сворачивать пройденные карточки</div>
-                            </div>
-                            <label class="toggle-switch"><input type="checkbox" id="set-collapse"
-                                    data-settings-action="toggleSetting" data-settings-action-key="autoCollapseOk" data-settings-action-val-type="element" data-action-event="change"><span
-                                    class="toggle-slider"></span></label>
-                        </div>
-                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.interface.groups_collapsed">Группы свернуты</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.groups_collapsed_hint">Изначально скрывать пункты этапов</div>
-                            </div>
-                            <label class="toggle-switch"><input type="checkbox" id="set-groups-col"
-                                    data-settings-action="toggleSetting" data-settings-action-key="defaultGroupsCollapsed" data-settings-action-val-type="element" data-action-event="change"><span
-                                    class="toggle-slider"></span></label>
-                        </div>
-                        <div class="p-4 flex justify-between items-center rounded-b-2xl">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.interface.fast_mode">Быстрый режим</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.fast_mode_hint">Скрыть тексты нормативов</div>
-                            </div>
-                            <label class="toggle-switch"><input type="checkbox" id="set-fast"
-                                    data-settings-action="toggleSetting" data-settings-action-key="fastMode" data-settings-action-val-type="element" data-action-event="change"><span
-                                    class="toggle-slider"></span></label>
-                        </div>
+                        <!-- P2-0038: «Вернуть корпоративный стиль» — тому, кто менял стиль сам (публикация стиля — Администрирование) -->
+                        <div id="corp-branding-reset" class="mt-2"></div>
                     </div>
                 </details>
-
+            </div>
+            <div id="settings-panel-my-device" data-settings-panel="my-device" class="space-y-3" hidden>
+                <!-- СИНХРОНИЗАЦИЯ КОМАНДЫ -->
+                <details
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden"
+                    open>
+                    <summary
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.sync">Синхронизация Команды</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
+                    </summary>
+                    <div id="sync-settings-block"></div>
+                </details>
                 <!-- УПРАВЛЕНИЕ ДАННЫМИ И БЭКАПЫ -->
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
@@ -730,341 +538,168 @@ var SettingsRender = {
                         </div>
                     </div>
                 </details>
-
-                <!-- ОБРАТНАЯ СВЯЗЬ (ФИДБЕК И ИДЕИ) -->
+            </div>
+            <div id="settings-panel-my-notifications" data-settings-panel="my-notifications" class="space-y-3" hidden>
+                <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm">
+                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.interface.push">Push-уведомления</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.push_hint">Оповещения о новых задачах СК</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="set-push-notifications"
+                                    data-settings-action="togglePushSettings" data-settings-action-val-type="element" data-action-event="change">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                </div>
+            </div>
+            <div id="settings-panel-my-quality" data-settings-panel="my-quality" class="space-y-3" hidden>
+                <!-- P2-0038: поведение Осмотра (было в «Интерфейсе») -->
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
                         class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z">
+                            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01">
                                 </path>
                             </svg>
-                            <span data-i18n="settings.accordion.feedback">Обратная связь (Идеи)</span>
+                            <span>Осмотр</span>
                         </span>
                         <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
                     </summary>
-                    <div class="p-4 bg-surface rounded-b-2xl">
-                        <div class="mb-4 border-b border-[var(--card-border)] pb-4">
-                            <label
-                                class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-2 block" data-i18n="settings.body.feedback.label">Предложить улучшение / Сообщить об ошибке</label>
-                            <textarea id="feedback-input-text" class="input-base text-rbi-body h-20 resize-none mb-2"
-                                placeholder="Опишите, чего не хватает или что работает не так..." data-i18n="settings.body.feedback.ph" data-i18n-attr="placeholder"></textarea>
-                            <button id="feedback-submit-btn" data-settings-action="rbi_submitFeedback"
-                                class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                </svg> <span data-i18n="settings.body.feedback.submit">Отправить разработчику</span>
-                            </button>
+                    <div>
+                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.interface.dashboard">Мини-дашборд</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.dashboard_hint">Отображение в шапке осмотра</div>
+                            </div>
+                            <select id="set-dashmode" class="input-base w-32"
+                                data-settings-action="toggleSetting" data-settings-action-key="dashboardMode" data-settings-action-val-type="element" data-action-event="change">
+                                <option value="compact" data-i18n="settings.opt.dash.compact">Компактный</option>
+                                <option value="expanded" data-i18n="settings.opt.dash.expanded">Развернутый</option>
+                                <option value="hidden" data-i18n="settings.opt.dash.hidden">Отключить</option>
+                            </select>
                         </div>
-                        <div class="text-rbi-caption font-black text-[var(--text-muted)] uppercase tracking-widest mb-3" data-i18n="settings.body.feedback.backlog">
-                            Бэклог команды</div>
-                        <div id="feedback-list-container"
-                            class="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
-                            <!-- Карточки фидбека будут здесь -->
+                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.interface.swipe">Свайпы (Вправо/Влево)</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.swipe_hint">Управление жестами в Осмотре</div>
+                            </div>
+                            <label class="toggle-switch"><input type="checkbox" id="set-swipe"
+                                    data-settings-action="toggleSetting" data-settings-action-key="swipeEnabled" data-settings-action-val-type="element" data-action-event="change"><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.interface.collapse_ok">Схлопывать OK</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.collapse_ok_hint">Сворачивать пройденные карточки</div>
+                            </div>
+                            <label class="toggle-switch"><input type="checkbox" id="set-collapse"
+                                    data-settings-action="toggleSetting" data-settings-action-key="autoCollapseOk" data-settings-action-val-type="element" data-action-event="change"><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.interface.groups_collapsed">Группы свернуты</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.groups_collapsed_hint">Изначально скрывать пункты этапов</div>
+                            </div>
+                            <label class="toggle-switch"><input type="checkbox" id="set-groups-col"
+                                    data-settings-action="toggleSetting" data-settings-action-key="defaultGroupsCollapsed" data-settings-action-val-type="element" data-action-event="change"><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                        <div class="p-4 flex justify-between items-center rounded-b-2xl">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.interface.fast_mode">Быстрый режим</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.fast_mode_hint">Скрыть тексты нормативов</div>
+                            </div>
+                            <label class="toggle-switch"><input type="checkbox" id="set-fast"
+                                    data-settings-action="toggleSetting" data-settings-action-key="fastMode" data-settings-action-val-type="element" data-action-event="change"><span
+                                    class="toggle-slider"></span></label>
                         </div>
                     </div>
                 </details>
-
-                <!-- ОНБОРДИНГ ПЛАТФОРМЫ -->
-                <div class="bg-[var(--card-bg)] border border-emerald-200 dark:border-emerald-800 rounded-2xl shadow-sm p-4 flex justify-between items-center gap-3 mb-3">
-                    <div class="min-w-0">
-                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight" data-i18n="settings.body.feedback.onboarding">Онбординг платформы</div>
-                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.onboarding_hint">Полный интерактивный тур по RBI Platform · Construction OS (Осмотр, Инженер, Аналитика, БЗ, СК, настройки)</div>
-                    </div>
-                    <button type="button" data-settings-action="startInteractiveTutorial"
-                        class="shrink-0 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.onboarding_start">
-                        Старт
-                    </button>
-                </div>
-
-                 <!-- ИСТОРИЯ ИЗМЕНЕНИЙ (CHANGELOG) -->
-                <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex justify-between items-center mb-3">
-                    <div>
-                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight" data-i18n="settings.body.feedback.changelog">История обновлений</div>
-                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.changelog_hint">Что нового в версиях (Changelog)</div>
-                    </div>
-                    <button data-settings-action="rbi_openChangelogModal" class="bg-brand-soft text-brand border border-brand-soft px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.changelog_read">
-                        Читать
-                    </button>
-                </div>
-
-                <!-- САМООБУЧЕНИЕ СИСТЕМЫ (AI) -->
-                <details id="ai-optimizer-settings"
-                    class="bg-[var(--card-bg)] border border-purple-200 dark:border-purple-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                <!-- AI АССИСТЕНТ -->
+                <details
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
                     <summary
-                        class="p-4 font-black text-rbi-body text-purple-700 dark:text-purple-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-purple-50 dark:bg-purple-900/20 transition-colors select-none group-open:border-b border-purple-200 dark:border-purple-800 rounded-2xl group-open:rounded-b-none">
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
                         <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.ai_optimizer">AI-Оптимизатор Системы</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-purple-400">▼</span>
-                    </summary>
-                    <div class="p-4 bg-surface rounded-b-2xl">
-                        <div class="text-rbi-label text-muted leading-relaxed mb-3" data-i18n="settings.body.ai_optimizer.body">
-                            Система проанализирует весь накопленный массив проверок и предложит корректировку математической модели: жесткость порогов (Красная/Зеленая зоны), веса рисков и правило «Стеклянного потолка».
-                        </div>
-                        <button data-action="runSelfLearningAi"
-                            class="w-full bg-purple-600 text-white py-3 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z">
                                 </path>
-                            </svg> <span data-i18n="settings.body.ai_optimizer.run">Запустить анализ базы</span>
-                        </button>
-                        <div id="ai-self-learning-result"
-                            class="hidden mt-4 p-3 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-xl text-rbi-label text-ink leading-relaxed font-medium whitespace-pre-wrap shadow-inner">
+                            </svg>
+                            <span data-i18n="settings.accordion.ai">AI-ассистент (DeepSeek)</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
+                    </summary>
+                    <div class="rounded-b-2xl overflow-hidden">
+                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.ai.enable">Включить AI</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.ai.enable_hint">Интеллектуальные подсказки и аналитика</div>
+                                <div id="set-ai-company-off" class="text-rbi-caption text-[var(--text-muted)] mt-1 hidden" data-i18n="settings.body.ai.company_off">ИИ-помощник выключен для вашей компании. Включает администратор платформы.</div>
+                            </div>
+                            <label class="toggle-switch"><input type="checkbox" id="set-ai-enabled"
+                                    data-settings-action="toggleSetting" data-settings-action-key="aiEnabled" data-settings-action-val-type="element" data-action-event="change"><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                        <div id="ai-settings-body" class="transition-all duration-300 hidden">
+                            <div class="p-4 bg-[var(--hover-bg)]">
+                                <div class="font-bold text-sm mb-3" data-i18n="settings.body.ai.mode_title">Способ вызова нейросети</div>
+                                <div class="flex flex-col gap-3">
+                                    <!-- Режим 1: По учётке (P2-0034: сервер решает по входу и галочке «ИИ-помощник» в роли) -->
+                                    <label
+                                        class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
+                                        <input type="radio" name="ai-mode" value="account"
+                                            class="w-4 h-4 accent-indigo-600" data-action="changeAiMode" data-action-arg="account" data-action-event="change">
+                                        <span
+                                            class="text-rbi-body font-bold text-ink flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                                </path>
+                                            </svg> <span data-i18n="settings.body.ai.mode_account">По учётке</span>
+                                        </span>
+                                    </label>
+
+                                    <!-- Режим 2: Личный ключ -->
+                                    <label
+                                        class="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform">
+                                        <input type="radio" name="ai-mode" value="personal"
+                                            class="w-4 h-4 accent-indigo-600"
+                                            data-action="changeAiMode" data-action-arg="personal" data-action-event="change">
+                                        <span
+                                            class="text-rbi-body font-bold text-ink flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                                                </path>
+                                            </svg> <span data-i18n="settings.body.ai.mode_personal">Мой персональный API-ключ</span>
+                                        </span>
+                                    </label>
+                                    
+                                    <div id="personal-key-field"
+                                        class="hidden bg-surface p-3 rounded-xl border border-surface shadow-inner ml-6">
+                                        <form onsubmit="event.preventDefault();">
+                                            <!-- ВСТАВКА: Скрытый логин -->
+                                            <input type="text" autocomplete="username" style="display:none;" value="admin">
+                                            
+                                            <label class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-1 block" data-i18n="settings.body.ai.api_key_label">API-ключ DeepSeek</label>
+                                            <input type="password" id="set-ai-key" autocomplete="new-password" class="input-base font-mono text-rbi-caption bg-surface" placeholder="sk-..." data-i18n="settings.body.ai.api_key_ph" data-i18n-attr="placeholder" data-settings-action="toggleSetting" data-settings-action-key="apiKey" data-settings-action-val-type="element" data-action-event="change">
+                                            <div class="text-rbi-caption text-muted mt-1.5 leading-snug" data-i18n="settings.body.ai.device_only">Сохраняется только на вашем устройстве.</div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </details>
-
-                <!-- БАЗА ЗНАНИЙ (FAQ) -->
-                <div
-                    class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex justify-between items-center mb-3">
-                    <div>
-                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight">
-                            <span data-i18n="settings.body.feedback.methodology">Методология RBI</span></div>
-                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.methodology_hint">Формулы, логика ИКО и ответы на вопросы</div>
-                    </div>
-                    <button data-knowledge-action="openFaqModal"
-                        class="bg-brand-soft text-brand border border-brand-soft px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.open_faq">
-                        Открыть FAQ
-                    </button>
-                </div>
-
-                <!-- Миграция перенесена в Настройки → Администрирование -->
-
-                <div class="flex flex-col gap-3 items-center mt-4 mb-6">
-                    <button data-shell-action="checkForUpdates"
-                        class="text-rbi-caption font-bold text-brand bg-brand-soft px-4 py-2 rounded-lg hover:bg-brand-soft border border-brand-soft transition-colors uppercase shadow-sm flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        <span data-i18n="settings.body.feedback.check_updates">Проверить обновления</span>
-                    </button>
-                    <button data-settings-action="fullFactoryReset"
-                        class="text-rbi-caption font-bold text-danger bg-danger-soft px-4 py-2 rounded-lg hover:bg-danger-soft border border-danger-soft transition-colors uppercase shadow-sm" data-i18n="settings.body.feedback.factory_reset">⚠️ Полный сброс (Удалить всё)</button>
-                </div>
-
-                <div class="text-center text-rbi-caption text-[var(--text-muted)] pb-10">
-                    <button data-settings-action="showAboutApp"
-                        class="font-bold text-brand mb-2 flex items-center justify-center gap-1 mx-auto"><svg
-                            class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg> <span data-i18n="settings.body.feedback.about">О платформе</span></button><br>
-                    <span class="font-black text-muted tracking-wide">RBI Platform</span><br>
-                    <span data-i18n="settings.body.feedback.about_tagline">Construction OS · ОС управления строительством</span><br>
-                    Developed by Igor Kondratiev
-                </div>
-            </div>
-            <div id="settings-panel-company" data-settings-panel="company" hidden></div>
-            <div id="settings-panel-platform-admin" data-settings-panel="platform-admin" hidden></div>
-            <div id="settings-panel-admin" data-settings-panel="admin" class="space-y-3" hidden>
-                <p class="text-rbi-caption text-[var(--text-muted)] leading-snug px-1" data-i18n="settings.admin.intro">
-                    Единая админка платформы: справочники, очереди заявок, команда и права.
-                    Объекты — SoT в «Объекты и планы»; инженеры привязываются к UUID этих объектов.
-                </p>
-
-                <!-- СПРАВОЧНИК ЛОКАЦИЙ / ПЛАНОВ -->
-                <details id="location-directory-section"
-                    class="bg-[var(--card-bg)] border border-teal-200 dark:border-teal-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-teal-700 dark:text-teal-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-teal-50 dark:bg-teal-900/20 transition-colors select-none group-open:border-b border-teal-200 dark:border-teal-800 rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.locations">Объекты и планы</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-teal-400">▼</span>
-                    </summary>
-                    <div id="location-directory-root"></div>
-                </details>
-
-                <!-- ОЧЕРЕДЬ ЗАЯВОК НА ОБЪЕКТЫ -->
-                <details id="admin-object-requests-section"
-                    class="bg-[var(--card-bg)] border border-orange-200 dark:border-orange-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-orange-700 dark:text-orange-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-orange-50 dark:bg-orange-900/20 transition-colors select-none group-open:border-b border-orange-200 dark:border-orange-800 rounded-2xl group-open:rounded-b-none">
-                        <span data-i18n="settings.accordion.object_requests">Заявки на объекты</span>
-                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); (window.RBI&&window.RBI.services&&window.RBI.services.objects&&window.RBI.services.objects.loadRequests());"
-                            class="bg-surface text-orange-600 border border-orange-200 dark:border-orange-700 px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
-                    </summary>
-                    <div id="obj-requests-list" class="p-3 max-h-[40vh] overflow-y-auto custom-scrollbar bg-[var(--hover-bg)] rounded-b-2xl">
-                        <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
-                    </div>
-                </details>
-
-                <!-- СПРАВОЧНИК ПОДРЯДЧИКОВ -->
-                <details id="contractor-directory-section"
-                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.contractors">Справочник подрядчиков</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
-                    </summary>
-                    <div id="contractor-directory-root"></div>
-                </details>
-
-                <!-- ОЧЕРЕДЬ ЗАЯВОК НА ПОДРЯДЧИКОВ -->
-                <details id="admin-contractor-requests-section"
-                    class="bg-[var(--card-bg)] border border-yellow-200 dark:border-yellow-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-yellow-700 dark:text-yellow-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-yellow-50 dark:bg-yellow-900/20 transition-colors select-none group-open:border-b border-yellow-200 dark:border-yellow-800 rounded-2xl group-open:rounded-b-none">
-                        <span data-i18n="settings.accordion.contractor_requests">Заявки на подрядчиков</span>
-                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if (typeof gameLoadContractorRequests === 'function') gameLoadContractorRequests();"
-                            class="bg-surface text-yellow-600 border border-yellow-200 dark:border-yellow-700 px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
-                    </summary>
-                    <div id="manager-contractor-requests-list" class="p-3 max-h-[40vh] overflow-y-auto custom-scrollbar bg-[var(--hover-bg)] rounded-b-2xl">
-                        <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
-                    </div>
-                </details>
-
-                <!-- КОМАНДА -->
-                <details id="admin-team-section"
-                    class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
-                        <span data-i18n="settings.accordion.team">Команда (доступы и объекты)</span>
-                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if (typeof gameLoadRoles === 'function') gameLoadRoles();"
-                            class="bg-surface text-brand border border-[var(--card-border)] px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
-                    </summary>
-                    <div class="p-3 bg-[var(--hover-bg)] rounded-b-2xl space-y-3">
-                        <details class="group/sub [&_summary::-webkit-details-marker]:hidden">
-                            <summary class="text-rbi-caption font-black uppercase text-orange-500 mb-2 cursor-pointer flex justify-between items-center select-none bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border border-orange-100 dark:border-orange-800">
-                                <span data-i18n="settings.accordion.access_requests">Заявки на доступ</span>
-                                <span class="text-orange-400">▼</span>
-                            </summary>
-                            <div id="manager-access-requests-list" class="space-y-2">
-                                <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
-                            </div>
-                        </details>
-                        <details class="group/sub [&_summary::-webkit-details-marker]:hidden">
-                            <summary class="text-rbi-caption font-black uppercase text-muted mb-2 cursor-pointer flex justify-between items-center select-none bg-surface p-2 rounded-lg border border-surface">
-                                <span data-i18n="settings.accordion.active_users">Активные пользователи</span>
-                                <span class="text-muted">▼</span>
-                            </summary>
-                            <div id="manager-team-list" class="space-y-2">
-                                <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
-                            </div>
-                        </details>
-                        <div id="manager-roles-list" class="hidden"></div>
-                    </div>
-                </details>
-
-                <!-- РОЛИ И ПРАВА -->
-                <details id="settings-role-matrix-section"
-                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.roles">Роли и права</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
-                    </summary>
-                    <div id="settings-role-matrix-root"></div>
-                </details>
-
-                <!-- ОБЛАКО: HARD-DELETE soft-deleted -->
-                <details id="cloud-deleted-purge-section"
-                    class="bg-[var(--card-bg)] border border-rose-200 dark:border-rose-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-rose-800 dark:text-rose-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-rose-50 dark:bg-rose-900/20 transition-colors select-none group-open:border-b border-rose-200 dark:border-rose-800 rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.cloud_deleted">Облако · удалённые</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-rose-400">▼</span>
-                    </summary>
-                    <div id="cloud-deleted-purge-root"></div>
-                </details>
-
-                <!-- ОБЛАКО: битые Storage URL у живых записей -->
-                <details id="cloud-orphan-urls-section"
-                    class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-amber-800 dark:text-amber-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.cloud_orphan">Облако · битые ссылки</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-amber-400">▼</span>
-                    </summary>
-                    <div id="cloud-orphan-urls-root"></div>
-                </details>
-
-                <!-- МИГРАЦИЯ ДАННЫХ -->
-                <details id="contractor-id-backfill-section"
-                    class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-amber-800 dark:text-amber-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.migration">Миграция данных</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-amber-400">▼</span>
-                    </summary>
-                    <div id="contractor-id-backfill-root"></div>
-                    <div id="project-id-backfill-root" class="border-t border-amber-200 dark:border-amber-800"></div>
-                </details>
-
-                <!-- РЕДАКТОР СИСТЕМНЫХ ЧЕК-ЛИСТОВ: ОФИЦИАЛЬНЫЕ ВЕРСИИ (Блок 1) -->
-                <details id="settings-official-templates-section"
-                    class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-amber-700 dark:text-amber-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.official_templates">Официальные версии чек-листов</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-amber-400">▼</span>
-                    </summary>
-                    <div class="p-3">
-                        <p class="text-rbi-caption text-[var(--text-muted)] leading-relaxed mb-2" data-i18n="settings.official_templates.intro">
-                            Назначьте команде официальную (изменённую компанией) версию системного вида работ — синхронизируется на все устройства.
-                        </p>
-                        <div id="settings-official-templates-root"></div>
-                    </div>
-                </details>
-            </div>
-            <div id="settings-panel-quality" data-settings-panel="quality" class="space-y-3" hidden>
                 <!-- БАЗА ЗНАНИЙ -->
                 <details
                     class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden">
@@ -1371,24 +1006,403 @@ var SettingsRender = {
 
                 </div>
             </div>
-            <div id="settings-panel-construction" data-settings-panel="construction" class="space-y-3" hidden>
-                <!-- СТРОЙКОНТРОЛЬ: пока нет отдельных настроек -->
-                <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-5 mb-3">
-                    <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight mb-2" data-i18n="settings.construction.empty_title">Стройконтроль</div>
-                    <p class="text-rbi-body text-[var(--text-muted)] leading-relaxed mb-4" data-i18n="settings.construction.empty_body">
-                        Отдельных настроек модуля стройконтроля пока нет. Справочник объектов и планов — общий для платформы.
-                    </p>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" data-settings-subsection-goto="admin"
-                            class="text-rbi-caption font-black uppercase tracking-widest text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 px-3 py-2 rounded-lg active:scale-95 transition-transform" data-i18n="settings.construction.goto_locations">
-                            Объекты и планы →
-                        </button>
-                        <a href="#/construction-v2"
-                            class="text-rbi-caption font-black uppercase tracking-widest text-brand bg-brand-soft border border-brand-soft px-3 py-2 rounded-lg active:scale-95 transition-transform" data-i18n="settings.construction.open_module">
-                            Открыть стройконтроль
-                        </a>
+            <div id="settings-panel-my-help" data-settings-panel="my-help" class="space-y-3" hidden>
+                <!-- P2-0038: «По умолчанию» — была кнопкой в шапке Настроек -->
+                <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="text-rbi-body font-bold">Сбросить настройки</div>
+                        <div class="text-rbi-caption text-muted">Вернуть оформление и поведение по умолчанию</div>
                     </div>
+                        <button type="button" data-settings-action="resetSettingsToDefault" data-i18n="settings.reset_defaults"
+                            class="text-rbi-caption font-black text-danger bg-danger-soft px-3 py-2 rounded-lg uppercase tracking-widest border border-danger-soft shadow-sm active:scale-95 transition-colors">По умолчанию</button>
                 </div>
+                <!-- ОБРАТНАЯ СВЯЗЬ (ФИДБЕК И ИДЕИ) -->
+                <details
+                    class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.feedback">Обратная связь (Идеи)</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-muted">▼</span>
+                    </summary>
+                    <div class="p-4 bg-surface rounded-b-2xl">
+                        <div class="mb-4 border-b border-[var(--card-border)] pb-4">
+                            <label
+                                class="text-rbi-caption font-bold text-[var(--text-muted)] uppercase mb-2 block" data-i18n="settings.body.feedback.label">Предложить улучшение / Сообщить об ошибке</label>
+                            <textarea id="feedback-input-text" class="input-base text-rbi-body h-20 resize-none mb-2"
+                                placeholder="Опишите, чего не хватает или что работает не так..." data-i18n="settings.body.feedback.ph" data-i18n-attr="placeholder"></textarea>
+                            <button id="feedback-submit-btn" data-settings-action="rbi_submitFeedback"
+                                class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg> <span data-i18n="settings.body.feedback.submit">Отправить разработчику</span>
+                            </button>
+                        </div>
+                        <div class="text-rbi-caption font-black text-[var(--text-muted)] uppercase tracking-widest mb-3" data-i18n="settings.body.feedback.backlog">
+                            Бэклог команды</div>
+                        <div id="feedback-list-container"
+                            class="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
+                            <!-- Карточки фидбека будут здесь -->
+                        </div>
+                    </div>
+                </details>
+
+                <!-- ОНБОРДИНГ ПЛАТФОРМЫ -->
+                <div class="bg-[var(--card-bg)] border border-emerald-200 dark:border-emerald-800 rounded-2xl shadow-sm p-4 flex justify-between items-center gap-3 mb-3">
+                    <div class="min-w-0">
+                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight" data-i18n="settings.body.feedback.onboarding">Онбординг платформы</div>
+                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.onboarding_hint">Полный интерактивный тур по RBI Platform · Construction OS (Осмотр, Инженер, Аналитика, БЗ, СК, настройки)</div>
+                    </div>
+                    <button type="button" data-settings-action="startInteractiveTutorial"
+                        class="shrink-0 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.onboarding_start">
+                        Старт
+                    </button>
+                </div>
+
+                 <!-- ИСТОРИЯ ИЗМЕНЕНИЙ (CHANGELOG) -->
+                <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex justify-between items-center mb-3">
+                    <div>
+                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight" data-i18n="settings.body.feedback.changelog">История обновлений</div>
+                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.changelog_hint">Что нового в версиях (Changelog)</div>
+                    </div>
+                    <button data-settings-action="rbi_openChangelogModal" class="bg-brand-soft text-brand border border-brand-soft px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.changelog_read">
+                        Читать
+                    </button>
+                </div>
+                <!-- БАЗА ЗНАНИЙ (FAQ) -->
+                <div
+                    class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex justify-between items-center mb-3">
+                    <div>
+                        <div class="font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight">
+                            <span data-i18n="settings.body.feedback.methodology">Методология RBI</span></div>
+                        <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.feedback.methodology_hint">Формулы, логика ИКО и ответы на вопросы</div>
+                    </div>
+                    <button data-knowledge-action="openFaqModal"
+                        class="bg-brand-soft text-brand border border-brand-soft px-4 py-2.5 rounded-xl text-rbi-caption font-black uppercase active:scale-95 transition-transform shadow-sm" data-i18n="settings.body.feedback.open_faq">
+                        Открыть FAQ
+                    </button>
+                </div>
+
+                <!-- Миграция перенесена в Настройки → Администрирование -->
+
+                <div class="flex flex-col gap-3 items-center mt-4 mb-6">
+                    <button data-shell-action="checkForUpdates"
+                        class="text-rbi-caption font-bold text-brand bg-brand-soft px-4 py-2 rounded-lg hover:bg-brand-soft border border-brand-soft transition-colors uppercase shadow-sm flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span data-i18n="settings.body.feedback.check_updates">Проверить обновления</span>
+                    </button>
+                    <button data-settings-action="fullFactoryReset"
+                        class="text-rbi-caption font-bold text-danger bg-danger-soft px-4 py-2 rounded-lg hover:bg-danger-soft border border-danger-soft transition-colors uppercase shadow-sm" data-i18n="settings.body.feedback.factory_reset">⚠️ Полный сброс (Удалить всё)</button>
+                </div>
+
+                <div class="text-center text-rbi-caption text-[var(--text-muted)] pb-10">
+                    <button data-settings-action="showAboutApp"
+                        class="font-bold text-brand mb-2 flex items-center justify-center gap-1 mx-auto"><svg
+                            class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg> <span data-i18n="settings.body.feedback.about">О платформе</span></button><br>
+                    <span class="font-black text-muted tracking-wide">RBI Platform</span><br>
+                    <span data-i18n="settings.body.feedback.about_tagline">Construction OS · ОС управления строительством</span><br>
+                    Developed by Igor Kondratiev
+                </div>
+            </div>
+            <div id="settings-panel-company" data-settings-panel="company" hidden></div>
+            <div id="settings-panel-platform-admin" data-settings-panel="platform-admin" hidden></div>
+            <div id="settings-panel-admin" data-settings-panel="admin" class="space-y-3" hidden>
+                <!-- P2-0038: «Панель руководителя» — была кнопкой-замком в шапке Настроек -->
+                <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="text-rbi-body font-bold" data-i18n="settings.chrome.manager_panel">Панель Руководителя</div>
+                        <div class="text-rbi-caption text-muted">Рейтинги, отчёты и управление командой Качества</div>
+                    </div>
+                    <button type="button" data-game-action="gameOpenManagerPanelAuth"
+                        class="min-h-[40px] px-4 rounded-xl border border-[var(--card-border)] font-black text-rbi-caption uppercase tracking-widest active:scale-95 shrink-0">Открыть</button>
+                </div>
+                <p class="text-rbi-caption text-[var(--text-muted)] leading-snug px-1" data-i18n="settings.admin.intro">
+                    Единая админка платформы: справочники, очереди заявок, команда и права.
+                    Объекты — SoT в «Объекты и планы»; инженеры привязываются к UUID этих объектов.
+                </p>
+
+                <!-- СПРАВОЧНИК ЛОКАЦИЙ / ПЛАНОВ -->
+                <details id="location-directory-section"
+                    class="bg-[var(--card-bg)] border border-teal-200 dark:border-teal-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-teal-700 dark:text-teal-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-teal-50 dark:bg-teal-900/20 transition-colors select-none group-open:border-b border-teal-200 dark:border-teal-800 rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.locations">Объекты и планы</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-teal-400">▼</span>
+                    </summary>
+                    <div id="location-directory-root"></div>
+                </details>
+
+                <!-- ОЧЕРЕДЬ ЗАЯВОК НА ОБЪЕКТЫ -->
+                <details id="admin-object-requests-section"
+                    class="bg-[var(--card-bg)] border border-orange-200 dark:border-orange-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-orange-700 dark:text-orange-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-orange-50 dark:bg-orange-900/20 transition-colors select-none group-open:border-b border-orange-200 dark:border-orange-800 rounded-2xl group-open:rounded-b-none">
+                        <span data-i18n="settings.accordion.object_requests">Заявки на объекты</span>
+                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); (window.RBI&&window.RBI.services&&window.RBI.services.objects&&window.RBI.services.objects.loadRequests());"
+                            class="bg-surface text-orange-600 border border-orange-200 dark:border-orange-700 px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
+                    </summary>
+                    <div id="obj-requests-list" class="p-3 max-h-[40vh] overflow-y-auto custom-scrollbar bg-[var(--hover-bg)] rounded-b-2xl">
+                        <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
+                    </div>
+                </details>
+
+                <!-- СПРАВОЧНИК ПОДРЯДЧИКОВ -->
+                <details id="contractor-directory-section"
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.contractors">Справочник подрядчиков</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
+                    </summary>
+                    <div id="contractor-directory-root"></div>
+                </details>
+
+                <!-- ОЧЕРЕДЬ ЗАЯВОК НА ПОДРЯДЧИКОВ -->
+                <details id="admin-contractor-requests-section"
+                    class="bg-[var(--card-bg)] border border-yellow-200 dark:border-yellow-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-yellow-700 dark:text-yellow-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-yellow-50 dark:bg-yellow-900/20 transition-colors select-none group-open:border-b border-yellow-200 dark:border-yellow-800 rounded-2xl group-open:rounded-b-none">
+                        <span data-i18n="settings.accordion.contractor_requests">Заявки на подрядчиков</span>
+                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if (typeof gameLoadContractorRequests === 'function') gameLoadContractorRequests();"
+                            class="bg-surface text-yellow-600 border border-yellow-200 dark:border-yellow-700 px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
+                    </summary>
+                    <div id="manager-contractor-requests-list" class="p-3 max-h-[40vh] overflow-y-auto custom-scrollbar bg-[var(--hover-bg)] rounded-b-2xl">
+                        <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
+                    </div>
+                </details>
+
+                <!-- КОМАНДА -->
+                <details id="admin-team-section"
+                    class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-ink dark:text-white uppercase tracking-tight cursor-pointer flex justify-between items-center bg-surface transition-colors select-none group-open:border-b border-[var(--card-border)] rounded-2xl group-open:rounded-b-none">
+                        <span data-i18n="settings.accordion.team">Команда (доступы и объекты)</span>
+                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if (typeof gameLoadRoles === 'function') gameLoadRoles();"
+                            class="bg-surface text-brand border border-[var(--card-border)] px-3 py-1.5 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-sm" data-i18n="settings.action.refresh">Обновить</button>
+                    </summary>
+                    <div class="p-3 bg-[var(--hover-bg)] rounded-b-2xl space-y-3">
+                        <details class="group/sub [&_summary::-webkit-details-marker]:hidden">
+                            <summary class="text-rbi-caption font-black uppercase text-orange-500 mb-2 cursor-pointer flex justify-between items-center select-none bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border border-orange-100 dark:border-orange-800">
+                                <span data-i18n="settings.accordion.access_requests">Заявки на доступ</span>
+                                <span class="text-orange-400">▼</span>
+                            </summary>
+                            <div id="manager-access-requests-list" class="space-y-2">
+                                <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
+                            </div>
+                        </details>
+                        <details class="group/sub [&_summary::-webkit-details-marker]:hidden">
+                            <summary class="text-rbi-caption font-black uppercase text-muted mb-2 cursor-pointer flex justify-between items-center select-none bg-surface p-2 rounded-lg border border-surface">
+                                <span data-i18n="settings.accordion.active_users">Активные пользователи</span>
+                                <span class="text-muted">▼</span>
+                            </summary>
+                            <div id="manager-team-list" class="space-y-2">
+                                <div class="text-center py-4 text-xs text-[var(--text-muted)]" data-i18n="settings.admin.loading">Загрузка...</div>
+                            </div>
+                        </details>
+                        <div id="manager-roles-list" class="hidden"></div>
+                    </div>
+                </details>
+
+                <!-- РОЛИ И ПРАВА -->
+                <details id="settings-role-matrix-section"
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.roles">Роли и права</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
+                    </summary>
+                    <div id="settings-role-matrix-root"></div>
+                </details>
+
+                <!-- ОБЛАКО: HARD-DELETE soft-deleted -->
+                <details id="cloud-deleted-purge-section"
+                    class="bg-[var(--card-bg)] border border-rose-200 dark:border-rose-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-rose-800 dark:text-rose-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-rose-50 dark:bg-rose-900/20 transition-colors select-none group-open:border-b border-rose-200 dark:border-rose-800 rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.cloud_deleted">Облако · удалённые</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-rose-400">▼</span>
+                    </summary>
+                    <div id="cloud-deleted-purge-root"></div>
+                </details>
+
+                <!-- ОБЛАКО: битые Storage URL у живых записей -->
+                <details id="cloud-orphan-urls-section"
+                    class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-amber-800 dark:text-amber-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.cloud_orphan">Облако · битые ссылки</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-amber-400">▼</span>
+                    </summary>
+                    <div id="cloud-orphan-urls-root"></div>
+                </details>
+
+                <!-- МИГРАЦИЯ ДАННЫХ -->
+                <details id="contractor-id-backfill-section"
+                    class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-amber-800 dark:text-amber-300 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.migration">Миграция данных</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-amber-400">▼</span>
+                    </summary>
+                    <div id="contractor-id-backfill-root"></div>
+                    <div id="project-id-backfill-root" class="border-t border-amber-200 dark:border-amber-800"></div>
+                </details>
+
+                <!-- РЕДАКТОР СИСТЕМНЫХ ЧЕК-ЛИСТОВ: ОФИЦИАЛЬНЫЕ ВЕРСИИ (Блок 1) -->
+                <details id="settings-official-templates-section"
+                    class="bg-[var(--card-bg)] border border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3 hidden">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-amber-700 dark:text-amber-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 transition-colors select-none group-open:border-b border-amber-200 dark:border-amber-800 rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.official_templates">Официальные версии чек-листов</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-amber-400">▼</span>
+                    </summary>
+                    <div class="p-3">
+                        <p class="text-rbi-caption text-[var(--text-muted)] leading-relaxed mb-2" data-i18n="settings.official_templates.intro">
+                            Назначьте команде официальную (изменённую компанией) версию системного вида работ — синхронизируется на все устройства.
+                        </p>
+                        <div id="settings-official-templates-root"></div>
+                    </div>
+                </details>
+                <!-- P2-0038: оформление компании — до этапа 3 (Компания → Оформление) здесь, как в P2-0037 -->
+                <!-- БРЕНДИРОВАНИЕ -->
+                <details
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.branding">Брендирование (PRO)</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
+                    </summary>
+                    <div>
+                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.branding.color">Фирменный цвет</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.color_hint">Цвет акцентов в PDF</div>
+                            </div>
+                            <input type="color" id="set-brand-color"
+                                class="w-10 h-10 p-0 border-0 rounded cursor-pointer"
+                                data-settings-action="toggleSetting" data-settings-action-key="brandColor" data-settings-action-val-type="element" data-action-event="change">
+                        </div>
+                        <div class="p-4 border-b border-[var(--card-border)]">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <div class="font-bold text-sm" data-i18n="settings.body.branding.logo">Логотип компании</div>
+                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.logo_hint">Отобразится в шапке отчетов</div>
+                                </div>
+                                <button onclick="document.getElementById('brand-logo-upload').click()"
+                                    class="bg-brand-soft text-brand px-3 py-1.5 rounded-lg text-rbi-caption font-bold active:scale-95 border border-brand-soft" data-i18n="settings.body.branding.upload">Загрузить</button>
+                                <input type="file" id="brand-logo-upload" accept="image/png, image/jpeg" class="hidden"
+                                    data-settings-action="handleLogoUpload" data-settings-action-val-type="event" data-action-event="change">
+                            </div>
+                            <div id="brand-logo-preview"
+                                class="hidden mt-3 border border-[var(--card-border)] rounded-lg p-2 bg-[var(--card-bg)] flex justify-between items-center shadow-inner">
+                                <img id="brand-logo-img" src="" class="h-10 max-w-[60%] object-contain bg-transparent">
+                                <button data-settings-action="removeBrandLogo"
+                                    class="text-danger text-rbi-caption font-bold px-3 py-1.5 bg-[var(--card-bg)] rounded border border-danger-soft shadow-sm active:scale-90" data-i18n="settings.body.branding.remove">Удалить</button>
+                            </div>
+                            <!-- УПРАВЛЕНИЕ КОРПОРАТИВНЫМ СТИЛЕМ -->
+                            <div id="corp-branding-controls" class="mt-3"></div>
+                        </div>
+                    </div>
+                </details>
+                <!-- САМООБУЧЕНИЕ СИСТЕМЫ (AI) -->
+                <details id="ai-optimizer-settings"
+                    class="bg-[var(--card-bg)] border border-purple-200 dark:border-purple-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-purple-700 dark:text-purple-400 uppercase tracking-tight cursor-pointer flex justify-between items-center bg-purple-50 dark:bg-purple-900/20 transition-colors select-none group-open:border-b border-purple-200 dark:border-purple-800 rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.ai_optimizer">AI-Оптимизатор Системы</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-purple-400">▼</span>
+                    </summary>
+                    <div class="p-4 bg-surface rounded-b-2xl">
+                        <div class="text-rbi-label text-muted leading-relaxed mb-3" data-i18n="settings.body.ai_optimizer.body">
+                            Система проанализирует весь накопленный массив проверок и предложит корректировку математической модели: жесткость порогов (Красная/Зеленая зоны), веса рисков и правило «Стеклянного потолка».
+                        </div>
+                        <button data-action="runSelfLearningAi"
+                            class="w-full bg-purple-600 text-white py-3 rounded-xl font-black text-rbi-label uppercase tracking-widest shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z">
+                                </path>
+                            </svg> <span data-i18n="settings.body.ai_optimizer.run">Запустить анализ базы</span>
+                        </button>
+                        <div id="ai-self-learning-result"
+                            class="hidden mt-4 p-3 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-xl text-rbi-label text-ink leading-relaxed font-medium whitespace-pre-wrap shadow-inner">
+                        </div>
+                    </div>
+                </details>
             </div>
             </div>
             </div>
@@ -1673,10 +1687,18 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         }
 
         brandControls.innerHTML = controlsHtml;
+        // P2-0038: «Вернуть корпоративный стиль» — в «Моё → Интерфейс» (тому, кто менял стиль сам), а не в «Оформлении»
+        var resetBox = document.getElementById('corp-branding-reset');
+        if (resetBox) {
+            var resetBtn = brandControls.querySelector('button[onclick^="window.resetToCorporateBranding"]');
+            resetBox.replaceChildren();
+            if (resetBtn) resetBox.appendChild(resetBtn);
+        }
     }
 
     var SETTINGS_SUBSECTION_KEY = 'rbi.settings.subsection';
-    var SETTINGS_SUBSECTIONS = ['platform', 'company', 'platform-admin', 'admin', 'quality', 'construction'];
+    /** P2-0038: ключи панелей двух зон (адреса — settings.routes.js). */
+    var SETTINGS_SUBSECTIONS = SETTINGS_KEYS;
 
     /** Platform 2.0: «Компания» (роли, сотрудники, журнал) — подраздел Настроек; виден, когда сервер подтвердил право (RBI.platformMenuAccess.company). */
     function _companyAllowed() {
@@ -1694,31 +1716,40 @@ console.log('[SettingsRender] settings.render.js markup mounted');
     function _subsectionAllowed(key) {
         if (key === 'company') return _companyAllowed();
         if (key === 'platform-admin') return _platformAdminAllowed();
-        if (key === 'admin') return _legacyAllowed() || _isAdminGateOk();   // P2-0037: почта — по праву сервера (quality.manage)
-        if (key === 'quality' || key === 'construction') {   // P2-0016: почта — если модуль включён у компании
-            var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
-            return sh && typeof sh.legacyModuleAllowed === 'function' ? sh.legacyModuleAllowed(key) : _legacyAllowed();
-        }
+        if (key === 'admin') return _canSeeAdminTab();   // P2-0037: почта — по праву сервера (quality.manage); P2-0038: без права вкладки — «Моё»
+        if (key === 'my-quality') return _qualityModuleAllowed();
         return true;
     }
+    /** P2-0016: почта — личные настройки Качества, если модуль включён у компании. */
+    function _qualityModuleAllowed() {
+        var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+        return sh && typeof sh.legacyModuleAllowed === 'function' ? sh.legacyModuleAllowed('quality') : _legacyAllowed();
+    }
+    /** P2-0038: видимость вкладок и зоны «Администрирование» — только по правам сервера; закрытый открытый подраздел → «Моё». */
     function _syncCompanyTab() {
-        var btn = document.getElementById('settings-subnav-company');
-        if (btn) btn.hidden = !_companyAllowed();
-        var pa = document.getElementById('settings-subnav-platform-admin');
-        if (pa) pa.hidden = !_platformAdminAllowed();
-        ['quality', 'construction'].forEach(function (k) {
-            var b = document.querySelector('[data-settings-subsection="' + k + '"]');
-            if (b) b.hidden = !_legacyAllowed();
-        });
-        var adm = document.getElementById('settings-subnav-admin');
-        if (adm && !_legacyAllowed()) {
-            adm.hidden = !_isAdminGateOk();
-            adm.classList.toggle('hidden', adm.hidden);
-            _syncAdminSectionsForEmail();
-        }
+        var show = function (id, on) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.hidden = !on;
+            el.classList.toggle('hidden', !on);
+        };
+        if (!_legacyAllowed()) _syncAdminSectionsForEmail();
+        show('settings-subnav-my-quality', _subsectionAllowed('my-quality'));
+        show('settings-subnav-company', _companyAllowed());
+        show('settings-subnav-admin', _canSeeAdminTab());
+        show('settings-subnav-platform-admin', _platformAdminAllowed());
+        var anyAdmin = ADMIN_KEYS.some(function (k) { return _adminTabVisible(k); });
+        show('settings-zone-admin', anyAdmin);
+        show('settings-zone-switch', anyAdmin);
         var cur = _getSettingsSubsection();
         var curPanel = document.getElementById('settings-panel-' + cur);
-        if (curPanel && !curPanel.hidden && !_subsectionAllowed(cur)) _setSettingsSubsection('platform', { skipGate: true, fromRouter: true });
+        if (curPanel && !curPanel.hidden && !_subsectionAllowed(cur)) _setSettingsSubsection(DEFAULT_KEY, { skipGate: true, fromRouter: true });
+    }
+    function _adminTabVisible(key) {
+        if (key === 'company') return _companyAllowed();
+        if (key === 'platform-admin') return _platformAdminAllowed();
+        if (key === 'admin') return _canSeeAdminTab();
+        return false;
     }
     window.addEventListener('rbi:platform-access', _syncCompanyTab);
     window.addEventListener('rbi:quality-access', _syncCompanyTab);   // P2-0037: права компании в Качестве пришли / сменились
@@ -1817,9 +1848,10 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         if (on) host.mount(panel); else host.unmount();
     }
 
+    /** Старые ключи подразделов (сохранённые в сессии, вызовы извне) → ключи двух зон. */
+    var LEGACY_SUBSECTION_KEYS = { directories: 'admin', platform: 'my-profile', quality: 'my-quality', construction: 'my-profile' };
     function _normalizeSettingsSubsection(key) {
-        if (key === 'directories') return 'admin';
-        return key;
+        return LEGACY_SUBSECTION_KEYS[key] || key;
     }
 
     function _isAdminGateOk() {
@@ -1904,15 +1936,23 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             var v = _normalizeSettingsSubsection(sessionStorage.getItem(SETTINGS_SUBSECTION_KEY));
             if (SETTINGS_SUBSECTIONS.indexOf(v) !== -1) return v;
         } catch (e) { /* ignore */ }
-        return 'platform';
+        return DEFAULT_KEY;
     }
 
     function _setSettingsSubsection(key, opts) {
         opts = opts || {};
         key = _normalizeSettingsSubsection(key);
-        if (SETTINGS_SUBSECTIONS.indexOf(key) === -1) key = 'platform';
+        if (SETTINGS_SUBSECTIONS.indexOf(key) === -1) key = DEFAULT_KEY;
 
-        if (!_subsectionAllowed(key)) key = 'platform';
+        if (!_subsectionAllowed(key)) {
+            key = DEFAULT_KEY;
+            // P2-0038: прямой адрес закрытого подраздела → «Моё», и адрес тоже (без лишней записи в истории)
+            if (opts.fromRouter && window.AppRouter && typeof window.AppRouter.navigate === 'function'
+                && settingsKeyFromHash(window.location.hash || '') !== key) {
+                window.AppRouter.navigate(settingsPathForKey(key), true);
+                return;
+            }
+        }
 
         if (key === 'admin' && !opts.skipGate) {
             if (!_isAdminGateOk()) {
@@ -1943,15 +1983,45 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             btn.classList.toggle('shadow-sm', active);
             btn.classList.toggle('bg-transparent', !active);
             btn.classList.toggle('text-muted', !active);
+            // телефон: активная вкладка видна в полосе (прокрутка только полосы, не страницы)
+            var strip = active && btn.closest('.settings-zone-tabs');
+            if (strip && strip.scrollWidth > strip.clientWidth) {
+                var l = btn.offsetLeft - strip.offsetLeft;
+                if (l < strip.scrollLeft || l + btn.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = Math.max(0, l - 8);
+            }
         });
+        _syncZone(settingsZoneForKey(key));
+        if (settingsZoneForKey(key) === 'my') _lastMyKey = key;
         if (key === 'admin') {
             _mountAdminOpsContent();
         }
         _mountCompanyPanel(key === 'company');
         _mountPlatformAdminPanel(key === 'platform-admin');
-        if (!opts.fromRouter && window.AppRouter && typeof window.AppRouter.navigateSub === 'function') {
-            window.AppRouter.navigateSub('#/settings', key);
+        if (!opts.fromRouter && window.AppRouter && typeof window.AppRouter.navigate === 'function') {
+            var hash = window.location.hash || '';
+            // «Компания»: вкладку внутри (Роли/Сотрудники/…) ведёт CompanyApp — открытую не сбрасываем
+            if (!(key === 'company' && settingsKeyFromHash(hash) === 'company')) window.AppRouter.navigate(settingsPathForKey(key));
         }
+    }
+
+    /** P2-0038: активная зона — на телефоне видны подвкладки только её (CSS по data-active-zone). */
+    var _lastMyKey = DEFAULT_KEY;
+    function _syncZone(zone) {
+        var nav = document.getElementById('settings-subnav');
+        if (nav) nav.setAttribute('data-active-zone', zone);
+        document.querySelectorAll('[data-settings-zone]').forEach(function (b) {
+            var on = b.getAttribute('data-settings-zone') === zone;
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+            b.classList.toggle('is-active', on);
+        });
+    }
+    function _openZone(zone) {
+        if (zone === 'admin') {
+            var first = ADMIN_KEYS.filter(function (k) { return _adminTabVisible(k); })[0];
+            if (first) _setSettingsSubsection(first);
+            return;
+        }
+        _setSettingsSubsection(_subsectionAllowed(_lastMyKey) ? _lastMyKey : DEFAULT_KEY);
     }
 
     window.setSettingsSubsection = _setSettingsSubsection;
@@ -1962,13 +2032,13 @@ console.log('[SettingsRender] settings.render.js markup mounted');
 
     window.openSettingsAdminTab = function () {
         if (window.AppRouter && typeof window.AppRouter.navigate === 'function') {
-            window.AppRouter.navigate('#/settings/admin');
+            window.AppRouter.navigate(settingsPathForKey('admin'));
             return;
         }
         if (typeof window.switchTab === 'function') {
             try { window.switchTab('tab-settings'); } catch (_e) { /* ignore */ }
         } else if (window.location) {
-            window.location.hash = '#/settings/admin';
+            window.location.hash = settingsPathForKey('admin');
         }
         setTimeout(function () {
             _setSettingsSubsection('admin', { fromRouter: true });
@@ -1986,6 +2056,12 @@ console.log('[SettingsRender] settings.render.js markup mounted');
                 _setSettingsSubsection(btn.getAttribute('data-settings-subsection'));
                 return;
             }
+            var zoneBtn = ev.target.closest('[data-settings-zone]');
+            if (zoneBtn && root.contains(zoneBtn)) {
+                ev.preventDefault();
+                _openZone(zoneBtn.getAttribute('data-settings-zone'));
+                return;
+            }
             var gotoBtn = ev.target.closest('[data-settings-subsection-goto]');
             if (gotoBtn && root.contains(gotoBtn)) {
                 ev.preventDefault();
@@ -1996,24 +2072,16 @@ console.log('[SettingsRender] settings.render.js markup mounted');
 
     function _renderSettingsTab() {
         _bindSettingsSubsectionNav();
-        var adminBtn = document.getElementById('settings-subnav-admin');
-        if (adminBtn) {
-            adminBtn.classList.toggle('hidden', !_canSeeAdminTab());
-        }
-        var companyBtn = document.getElementById('settings-subnav-company');
-        if (companyBtn) companyBtn.hidden = !_companyAllowed();
         _syncCompanyTab();
         _syncP2Account();
         var initial = null;
-        if (window.AppRouter && typeof window.AppRouter.subTabIdFromPath === 'function') {
-            var hash = window.location.hash || '';
-            if (/#\/settings\//i.test(hash) || /#\/quality\/settings\//i.test(hash)) {
-                initial = window.AppRouter.subTabIdFromPath(hash, '#/settings');
-            }
+        var hash = window.location.hash || '';
+        if (/#\/settings\//i.test(hash) || /#\/quality\/settings\//i.test(hash)) {
+            initial = settingsKeyFromHash(hash.replace(/^#\/quality\/settings/i, '#/settings'));
         }
         if (!initial) initial = _getSettingsSubsection();
         if (initial === 'admin' && !_isAdminGateOk()) {
-            initial = 'platform';
+            initial = DEFAULT_KEY;
         }
         // fromRouter: true — только синхронизация панелей/тумблеров.
         // Иначе navigateSub('#/settings') уводит с Осмотра/Аналитики при

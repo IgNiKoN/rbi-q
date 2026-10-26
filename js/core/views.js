@@ -413,10 +413,11 @@ window.AppViews = {
         if (alreadyOn && window.AppRouter && typeof window.AppRouter.sameFamily === 'function'
             && window.AppRouter.sameFamily(window.AppRouter.activePath, hash)) {
             // Подвкладки настроек: только sync секции — без switchViewNode (мигание #main-header / логотипа)
-            var sub = (typeof window.AppRouter.subTabIdFromPath === 'function')
-                ? window.AppRouter.subTabIdFromPath(hash, '#/settings')
+            // P2-0038: адрес двух зон → ключ панели (settings.routes.js)
+            var sub = (window.SettingsRoutes && typeof window.SettingsRoutes.keyFromHash === 'function')
+                ? window.SettingsRoutes.keyFromHash(hash)
                 : null;
-            sub = sub || 'platform';
+            sub = sub || 'my-profile';
             if (typeof window.setSettingsSubsection === 'function') {
                 window.setSettingsSubsection(sub, {
                     fromRouter: true,

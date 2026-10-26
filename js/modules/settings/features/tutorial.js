@@ -49,12 +49,20 @@ function go(hash) {
         '#/quality/analytics': 'tab-analytics',
         '#/quality/reference': 'tab-reference',
         '#/settings': 'tab-settings',
-        '#/settings/platform': 'tab-settings'
+        '#/settings/my/profile': 'tab-settings'
     };
     var tab = map[hash];
     if (!tab && hash && hash.indexOf('#/settings') === 0) tab = 'tab-settings';
     if (tab && typeof window.switchTab === 'function') window.switchTab(tab);
     else if (hash) window.location.hash = hash;
+}
+
+/** P2-0038: подраздел «Настроек» по ключу панели (адреса двух зон — settings.routes.js). */
+function goSettings(key) {
+    var routes = window.SettingsRoutes;
+    var path = routes && typeof routes.pathForKey === 'function' ? routes.pathForKey(key) : '#/settings';
+    if (window.AppRouter && typeof window.AppRouter.navigate === 'function') window.AppRouter.navigate(path);
+    else go(path);
 }
 
 function goSub(base, subId) {
@@ -516,7 +524,7 @@ var tutorialSteps = [
         targets: NAV_SETTINGS.concat(['#settings-subnav', '#empty-checklist-state']),
         action: function () {
             ensureQualityMode();
-            goSub('#/settings', 'platform');
+            goSettings('my-profile');
         }
     },
     {
@@ -553,10 +561,10 @@ var tutorialSteps = [
     {
         chapter: 'shell',
         title: '7. Где настройки',
-        text: 'Настройки платформы: на ПК — кнопка внизу rail; на телефоне — пункт меню. Секции: Платформа, Админ, Качество, Стройконтроль.',
+        text: 'Настройки платформы: на ПК — кнопка внизу rail; на телефоне — пункт меню. Две зоны: «Моё» (профиль, интерфейс, устройство, уведомления, Качество, помощь) и «Администрирование» (Компания, Модули, Платформа — по правам).',
         targets: NAV_SETTINGS,
         action: function () {
-            goSub('#/settings', 'platform');
+            goSettings('my-profile');
         }
     },
     {
@@ -880,21 +888,21 @@ var tutorialSteps = [
     {
         chapter: 'settings',
         title: '41. Настройки платформы',
-        text: 'Секции: Платформа (sync, AI, интерфейс), Админ (справочники и права), Качество и Стройконтроль — продуктовые prefs.',
-        targets: ['#settings-subnav', '#settings-panel-platform'].concat(NAV_SETTINGS),
+        text: '«Моё» — личные настройки (профиль, интерфейс, устройство и данные, уведомления, Качество, помощь); «Администрирование» — Компания, Модули, Платформа (видно по правам).',
+        targets: ['#settings-subnav', '#settings-panel-my-profile'].concat(NAV_SETTINGS),
         action: function () {
             ensureQualityMode();
-            goSub('#/settings', 'platform');
+            goSettings('my-profile');
         }
     },
     {
         chapter: 'settings',
         title: '42. Синхронизация и офлайн-кэш',
         text: 'Подключение команды, права push/pull, автокэш облачных файлов и очистка хранилища — основа Offline-First на объектах без сети.',
-        targets: ['#sync-settings-block', '#settings-panel-platform'],
+        targets: ['#sync-settings-block', '#settings-panel-my-device'],
         action: function () {
-            goSub('#/settings', 'platform');
-            var det = document.querySelector('#settings-panel-platform details');
+            goSettings('my-device');
+            var det = document.querySelector('#settings-panel-my-device details');
             if (det && !det.open) det.open = true;
         }
     },
@@ -902,9 +910,9 @@ var tutorialSteps = [
         chapter: 'settings',
         title: '43. Интерфейс',
         text: 'Тема, шрифт, навигация, автосворачивание фильтров (ручное/авто), анимации и жесты — подстройте под телефон или ПК.',
-        targets: ['#set-theme', '#set-auto-collapse-filters', '#settings-panel-platform'],
+        targets: ['#set-theme', '#set-auto-collapse-filters', '#settings-panel-my-interface'],
         action: function () {
-            goSub('#/settings', 'platform');
+            goSettings('my-interface');
             var theme = document.getElementById('set-theme');
             if (theme) scrollTarget(theme);
         }

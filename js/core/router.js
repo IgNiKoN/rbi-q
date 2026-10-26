@@ -96,23 +96,20 @@ window.AppRouter = {
                 'ref-sub-practices': 'practices'
             }
         },
+        // P2-0038: первый уровень «Настроек» (второй — вкладка уровня, его разбирает settings.routes.js)
         '#/settings': {
-            defaultSlug: 'platform',
+            defaultSlug: 'my',
             slugToId: {
-                platform: 'platform',
+                my: 'my-profile',
                 company: 'company',
-                'platform-admin': 'platform-admin',
-                admin: 'admin',
-                quality: 'quality',
-                construction: 'construction'
+                modules: 'admin',
+                platform: 'platform-admin'
             },
             idToSlug: {
-                platform: 'platform',
+                'my-profile': 'my',
                 company: 'company',
-                'platform-admin': 'platform-admin',
-                admin: 'admin',
-                quality: 'quality',
-                construction: 'construction'
+                admin: 'modules',
+                'platform-admin': 'platform'
             }
         }
     },
@@ -396,6 +393,11 @@ window.AppRouter = {
         // Alias: старый quality-scoped путь → платформенный
         if (p === '#/quality/settings' || p.indexOf('#/quality/settings/') === 0) {
             p = '#/settings' + p.slice('#/quality/settings'.length);
+        }
+        // P2-0038: старые адреса «Настроек» (platform, platform-admin, admin, quality, construction) → две зоны
+        // (js/modules/settings/settings.routes.js подключён в index.html до роутера)
+        if (window.SettingsRoutes && typeof window.SettingsRoutes.legacyRedirect === 'function') {
+            p = window.SettingsRoutes.legacyRedirect(p);
         }
         const maps = this.subTabMaps || {};
         for (const base of Object.keys(maps)) {

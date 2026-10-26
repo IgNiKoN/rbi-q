@@ -4,6 +4,8 @@
  * Mobile markup settings.render.js не переписывает.
  */
 
+import { settingsKeyFromHash, DEFAULT_KEY } from './settings.routes.js';
+
 const DESKTOP_MIN = 1280;
 const WIDE_CLASS = 'rbi-settings-desktop-wide';
 const CSS_HREF = './css/settings.desktop.css';
@@ -14,22 +16,17 @@ let _hooksBound = false;
 let _resizeBound = false;
 let _localeBound = false;
 
-const SECTION_KEYS = {
-  platform: 'settings.section.platform',
-  company: 'settings.section.company',
-  'platform-admin': 'settings.section.platform_admin',
-  admin: 'settings.section.admin',
-  quality: 'settings.section.quality',
-  construction: 'settings.section.construction'
-};
-
+// P2-0038: подписи подразделов двух зон (подзаголовок полосы ПК)
 const SECTION_FALLBACKS = {
-  platform: 'Платформа',
-  company: 'Компания',
-  'platform-admin': 'Админ платформы',
-  admin: 'Админ Качества',
-  quality: 'Качество',
-  construction: 'Стройконтроль'
+  'my-profile': 'Моё · Профиль и вход',
+  'my-interface': 'Моё · Интерфейс',
+  'my-device': 'Моё · Устройство и данные',
+  'my-notifications': 'Моё · Уведомления',
+  'my-quality': 'Моё · Качество',
+  'my-help': 'Моё · Помощь',
+  company: 'Администрирование · Компания',
+  admin: 'Администрирование · Модули',
+  'platform-admin': 'Администрирование · Платформа'
 };
 
 function _t(key, fallback) {
@@ -42,9 +39,7 @@ function _t(key, fallback) {
 }
 
 function sectionLabel(id) {
-  const key = SECTION_KEYS[id];
-  if (!key) return id;
-  return _t(key, SECTION_FALLBACKS[id] || id);
+  return SECTION_FALLBACKS[id] || id;
 }
 
 function isDesktopViewport() {
@@ -84,10 +79,7 @@ function setWideLayout(on) {
 }
 
 function currentSectionId() {
-  if (window.AppRouter && typeof window.AppRouter.subTabIdFromPath === 'function') {
-    return window.AppRouter.subTabIdFromPath(location.hash || '', '#/settings') || 'platform';
-  }
-  return 'platform';
+  return settingsKeyFromHash(location.hash || '') || DEFAULT_KEY;
 }
 
 function syncStripSubtitle() {
