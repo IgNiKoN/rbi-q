@@ -10,7 +10,8 @@ import type { AuthApi } from '../auth/auth.service.ts';
 import { openPlatformLogin, platformSignOut } from '../auth/shell-user.ts';
 import { CompanyRoles } from './CompanyRoles.ts';
 import { CompanyMembers, COMPANY_MEMBERS_CSS } from './CompanyMembers.ts';
-import { CompanyAudit } from './CompanyAudit.ts';
+import { CompanyAudit, COMPANY_AUDIT_CSS } from './CompanyAudit.ts';
+import { SETTINGS_UI_CSS } from '../ui/settings.ts';
 import type { CompanyApi, CompanyRef } from './company.service.ts';
 import { CounterpartiesTab, COUNTERPARTIES_CSS } from './CounterpartiesTab.ts';
 import type { CoreApi } from '../core/core.service.ts';
@@ -111,7 +112,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
       tab === 'audit' ? h(CompanyAudit, { api, companyId, key: companyId }) : null));
 }
 
-export const COMPANY_CSS = COMPANY_MEMBERS_CSS + COUNTERPARTIES_CSS + `
+export const COMPANY_CSS = SETTINGS_UI_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT_CSS + COUNTERPARTIES_CSS + `
 .co-root{max-width:1200px}
 .co-head{margin-bottom:16px}
 .co-tabs{display:flex;flex-wrap:nowrap;gap:var(--rbi-subtab-gap,6px);padding:4px;border:1px solid var(--card-border);border-radius:12px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch}

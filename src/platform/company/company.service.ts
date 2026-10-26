@@ -36,7 +36,8 @@ export interface CompanyApi {
   listRoles(companyId: string): Promise<RoleRow[]>;
   listMembers(companyId: string): Promise<MemberRow[]>;
   listProjects(): Promise<ProjectRef[]>;
-  listAudit(companyId: string): Promise<CompanyAuditRow[]>;
+  /** P2-0038: limit — сколько последних записей (сервер отдаёт не больше 200). */
+  listAudit(companyId: string, limit?: number): Promise<CompanyAuditRow[]>;
   createRole(sourceRoleId: string, name: string): Promise<Result<string>>;
   renameRole(roleId: string, name: string): Promise<Result>;
   setRoleActions(roleId: string, actions: string[]): Promise<Result>;
@@ -89,7 +90,7 @@ export function createCompanyService(): CompanyApi | null {
     listRoles: (co) => rows<RoleRow>('pf_list_company_roles', { p_company: co }),
     listMembers: (co) => rows<MemberRow>('pf_list_company_members', { p_company: co }),
     listProjects: () => fetchMyProjects<ProjectRef>(),
-    listAudit: (co) => rows<CompanyAuditRow>('pf_list_company_audit', { p_company: co, p_limit: 100 }),
+    listAudit: (co, limit) => rows<CompanyAuditRow>('pf_list_company_audit', { p_company: co, p_limit: limit || 100 }),
     createRole: (src, name) => call<string>('pf_create_role', { p_source_role: src, p_name: name }),
     renameRole: (id, name) => call('pf_rename_role', { p_role: id, p_name: name }),
     setRoleActions: (id, actions) => call('pf_set_role_actions', { p_role: id, p_actions: actions }),

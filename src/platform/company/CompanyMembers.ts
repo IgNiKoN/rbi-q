@@ -7,10 +7,12 @@
  * P2-0033: «Объекты Качества» при назначении роли — галочки по объектам компании (ничего не отмечено — все объекты);
  * закрепление хранится по id объекта (ADR-070), что видит сотрудник — решает сервер (033).
  * Всё — через pf_*; права и правила — на сервере (032, 032a, 033).
+ * P2-0038: карточка на сотрудника (телефон и ПК): действия по человеку — меню «⋯», подтверждения — диалог.
  */
 import { createElement as h, useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import type { CompanyApi, ContractorRef, MemberRow, ProjectRef, QualityObjectRef, RoleRow } from './company.service.ts';
+import { ActionsMenu, ConfirmDialog } from '../ui/settings.ts';
 
 const DAY = new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short' });
 
@@ -60,13 +62,13 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
-  const [confirmRevoke, setConfirmRevoke] = useState('');
+  /** Открытый диалог подтверждения: сброс пароля / отключение (по человеку) или отзыв назначения. */
+  const [confirm, setConfirm] = useState<{ kind: 'reset' | 'disable' | 'revoke'; userId: string; assignmentId?: string } | null>(null);
   const [contractors, setContractors] = useState<ContractorRef[]>([]);
   const [roleId, setRoleId] = useState('');
   const [adding, setAdding] = useState(false);
   const [temp, setTemp] = useState<TempPassword | null>(null);
   const [copied, setCopied] = useState(false);
-  const [confirmPerson, setConfirmPerson] = useState('');   // «reset:<id>» | «disable:<id>»
   const [editName, setEditName] = useState('');   // user_id, у которого правится ФИО
   const [qObjects, setQObjects] = useState<QualityObjectRef[]>([]);
 
@@ -119,7 +121,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
 
   async function resetPassword(p: Person): Promise<void> {
     if (busy) return;
-    setConfirmPerson(''); setBusy(true); setError(''); setNotice(''); setTemp(null); setCopied(false);
+    setConfirm(null); setBusy(true); setError(''); setNotice(''); setTemp(null); setCopied(false);
     const res = await api.resetPassword(companyId, p.user_id);
     setBusy(false);
     if (!res.ok) { setError(res.message); return; }
@@ -129,7 +131,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
 
   async function disable(p: Person): Promise<void> {
     if (busy) return;
-    setConfirmPerson(''); setBusy(true); setError(''); setNotice('');
+    setConfirm(null); setBusy(true); setError(''); setNotice('');
     const res = await api.disableMember(companyId, p.user_id);
     setBusy(false);
     if (!res.ok) { setError(res.message); return; }
@@ -159,7 +161,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
 
   async function revoke(id: string): Promise<void> {
     if (busy) return;
-    setConfirmRevoke(''); setBusy(true); setError(''); setNotice('');
+    setConfirm(null); setBusy(true); setError(''); setNotice('');
     const res = await api.revoke(id);
     setBusy(false);
     if (!res.ok) { setError(res.message); return; }
@@ -171,27 +173,61 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
   const list = people(rows);
   const label = (p: Person) => (p.name ? `${p.name} · ${p.email}` : p.email) + (p.email === me ? ' (вы)' : '');
 
-  function personActions(p: Person): ReactElement | null {
+  /** Меню «⋯» по человеку: ФИО, сброс пароля (только учётке компании), отключение доступа; себе — только ФИО. */
+  function personMenu(p: Person): ReactElement | null {
     if (p.disabled) return null;
-    if (editName === p.user_id) return h('form', { className: 'co-row co-name-form', 'data-testid': 'co-name-form', onSubmit: (e: FormEvent) => { void saveName(e, p); } },
+    const own = p.email === me;
+    return h(ActionsMenu, { label: `Действия: ${p.name || p.email}`, testId: 'co-person-menu', items: [
+      { key: 'n', label: 'Изменить ФИО', testId: 'co-name-edit', disabled: busy, onSelect: () => { setEditName(p.user_id); setConfirm(null); } },
+      ...(!own && p.managed ? [{ key: 'r', label: 'Сбросить пароль', testId: 'co-reset', disabled: busy, onSelect: () => setConfirm({ kind: 'reset' as const, userId: p.user_id }) }] : []),
+      ...(!own ? [{ key: 'd', label: 'Отключить доступ', testId: 'co-disable', danger: true, disabled: busy, onSelect: () => setConfirm({ kind: 'disable' as const, userId: p.user_id }) }] : [])] });
+  }
+
+  function nameForm(p: Person): ReactElement | null {
+    if (p.disabled || editName !== p.user_id) return null;
+    return h('form', { className: 'co-row co-name-form', 'data-testid': 'co-name-form', onSubmit: (e: FormEvent) => { void saveName(e, p); } },
       h('input', { name: 'full_name', className: 'co-input', defaultValue: p.name, maxLength: 120, 'aria-label': 'ФИО' }),
       h('button', { type: 'submit', className: 'pf-btn co-btn-sm', disabled: busy }, 'Сохранить'),
       h('button', { type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', onClick: () => setEditName('') }, 'Отмена'));
-    const rename = h('button', { key: 'n', type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', 'data-testid': 'co-name-edit', disabled: busy,
-      onClick: () => { setEditName(p.user_id); setConfirmPerson(''); } }, 'Изменить ФИО');
-    if (p.email === me) return h('div', { className: 'co-person-actions' }, rename);
-    const ask = (kind: string, text: string, yes: () => void) => confirmPerson === `${kind}:${p.user_id}`
-      ? h('span', { key: kind, className: 'co-row' },
-          h('button', { type: 'button', className: 'pf-btn co-danger co-btn-sm', 'data-testid': `co-${kind}-yes`, onClick: yes }, text),
-          h('button', { type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', onClick: () => setConfirmPerson('') }, 'Нет'))
-      : null;
-    return h('div', { className: 'co-person-actions' },
-      ask('reset', 'Да, сбросить', () => { void resetPassword(p); }) || ask('disable', 'Да, отключить', () => { void disable(p); }) || [
-        rename,
-        p.managed ? h('button', { key: 'r', type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', 'data-testid': 'co-reset', disabled: busy,
-          onClick: () => setConfirmPerson(`reset:${p.user_id}`) }, 'Сбросить пароль') : null,
-        h('button', { key: 'd', type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', 'data-testid': 'co-disable', disabled: busy,
-          onClick: () => setConfirmPerson(`disable:${p.user_id}`) }, 'Отключить доступ')]);
+  }
+
+  function confirmDialog(): ReactElement | null {
+    if (!confirm) return null;
+    const p = list.find((x) => x.user_id === confirm.userId);
+    if (!p) return null;
+    const who = p.name || p.email;
+    if (confirm.kind === 'reset') return h(ConfirmDialog, { title: 'Сбросить пароль?', yes: 'Да, сбросить', yesTestId: 'co-reset-yes', busy,
+      text: `${who}: старый пароль перестанет работать, новый временный покажем один раз.`, onYes: () => { void resetPassword(p); }, onNo: () => setConfirm(null) });
+    if (confirm.kind === 'disable') return h(ConfirmDialog, { title: 'Отключить доступ?', yes: 'Да, отключить', yesTestId: 'co-disable-yes', danger: true, busy,
+      text: `${who} больше не сможет войти. Записи сотрудника останутся в истории.`, onYes: () => { void disable(p); }, onNo: () => setConfirm(null) });
+    const r = p.items.find((x) => x.assignment_id === confirm.assignmentId);
+    return h(ConfirmDialog, { title: 'Отозвать роль?', yes: 'Да, отозвать', yesTestId: 'co-revoke-yes', danger: true, busy,
+      text: `${who}: роль «${r ? r.role_name : ''}»${r ? ' · ' + (r.project_name || 'все проекты') : ''}. Права пропадут со следующего запроса.`,
+      onYes: () => { if (confirm.assignmentId) void revoke(confirm.assignmentId); }, onNo: () => setConfirm(null) });
+  }
+
+  function assignmentRow(p: Person, r: MemberRow): ReactElement {
+    return h('div', { key: r.assignment_id, className: 'sui-sub co-assignment' + (!r.is_active || p.disabled ? ' co-inactive' : ''), 'data-assignment-id': r.assignment_id },
+      h('div', { className: 'sui-sub-main' },
+        h('div', { className: 'co-role-name' }, r.role_name, r.counterparty_name ? h('span', { className: 'pf-muted' }, ` · ${r.counterparty_name}`) : null),
+        h('div', { className: 'sui-sub-meta' }, (r.project_name || 'Все проекты') + ' · ' + status(r)),
+        objectsText(r.quality_objects) ? h('div', { className: 'sui-sub-meta', 'data-testid': 'co-row-objects' }, `Объекты: ${objectsText(r.quality_objects)}`) : null),
+      p.disabled ? null : h('button', { type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', 'data-testid': 'co-revoke', disabled: busy,
+        onClick: () => setConfirm({ kind: 'revoke', userId: p.user_id, assignmentId: r.assignment_id! }) }, 'Отозвать'));
+  }
+
+  function personCard(p: Person): ReactElement {
+    return h('div', { key: p.user_id, className: 'sui-card co-person-card' + (p.disabled ? ' co-inactive' : ''), 'data-user-id': p.user_id },
+      h('div', { className: 'sui-card-head' },
+        h('div', { className: 'sui-card-main' },
+          h('div', { className: 'co-person-name' }, (p.name || p.email) + (p.email === me ? ' (вы)' : '')),
+          p.name ? h('div', { className: 'pf-muted co-person-mail' }, p.email) : null,
+          p.disabled ? h('span', { className: 'co-badge', 'data-testid': 'co-badge-disabled' }, 'доступ отключён') : null,
+          p.mustChange && !p.disabled ? h('span', { className: 'co-badge' }, 'ещё не сменил временный пароль') : null),
+        personMenu(p)),
+      nameForm(p),
+      p.items.length ? p.items.map((r) => assignmentRow(p, r))
+        : h('div', { className: 'sui-sub sui-sub-meta' }, p.disabled ? '—' : 'нет ролей'));
   }
 
   return h('div', { className: 'co-members', 'data-testid': 'co-members' },
@@ -248,52 +284,27 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
       'Сотрудник увидит в Качестве и Стройконтроле только записи этой фирмы — это проверяет сервер.') : null,
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     notice ? h('div', { className: 'co-notice', role: 'status' }, notice) : null,
-    h('div', { className: 'co-card' },
-      h('table', { className: 'co-table' },
-        h('thead', null, h('tr', null, h('th', null, 'Сотрудник'), h('th', null, 'Роль'), h('th', null, 'Проект'), h('th', null, 'Срок'), h('th', null, ''))),
-        h('tbody', null, list.flatMap((p) => (p.items.length ? p.items : [null]).map((r, i) =>
-          h('tr', { key: p.user_id + (r ? r.assignment_id : ''), 'data-assignment-id': r ? r.assignment_id : undefined, 'data-user-id': i === 0 ? p.user_id : undefined,
-            className: (r && !r.is_active) || p.disabled ? 'co-inactive' : '' },
-            h('td', { className: i === 0 ? 'co-person' : undefined }, i !== 0 ? '' : [
-              h('div', { key: 'n', className: 'co-person-name' }, (p.name || p.email) + (p.email === me ? ' (вы)' : '')),
-              p.name ? h('div', { key: 'e', className: 'pf-muted co-person-mail' }, p.email) : null,
-              p.disabled ? h('span', { key: 'x', className: 'co-badge', 'data-testid': 'co-badge-disabled' }, 'доступ отключён') : null,
-              p.mustChange && !p.disabled ? h('span', { key: 'm', className: 'co-badge' }, 'ещё не сменил временный пароль') : null,
-              h('span', { key: 'a' }, personActions(p))]),
-            h('td', null, r ? [r.role_name, r.counterparty_name ? h('span', { key: 'f', className: 'pf-muted' }, ` · ${r.counterparty_name}`) : null]
-              : h('span', { className: 'pf-muted' }, p.disabled ? '—' : 'нет ролей')),
-            h('td', null, r ? [r.project_name || 'Все проекты', objectsText(r.quality_objects)
-              ? h('div', { key: 'o', className: 'pf-muted co-objects-cell', 'data-testid': 'co-row-objects' }, `Объекты: ${objectsText(r.quality_objects)}`) : null] : ''),
-            h('td', { className: 'co-nowrap' }, r ? status(r) : ''),
-            h('td', { className: 'co-nowrap' }, !r ? null : confirmRevoke === r.assignment_id
-              ? h('span', { className: 'co-row' },
-                  h('button', { type: 'button', className: 'pf-btn co-danger co-btn-sm', 'data-testid': 'co-revoke-yes', onClick: () => { void revoke(r.assignment_id!); } }, 'Да, отозвать'),
-                  h('button', { type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', onClick: () => setConfirmRevoke('') }, 'Нет'))
-              : h('button', { type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', 'data-testid': 'co-revoke', disabled: busy, onClick: () => setConfirmRevoke(r.assignment_id!) }, 'Отозвать'))))))))
+    h('div', { className: 'sui-cards', 'data-testid': 'co-people' }, list.map(personCard)),
+    confirmDialog()
   );
 }
 
 export const COMPANY_MEMBERS_CSS = `
 .co-members{display:flex;flex-direction:column;gap:12px}
 .co-input{font-size:14px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);text-transform:none;font-weight:400}
-.co-card{overflow-x:auto}
-.co-table{width:100%;border-collapse:collapse;font-size:13px}
-.co-table th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);padding:10px 14px;border-bottom:1px solid var(--card-border);white-space:nowrap}
-.co-table td{padding:8px 14px;border-bottom:1px solid var(--card-border);vertical-align:middle}
-.co-table tbody tr:last-child td{border-bottom:0}
 .co-inactive td{color:var(--text-muted)}
-.co-nowrap{white-space:nowrap}
 .co-btn-sm{padding:6px 10px;font-size:12px}
 .co-hint{font-size:13px}
 .co-members .pf-field{min-width:0;max-width:100%}
 .co-members select.co-input{max-width:100%;min-width:0;text-overflow:ellipsis}
-.co-person{min-width:300px}
+.co-person-card .co-badge{margin-top:6px}
+.co-role-name{font-weight:700;color:var(--text-main)}
+.co-inactive .co-role-name,.co-inactive .co-person-name{color:var(--text-muted)}
 .co-name-form{margin-top:6px;gap:6px}
 .co-name-form .co-input{flex:1 1 160px;min-width:0}
 .co-person-name{font-weight:700;color:var(--text-main)}
 .co-person-mail{font-size:12px;overflow-wrap:anywhere}
 .co-badge{display:inline-block;margin:4px 6px 0 0;padding:2px 8px;border-radius:999px;border:1px solid var(--card-border);font-size:11px;color:var(--text-muted)}
-.co-person-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .co-temp{flex-direction:column;align-items:stretch;gap:8px}
 .co-temp-title{font-weight:800}
 .co-objects{flex:1 1 100%;min-width:0;border:1px solid var(--card-border);border-radius:10px;padding:8px 12px;margin:0}
@@ -301,6 +312,5 @@ export const COMPANY_MEMBERS_CSS = `
 .co-objects-list{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px}
 .co-check{display:flex;align-items:center;gap:8px;min-height:36px;font-size:14px;color:var(--text-main);cursor:pointer}
 .co-check input{width:18px;height:18px;flex:none}
-.co-objects-cell{font-size:12px;margin-top:2px;min-width:180px;overflow-wrap:anywhere}
 .co-temp-pw{font-size:18px;font-weight:700;letter-spacing:.06em;padding:6px 10px;border:1px dashed var(--card-border);border-radius:8px;user-select:all;overflow-wrap:anywhere}
 `;

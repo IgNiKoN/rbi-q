@@ -7,7 +7,7 @@ import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { CompanyMembers, endOfDayIso } from '../CompanyMembers.ts';
-import { CompanyAudit, auditText } from '../CompanyAudit.ts';
+import { CompanyAudit, auditText, filterAudit, auditKind, AUDIT_MAX } from '../CompanyAudit.ts';
 import type { CompanyApi, MemberRow, Result } from '../company.service.ts';
 import { settle } from '../../../test-utils/settle.ts';
 
@@ -22,6 +22,13 @@ const tick = (): Promise<void> => settle();
 type N = any;
 const click = (b: N) => b.dispatchEvent(new win.Event('click', { bubbles: true }));
 const submit = (f: N) => f.dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+/** P2-0038: действия по сотруднику — в меню «⋯» карточки; открыть меню и вернуть пункт (null — пункта нет). */
+async function menuItem(el: N, userId: string, testId: string): Promise<N> {
+  const btn = el.querySelector(`[data-user-id=${userId}] [data-testid=co-person-menu]`);
+  if (!btn) return null;
+  if (btn.getAttribute('aria-expanded') !== 'true') { click(btn); await settle(); }
+  return el.querySelector(`[data-user-id=${userId}] [data-testid=${testId}]`);
+}
 
 const A = (id: string, user: string, email: string, role: string, project: string | null, active: boolean, validTo: string | null = null): MemberRow => ({
   user_id: user, email, assignment_id: id, role_id: 'r-' + role, role_name: role, project_id: project ? 'p1' : null, project_name: project,
@@ -159,7 +166,8 @@ test('отозвать — с подтверждением, строка исч�
   click(el.querySelector('[data-assignment-id=a-for] [data-testid=co-revoke]'));
   await tick();
   assert.deepEqual(calls, []);
-  click(el.querySelector('[data-assignment-id=a-for] [data-testid=co-revoke-yes]'));
+  assert.ok(el.querySelector('[data-testid=sui-dialog]'), 'подтверждение — диалог');
+  click(el.querySelector('[data-testid=co-revoke-yes]'));
   await tick();
   assert.deepEqual(calls, ['revoke:a-for']);
   assert.ok(!el.querySelector('[data-assignment-id=a-for]'));
@@ -170,7 +178,7 @@ test('последнего админа сервер не даёт отозва�
   await tick();
   click(el.querySelector('[data-assignment-id=a-adm] [data-testid=co-revoke]'));
   await tick();
-  click(el.querySelector('[data-assignment-id=a-adm] [data-testid=co-revoke-yes]'));
+  click(el.querySelector('[data-testid=co-revoke-yes]'));
   await tick();
   assert.match(el.querySelector('[role=alert]').textContent, /не останется ни одного администратора/);
 });
@@ -307,12 +315,13 @@ test('P2-0028: «Сбросить пароль» — только учётке �
   const { api, calls } = fakeApi();
   const el = mount(api);
   await tick();
-  assert.equal(el.querySelector('[data-user-id=u-adm] [data-testid=co-reset]'), null, 'себе — нет кнопок');
-  assert.equal(el.querySelector('[data-user-id=u-new] [data-testid=co-reset]'), null, 'учётка не компании — сброса нет');
-  click(el.querySelector('[data-user-id=u-for] [data-testid=co-reset]'));
+  assert.equal(await menuItem(el, 'u-adm', 'co-reset'), null, 'себе — нет сброса');
+  assert.equal(await menuItem(el, 'u-adm', 'co-disable'), null, 'себе — нет отключения');
+  assert.equal(await menuItem(el, 'u-new', 'co-reset'), null, 'учётка не компании — сброса нет');
+  click(await menuItem(el, 'u-for', 'co-reset'));
   await tick();
   assert.deepEqual(calls, []);
-  click(el.querySelector('[data-user-id=u-for] [data-testid=co-reset-yes]'));
+  click(el.querySelector('[data-testid=co-reset-yes]'));
   await tick();
   assert.deepEqual(calls, ['reset:c1:u-for']);
   assert.equal(el.querySelector('[data-testid=co-temp-pw]').textContent, 'NewTmp8Pass2xy');
@@ -323,14 +332,15 @@ test('P2-0028: «Отключить доступ» — с подтвержден
   const { api, calls } = fakeApi();
   const el = mount(api);
   await tick();
-  click(el.querySelector('[data-user-id=u-for] [data-testid=co-disable]'));
+  click(await menuItem(el, 'u-for', 'co-disable'));
   await tick();
-  click(el.querySelector('[data-user-id=u-for] [data-testid=co-disable-yes]'));
+  click(el.querySelector('[data-testid=co-disable-yes]'));
   await tick();
   assert.deepEqual(calls, ['disable:c1:u-for']);
   const row = el.querySelector('[data-user-id=u-for]');
   assert.ok(row.querySelector('[data-testid=co-badge-disabled]'));
-  assert.equal(row.querySelector('[data-testid=co-disable]'), null);
+  assert.equal(row.querySelector('[data-testid=co-person-menu]'), null, 'отключённому — без меню');
+  assert.equal(row.querySelector('[data-testid=co-revoke]'), null, 'и без «Отозвать»');
   assert.match(el.textContent, /Доступ отключён: Петров П\.П\./);
   const opts = Array.from(el.querySelectorAll('select[name=user] option')).map((o: N) => o.value);
   assert.ok(!opts.includes('u-for'));
@@ -340,8 +350,8 @@ test('P2-0028: «Изменить ФИО» — сервер получает н�
   const { api, calls } = fakeApi();
   const el = mount(api);
   await tick();
-  assert.ok(el.querySelector('[data-user-id=u-adm] [data-testid=co-name-edit]'), 'своё ФИО — можно');
-  click(el.querySelector('[data-user-id=u-for] [data-testid=co-name-edit]'));
+  assert.ok(await menuItem(el, 'u-adm', 'co-name-edit'), 'своё ФИО — можно');
+  click(await menuItem(el, 'u-for', 'co-name-edit'));
   await tick();
   const form = el.querySelector('[data-user-id=u-for] [data-testid=co-name-form]');
   assert.equal(form.querySelector('[name=full_name]').value, 'Петров П.П.');
@@ -404,4 +414,65 @@ test('P2-0033 (L7): ошибка списка объектов Качества 
   role.value = 'r-eng'; role.dispatchEvent(new win.Event('change', { bubbles: true }));
   await tick();
   assert.equal(el.querySelector('[data-testid=co-objects]'), null);
+});
+
+// P2-0038 этап 2: журнал — фильтры (дата, кто, действие), «Показать ещё» (до 200 — больше сервер не отдаёт), карточки на телефоне
+const AT = (at: string, actor: string | null, action: string, extra: Record<string, unknown> = {}) =>
+  ({ at, actor_email: actor, action, record_id: 'x', subject_email: 'e@test.invalid', old_data: { role_name: 'Р', name: 'Р' }, new_data: { role_name: 'Р', name: 'Р' }, ...extra });
+
+test('журнал: фильтр по дате (включительно), человеку и виду действия', () => {
+  const rows = [AT('2026-10-20T09:00:00Z', 'a@test.invalid', 'ROLE_CREATE'), AT('2026-10-21T09:00:00Z', 'b@test.invalid', 'ASSIGN'),
+    AT('2026-10-22T09:00:00Z', null, 'REVOKE'), AT('2026-10-22T10:00:00Z', 'a@test.invalid', 'UPDATE', { table_name: 'counterparties' })];
+  const f = { from: '', to: '', who: '', kind: '' as const };
+  assert.equal(filterAudit(rows, f).length, 4);
+  assert.deepEqual(filterAudit(rows, { ...f, from: '2026-10-21', to: '2026-10-21' }).map((r) => r.action), ['ASSIGN']);
+  assert.deepEqual(filterAudit(rows, { ...f, who: 'a@test.invalid' }).map((r) => r.action), ['ROLE_CREATE', 'UPDATE']);
+  assert.deepEqual(filterAudit(rows, { ...f, who: 'система' }).map((r) => r.action), ['REVOKE']);
+  assert.deepEqual(filterAudit(rows, { ...f, kind: 'assign' }).map((r) => r.action), ['ASSIGN', 'REVOKE']);
+  assert.equal(auditKind(rows[3]), 'counterparties');
+  assert.equal(auditKind(rows[0]), 'roles');
+});
+
+test('журнал: фильтр «Кто» в экране, «Показать ещё» просит больше записей и пропадает на пределе сервера', async () => {
+  const { api } = fakeApi();
+  const asked: number[] = [];
+  const many = (n: number) => Array.from({ length: n }, (_, i) => AT(new Date(Date.UTC(2026, 9, 1, 0, i)).toISOString(), i % 2 ? 'b@test.invalid' : 'a@test.invalid', 'ASSIGN'));
+  const withAudit: CompanyApi = { ...api, async listAudit(_c, limit) { asked.push(limit || 0); return many(limit || 0); } };
+  const el = win.document.createElement('div') as N; win.document.body.appendChild(el);
+  flushSync(() => createRoot(el).render(createElement(CompanyAudit, { api: withAudit, companyId: 'c1' })));
+  await tick();
+  assert.deepEqual(asked, [100]);
+  assert.equal(el.querySelectorAll('tbody tr').length, 100);
+  const who = el.querySelector('[data-testid=co-audit-who]');
+  who.value = 'b@test.invalid'; who.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await tick();
+  assert.equal(el.querySelectorAll('tbody tr').length, 50);
+  assert.match(el.querySelector('[data-testid=co-audit-count]').textContent, /Показано 50 из 100/);
+  click(el.querySelector('[data-testid=co-audit-more]'));
+  await tick();
+  assert.deepEqual(asked, [100, AUDIT_MAX]);
+  assert.equal(el.querySelectorAll('tbody tr').length, 100, 'фильтр остаётся');
+  assert.equal(el.querySelector('[data-testid=co-audit-more]'), null, 'на пределе сервера — кнопки нет');
+  click(el.querySelector('[data-testid=co-audit-reset]'));
+  await tick();
+  assert.equal(el.querySelectorAll('tbody tr').length, AUDIT_MAX);
+});
+
+test('сотрудники: меню «⋯» закрывается Escape; диалог «Нет» — ничего не уходит на сервер', async () => {
+  const { api, calls } = fakeApi();
+  const el = mount(api);
+  await tick();
+  click(await menuItem(el, 'u-for', 'co-disable'));
+  await tick();
+  assert.ok(el.querySelector('[data-testid=sui-dialog]'));
+  const no = Array.from(el.querySelectorAll('[data-testid=sui-dialog] button')).find((b: N) => b.textContent === 'Нет') as N;
+  click(no); await tick();
+  assert.equal(el.querySelector('[data-testid=sui-dialog]'), null);
+  assert.deepEqual(calls, []);
+  const btn = el.querySelector('[data-user-id=u-for] [data-testid=co-person-menu]');
+  click(btn); await tick();
+  assert.equal(btn.getAttribute('aria-expanded'), 'true');
+  win.document.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape' }));
+  await tick();
+  assert.equal(btn.getAttribute('aria-expanded'), 'false');
 });

@@ -3,6 +3,7 @@
  * Все изменения — через сервер (pf_*); при отказе показывается текст сервера.
  */
 import { createElement as h, useEffect, useState } from 'react';
+import { ConfirmDialog } from '../ui/settings.ts';
 import type { FormEvent, ReactElement } from 'react';
 import { groupCatalog } from './action-groups.ts';
 import type { CatalogRow, CompanyApi, RoleRow } from './company.service.ts';
@@ -117,13 +118,12 @@ export function CompanyRoles(props: { api: CompanyApi; companyId: string }): Rea
           onClick: () => { void run(() => api.setRoleActions(role.id, Array.from(draft)), 'Действия роли сохранены — права действуют со следующего запроса'); } }, 'Сохранить действия'),
         changed ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: () => setDraft(new Set(role.actions)) }, 'Отменить изменения') : null,
         h('span', { className: 'co-grow' }),
-        confirmDelete
-          ? h('span', { className: 'co-row' }, h('span', { className: 'co-hint' }, 'Удалить роль?'),
-              h('button', { type: 'button', className: 'pf-btn co-danger', 'data-testid': 'co-delete-yes',
-                onClick: () => { setConfirmDelete(false); void run(() => api.deleteRole(role.id), `Роль «${role.name}» удалена`, ''); } }, 'Да, удалить'),
-              h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: () => setConfirmDelete(false) }, 'Нет'))
-          : h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'co-delete', disabled: busy,
-              title: role.active_assignments ? 'Сначала отзовите назначения в «Сотрудниках»' : '', onClick: () => setConfirmDelete(true) }, 'Удалить роль'))
+        h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'co-delete', disabled: busy,
+          title: role.active_assignments ? 'Сначала отзовите назначения в «Сотрудниках»' : '', onClick: () => setConfirmDelete(true) }, 'Удалить роль'),
+        // P2-0038: подтверждение — общий диалог «Настроек»
+        confirmDelete ? h(ConfirmDialog, { title: 'Удалить роль?', text: `Роль «${role.name}» будет удалена. Назначенную роль сервер удалить не даст.`,
+          yes: 'Да, удалить', yesTestId: 'co-delete-yes', danger: true, busy, onNo: () => setConfirmDelete(false),
+          onYes: () => { setConfirmDelete(false); void run(() => api.deleteRole(role.id), `Роль «${role.name}» удалена`, ''); } }) : null)
     ) : h('div', { className: 'pf-muted' }, 'Ролей нет')
   );
 }
