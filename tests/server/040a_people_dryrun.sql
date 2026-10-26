@@ -74,7 +74,7 @@ begin
   if r."не найдено" <> 1 then res := res || 'FAIL Сидоров из другой компании — не найдено 1: ' || r."не найдено" || E'\n'; end if;
   if r."номер не совпадает с ФИО" <> 1 then res := res || 'FAIL автор-админ при ФИО Иванова — расхождение 1: ' || r."номер не совпадает с ФИО" || E'\n'; end if;
   select * into r from got where "таблица" = 'rbi_tasks';
-  if r."узнано однозначно" <> 2 or r."спорно" <> 1 or r."уже с номером" <> 0 then res := res || 'FAIL задачи: Иванов и почта — однозначно 2, Петров — спорно 1: ' || row_to_json(r) || E'\n'; end if;
+  if r."узнано однозначно" <> 2 or r."спорно" <> 1 or r."уже с номером" not in (0, 2) then res := res || 'FAIL задачи: Иванов и почта — однозначно 2, Петров — спорно 1 (с номером: 0 до 040b, 2 после — сервер ставит сам): ' || row_to_json(r) || E'\n'; end if;
   select * into r from got where "таблица" = 'rbi_engineer_profiles';
   if r."узнано однозначно" <> 1 or r."уже с номером" <> 0 then res := res || 'FAIL профиль Иванова узнан: ' || row_to_json(r) || E'\n'; end if;
   raise exception 'P2-0035b 040a (пробная привязка)%FAIL всего: %', E'\n' || res, (length(res) - length(replace(res, 'FAIL', ''))) / 4 using errcode = 'P0001';
