@@ -159,6 +159,7 @@ export function createPhotoLazyLoader(deps) {
             if (res && res.state === PHOTO_STATE.OK && res.url) {
                 img.src = res.url;
                 img.removeAttribute('data-local-src');
+                img.removeAttribute('data-photo-heal');
                 if (!img.getAttribute('data-photo-ref')) img.setAttribute('data-photo-ref', ref);
                 setState(img, PHOTO_STATE.OK);
                 loaded.add(img);
@@ -212,6 +213,25 @@ export function createPhotoLazyLoader(deps) {
         observeAll(root) { listImgs(root).forEach(observe); },
         /** Как observeAll, но ждёт первого прохода: видимые загружены, невидимые отложены. */
         hydrate(root) { return Promise.all(listImgs(root).map(observe)).then(() => undefined); },
+        /**
+         * P2-0032: картинка с адресом blob: не загрузилась (адрес отозван) — забыть адрес и загрузить заново
+         * из базы устройства. Не больше двух раз подряд (успешная загрузка сбрасывает счётчик).
+         * @returns {boolean} поставлено ли в очередь
+         */
+        heal(img) {
+            const ref = img && img.getAttribute && img.getAttribute('data-photo-ref');
+            if (!ref) return false;
+            const tries = Number(img.getAttribute('data-photo-heal')) || 0;
+            if (tries >= 2) return false;
+            img.setAttribute('data-photo-heal', String(tries + 1));
+            const bad = String(img.src || '');
+            if (deps.forgetUrl && bad.startsWith('blob:')) deps.forgetUrl(bad);
+            loaded.delete(img);
+            img.src = deps.placeholderFor(PHOTO_STATE.LOADING);
+            img.setAttribute('data-local-src', ref);
+            nearObserver.observe(img);
+            return true;
+        },
         /** Повторить одно фото (кнопка «повторить»). */
         retry(img) {
             if (!img) return Promise.resolve();

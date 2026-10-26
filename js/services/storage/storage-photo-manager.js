@@ -16,6 +16,7 @@ import {
 const PhotoManager = {
     cache: {},
     activeUrls: new Set(),
+    _deferredRevoke: new Set(),
     // P2-0023: раньше LRU на 80 адресов отзывал и те, что ещё на экране → «очищено».
     // Теперь адрес отзывается только если его нет на странице (sweepUnusedUrls)
     // и он не выдавался последние URL_GRACE_MS; чистка — только когда адресов > SOFT_URL_LIMIT.
@@ -41,13 +42,27 @@ const PhotoManager = {
         return Object.keys(this.cache).length;
     },
 
-    releaseCachedUrl(id) {
+    releaseCachedUrl(id, inUse) {
         if (!id || !this.cache[id]) return;
         const url = this.cache[id];
-        try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
-        this.activeUrls.delete(url);
         delete this.cache[id];
         delete this._touchedAt[id];
+        // P2-0032: адрес ещё на странице (в т.ч. в скрытом разделе) — не отзываем: iPhone при повторной отрисовке
+        // показал бы «сломанную картинку». Отзовёт чистка, когда его не станет на странице.
+        if (Object.values(this.cache).indexOf(url) !== -1) return;
+        if ((inUse || this._collectInUseUrls()).has(url)) { this._deferredRevoke.add(url); return; }
+        try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+        this.activeUrls.delete(url);
+    },
+
+    /** P2-0032: адрес оказался нерабочим (картинка не загрузилась) — забыть его во всех записях кэша. */
+    forgetUrl(url) {
+        if (!url) return;
+        Object.keys(this.cache).forEach((k) => {
+            if (this.cache[k] === url) { delete this.cache[k]; delete this._touchedAt[k]; }
+        });
+        this.activeUrls.delete(url);
+        this._deferredRevoke.delete(url);
     },
 
     _rememberObjectUrl(id, url) {
@@ -98,14 +113,25 @@ const PhotoManager = {
             url: this.cache[key],
             touchedAt: this._touchedAt[key] || 0
         }));
+        const inUseNow = this._collectInUseUrls();
         const keys = selectUrlsToRelease({
             entries,
-            inUse: this._collectInUseUrls(),
+            inUse: inUseNow,
             now: Date.now(),
             graceMs: force ? 0 : this.URL_GRACE_MS,
             targetSize: force ? 0 : Math.floor(this.SOFT_URL_LIMIT * 0.75)
         });
-        keys.forEach((k) => this.releaseCachedUrl(k));
+        keys.forEach((k) => this.releaseCachedUrl(k, inUseNow));
+        // P2-0032: отложенные (были на странице при освобождении) — отозвать, когда их там больше нет.
+        if (this._deferredRevoke.size) {
+            const inUse = this._collectInUseUrls();
+            this._deferredRevoke.forEach((url) => {
+                if (inUse.has(url)) return;
+                try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+                this.activeUrls.delete(url);
+                this._deferredRevoke.delete(url);
+            });
+        }
         return keys.length;
     },
 
@@ -526,6 +552,7 @@ const PhotoManager = {
         });
 
         this.activeUrls.clear();
+        this._deferredRevoke.clear();
         this.cache = {};
         this._touchedAt = {};
     },
@@ -736,9 +763,19 @@ if (typeof IntersectionObserver !== 'undefined') {
         document,
         maxConcurrent: 4,
         rootMargin: '300px',
-        viewportHeight: () => window.innerHeight || 800
+        viewportHeight: () => window.innerHeight || 800,
+        forgetUrl: (url) => PhotoManager.forgetUrl(url)
     });
     window.RbiPhotoLoader = loader;
+
+    // P2-0032: превью с нерабочим адресом blob: (iPhone — «сломанная картинка» после перехода между разделами) —
+    // перезагрузить из базы устройства, а не ждать перезагрузки страницы.
+    document.addEventListener('error', (e) => {
+        const img = e.target;
+        if (!img || img.tagName !== 'IMG' || !img.getAttribute('data-photo-ref')) return;
+        if (!String(img.getAttribute('src') || '').startsWith('blob:')) return;
+        loader.heal(img);
+    }, true);
 
     // «Не удалось загрузить — нажмите, чтобы повторить»: нажатие повторяет, а не открывает просмотр.
     document.addEventListener('click', (e) => {
