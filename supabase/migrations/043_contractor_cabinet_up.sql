@@ -133,6 +133,9 @@ begin
     raise exception 'Подрядчик не создаёт замечания' using errcode = '42501';
   end if;
   n := to_jsonb(new); o := to_jsonb(old);
+  if (n -> 'contractorId', n -> 'contractor') is distinct from (o -> 'contractorId', o -> 'contractor') then
+    raise exception 'Подрядчик не переводит замечание на другую фирму' using errcode = '42501';
+  end if;
   v_old := coalesce(nullif(o ->> 'status', ''), 'issued');
   v_new := coalesce(nullif(n ->> 'status', ''), 'issued');
   if v_new is distinct from v_old and not ((v_old, v_new) in (('issued', 'in_progress'), ('issued', 'fixed'), ('in_progress', 'fixed'),

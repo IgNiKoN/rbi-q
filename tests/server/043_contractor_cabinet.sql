@@ -115,8 +115,10 @@ begin
   res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set status = 'rejected' where id = 'x1-m43'$q$) = '42501', 'подрядчик не отклоняет');
   res := res || pg_temp.t(pg_temp.err($q$update quality.construction_defects_v2 set status = 'issued' where id = 'x1-m43'$q$) = '42501', 'подрядчик не возвращает в «выдано»');
   -- прочие поля сервер оставляет прежними (приложение присылает строку целиком)
+  res := res || pg_temp.t(pg_temp.err(format($q$update quality.construction_defects_v2 set "contractorId" = %L where id = 'x1-m43'$q$, d2)) = '42501',
+                          'подрядчик не переводит замечание на другую фирму');
   perform pg_temp.rows($q$update quality.construction_defects_v2 set text = 'другое', deadline = now() + interval '30 day',
-      is_deleted = true, "contractorId" = null where id = 'x1-m43'$q$);
+      is_deleted = true where id = 'x1-m43'$q$);
   reset role;
   select count(*) into n from quality.construction_defects_v2 where id = 'x1-m43' and text is distinct from 'другое'
      and deadline is null and not is_deleted and "contractorId" = d1::text and core_counterparty_id = f1 and status = 'fixed';
