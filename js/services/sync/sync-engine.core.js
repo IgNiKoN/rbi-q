@@ -3821,7 +3821,12 @@ window.triggerSync = async function (mode = 'silent') {
                                             if (myContractorIdDef === 'pending') myContractorIdDef = '';
                                         }
                                     }
+                                    // P2-0044: своя фирма — по номеру контрагента (core_counterparty_id), без номера — по карточке справочника
+                                    const myCpDef = String((window.appSettings && window.appSettings.assignedCounterpartyId) || '').trim();
                                     defectsToPush = defectsToPush.filter(d => {
+                                        if (isContractorDef && myCpDef && d.core_counterparty_id) {
+                                            return String(d.core_counterparty_id) === myCpDef;
+                                        }
                                         if (isContractorDef && myContractorIdDef) {
                                             return String(d.contractorId || d.contractor_id || '') === String(myContractorIdDef);
                                         }

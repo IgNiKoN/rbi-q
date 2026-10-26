@@ -250,9 +250,9 @@ class Is {
         let v;
         const _ = !!c && Object.keys(c).some((Ee) => Ee.toLowerCase() === "content-type");
         h && !_ ? typeof Blob < "u" && h instanceof Blob || h instanceof ArrayBuffer ? (p["Content-Type"] = h.type || "application/octet-stream", v = h) : typeof h == "string" ? (p["Content-Type"] = "text/plain", v = h) : typeof FormData < "u" && h instanceof FormData ? v = h : (p["Content-Type"] = "application/json", v = JSON.stringify(h)) : h && typeof h != "string" && !(typeof Blob < "u" && h instanceof Blob) && !(h instanceof ArrayBuffer) && !(typeof FormData < "u" && h instanceof FormData) ? v = JSON.stringify(h) : v = h;
-        let b = f;
-        d && (o = new AbortController(), a = setTimeout(() => o.abort(), d), f ? (b = o.signal, l = () => o.abort(), f.addEventListener("abort", l)) : b = o.signal);
-        const S = yield this.fetch(m.toString(), {
+        let S = f;
+        d && (o = new AbortController(), a = setTimeout(() => o.abort(), d), f ? (S = o.signal, l = () => o.abort(), f.addEventListener("abort", l)) : S = o.signal);
+        const b = yield this.fetch(m.toString(), {
           method: u || "POST",
           // headers priority is (high to low):
           // 1. invoke-level headers
@@ -260,16 +260,16 @@ class Is {
           // 3. default Content-Type header
           headers: Object.assign(Object.assign(Object.assign({}, p), this.headers), c),
           body: v,
-          signal: b
+          signal: S
         }).catch((Ee) => {
           throw new Ps(Ee);
-        }), T = S.headers.get("x-relay-error");
+        }), T = b.headers.get("x-relay-error");
         if (T && T === "true")
-          throw new Vt(S);
-        if (!S.ok)
-          throw new Gt(S);
-        let E = ((n = S.headers.get("Content-Type")) !== null && n !== void 0 ? n : "text/plain").split(";")[0].trim().toLowerCase(), A;
-        return E === "application/json" ? A = yield S.json() : E === "application/octet-stream" || E === "application/pdf" ? A = yield S.blob() : E === "text/event-stream" ? A = S : E === "multipart/form-data" ? A = yield S.formData() : A = yield S.text(), { data: A, error: null, response: S };
+          throw new Vt(b);
+        if (!b.ok)
+          throw new Gt(b);
+        let E = ((n = b.headers.get("Content-Type")) !== null && n !== void 0 ? n : "text/plain").split(";")[0].trim().toLowerCase(), A;
+        return E === "application/json" ? A = yield b.json() : E === "application/octet-stream" || E === "application/pdf" ? A = yield b.blob() : E === "text/event-stream" ? A = b : E === "multipart/form-data" ? A = yield b.formData() : A = yield b.text(), { data: A, error: null, response: b };
       } catch (c) {
         return {
           data: null,
@@ -578,10 +578,10 @@ var Us = class {
       const h = a == null ? void 0 : a.cause;
       if (h) {
         var f, d, p, g;
-        const _ = (f = h == null ? void 0 : h.message) !== null && f !== void 0 ? f : "", b = (d = h == null ? void 0 : h.code) !== null && d !== void 0 ? d : "";
+        const _ = (f = h == null ? void 0 : h.message) !== null && f !== void 0 ? f : "", S = (d = h == null ? void 0 : h.code) !== null && d !== void 0 ? d : "";
         l = `${(p = a == null ? void 0 : a.name) !== null && p !== void 0 ? p : "FetchError"}: ${a == null ? void 0 : a.message}`, l += `
 
-Caused by: ${(g = h == null ? void 0 : h.name) !== null && g !== void 0 ? g : "Error"}: ${_}`, b && (l += ` (${b})`), h != null && h.stack && (l += `
+Caused by: ${(g = h == null ? void 0 : h.name) !== null && g !== void 0 ? g : "Error"}: ${_}`, S && (l += ` (${S})`), h != null && h.stack && (l += `
 ${h.stack}`);
       } else {
         var m;
@@ -7012,7 +7012,7 @@ class jn {
     const v = (h = e == null ? void 0 : e.vsn) !== null && h !== void 0 ? h : Vs;
     switch (v) {
       case Ks:
-        g = (_, b) => b(JSON.stringify(_)), m = (_, b) => b(JSON.parse(_));
+        g = (_, S) => S(JSON.stringify(_)), m = (_, S) => S(JSON.parse(_));
         break;
       case Qr:
         g = this.serializer.encode.bind(this.serializer), m = this.serializer.decode.bind(this.serializer);
@@ -11995,11 +11995,11 @@ Not Before: ${o.toISOString()}`), l && (v += `
 Request ID: ${l}`), c) {
     let _ = `
 Resources:`;
-    for (const b of c) {
-      if (!b || typeof b != "string")
-        throw new Error(`@supabase/auth-js: Invalid SIWE message field "resources". Every resource must be a valid string. Provided value: ${b}`);
+    for (const S of c) {
+      if (!S || typeof S != "string")
+        throw new Error(`@supabase/auth-js: Invalid SIWE message field "resources". Every resource must be a valid string. Provided value: ${S}`);
       _ += `
-- ${b}`;
+- ${S}`;
     }
     v += _;
   }
@@ -13692,23 +13692,23 @@ class Ue {
       d = e.message, p = e.signature;
     else {
       const { chain: g, wallet: m, statement: v, options: _ } = e;
-      let b;
+      let S;
       if (x())
         if (typeof m == "object")
-          b = m;
+          S = m;
         else {
           const K = window;
           if ("ethereum" in K && typeof K.ethereum == "object" && "request" in K.ethereum && typeof K.ethereum.request == "function")
-            b = K.ethereum;
+            S = K.ethereum;
           else
             throw new Error("@supabase/auth-js: No compatible Ethereum wallet interface on the window object (window.ethereum) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'ethereum', wallet: resolvedUserWallet }) instead.");
         }
       else {
         if (typeof m != "object" || !(_ != null && _.url))
           throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
-        b = m;
+        S = m;
       }
-      const S = new URL((r = _ == null ? void 0 : _.url) !== null && r !== void 0 ? r : window.location.href), T = await b.request({
+      const b = new URL((r = _ == null ? void 0 : _.url) !== null && r !== void 0 ? r : window.location.href), T = await S.request({
         method: "eth_requestAccounts"
       }).then((K) => K).catch(() => {
         throw new Error("@supabase/auth-js: Wallet method eth_requestAccounts is missing or invalid");
@@ -13718,16 +13718,16 @@ class Ue {
       const E = ps(T[0]);
       let A = (s = _ == null ? void 0 : _.signInWithEthereum) === null || s === void 0 ? void 0 : s.chainId;
       if (!A) {
-        const K = await b.request({
+        const K = await S.request({
           method: "eth_chainId"
         });
         A = Zi(K);
       }
       const Ee = {
-        domain: S.host,
+        domain: b.host,
         address: E,
         statement: v,
-        uri: S.href,
+        uri: b.href,
         version: "1",
         chainId: A,
         nonce: (n = _ == null ? void 0 : _.signInWithEthereum) === null || n === void 0 ? void 0 : n.nonce,
@@ -13737,7 +13737,7 @@ class Ue {
         requestId: (c = _ == null ? void 0 : _.signInWithEthereum) === null || c === void 0 ? void 0 : c.requestId,
         resources: (u = _ == null ? void 0 : _.signInWithEthereum) === null || u === void 0 ? void 0 : u.resources
       };
-      d = ta(Ee), p = await b.request({
+      d = ta(Ee), p = await S.request({
         method: "personal_sign",
         params: [ea(d), E]
       });
@@ -13771,26 +13771,26 @@ class Ue {
     if ("message" in e)
       p = e.message, g = e.signature;
     else {
-      const { chain: m, wallet: v, statement: _, options: b } = e;
-      let S;
+      const { chain: m, wallet: v, statement: _, options: S } = e;
+      let b;
       if (x())
         if (typeof v == "object")
-          S = v;
+          b = v;
         else {
           const E = window;
           if ("solana" in E && typeof E.solana == "object" && ("signIn" in E.solana && typeof E.solana.signIn == "function" || "signMessage" in E.solana && typeof E.solana.signMessage == "function"))
-            S = E.solana;
+            b = E.solana;
           else
             throw new Error("@supabase/auth-js: No compatible Solana wallet interface on the window object (window.solana) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'solana', wallet: resolvedUserWallet }) instead.");
         }
       else {
-        if (typeof v != "object" || !(b != null && b.url))
+        if (typeof v != "object" || !(S != null && S.url))
           throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
-        S = v;
+        b = v;
       }
-      const T = new URL((r = b == null ? void 0 : b.url) !== null && r !== void 0 ? r : window.location.href);
-      if ("signIn" in S && S.signIn) {
-        const E = await S.signIn(Object.assign(Object.assign(Object.assign({ issuedAt: (/* @__PURE__ */ new Date()).toISOString() }, b == null ? void 0 : b.signInWithSolana), {
+      const T = new URL((r = S == null ? void 0 : S.url) !== null && r !== void 0 ? r : window.location.href);
+      if ("signIn" in b && b.signIn) {
+        const E = await b.signIn(Object.assign(Object.assign(Object.assign({ issuedAt: (/* @__PURE__ */ new Date()).toISOString() }, S == null ? void 0 : S.signInWithSolana), {
           // non-overridable properties
           version: "1",
           domain: T.host,
@@ -13808,27 +13808,27 @@ class Ue {
         else
           throw new Error("@supabase/auth-js: Wallet method signIn() API returned object without signedMessage and signature fields");
       } else {
-        if (!("signMessage" in S) || typeof S.signMessage != "function" || !("publicKey" in S) || typeof S != "object" || !S.publicKey || !("toBase58" in S.publicKey) || typeof S.publicKey.toBase58 != "function")
+        if (!("signMessage" in b) || typeof b.signMessage != "function" || !("publicKey" in b) || typeof b != "object" || !b.publicKey || !("toBase58" in b.publicKey) || typeof b.publicKey.toBase58 != "function")
           throw new Error("@supabase/auth-js: Wallet does not have a compatible signMessage() and publicKey.toBase58() API");
         p = [
           `${T.host} wants you to sign in with your Solana account:`,
-          S.publicKey.toBase58(),
+          b.publicKey.toBase58(),
           ..._ ? ["", _, ""] : [""],
           "Version: 1",
           `URI: ${T.href}`,
-          `Issued At: ${(n = (s = b == null ? void 0 : b.signInWithSolana) === null || s === void 0 ? void 0 : s.issuedAt) !== null && n !== void 0 ? n : (/* @__PURE__ */ new Date()).toISOString()}`,
-          ...!((i = b == null ? void 0 : b.signInWithSolana) === null || i === void 0) && i.notBefore ? [`Not Before: ${b.signInWithSolana.notBefore}`] : [],
-          ...!((a = b == null ? void 0 : b.signInWithSolana) === null || a === void 0) && a.expirationTime ? [`Expiration Time: ${b.signInWithSolana.expirationTime}`] : [],
-          ...!((o = b == null ? void 0 : b.signInWithSolana) === null || o === void 0) && o.chainId ? [`Chain ID: ${b.signInWithSolana.chainId}`] : [],
-          ...!((l = b == null ? void 0 : b.signInWithSolana) === null || l === void 0) && l.nonce ? [`Nonce: ${b.signInWithSolana.nonce}`] : [],
-          ...!((c = b == null ? void 0 : b.signInWithSolana) === null || c === void 0) && c.requestId ? [`Request ID: ${b.signInWithSolana.requestId}`] : [],
-          ...!((h = (u = b == null ? void 0 : b.signInWithSolana) === null || u === void 0 ? void 0 : u.resources) === null || h === void 0) && h.length ? [
+          `Issued At: ${(n = (s = S == null ? void 0 : S.signInWithSolana) === null || s === void 0 ? void 0 : s.issuedAt) !== null && n !== void 0 ? n : (/* @__PURE__ */ new Date()).toISOString()}`,
+          ...!((i = S == null ? void 0 : S.signInWithSolana) === null || i === void 0) && i.notBefore ? [`Not Before: ${S.signInWithSolana.notBefore}`] : [],
+          ...!((a = S == null ? void 0 : S.signInWithSolana) === null || a === void 0) && a.expirationTime ? [`Expiration Time: ${S.signInWithSolana.expirationTime}`] : [],
+          ...!((o = S == null ? void 0 : S.signInWithSolana) === null || o === void 0) && o.chainId ? [`Chain ID: ${S.signInWithSolana.chainId}`] : [],
+          ...!((l = S == null ? void 0 : S.signInWithSolana) === null || l === void 0) && l.nonce ? [`Nonce: ${S.signInWithSolana.nonce}`] : [],
+          ...!((c = S == null ? void 0 : S.signInWithSolana) === null || c === void 0) && c.requestId ? [`Request ID: ${S.signInWithSolana.requestId}`] : [],
+          ...!((h = (u = S == null ? void 0 : S.signInWithSolana) === null || u === void 0 ? void 0 : u.resources) === null || h === void 0) && h.length ? [
             "Resources",
-            ...b.signInWithSolana.resources.map((A) => `- ${A}`)
+            ...S.signInWithSolana.resources.map((A) => `- ${A}`)
           ] : []
         ].join(`
 `);
-        const E = await S.signMessage(new TextEncoder().encode(p), "utf8");
+        const E = await b.signMessage(new TextEncoder().encode(p), "utf8");
         if (!E || !(E instanceof Uint8Array))
           throw new Error("@supabase/auth-js: Wallet signMessage() API returned an recognized value");
         g = E;
@@ -15263,14 +15263,14 @@ class Ue {
       if (r === "pkce") {
         if (this._debug("#_initialize()", "begin", "is PKCE flow", !0), !e.code)
           throw new cr("No code detected.");
-        const { data: b, error: S } = await this._exchangeCodeForSession(e.code, {
+        const { data: S, error: b } = await this._exchangeCodeForSession(e.code, {
           flowId: e[ae]
         });
-        if (S)
-          throw S;
+        if (b)
+          throw b;
         const T = new URL(window.location.href);
         return T.searchParams.delete("code"), T.searchParams.delete(ae), window.history.replaceState(window.history.state, "", T.toString()), {
-          data: { session: b.session, redirectType: (s = b.redirectType) !== null && s !== void 0 ? s : null },
+          data: { session: S.session, redirectType: (s = S.redirectType) !== null && s !== void 0 ? s : null },
           error: null
         };
       }
@@ -16505,9 +16505,9 @@ class Ue {
         const { data: { user: m }, error: v } = await this.getUser(e);
         if (v)
           return this._returnResult({ data: null, error: v });
-        ((s = (r = m == null ? void 0 : m.factors) === null || r === void 0 ? void 0 : r.filter((S) => S.status === "verified")) !== null && s !== void 0 ? s : []).length > 0 && (g = "aal2");
-        const b = d.amr || [];
-        return { data: { currentLevel: p, nextLevel: g, currentAuthenticationMethods: b }, error: null };
+        ((s = (r = m == null ? void 0 : m.factors) === null || r === void 0 ? void 0 : r.filter((b) => b.status === "verified")) !== null && s !== void 0 ? s : []).length > 0 && (g = "aal2");
+        const S = d.amr || [];
+        return { data: { currentLevel: p, nextLevel: g, currentAuthenticationMethods: S }, error: null };
       } catch (d) {
         if (y(d))
           return this._returnResult({ data: null, error: d });
@@ -17959,6 +17959,8 @@ function Wa(t) {
     templates: Array.isArray(e.templates) ? e.templates.map(String) : [],
     projects: Array.isArray(e.projects) ? e.projects.map(String) : null,
     contractor: typeof r.name == "string" ? r.name : "",
+    // P2-0044: номер фирмы (контрагент ядра) — по нему Стройконтроль отбирает записи подрядчика
+    contractorId: typeof r.id == "string" ? r.id : "",
     objects: Array.isArray(e.objects) ? e.objects.map((s) => s && typeof s == "object" ? String(s.key ?? "") : "").filter(Boolean) : null,
     // P2-0035 (039b): служебный объект-контейнер компании (как «Объекты RBI») — Качество работает в нём
     container: typeof e.container == "string" && e.container ? e.container : null
@@ -18055,44 +18057,45 @@ function Qa(t) {
   }), s();
 }
 async function Za(t, e) {
-  var b;
+  var S;
   if (t.mode === "none" && !e.store.getItem(ce)) return null;
   const r = qa(t);
   if (Fa(e.store, r, r && t.email ? Ma(t.email) : ""))
     return e.reload(), null;
   const s = e.store.getItem(ut);
   if (s && e.dropDatabase) {
-    const S = ((b = e.win.APP_CONFIG) == null ? void 0 : b.LOCAL_DB_NAME) || "PLATFORM2_DB";
-    e.dropDatabase(S + "_" + s), e.store.removeItem(ut), e.store.getItem(ht) !== null && e.store.getItem(ce) === s && e.store.removeItem(ht);
+    const b = ((S = e.win.APP_CONFIG) == null ? void 0 : S.LOCAL_DB_NAME) || "PLATFORM2_DB";
+    e.dropDatabase(b + "_" + s), e.store.removeItem(ut), e.store.getItem(ht) !== null && e.store.getItem(ce) === s && e.store.removeItem(ht);
   }
   const n = e.win.RBI = e.win.RBI || {};
   if (!r || !e.platformClient || !e.cfg || !t.email)
     return n.qualitySync = null, null;
   const i = n.qualitySync;
   if (i && i.companyId === r) {
-    const S = (t.fullName || "").trim() || t.email;
-    if (i.engineerName !== S) {
-      i.engineerName = S;
+    const b = (t.fullName || "").trim() || t.email;
+    if (i.engineerName !== b) {
+      i.engineerName = b;
       const T = e.win.syncConfig;
-      T && (T.engineerName = S, e.store.setItem("rbi_sync_config", JSON.stringify(T))), e.win.appSettings && Dr(e.win.appSettings, { engineerName: S });
+      T && (T.engineerName = b, e.store.setItem("rbi_sync_config", JSON.stringify(T))), e.win.appSettings && Dr(e.win.appSettings, { engineerName: b });
     }
     return i;
   }
   Qa(e);
   const a = Ka(e.createClient, e.cfg, r, e.platformClient);
   e.win.supabaseClient = a;
-  const o = async (S) => {
-    const { data: T, error: E } = await a.rpc("my_access", { p_project: S });
+  const o = async (b) => {
+    const { data: T, error: E } = await a.rpc("my_access", { p_project: b });
     return Wa(E ? null : T);
-  }, l = await o(null), c = l.projects, u = t.companies.find((S) => S.id === r), h = l.container ? [{ id: l.container, name: u ? u.name : "" }] : (await e.listProjects(r).catch(() => [])).filter((S) => c === null || c.includes(S.id)), f = e.store.getItem(Ur + r), d = l.container ? l.container : h.some((S) => S.id === f) ? f : h.length === 1 ? h[0].id : null, p = t.email, g = (t.fullName || "").trim() || p, m = (S) => {
-    _.actions = S.actions, _.role = Ha(S.actions);
-    const T = S.objects || [];
+  }, l = await o(null), c = l.projects, u = t.companies.find((b) => b.id === r), h = l.container ? [{ id: l.container, name: u ? u.name : "" }] : (await e.listProjects(r).catch(() => [])).filter((b) => c === null || c.includes(b.id)), f = e.store.getItem(Ur + r), d = l.container ? l.container : h.some((b) => b.id === f) ? f : h.length === 1 ? h[0].id : null, p = t.email, g = (t.fullName || "").trim() || p, m = (b) => {
+    _.actions = b.actions, _.role = Ha(b.actions);
+    const T = b.objects || [];
     e.win.appSettings && Dr(e.win.appSettings, {
       userRole: _.role,
       cloudStatus: "approved",
       engineerName: g,
-      contractorName: S.contractor,
-      assignedContractor: S.contractor,
+      contractorName: b.contractor,
+      assignedContractor: b.contractor,
+      assignedCounterpartyId: b.contractorId,
       assignedProjects: T,
       assigned_projects: T
     });
@@ -18100,9 +18103,9 @@ async function Za(t, e) {
     E && (_.role === "manager" || _.role === "director") && E.syncMode !== "full" && (E.syncMode = "full", e.store.setItem("rbi_sync_config", JSON.stringify(E)));
     const A = e.win.dispatchEvent;
     typeof A == "function" && A.call(e.win, new Event(Xa));
-  }, v = (S) => {
+  }, v = (b) => {
     const T = e.win.syncConfig = e.win.syncConfig || {};
-    T.enabled = !!S, T.engineerName = g, T.authUserId = t.userId || null, T.projectCode = S || "", T.pinHash = null, T.syncMode || (T.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(T));
+    T.enabled = !!b, T.engineerName = g, T.authUserId = t.userId || null, T.projectCode = b || "", T.pinHash = null, T.syncMode || (T.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(T));
   }, _ = {
     active: !0,
     companyId: r,
@@ -18113,8 +18116,8 @@ async function Za(t, e) {
     projectId: d,
     role: "guest",
     actions: [],
-    async selectProject(S) {
-      !h.some((T) => T.id === S) || S === _.projectId || (e.store.setItem(Ur + r, S), _.projectId = S, m(await o(S)), e.win.applySyncConnect ? await e.win.applySyncConnect(g, S, null) : v(S), e.win.initSync && await e.win.initSync());
+    async selectProject(b) {
+      !h.some((T) => T.id === b) || b === _.projectId || (e.store.setItem(Ur + r, b), _.projectId = b, m(await o(b)), e.win.applySyncConnect ? await e.win.applySyncConnect(g, b, null) : v(b), e.win.initSync && await e.win.initSync());
     }
   };
   return n.qualitySync = _, v(d), m(await o(d)), e.win.initSync && await e.win.initSync(), e.win.renderSyncUI && e.win.renderSyncUI(), _;

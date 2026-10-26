@@ -33,17 +33,27 @@ function resolveMyContractorId() {
   if (!id || id === "pending") return null;
   return id;
 }
-function filterDefectsForRole(list) {
+function myCounterpartyId() {
+  const s = window.appSettings;
+  return String((s == null ? void 0 : s.assignedCounterpartyId) || "").trim();
+}
+function ownsRecord(row, myCp, myDirId) {
+  const cp = String((row == null ? void 0 : row.core_counterparty_id) || "").trim();
+  if (myCp && cp) return cp === myCp;
+  return !!myDirId && String((row == null ? void 0 : row.contractorId) || "").trim() === myDirId;
+}
+function _filterForRole(list) {
   if (!isContractorRole()) return list;
-  const myId = resolveMyContractorId();
-  if (!myId) return [];
-  return (list || []).filter((d) => String(d.contractorId || "").trim() === myId);
+  const myCp = myCounterpartyId();
+  const myDirId = resolveMyContractorId();
+  if (!myCp && !myDirId) return [];
+  return (list || []).filter((r) => ownsRecord(r, myCp, myDirId));
+}
+function filterDefectsForRole(list) {
+  return _filterForRole(list);
 }
 function filterAcceptancesForRole(list) {
-  if (!isContractorRole()) return list;
-  const myId = resolveMyContractorId();
-  if (!myId) return [];
-  return (list || []).filter((a) => String(a.contractorId || "").trim() === myId);
+  return _filterForRole(list);
 }
 function _knowledgeSvc() {
   var _a, _b;

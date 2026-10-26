@@ -42,10 +42,10 @@ test('роль экрана Качества — из прав компании 
 
 test('доступ из my_access: объекты (null — вся компания) и фирма подрядчика', () => {
   assert.deepEqual(parseAccess({ actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: null }),
-    { actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: '', objects: null, container: null });
+    { actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: '', contractorId: '', objects: null, container: null });
   assert.deepEqual(parseAccess({ actions: [], projects: null, contractor: { id: 'k', name: 'ООО «Альфа-Строй»', keys: [] } }),
-    { actions: [], templates: [], projects: null, contractor: 'ООО «Альфа-Строй»', objects: null, container: null });
-  assert.deepEqual(parseAccess(null), { actions: [], templates: [], projects: null, contractor: '', objects: null, container: null });
+    { actions: [], templates: [], projects: null, contractor: 'ООО «Альфа-Строй»', contractorId: 'k', objects: null, container: null });
+  assert.deepEqual(parseAccess(null), { actions: [], templates: [], projects: null, contractor: '', contractorId: '', objects: null, container: null });
   assert.deepEqual(parseAccess({ actions: [], objects: [{ id: 'obj_1', key: 'большевиков,22 (гений)', name: 'Большевиков,22 (Гений)' }, { id: 'x' }] }).objects,
     ['большевиков,22 (гений)'], 'P2-0033: ключи закреплённых объектов Качества');
   assert.deepEqual(parseAccess({ actions: [], objects: [] }).objects, [], 'пустой список — не «все»');
@@ -54,7 +54,7 @@ test('доступ из my_access: объекты (null — вся компан�
 test('мост: подрядчик — фирма в настройках экрана, объекты экрану не передаются; список объектов — только свои', async () => {
   const { d, win } = deps({ projects: [{ id: P1, name: 'Спутник' }, { id: P2, name: 'Второй' }],
     access: { actions: ['quality.view', 'construction.view', 'construction.edit', 'quality.scope.contractor'], templates: ['contractor_rep'],
-      projects: [P2], contractor: { name: 'ООО «Альфа-Строй»' } } });
+      projects: [P2], contractor: { id: 'cp-alfa', name: 'ООО «Альфа-Строй»' } } });
   win.appSettings.assignedProjects = ['старый'];
   const sync = await applyQualityBridge(st(), d);
   assert.deepEqual(sync!.projects.map((p) => p.id), [P2]);
@@ -62,6 +62,7 @@ test('мост: подрядчик — фирма в настройках экр
   assert.equal(win.appSettings.userRole, 'contractor');
   assert.equal(win.appSettings.contractorName, 'ООО «Альфа-Строй»');
   assert.equal(win.appSettings.assignedContractor, 'ООО «Альфа-Строй»');
+  assert.equal(win.appSettings.assignedCounterpartyId, 'cp-alfa', 'P2-0044: номер фирмы');
   assert.deepEqual(win.appSettings.assignedProjects, []);
 });
 
