@@ -102,7 +102,7 @@ export function CompanyAudit(props: { api: CompanyApi; companyId: string }): Rea
               h('td', { className: 'co-audit-when' }, WHEN.format(new Date(r.at))), h('td', { 'data-label': 'Кто' }, r.actor_email || 'система'), h('td', null, auditText(r))))
           : h('tr', null, h('td', { colSpan: 3, className: 'pf-muted' }, rows.length ? 'По фильтру ничего не найдено' : 'Изменений ролей пока не было'))))),
     h('div', { className: 'co-row co-audit-foot' },
-      h('span', { className: 'co-hint', 'data-testid': 'co-audit-count' },
+      h('span', { className: 'sui-hint', 'data-testid': 'co-audit-count' },
         `Показано ${shown.length} из ${rows.length} последних` + (rows.length >= AUDIT_MAX ? ` (сервер хранит в выдаче до ${AUDIT_MAX})` : '') + (filtered ? ' — фильтр по загруженным записям' : '')),
       canMore ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost sui-more', disabled: loading, 'data-testid': 'co-audit-more', onClick: () => { void more(); } },
         loading ? 'Загрузка…' : 'Показать ещё') : null));

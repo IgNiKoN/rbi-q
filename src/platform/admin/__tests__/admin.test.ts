@@ -55,7 +55,7 @@ test('список компаний: название, тестовая, люд�
   assert.match(cards[0].querySelector('[data-module=ai] input').getAttribute('aria-label'), /ИИ-помощник у компании Альфа/);
   assert.match(cards[0].querySelector('[data-module=knowledge]').textContent, /вместе с «Качеством»/);
   assert.match(cards[0].querySelector('[data-module=ai]').textContent, /галочка «ИИ-помощник» в роли/);
-  assert.equal(cards[0].querySelector('[data-module=quality] .pa-mod-hint'), null);
+  assert.equal(cards[0].querySelector('[data-module=quality] [data-testid=pa-mod-hint]'), null);
   assert.ok(!/старому входу/.test(el.textContent));
 });
 
@@ -83,7 +83,7 @@ test('выключатель модуля: вызов сервера, сообщ
   box.checked = false; box.dispatchEvent(new win.Event('change'));
   await tick();
   assert.ok(calls.includes('module:a:planfact:false'));
-  assert.match(el.querySelector('[data-company=a] .pa-msg').textContent, /выключен/);
+  assert.match(el.querySelector('[data-company=a] .sui-msg').textContent, /выключен/);
   assert.equal(changed, 1);
 
   const bad = fakeApi({ async setModule() { return { ok: false, message: 'Только для администратора платформы' }; } });
@@ -94,7 +94,7 @@ test('выключатель модуля: вызов сервера, сообщ
   b2.checked = false; b2.dispatchEvent(new win.Event('change'));
   await tick();
   assert.equal(b2.checked, true, 'вернулся как было');
-  assert.equal(el2.querySelector('[data-company=a] .pa-msg').getAttribute('data-kind'), 'error');
+  assert.equal(el2.querySelector('[data-company=a] .sui-msg').getAttribute('data-kind'), 'error');
 });
 
 test('создать компанию: пустое название — подсказка без запроса; иначе — создана, список перечитан', async () => {
@@ -104,7 +104,7 @@ test('создать компанию: пустое название — под�
   await tick();
   const form = el.querySelector('[data-testid=pa-create]');
   submit(form);
-  assert.match(form.querySelector('.pa-msg').textContent, /Введите название/);
+  assert.match(form.querySelector('.sui-msg').textContent, /Введите название/);
   assert.ok(!calls.some((c) => c.startsWith('create')));
   form.querySelector('input[name=name]').value = 'Гамма';
   form.querySelector('input[name=is_test]').checked = true;
@@ -121,11 +121,11 @@ test('назначить администратора компании: почт
   await tick();
   const form = el.querySelector('[data-company=d] [data-testid=pa-admin]');
   submit(form);
-  assert.match(el.querySelector('[data-company=d] .pa-msg').textContent, /Введите почту/);
+  assert.match(el.querySelector('[data-company=d] .sui-msg').textContent, /Введите почту/);
   form.querySelector('input').value = 'nobody@x.ru';
   submit(form);
   await tick();
-  assert.match(el.querySelector('[data-company=d] .pa-msg').textContent, /не найдена/);
+  assert.match(el.querySelector('[data-company=d] .sui-msg').textContent, /не найдена/);
   assert.ok(!calls.some((c) => c.startsWith('admin')), 'подставной setCompanyAdmin заменён');
 });
 

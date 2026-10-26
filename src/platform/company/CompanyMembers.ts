@@ -222,8 +222,8 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
         h('div', { className: 'sui-card-main' },
           h('div', { className: 'co-person-name' }, (p.name || p.email) + (p.email === me ? ' (вы)' : '')),
           p.name ? h('div', { className: 'pf-muted co-person-mail' }, p.email) : null,
-          p.disabled ? h('span', { className: 'co-badge', 'data-testid': 'co-badge-disabled' }, 'доступ отключён') : null,
-          p.mustChange && !p.disabled ? h('span', { className: 'co-badge' }, 'ещё не сменил временный пароль') : null),
+          p.disabled ? h('span', { className: 'sui-badge', 'data-testid': 'co-badge-disabled' }, 'доступ отключён') : null,
+          p.mustChange && !p.disabled ? h('span', { className: 'sui-badge' }, 'ещё не сменил временный пароль') : null),
         personMenu(p)),
       nameForm(p),
       p.items.length ? p.items.map((r) => assignmentRow(p, r))
@@ -255,7 +255,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
         h('code', { className: 'co-temp-pw', 'data-testid': 'co-temp-pw' }, temp.password),
         h('button', { type: 'button', className: 'pf-btn co-btn-sm', 'data-testid': 'co-temp-copy', onClick: () => { void copyTemp(); } }, copied ? 'Скопировано' : 'Скопировать'),
         h('button', { type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', 'data-testid': 'co-temp-done', onClick: () => { setTemp(null); setCopied(false); } }, 'Готово')),
-      h('div', { className: 'pf-muted co-hint' }, 'Больше этот пароль не покажем. Передайте его сотруднику: при первом входе он придумает свой.')) : null,
+      h('div', { className: 'pf-muted sui-hint' }, 'Больше этот пароль не покажем. Передайте его сотруднику: при первом входе он придумает свой.')) : null,
     h('form', { className: 'co-panel co-row', onSubmit: assign, 'data-testid': 'co-assign' },
       h('label', { className: 'pf-field co-grow' }, 'Сотрудник',
         h('select', { name: 'user', className: 'co-input', defaultValue: '' },
@@ -276,11 +276,11 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
       h('label', { className: 'pf-field' }, 'Срок до (необязательно)', h('input', { name: 'until', type: 'date', className: 'co-input' })),
       showObjects ? h('fieldset', { className: 'co-objects', 'data-testid': 'co-objects' },
         h('legend', null, 'Объекты Качества'),
-        h('div', { className: 'pf-muted co-hint' }, 'Ничего не отмечено — все объекты. Отмеченные — сотрудник видит записи только этих объектов и свои без объекта.'),
+        h('div', { className: 'pf-muted sui-hint' }, 'Ничего не отмечено — все объекты. Отмеченные — сотрудник видит записи только этих объектов и свои без объекта.'),
         h('div', { className: 'co-objects-list' }, qObjects.map((o) =>
           h('label', { key: o.id, className: 'co-check' }, h('input', { type: 'checkbox', name: 'qobj', value: o.id }), o.name)))) : null,
       h('button', { type: 'submit', className: 'pf-btn', disabled: busy }, 'Назначить роль')),
-    needsFirm ? h('div', { className: 'pf-muted co-hint', 'data-testid': 'co-firm-hint' },
+    needsFirm ? h('div', { className: 'pf-muted sui-hint', 'data-testid': 'co-firm-hint' },
       'Сотрудник увидит в Качестве и Стройконтроле только записи этой фирмы — это проверяет сервер.') : null,
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     notice ? h('div', { className: 'co-notice', role: 'status' }, notice) : null,
@@ -294,23 +294,21 @@ export const COMPANY_MEMBERS_CSS = `
 .co-input{font-size:14px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);text-transform:none;font-weight:400}
 .co-inactive td{color:var(--text-muted)}
 .co-btn-sm{padding:6px 10px;font-size:12px}
-.co-hint{font-size:13px}
 .co-members .pf-field{min-width:0;max-width:100%}
 .co-members select.co-input{max-width:100%;min-width:0;text-overflow:ellipsis}
-.co-person-card .co-badge{margin-top:6px}
+.co-person-card .sui-badge{margin:6px 6px 0 0}
 .co-role-name{font-weight:700;color:var(--text-main)}
 .co-inactive .co-role-name,.co-inactive .co-person-name{color:var(--text-muted)}
 .co-name-form{margin-top:6px;gap:6px}
 .co-name-form .co-input{flex:1 1 160px;min-width:0}
 .co-person-name{font-weight:700;color:var(--text-main)}
 .co-person-mail{font-size:12px;overflow-wrap:anywhere}
-.co-badge{display:inline-block;margin:4px 6px 0 0;padding:2px 8px;border-radius:999px;border:1px solid var(--card-border);font-size:11px;color:var(--text-muted)}
 .co-temp{flex-direction:column;align-items:stretch;gap:8px}
 .co-temp-title{font-weight:800}
 .co-objects{flex:1 1 100%;min-width:0;border:1px solid var(--card-border);border-radius:10px;padding:8px 12px;margin:0}
 .co-objects legend{font-size:12px;font-weight:700;color:var(--text-muted);padding:0 4px}
 .co-objects-list{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px}
-.co-check{display:flex;align-items:center;gap:8px;min-height:36px;font-size:14px;color:var(--text-main);cursor:pointer}
-.co-check input{width:18px;height:18px;flex:none}
+.co-objects .co-check{display:flex;align-items:center;gap:8px;min-height:36px;font-size:14px;color:var(--text-main);cursor:pointer}
+.co-objects .co-check input{width:18px;height:18px;flex:none;margin:0}
 .co-temp-pw{font-size:18px;font-weight:700;letter-spacing:.06em;padding:6px 10px;border:1px dashed var(--card-border);border-radius:8px;user-select:all;overflow-wrap:anywhere}
 `;

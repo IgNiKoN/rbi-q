@@ -73,10 +73,10 @@ function ModulesView(props: { companyId: string }): ReactElement {
   const c = platformCompanies().find((x) => x.id === props.companyId);
   const on = new Set(c ? c.modules : []);
   return h('div', { className: 'sui-cards', 'data-testid': 'co-modules' },
-    h('div', { className: 'co-hint' }, 'Какие модули включены у компании. Включает и выключает администратор платформы.'),
-    h('div', { className: 'co-card co-modules-list' }, MODULES.map((m) => h('div', { key: m.code, className: 'co-module-row', 'data-module': m.code },
-      h('span', { className: 'co-module-name' }, m.name),
-      h('span', { className: 'co-badge' + (on.has(m.code) ? ' co-badge--on' : '') }, on.has(m.code) ? 'включён' : 'выключен')))));
+    h('div', { className: 'sui-hint' }, 'Какие модули включены у компании. Включает и выключает администратор платформы.'),
+    h('div', { className: 'sui-card sui-list' }, MODULES.map((m) => h('div', { key: m.code, className: 'sui-list-row', 'data-module': m.code },
+      h('span', { className: 'sui-title' }, m.name),
+      h('span', { className: 'sui-badge' + (on.has(m.code) ? ' sui-badge--on' : '') }, on.has(m.code) ? 'включён' : 'выключен')))));
 }
 
 export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null; core?: CoreApi | null; projects?: ProjectsApi | null }): ReactElement {
@@ -176,7 +176,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
     : cur === 'objects' && projects ? h(CompanyScope, { api: projects, render: (c) => h(ProjectsTab, { api: projects, company: c, core: core || null }) })
     : cur === 'counterparties' && core ? h(CounterpartiesTab, { core, companyId, key: companyId })
     : cur === 'directories' && projects ? h(CompanyScope, { api: projects, render: (c) => h(UnitsTab, { api: projects, company: c }) })
-    : cur === 'branding' ? h('div', { className: 'co-hint', 'data-testid': 'co-branding' }, 'Логотип и фирменный цвет — для отчётов и шапки у всех сотрудников компании.')
+    : cur === 'branding' ? h('div', { className: 'sui-hint', 'data-testid': 'co-branding' }, 'Логотип и фирменный цвет — для отчётов и шапки у всех сотрудников компании.')
     : cur === 'modules' ? h(ModulesView, { companyId, key: companyId })
     : cur === 'audit' ? h(CompanyAudit, { api, companyId, key: companyId })
     : null;
@@ -204,11 +204,9 @@ export const COMPANY_CSS = SETTINGS_UI_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT
 .co-list-item:hover{background:var(--hover-bg)}
 .co-list-item--active{background:var(--hover-bg);box-shadow:inset 3px 0 0 var(--primary)}
 .co-list-meta{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text-muted)}
-.co-badge{font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:6px;border:1px solid var(--card-border);color:var(--text-muted)}
 .co-panel{padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .co-row{display:flex;flex-direction:row;flex-wrap:wrap;gap:10px;align-items:flex-end}
 .co-grow{flex:1 1 200px}
-.co-hint{font-size:12px;color:var(--text-muted)}
 .co-notice{font-size:12px;color:var(--color-green)}
 .co-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .co-group{border:1px solid var(--card-border);border-radius:12px;padding:10px 12px;margin:0;min-width:0}
@@ -217,9 +215,4 @@ export const COMPANY_CSS = SETTINGS_UI_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT
 .co-check input{margin-top:2px;accent-color:var(--primary)}
 .co-check input:disabled+span{color:var(--text-muted)}
 .co-danger{background:var(--color-red);border-color:var(--color-red)}
-.co-modules-list{display:flex;flex-direction:column;padding:4px 0}
-.co-module-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--card-border);min-height:44px}
-.co-module-row:last-child{border-bottom:0}
-.co-module-name{font-weight:700;color:var(--text-main)}
-.co-badge--on{color:var(--color-green);border-color:var(--color-green)}
 `;

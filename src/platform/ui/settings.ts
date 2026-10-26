@@ -75,6 +75,22 @@ export const SETTINGS_UI_CSS = `
 .sui-dialog-actions .pf-btn{min-height:44px}
 .sui-danger{background:var(--color-red);border-color:var(--color-red)}
 .sui-cards{display:flex;flex-direction:column;gap:10px}
+.sui-stack{display:flex;flex-direction:column;gap:12px;color:var(--text-main)}
+.sui-section-title{margin:0;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.02em}
+.sui-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sui-input{flex:1 1 200px;min-width:0;max-width:100%;font-size:16px;min-height:44px;padding:8px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);box-sizing:border-box}
+.sui-check{display:inline-flex;align-items:center;gap:8px;font-size:13px;min-height:44px;cursor:pointer}
+.sui-check input{width:20px;height:20px;accent-color:var(--primary)}
+.sui-badge{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--card-border);color:var(--text-muted)}
+.sui-badge--on{color:var(--color-green);border-color:var(--color-green)}
+.sui-list{display:flex;flex-direction:column}
+.sui-list-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;min-height:44px;padding:8px 0;border-top:1px solid var(--card-border)}
+.sui-list-row:first-child{border-top:0}
+.sui-list-row .sui-hint{flex:1 1 100%;margin-top:-4px}
+.sui-msg{font-size:13px}
+.sui-msg[data-kind="error"]{color:var(--color-red,#dc2626)}
+.sui-msg[data-kind="ok"]{color:var(--color-green,#16a34a)}
+.sui-stack [hidden]{display:none!important}
 .sui-hint{font-size:12px;color:var(--text-muted)}
 .sui-notice{font-size:12px;color:var(--color-green)}
 .sui-title{font-weight:700;color:var(--text-main);overflow-wrap:anywhere}

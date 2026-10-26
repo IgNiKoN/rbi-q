@@ -12151,6 +12151,22 @@ const Fb = `
 .sui-dialog-actions .pf-btn{min-height:44px}
 .sui-danger{background:var(--color-red);border-color:var(--color-red)}
 .sui-cards{display:flex;flex-direction:column;gap:10px}
+.sui-stack{display:flex;flex-direction:column;gap:12px;color:var(--text-main)}
+.sui-section-title{margin:0;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.02em}
+.sui-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sui-input{flex:1 1 200px;min-width:0;max-width:100%;font-size:16px;min-height:44px;padding:8px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);box-sizing:border-box}
+.sui-check{display:inline-flex;align-items:center;gap:8px;font-size:13px;min-height:44px;cursor:pointer}
+.sui-check input{width:20px;height:20px;accent-color:var(--primary)}
+.sui-badge{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--card-border);color:var(--text-muted)}
+.sui-badge--on{color:var(--color-green);border-color:var(--color-green)}
+.sui-list{display:flex;flex-direction:column}
+.sui-list-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;min-height:44px;padding:8px 0;border-top:1px solid var(--card-border)}
+.sui-list-row:first-child{border-top:0}
+.sui-list-row .sui-hint{flex:1 1 100%;margin-top:-4px}
+.sui-msg{font-size:13px}
+.sui-msg[data-kind="error"]{color:var(--color-red,#dc2626)}
+.sui-msg[data-kind="ok"]{color:var(--color-green,#16a34a)}
+.sui-stack [hidden]{display:none!important}
 .sui-hint{font-size:12px;color:var(--text-muted)}
 .sui-notice{font-size:12px;color:var(--color-green)}
 .sui-title{font-weight:700;color:var(--text-main);overflow-wrap:anywhere}
@@ -12265,7 +12281,7 @@ function n_(l) {
         g.createElement(
           "span",
           { className: "co-list-meta" },
-          H.template_code ? g.createElement("span", { className: "co-badge" }, "шаблон") : null,
+          H.template_code ? g.createElement("span", { className: "sui-badge" }, "шаблон") : null,
           H.active_assignments ? `назначена: ${H.active_assignments}` : null
         )
       ))
@@ -12277,7 +12293,7 @@ function n_(l) {
         "div",
         null,
         g.createElement("h3", { className: "pf-title" }, I.name),
-        g.createElement("div", { className: "co-hint", "data-testid": "co-template-note" }, "Шаблон, только копия: изменить или удалить нельзя — скопируйте и настройте копию.")
+        g.createElement("div", { className: "sui-hint", "data-testid": "co-template-note" }, "Шаблон, только копия: изменить или удалить нельзя — скопируйте и настройте копию.")
       ) : g.createElement(
         "form",
         { className: "co-row", onSubmit: X, key: "rn-" + I.id },
@@ -12578,8 +12594,8 @@ function s_(l) {
           { className: "sui-card-main" },
           g.createElement("div", { className: "co-person-name" }, (B.name || B.email) + (B.email === s ? " (вы)" : "")),
           B.name ? g.createElement("div", { className: "pf-muted co-person-mail" }, B.email) : null,
-          B.disabled ? g.createElement("span", { className: "co-badge", "data-testid": "co-badge-disabled" }, "доступ отключён") : null,
-          B.mustChange && !B.disabled ? g.createElement("span", { className: "co-badge" }, "ещё не сменил временный пароль") : null
+          B.disabled ? g.createElement("span", { className: "sui-badge", "data-testid": "co-badge-disabled" }, "доступ отключён") : null,
+          B.mustChange && !B.disabled ? g.createElement("span", { className: "sui-badge" }, "ещё не сменил временный пароль") : null
         ),
         Ce(B)
       ),
@@ -12647,7 +12663,7 @@ function s_(l) {
           X(null), Y(!1);
         } }, "Готово")
       ),
-      g.createElement("div", { className: "pf-muted co-hint" }, "Больше этот пароль не покажем. Передайте его сотруднику: при первом входе он придумает свой.")
+      g.createElement("div", { className: "pf-muted sui-hint" }, "Больше этот пароль не покажем. Передайте его сотруднику: при первом входе он придумает свой.")
     ) : null,
     g.createElement(
       "form",
@@ -12702,14 +12718,14 @@ function s_(l) {
         "fieldset",
         { className: "co-objects", "data-testid": "co-objects" },
         g.createElement("legend", null, "Объекты Качества"),
-        g.createElement("div", { className: "pf-muted co-hint" }, "Ничего не отмечено — все объекты. Отмеченные — сотрудник видит записи только этих объектов и свои без объекта."),
+        g.createElement("div", { className: "pf-muted sui-hint" }, "Ничего не отмечено — все объекты. Отмеченные — сотрудник видит записи только этих объектов и свои без объекта."),
         g.createElement("div", { className: "co-objects-list" }, de.map((B) => g.createElement("label", { key: B.id, className: "co-check" }, g.createElement("input", { type: "checkbox", name: "qobj", value: B.id }), B.name)))
       ) : null,
       g.createElement("button", { type: "submit", className: "pf-btn", disabled: A }, "Назначить роль")
     ),
     te ? g.createElement(
       "div",
-      { className: "pf-muted co-hint", "data-testid": "co-firm-hint" },
+      { className: "pf-muted sui-hint", "data-testid": "co-firm-hint" },
       "Сотрудник увидит в Качестве и Стройконтроле только записи этой фирмы — это проверяет сервер."
     ) : null,
     _ ? g.createElement("div", { className: "pf-error", role: "alert" }, _) : null,
@@ -12723,24 +12739,22 @@ const o_ = `
 .co-input{font-size:14px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);text-transform:none;font-weight:400}
 .co-inactive td{color:var(--text-muted)}
 .co-btn-sm{padding:6px 10px;font-size:12px}
-.co-hint{font-size:13px}
 .co-members .pf-field{min-width:0;max-width:100%}
 .co-members select.co-input{max-width:100%;min-width:0;text-overflow:ellipsis}
-.co-person-card .co-badge{margin-top:6px}
+.co-person-card .sui-badge{margin:6px 6px 0 0}
 .co-role-name{font-weight:700;color:var(--text-main)}
 .co-inactive .co-role-name,.co-inactive .co-person-name{color:var(--text-muted)}
 .co-name-form{margin-top:6px;gap:6px}
 .co-name-form .co-input{flex:1 1 160px;min-width:0}
 .co-person-name{font-weight:700;color:var(--text-main)}
 .co-person-mail{font-size:12px;overflow-wrap:anywhere}
-.co-badge{display:inline-block;margin:4px 6px 0 0;padding:2px 8px;border-radius:999px;border:1px solid var(--card-border);font-size:11px;color:var(--text-muted)}
 .co-temp{flex-direction:column;align-items:stretch;gap:8px}
 .co-temp-title{font-weight:800}
 .co-objects{flex:1 1 100%;min-width:0;border:1px solid var(--card-border);border-radius:10px;padding:8px 12px;margin:0}
 .co-objects legend{font-size:12px;font-weight:700;color:var(--text-muted);padding:0 4px}
 .co-objects-list{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px}
-.co-check{display:flex;align-items:center;gap:8px;min-height:36px;font-size:14px;color:var(--text-main);cursor:pointer}
-.co-check input{width:18px;height:18px;flex:none}
+.co-objects .co-check{display:flex;align-items:center;gap:8px;min-height:36px;font-size:14px;color:var(--text-main);cursor:pointer}
+.co-objects .co-check input{width:18px;height:18px;flex:none;margin:0}
 .co-temp-pw{font-size:18px;font-weight:700;letter-spacing:.06em;padding:6px 10px;border:1px dashed var(--card-border);border-radius:8px;user-select:all;overflow-wrap:anywhere}
 `, dv = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" }), rn = (l) => l == null ? "" : String(l);
 function u_(l) {
@@ -12850,7 +12864,7 @@ function f_(l) {
       { className: "co-row co-audit-foot" },
       g.createElement(
         "span",
-        { className: "co-hint", "data-testid": "co-audit-count" },
+        { className: "sui-hint", "data-testid": "co-audit-count" },
         `Показано ${S.length} из ${s.length} последних` + (s.length >= Qs ? ` (сервер хранит в выдаче до ${Qs})` : "") + (k ? " — фильтр по загруженным записям" : "")
       ),
       D ? g.createElement(
@@ -13089,7 +13103,7 @@ function __(l) {
         "Добавить контрагента"
       ) : null
     ),
-    d ? null : g.createElement("div", { className: "co-hint", "data-testid": "cp-readonly" }, "Только просмотр: нет права управлять контрагентами."),
+    d ? null : g.createElement("div", { className: "sui-hint", "data-testid": "cp-readonly" }, "Только просмотр: нет права управлять контрагентами."),
     E ? g.createElement("div", { className: "pf-error", role: "alert" }, E) : null,
     k ? g.createElement("div", { className: "co-notice", role: "status" }, k) : null,
     Ee,
@@ -13111,8 +13125,8 @@ function __(l) {
           "span",
           { className: "cp-name" },
           Y.name,
-          Y.archived_at ? g.createElement("span", { className: "co-badge cp-badge" }, "архив") : null,
-          Y.draft ? g.createElement("span", { className: "co-badge cp-badge", "data-testid": "cp-draft" }, "из Качества · нужен ИНН") : null
+          Y.archived_at ? g.createElement("span", { className: "sui-badge cp-badge" }, "архив") : null,
+          Y.draft ? g.createElement("span", { className: "sui-badge cp-badge", "data-testid": "cp-draft" }, "из Качества · нужен ИНН") : null
         ),
         g.createElement("span", { className: "cp-inn" }, Y.inn ? "ИНН " + Y.inn + (Y.kpp ? " · КПП " + Y.kpp : "") : "ИНН не указан"),
         g.createElement("span", { className: "cp-kind" }, m_(Y.kinds))
@@ -31734,12 +31748,12 @@ function FS(l) {
   return g.createElement(
     "div",
     { className: "sui-cards", "data-testid": "co-modules" },
-    g.createElement("div", { className: "co-hint" }, "Какие модули включены у компании. Включает и выключает администратор платформы."),
-    g.createElement("div", { className: "co-card co-modules-list" }, JS.map((s) => g.createElement(
+    g.createElement("div", { className: "sui-hint" }, "Какие модули включены у компании. Включает и выключает администратор платформы."),
+    g.createElement("div", { className: "sui-card sui-list" }, JS.map((s) => g.createElement(
       "div",
-      { key: s.code, className: "co-module-row", "data-module": s.code },
-      g.createElement("span", { className: "co-module-name" }, s.name),
-      g.createElement("span", { className: "co-badge" + (r.has(s.code) ? " co-badge--on" : "") }, r.has(s.code) ? "включён" : "выключен")
+      { key: s.code, className: "sui-list-row", "data-module": s.code },
+      g.createElement("span", { className: "sui-title" }, s.name),
+      g.createElement("span", { className: "sui-badge" + (r.has(s.code) ? " sui-badge--on" : "") }, r.has(s.code) ? "включён" : "выключен")
     )))
   );
 }
@@ -31819,7 +31833,7 @@ function WS(l) {
       fe,
       g.createElement("div", { className: "pf-root pf-muted", "data-testid": "co-noaccess" }, "Нет права управлять компанией. Раздел доступен администратору компании (объекты и единицы — тем, кто их ведёт).")
     );
-  const ee = pd(k), P = E && ee.includes(E) ? E : ee[0], se = P === "members" ? g.createElement(s_, { api: r, companyId: y, me: m, key: y }) : P === "roles" ? g.createElement(n_, { api: r, companyId: y, key: y }) : P === "objects" && c ? g.createElement(mg, { api: c, render: (X) => g.createElement(KS, { api: c, company: X, core: s || null }) }) : P === "counterparties" && s ? g.createElement(__, { core: s, companyId: y, key: y }) : P === "directories" && c ? g.createElement(mg, { api: c, render: (X) => g.createElement(PS, { api: c, company: X }) }) : P === "branding" ? g.createElement("div", { className: "co-hint", "data-testid": "co-branding" }, "Логотип и фирменный цвет — для отчётов и шапки у всех сотрудников компании.") : P === "modules" ? g.createElement(FS, { companyId: y, key: y }) : P === "audit" ? g.createElement(f_, { api: r, companyId: y, key: y }) : null;
+  const ee = pd(k), P = E && ee.includes(E) ? E : ee[0], se = P === "members" ? g.createElement(s_, { api: r, companyId: y, me: m, key: y }) : P === "roles" ? g.createElement(n_, { api: r, companyId: y, key: y }) : P === "objects" && c ? g.createElement(mg, { api: c, render: (X) => g.createElement(KS, { api: c, company: X, core: s || null }) }) : P === "counterparties" && s ? g.createElement(__, { core: s, companyId: y, key: y }) : P === "directories" && c ? g.createElement(mg, { api: c, render: (X) => g.createElement(PS, { api: c, company: X }) }) : P === "branding" ? g.createElement("div", { className: "sui-hint", "data-testid": "co-branding" }, "Логотип и фирменный цвет — для отчётов и шапки у всех сотрудников компании.") : P === "modules" ? g.createElement(FS, { companyId: y, key: y }) : P === "audit" ? g.createElement(f_, { api: r, companyId: y, key: y }) : null;
   return g.createElement(
     "div",
     null,
@@ -31863,11 +31877,9 @@ const eT = Fb + o_ + h_ + w_ + `
 .co-list-item:hover{background:var(--hover-bg)}
 .co-list-item--active{background:var(--hover-bg);box-shadow:inset 3px 0 0 var(--primary)}
 .co-list-meta{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text-muted)}
-.co-badge{font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:6px;border:1px solid var(--card-border);color:var(--text-muted)}
 .co-panel{padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .co-row{display:flex;flex-direction:row;flex-wrap:wrap;gap:10px;align-items:flex-end}
 .co-grow{flex:1 1 200px}
-.co-hint{font-size:12px;color:var(--text-muted)}
 .co-notice{font-size:12px;color:var(--color-green)}
 .co-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .co-group{border:1px solid var(--card-border);border-radius:12px;padding:10px 12px;margin:0;min-width:0}
@@ -31876,11 +31888,6 @@ const eT = Fb + o_ + h_ + w_ + `
 .co-check input{margin-top:2px;accent-color:var(--primary)}
 .co-check input:disabled+span{color:var(--text-muted)}
 .co-danger{background:var(--color-red);border-color:var(--color-red)}
-.co-modules-list{display:flex;flex-direction:column;padding:4px 0}
-.co-module-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--card-border);min-height:44px}
-.co-module-row:last-child{border-bottom:0}
-.co-module-name{font-weight:700;color:var(--text-main)}
-.co-badge--on{color:var(--color-green);border-color:var(--color-green)}
 `, tT = `
 .pf-login{max-width:380px;margin:24px auto;padding:20px;display:flex;flex-direction:column;gap:12px}
 .pf-field{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}

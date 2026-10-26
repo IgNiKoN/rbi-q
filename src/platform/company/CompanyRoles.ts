@@ -92,13 +92,13 @@ export function CompanyRoles(props: { api: CompanyApi; companyId: string }): Rea
       },
       h('span', { className: 'co-list-name' }, r.name),
       h('span', { className: 'co-list-meta' },
-        r.template_code ? h('span', { className: 'co-badge' }, 'шаблон') : null,
+        r.template_code ? h('span', { className: 'sui-badge' }, 'шаблон') : null,
         r.active_assignments ? `назначена: ${r.active_assignments}` : null)))),
     role ? h('div', { className: 'co-panel pf-card', 'data-testid': 'co-role-panel' },
       isTemplate
         ? h('div', null,
             h('h3', { className: 'pf-title' }, role.name),
-            h('div', { className: 'co-hint', 'data-testid': 'co-template-note' }, 'Шаблон, только копия: изменить или удалить нельзя — скопируйте и настройте копию.'))
+            h('div', { className: 'sui-hint', 'data-testid': 'co-template-note' }, 'Шаблон, только копия: изменить или удалить нельзя — скопируйте и настройте копию.'))
         : h('form', { className: 'co-row', onSubmit: rename, key: 'rn-' + role.id },
             h('label', { className: 'pf-field co-grow' }, 'Название роли', h('input', { name: 'roleName', type: 'text', defaultValue: role.name, maxLength: 100 })),
             h('button', { type: 'submit', className: 'pf-btn pf-btn--ghost', disabled: busy }, 'Переименовать')),

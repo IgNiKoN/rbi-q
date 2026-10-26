@@ -106,7 +106,7 @@ export function CounterpartiesTab(props: { core: CoreApi; companyId: string }): 
         h('span', null, 'Показать архив')),
       canManage ? h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'cp-add', onClick: () => { setEdit({ id: null, d: { ...EMPTY, requisites: {} } }); setError(''); setNotice(''); } },
         'Добавить контрагента') : null),
-    !canManage ? h('div', { className: 'co-hint', 'data-testid': 'cp-readonly' }, 'Только просмотр: нет права управлять контрагентами.') : null,
+    !canManage ? h('div', { className: 'sui-hint', 'data-testid': 'cp-readonly' }, 'Только просмотр: нет права управлять контрагентами.') : null,
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     notice ? h('div', { className: 'co-notice', role: 'status' }, notice) : null,
     form,
@@ -114,8 +114,8 @@ export function CounterpartiesTab(props: { core: CoreApi; companyId: string }): 
       list.length
         ? list.map((c) => h('button', { key: c.id, type: 'button', className: 'cp-row' + (edit?.id === c.id ? ' cp-row--active' : ''), 'data-cp-id': c.id,
             onClick: () => { setEdit({ id: c.id, d: draftOf(c) }); setError(''); setNotice(''); } },
-            h('span', { className: 'cp-name' }, c.name, c.archived_at ? h('span', { className: 'co-badge cp-badge' }, 'архив') : null,
-              c.draft ? h('span', { className: 'co-badge cp-badge', 'data-testid': 'cp-draft' }, 'из Качества · нужен ИНН') : null),
+            h('span', { className: 'cp-name' }, c.name, c.archived_at ? h('span', { className: 'sui-badge cp-badge' }, 'архив') : null,
+              c.draft ? h('span', { className: 'sui-badge cp-badge', 'data-testid': 'cp-draft' }, 'из Качества · нужен ИНН') : null),
             h('span', { className: 'cp-inn' }, c.inn ? 'ИНН ' + c.inn + (c.kpp ? ' · КПП ' + c.kpp : '') : 'ИНН не указан'),
             h('span', { className: 'cp-kind' }, kindLabels(c.kinds))))
         : h('div', { className: 'pj-empty pf-muted cp-empty', 'data-testid': 'cp-empty' },
