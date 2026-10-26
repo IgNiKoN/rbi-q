@@ -21,7 +21,7 @@ interface Person {
   disabled: boolean; mustChange: boolean; managed: boolean;
 }
 /** Временный пароль на экране: показывается один раз, после «Готово» не восстановить. */
-interface TempPassword { who: string; email: string; password: string }
+interface TempPassword { who: string; email: string; password: string; note?: string }
 
 const SCOPE_CONTRACTOR = 'quality.scope.contractor';
 
@@ -114,7 +114,9 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
     setBusy(false);
     if (!res.ok) { setError(res.message); return; }
     form.reset(); setAdding(false);
-    if (res.value.temp_password) setTemp({ who: name, email: email.toLowerCase(), password: res.value.temp_password });
+    // P2-0035b: пароль пришёл, а учётка не новая — её раньше создала другая компания: сервер сменил пароль и закрыл входы
+    if (res.value.temp_password) setTemp({ who: name, email: email.toLowerCase(), password: res.value.temp_password,
+      note: res.value.created ? undefined : 'Эту учётку раньше создала другая компания — прежний пароль больше не действует, все входы закрыты.' });
     else setNotice('У этой почты уже есть учётка — сотрудник добавлен в компанию, пароль у него прежний');
     await load();
   }
@@ -251,6 +253,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
     temp ? h('div', { className: 'co-panel co-temp', role: 'status', 'data-testid': 'co-temp' },
       h('div', { className: 'co-temp-title' }, `Временный пароль — ${temp.who}`),
       h('div', { className: 'pf-muted' }, `Почта для входа: ${temp.email}`),
+      temp.note ? h('div', { className: 'sui-hint', 'data-testid': 'co-temp-note' }, temp.note) : null,
       h('div', { className: 'co-row' },
         h('code', { className: 'co-temp-pw', 'data-testid': 'co-temp-pw' }, temp.password),
         h('button', { type: 'button', className: 'pf-btn co-btn-sm', 'data-testid': 'co-temp-copy', onClick: () => { void copyTemp(); } }, copied ? 'Скопировано' : 'Скопировать'),

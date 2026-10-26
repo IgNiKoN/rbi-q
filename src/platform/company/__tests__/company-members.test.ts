@@ -65,6 +65,7 @@ function fakeApi(opts: { fail?: string } = {}) {
       calls.push(`add:${co}:${email}:${name}:${role}:${project}`);
       if (opts.fail) return { ok: false, message: opts.fail };
       const existing = email === 'old@test.invalid';
+      if (email === 'foreign@test.invalid') return { ok: true, value: { user_id: 'u-f', temp_password: 'Fr3shPass8wordZ', created: false } };   // P2-0035b: учётка другой компании
       members = [...members, { ...A('a-added', 'u-added', email.toLowerCase(), 'Старший прораб', project ? 'Проект Альфа' : null, true),
         full_name: name, must_change_password: !existing, managed: !existing }];
       return { ok: true, value: { user_id: 'u-added', temp_password: existing ? null : 'Tmp7Pass9wordQ', created: !existing } };
@@ -475,4 +476,18 @@ test('сотрудники: меню «⋯» закрывается Escape; ди
   win.document.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape' }));
   await tick();
   assert.equal(btn.getAttribute('aria-expanded'), 'false');
+});
+
+test('P2-0035b: почта, учётку на которую создала другая компания, — новый временный пароль и пояснение «прежний пароль не действует»', async () => {
+  const { api } = fakeApi();
+  const el = mount(api);
+  await tick();
+  click(el.querySelector('[data-testid=co-add-open]'));
+  await tick();
+  const form = el.querySelector('[data-testid=co-add]');
+  fill(form, { email: 'foreign@test.invalid', full_name: 'Иванов И.И.', role: 'r-senior' });
+  submit(form);
+  await tick();
+  assert.equal(el.querySelector('[data-testid=co-temp-pw]').textContent, 'Fr3shPass8wordZ');
+  assert.match(el.querySelector('[data-testid=co-temp-note]').textContent, /другая компания — прежний пароль больше не действует/);
 });

@@ -437,11 +437,13 @@
             return false;
         },
 
-        // 8. Можно ли удалить конкретную запись
-        canDelete(ownerName) {
+        // 8. Можно ли удалить конкретную запись. P2-0035b: есть номер учётки владельца и свой — сравниваем номера (ФИО — подпись)
+        canDelete(ownerName, ownerId) {
             const perms = this.getPermissions();
             if (perms.canDeleteAll) return true;
             if (perms.canDeleteOwn) {
+                const myId = window.syncConfig && window.syncConfig.authUserId;
+                if (ownerId && myId) return ownerId === myId;
                 return ownerName === this.getCurrentEngineerName();
             }
             return false;
@@ -798,8 +800,8 @@
             return permissions.canEdit(ownerName || '');
         },
 
-        canDelete: function (ownerName) {
-            return permissions.canDelete(ownerName || '');
+        canDelete: function (ownerName, ownerId) {
+            return permissions.canDelete(ownerName || '', ownerId);
         },
 
         canManageRoles: function () {
