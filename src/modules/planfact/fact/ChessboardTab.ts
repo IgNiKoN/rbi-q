@@ -182,7 +182,7 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
         h('select', { className: 'pj-input', value: b || '', 'data-testid': 'cb-building', onChange: (e) => { setBuilding((e.target as HTMLSelectElement).value); setSel(null); } },
           blds.map((x) => h('option', { key: x.id, value: x.id }, x.name)))) : null,
       view === 'sections'
-        ? h('label', { className: 'pf-field' }, 'Вид работ',
+        ? h('label', { className: 'pf-field cb-workpick' }, 'Вид работ',
             h('select', { className: 'pj-input', value: w || ALL, 'data-testid': 'cb-work', onChange: (e) => { setWork((e.target as HTMLSelectElement).value); setSel(null); } },
               h('option', { value: ALL }, 'Все виды работ'), works.map((x) => h('option', { key: x.id, value: x.id }, x.name))))
         : secs.length > 1 ? h('label', { className: 'pf-field' }, 'Секция',
@@ -201,6 +201,7 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
 }
 
 export const CHESSBOARD_CSS = `
+.cb-workpick{max-width:480px}
 .cb-root{display:flex;flex-direction:column;gap:10px;min-width:0}
 .cb-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .cb-mode,.cb-loose{font-size:12px}

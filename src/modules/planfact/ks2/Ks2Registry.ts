@@ -6,7 +6,7 @@
  */
 import { createElement as h, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
-import { RegistryTable, StatusBadge, buildRegistryXlsx, queryOf, queryToState, registryFileName, registryRows, saveXlsx, syncRegistryAddress } from '../../../platform/ui/index.ts';
+import { RegistryExport, RegistryTable, StatusBadge, buildRegistryXlsx, queryOf, queryToState, registryFileName, registryRows, saveXlsx, syncRegistryAddress } from '../../../platform/ui/index.ts';
 import type { RegistryColumn, RegistryFilter, RegistryState, Status } from '../../../platform/ui/index.ts';
 import type { Ks2ActItem, Ks2Status } from './ks2.service.ts';
 import { STATUS_LABEL } from './model.ts';
@@ -65,10 +65,8 @@ export function Ks2Registry(props: Ks2RegistryProps): ReactElement {
   const visibleCols = columns.filter((c) => c.fixed || (state.cols ? state.cols.includes(c.id) : !c.hidden));
 
   return h('div', { className: 'k2r', 'data-testid': 'k2-registry' },
-    h('div', { className: 'pj-actions' },
-      h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'k2r-export-all', disabled: !ordered.length,
-        onClick: () => { void exportActs(visibleCols, ordered, save); } }, `Выгрузить список в Excel (${ordered.length})`)),
     h(RegistryTable<Ks2ActItem>, {
+      tools: h(RegistryExport, { testId: 'k2r-export-all', count: ordered.length, onClick: () => { void exportActs(visibleCols, ordered, save); } }),
       testId: 'k2r-table', rows: acts, rowKey: (a) => a.id, columns, filters: KS2_FILTERS, state, onState,
       toneOf: (a) => STATUS_TONE[a.status], toneLabel: TONE_LABEL,
       selected, onSelect: setSelected, onOpen: (a) => props.onOpen(a.id),

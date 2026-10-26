@@ -3,9 +3,11 @@
  * Архивные объекты скрыты по умолчанию; «Показать архив (N)» — показать их с пометкой «(архив)»; выбран архивный — подпись
  * «Объект в архиве — только просмотр» (запись в архивный объект запрещает сервер; разделы дополнительно прячут кнопки ввода).
  * Признак архива — только projects.archived_at (pf_my_projects отдаёт его вместе со строкой проекта).
+ * P2-0041: выбор стоит в шапке раздела (InHead) и общий для разделов — выбранный объект запоминается на устройстве.
  */
-import { createElement as h, Fragment, useState } from 'react';
+import { createElement as h, useState } from 'react';
 import type { ReactElement } from 'react';
+import { InHead, rememberedProject, rememberProject } from './PageHead.ts';
 
 export interface PickProject { id: string; name: string; archived_at?: string | null }
 
@@ -27,10 +29,12 @@ export function hashParam(hash: string, key: string): string {
   return '';
 }
 
-/** Объект при открытии раздела: из перехода (p=…), если он есть в списке; иначе — первый действующий. */
-export function initialProjectId(list: PickProject[], hash: string): string {
+/** Объект при открытии раздела: из перехода (p=…), если он есть в списке; иначе — выбранный последним (P2-0041);
+ *  иначе — первый действующий. Адрес важнее памяти. */
+export function initialProjectId(list: PickProject[], hash: string, remembered: string = rememberedProject()): string {
   const want = hashParam(hash, 'p');
-  return want && list.some((p) => p.id === want) ? want : firstProjectId(list);
+  if (want && list.some((p) => p.id === want)) return want;
+  return remembered && list.some((p) => p.id === remembered) ? remembered : firstProjectId(list);
 }
 
 /** Что показать в списке: действующие; архивные — при «Показать архив» (и всегда — выбранный сейчас). */
@@ -40,7 +44,8 @@ export function visibleProjects<T extends PickProject>(list: T[], showArchive: b
 
 /** alwaysSelect — список даже из одного объекта (ВОР: так было до P2-0011). */
 export function ProjectPicker(props: { list: PickProject[]; value: string; onChange: (id: string) => void; testId?: string; alwaysSelect?: boolean }): ReactElement {
-  const { list, value, onChange, testId, alwaysSelect } = props;
+  const { list, testId, alwaysSelect, value } = props;
+  const onChange = (id: string): void => { rememberProject(id); props.onChange(id); };
   const [showArchive, setShowArchive] = useState(false);
   const archivedN = list.filter(isArchived).length;
   const shown = visibleProjects(list, showArchive, value);
@@ -51,11 +56,11 @@ export function ProjectPicker(props: { list: PickProject[]; value: string; onCha
     setShowArchive(next);
     if (!next && isArchived(current) && list.some((p) => !isArchived(p))) onChange(firstProjectId(list));
   };
-  return h(Fragment, null,
+  return h(InHead, { slot: 'picker' },
     shown.length > 1 || (alwaysSelect && shown.length)
-      ? h('select', { className: 'pj-input pj-company', 'aria-label': 'Проект', value, 'data-testid': testId, onChange: (e) => onChange((e.target as HTMLSelectElement).value) },
+      ? h('select', { className: 'pj-input pj-company', 'aria-label': 'Объект', value, 'data-testid': testId, onChange: (e) => onChange((e.target as HTMLSelectElement).value) },
           shown.map((p) => h('option', { key: p.id, value: p.id }, label(p))))
-      : h('div', { className: 'pf-muted' }, 'Проект: ', h('b', null, current ? label(current) : '—')),
+      : h('div', { className: 'pf-muted pp-one' }, 'Объект: ', h('b', null, current ? label(current) : '—')),
     archivedN
       ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost pj-toggle', 'data-testid': 'pp-archive', onClick: toggle },
           showArchive ? 'Скрыть архив' : `Показать архив (${archivedN})`)

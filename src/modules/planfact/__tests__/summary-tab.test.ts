@@ -112,7 +112,7 @@ test('серый светофор: без договорной КП — прич
   assert.equal(metric(tile(el, 'lag')), '—');
 });
 
-test('несколько объектов: таблица по отставанию (сверху самые отстающие), выбор объекта чипом и из таблицы, период', async () => {
+test('несколько объектов: таблица по отставанию (сверху самые отстающие), выбор объекта списком (P2-0041) и из таблицы, период', async () => {
   const a: SummaryProject = { ...PTO_PROJECT, project_id: 'a', name: 'ЖК А', lag_days: 2, light: 'green', light_reason: 'on_track' };
   const b: SummaryProject = { ...PTO_PROJECT, project_id: 'b', name: 'ЖК Б', lag_days: 45.9, light: 'red', light_reason: 'lag_red' };
   const c: SummaryProject = { ...PTO_PROJECT, project_id: 'c', name: 'ЖК В', lag_days: null, light: 'grey', light_reason: 'no_dates' };
@@ -123,13 +123,14 @@ test('несколько объектов: таблица по отставан�
   assert.deepEqual([...el.querySelectorAll('[data-testid="sm-objects"] tbody tr')].map((r: N) => r.getAttribute('data-project-id')), ['b', 'a', 'c']);
   assert.equal(el.querySelector('[data-project-id="b"] [data-testid="sm-olag"]').textContent, '46 дн.');
   assert.equal(el.querySelector('[data-project-id="b"] [data-testid="sm-olight"]').textContent, 'Отставание');
-  assert.equal(el.querySelector('[data-testid="sm-chip-all"]').textContent, 'Все объекты (3)');
+  const pick = el.querySelector('[data-testid="sm-project"]');
+  assert.deepEqual([...pick.options].map((o: N) => o.textContent), ['Все объекты (3)', 'ЖК Б', 'ЖК А', 'ЖК В']);
   el.querySelector('[data-project-id="b"] [data-testid="sm-open"]').click(); await tick();
   assert.equal(el.querySelector('[data-testid="sm-dashboard"]').getAttribute('data-project-id'), 'b');
   assert.ok(f.calls.includes('weekly:b:8'));
   [...el.querySelectorAll('[data-testid="sm-chip-period"]')].find((x: N) => x.textContent === '12 недель').click(); await tick();
   assert.ok(f.calls.includes('weekly:b:12'), 'период 12 недель — новый запрос');
-  [...el.querySelectorAll('[data-testid="sm-chip-project"]')].find((x: N) => x.textContent === 'ЖК А').click(); await tick();
+  pick.value = 'a'; pick.dispatchEvent(new win.Event('change', { bubbles: true })); await tick();
   assert.equal(el.querySelector('[data-testid="sm-dashboard"]').getAttribute('data-project-id'), 'a');
   el.querySelector('[data-testid="sm-back"]').click(); await tick();
   assert.equal(el.querySelector('[data-testid="sm-dashboard"]'), null);

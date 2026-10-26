@@ -7,7 +7,7 @@
  */
 import { createElement as h, useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
-import { HistoryFeed, RegistryTable, SideCard, StatusBadge, buildRegistryXlsx, queryOf, queryToState, registryFileName, registryRows, saveXlsx, syncRegistryAddress } from '../../../platform/ui/index.ts';
+import { HistoryFeed, RegistryExport, RegistryTable, SideCard, StatusBadge, buildRegistryXlsx, queryOf, queryToState, registryFileName, registryRows, saveXlsx, syncRegistryAddress } from '../../../platform/ui/index.ts';
 import type { RegistryColumn, RegistryFilter, RegistryState, Status } from '../../../platform/ui/index.ts';
 import type { FactApi, FactHistoryRow, FactJournalRow, FactStatus } from './fact.service.ts';
 import { fmtPeriod, fmtQty, todayMoscow } from './fact.ts';
@@ -139,17 +139,15 @@ export function FactJournal(props: FactJournalProps): ReactElement {
 
   return h('div', { className: 'pj-tab vr-tab fp-registry', 'data-testid': 'fj-journal' },
     h('div', { className: 'fj-period', role: 'group', 'aria-label': 'Период по дате работ', 'data-testid': 'fj-period' },
-      h('label', { className: 'pf-field' }, 'С', h('input', { type: 'date', className: 'pj-input', value: from, max: to || undefined, 'data-testid': 'fj-from', onChange: (e) => setFrom((e.target as HTMLInputElement).value) })),
-      h('label', { className: 'pf-field' }, 'По', h('input', { type: 'date', className: 'pj-input', value: to, min: from || undefined, 'data-testid': 'fj-to', onChange: (e) => setTo((e.target as HTMLInputElement).value) })),
-      h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'fj-apply', onClick: () => { void load(from, to); } }, 'Показать'),
+      // P2-0041: период применяется сразу (кнопки «Показать» нет)
+      h('label', { className: 'pf-field' }, 'С', h('input', { type: 'date', className: 'pj-input', value: from, max: to || undefined, 'data-testid': 'fj-from', onChange: (e) => { const v = (e.target as HTMLInputElement).value; setFrom(v); void load(v, to); } })),
+      h('label', { className: 'pf-field' }, 'По', h('input', { type: 'date', className: 'pj-input', value: to, min: from || undefined, 'data-testid': 'fj-to', onChange: (e) => { const v = (e.target as HTMLInputElement).value; setTo(v); void load(from, v); } })),
       h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'fj-7', onClick: () => preset(7) }, '7 дней'),
       h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'fj-30', onClick: () => preset(JOURNAL_DAYS) }, '30 дней')),
     error ? h('div', { className: 'pf-error', role: 'alert', 'data-testid': 'fj-error' }, error) : null,
     rows && rows.length >= JOURNAL_LIMIT ? h('div', { className: 'pj-notice', role: 'status', 'data-testid': 'fj-limit' }, `Показаны последние ${JOURNAL_LIMIT.toLocaleString('ru-RU')} записей периода — сузьте период, чтобы увидеть остальные.`) : null,
-    rows === null ? h('div', { className: 'pf-muted' }, 'Загрузка журнала…') : h('div', { className: 'pj-actions' },
-      h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'fj-export-all', disabled: !ordered.length,
-        onClick: () => { void exportRows(visibleCols, ordered, save); } }, `Выгрузить список в Excel (${ordered.length})`)),
-    rows === null ? null : h(RegistryTable<JournalRow>, {
+    rows === null ? h('div', { className: 'pf-muted' }, 'Загрузка журнала…') : h(RegistryTable<JournalRow>, {
+      tools: h(RegistryExport, { testId: 'fj-export-all', count: ordered.length, onClick: () => { void exportRows(visibleCols, ordered, save); } }),
       testId: 'fj-table', rows, rowKey: (r) => r.id, columns: JOURNAL_COLUMNS, filters: JOURNAL_FILTERS, state, onState, groupBy: GROUP,
       toneOf: (r) => FACT_LABEL[r.status].tone, toneLabel: TONE_LABEL,
       selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId,

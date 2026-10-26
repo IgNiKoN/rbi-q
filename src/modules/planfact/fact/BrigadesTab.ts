@@ -7,6 +7,7 @@ import { createElement as h, useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import type { CompanyAccess } from '../../../platform/core/projects.service.ts';
 import type { Brigade, FactApi } from './fact.service.ts';
+import { InHead } from '../PageHead.ts';
 
 export function BrigadesTab(props: { api: FactApi; company: CompanyAccess }): ReactElement {
   const { api, company } = props;
@@ -16,6 +17,7 @@ export function BrigadesTab(props: { api: FactApi; company: CompanyAccess }): Re
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   async function load(withArchived = archived): Promise<void> { setRows(await api.listBrigades(company.company_id, withArchived)); }
   useEffect(() => { void load(); }, []);
@@ -32,7 +34,7 @@ export function BrigadesTab(props: { api: FactApi; company: CompanyAccess }): Re
     const r = await api.saveBrigade(company.company_id, id, val('name'), val('leader'), val('phone'));
     setBusy(false);
     if (!r.ok) { setError(r.message); return; }
-    if (!id) f.reset();
+    if (!id) { f.reset(); setAdding(true); }   // P2-0041: форма остаётся открытой — можно добавить следующую
     setEditId(''); setNotice(id ? 'Бригада изменена' : 'Бригада добавлена'); await load();
   }
   async function archive(b: Brigade, value: boolean): Promise<void> {
@@ -49,12 +51,18 @@ export function BrigadesTab(props: { api: FactApi; company: CompanyAccess }): Re
   const field = (label: string, name: string, def: string, cls = ''): ReactElement =>
     h('label', { className: 'pf-field ' + cls }, label, h('input', { name, type: 'text', className: 'pj-input', maxLength: name === 'name' ? 120 : 120, defaultValue: def }));
 
+  // Форма «Добавить» — по кнопке «+ Бригада» в шапке раздела (P2-0041); при пустом списке открыта сразу (право неизвестно — сервер проверит).
+  const formOpen = rows.length === 0 || (canManage && adding);
   return h('div', { className: 'pj-tab br-tab', 'data-testid': 'br-tab' },
-    // Форма «Добавить» видна всем, у кого есть право; при пустом списке право неизвестно — показываем, сервер проверит.
-    (canManage || rows.length === 0)
-      ? h('form', { className: 'pf-card pj-form', onSubmit: (e: FormEvent) => { void save(e, null); }, 'data-testid': 'br-add' },
+    canManage && !formOpen
+      ? h(InHead, { slot: 'actions' }, h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'br-add-open', onClick: () => setAdding(true) }, '+ Бригада'))
+      : null,
+    formOpen
+      ? h('form', { className: 'pf-card pj-form br-add', onSubmit: (e: FormEvent) => { void save(e, null); }, 'data-testid': 'br-add' },
           field('Название бригады', 'name', '', 'pj-grow'), field('Бригадир', 'leader', '', 'pj-grow'), field('Телефон', 'phone', '', 'pj-grow'),
-          h('button', { type: 'submit', className: 'pf-btn', disabled: busy }, 'Добавить бригаду'))
+          h('div', { className: 'pj-actions' },
+            rows.length ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'br-add-cancel', onClick: () => setAdding(false) }, 'Готово') : null,
+            h('button', { type: 'submit', className: 'pf-btn', disabled: busy }, 'Добавить бригаду')))
       : null,
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     notice ? h('div', { className: 'pj-notice', role: 'status' }, notice) : null,

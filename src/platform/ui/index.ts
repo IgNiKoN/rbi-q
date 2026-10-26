@@ -7,7 +7,7 @@ export type { ChartTable, LineSeries, Bar } from './charts.ts';
 export { compactNumber, compactRub, dayMonth, monthLabel, daysBetween, niceStep } from './format.ts';
 export { ChessCell, ChessScale, CHESS_STATE_LABEL, P2_CHESS_CSS } from './chess.ts';
 export type { ChessState } from './chess.ts';
-export { RegistryTable, registryRows } from './registry/RegistryTable.ts';
+export { RegistryExport, RegistryTable, registryRows } from './registry/RegistryTable.ts';
 export type { RegistryProps, RegistryGroupBy } from './registry/RegistryTable.ts';
 export { SideCard, Steps, HistoryFeed } from './registry/SideCard.ts';
 export type { Step, HistoryItem } from './registry/SideCard.ts';

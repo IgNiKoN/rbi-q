@@ -3,7 +3,7 @@
  * «Сохранить черновик» (строки исходника на сервер порциями). Без сервера (демо) — только предпросмотр.
  * Библиотека Excel и чтение файла подгружаются лениво (import('./xlsx-reader.ts')) — только когда выбран файл.
  */
-import { createElement as h, useEffect, useMemo, useState } from 'react';
+import { createElement as h, Fragment, useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import { parseSheet, contextLabel, columnMapFrom, editColumn } from './parse.ts';
 import type { ColumnMap, EditableRole, ParseResult, ParsedRow, RowKind, SheetData } from './parse.ts';
@@ -17,7 +17,8 @@ import type { SummaryApi } from '../summary/summary.service.ts';
 import type { ProjectsApi } from '../../../platform/core/projects.service.ts';
 import { VOR_MANAGE } from './vor.service.ts';
 import type { VorApi, VorImport, VorProfile, VorProject } from './vor.service.ts';
-import { firstProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
+import { initialProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
+import { InHead } from '../PageHead.ts';
 
 const KIND_LABEL: Record<RowKind, string> = { work: 'Работа', material: 'Материал', group: 'Группа', context: 'Место', skip: 'Пропуск' };
 type Filter = 'all' | RowKind;
@@ -136,7 +137,7 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
 
   useEffect(() => {
     if (!api) return;
-    void api.listProjects().then((list) => { setProjects(list); if (list.length) setProjectId(firstProjectId(list)); });
+    void api.listProjects().then((list) => { setProjects(list); if (list.length) setProjectId(initialProjectId(list, window.location.hash)); });
   }, []);
 
   // Счётчик подвкладки «Позиции (N)» — позиции подтверждённых загрузок проекта.
@@ -229,11 +230,11 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
       onBack: () => { setOpenId(''); void reloadImports(projectId); }, onChanged: () => { void api.listImports(projectId).then(setImports); } });
   }
 
+  // P2-0041: выбор объекта — в шапке раздела (ProjectPicker сам переносится туда); здесь остаётся только пометка «просмотр».
   const picker = api && projects
-    ? h('div', { className: 'pf-card pj-form' },
-        h('div', { className: 'pf-field pj-grow' }, 'Проект',
-          h(ProjectPicker, { list: projects, value: projectId, onChange: setProjectId, testId: 'vor-project', alwaysSelect: true })),
-        sub === 'load' && !canManage && perms.length ? h('span', { className: 'pf-muted', 'data-testid': 'vor-readonly' }, 'Только просмотр: загрузка ВОР доступна ПТО, РП и администратору.') : null)
+    ? h(Fragment, null,
+        h(ProjectPicker, { list: projects, value: projectId, onChange: setProjectId, testId: 'vor-project', alwaysSelect: true }),
+        sub === 'load' && !canManage && perms.length ? h('div', { className: 'pf-muted', 'data-testid': 'vor-readonly' }, 'Только просмотр: загрузка ВОР доступна ПТО, РП и администратору.') : null)
     : null;
   if (api && sub === 'positions') {
     const company = (projects || []).find((p) => p.id === projectId)?.company_id || '';
@@ -255,9 +256,10 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
         : h(VorPositions, { key: projectId, api, projectId })
       : null,
     api && !canManage ? null : h('div', { className: 'pf-card pj-form' },
-      h('label', { className: 'pf-btn vor-file' + (busy ? ' vor-file--busy' : '') },
-        busy ? 'Читаю файл…' : 'Загрузить Excel (.xlsx)',
-        h('input', { type: 'file', accept: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disabled: busy, onChange: pick, 'data-testid': 'vor-file' })),
+      // P2-0041: «Загрузить Excel» — главное действие экрана, в шапке раздела; здесь — лист файла или подсказка
+      h(InHead, { slot: 'actions' }, h('label', { className: 'pf-btn vor-file' + (busy ? ' vor-file--busy' : '') },
+        busy ? 'Читаю файл…' : 'Загрузить ВОР',
+        h('input', { type: 'file', accept: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', disabled: busy, onChange: pick, 'data-testid': 'vor-file' }))),
       file
         ? h('label', { className: 'pf-field pj-grow' }, `Лист файла «${file.name}»`,
             h('select', { className: 'pj-input', value: sheet, 'data-testid': 'vor-sheet', onChange: (e: ChangeEvent<HTMLSelectElement>) => { setSheet(e.currentTarget.value); setFilter('all'); } },

@@ -109,7 +109,7 @@ test('экран: чипы с «×», панель «Фильтрация» — 
   click(box.querySelector('[data-testid="p2-reg-filter"]'));
   click(box.querySelector('[data-filter="corp"] input[data-value="Корпус 10"]'));
   click(box.querySelector('[data-testid="p2-reg-panel-apply"]'));
-  click(box.querySelector('[data-testid="p2-reg-overdue"]'));
+  click(box.querySelector('[data-testid=\"p2-reg-filter\"]')); click(box.querySelector('[data-testid=\"p2-reg-overdue\"]'));
   assert.deepEqual(rowsShown(box), ['d'], 'фильтр + только просроченные');
   assert.equal(box.querySelector('[data-testid="p2-reg-overdue"]').getAttribute('aria-pressed'), 'true');
   click(box.querySelector('[data-testid="p2-reg-reset"]'));
@@ -126,7 +126,7 @@ test('экран: выбор строк, «Выбрано: N» с действи
   assert.equal(box.querySelector('[data-testid="act"]').textContent, 'b,d', 'действия получают выбранные строки по порядку экрана');
   click(box.querySelector('[data-testid="p2-reg-unselect"]'));
   assert.equal(box.querySelector('[data-testid="p2-reg-selbar"]'), null);
-  click(box.querySelector('[data-testid="p2-reg-overdue"]'));
+  click(box.querySelector('[data-testid=\"p2-reg-filter\"]')); click(box.querySelector('[data-testid=\"p2-reg-overdue\"]'));
   click(box.querySelector('[data-testid="p2-reg-select-all"]'));
   assert.match(box.querySelector('[data-testid="p2-reg-selected"]').textContent, /Выбрано: 2/, 'выбрать все — только видимые после фильтра');
   click(box.querySelector('[data-testid="p2-reg-select-all"]'));
@@ -173,6 +173,7 @@ test('экран: выбор колонок (закреплённая не ск�
   const none = mount(h(Harness, { initial: { ...ui.EMPTY_STATE, f: { corp: ['Корпус 99'] } } }));
   assert.match(none.querySelector('[data-testid="p2-reg-empty"]').textContent, /Ничего не найдено/);
   const hint = mount(h(Harness, { overdueHint: 'Нет срока объекта' }));
+  click(hint.querySelector('[data-testid=\"p2-reg-filter\"]'));   // P2-0041: «Только просроченные» — в «Фильтре»
   assert.equal(hint.querySelector('[data-testid="p2-reg-overdue"]').disabled, true);
   assert.equal(hint.querySelector('[data-testid="p2-reg-overdue-hint"]').textContent, 'Нет срока объекта');
 });
@@ -234,7 +235,7 @@ test('виды: сохраняются и открываются по компа
       copy: async (t: string) => { copied = t; return true; } });
   }
   const box = mount(h(ViewHarness));
-  click(box.querySelector('[data-testid="p2-reg-overdue"]'));
+  click(box.querySelector('[data-testid=\"p2-reg-filter\"]')); click(box.querySelector('[data-testid=\"p2-reg-overdue\"]'));
   click(box.querySelector('[data-testid="p2-reg-views-open"]'));
   const name = box.querySelector('[data-testid="p2-reg-view-name"]');
   flushSync(() => { const set = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')!.set!; set.call(name, 'Просроченные'); name.dispatchEvent(new win.Event('input', { bubbles: true })); });

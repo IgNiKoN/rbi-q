@@ -7,7 +7,7 @@
 import { createElement as h, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactElement, ReactNode } from 'react';
-import { buildRegistryXlsx, registryFileName, saveXlsx } from '../../../platform/ui/index.ts';
+import { RegistryExport, buildRegistryXlsx, registryFileName, saveXlsx } from '../../../platform/ui/index.ts';
 import type { RegistryColumn } from '../../../platform/ui/index.ts';
 import type { Brigade, FactApi, FactPosition } from '../fact/fact.service.ts';
 import { FACT_CREATE } from '../fact/fact.service.ts';
@@ -71,8 +71,7 @@ export function positionRegistryActions(fact: FactApi, perms: string[], projectI
   const canClose = perms.includes(FACT_CREATE) && !archived;
   return {
     actions: (rows, ctx): ReactNode => h(SelectedActions, { fact, rows, columns: ctx.columns, canClose, projectId, companyId, reload: ctx.reload, clear: ctx.clear, notify: ctx.notify, save }),
-    tools: (ctx): ReactNode => h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'vr-export-all', disabled: !ctx.rows.length,
-      onClick: () => { void exportRows(ctx.columns, ctx.rows, save); } }, `Выгрузить список в Excel (${ctx.rows.length})`),
+    tools: (ctx): ReactNode => h(RegistryExport, { testId: 'vr-export-all', count: ctx.rows.length, onClick: () => { void exportRows(ctx.columns, ctx.rows, save); } }),
   };
 }
 

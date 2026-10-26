@@ -23,8 +23,10 @@ type N = any;
 
 function auth(): AuthApi & { out: () => void } {
   let signed = true;
+  let cb: () => void = () => {};
   return { async signIn() { return { ok: true }; }, async signOut() { signed = false; }, async getEmail() { return signed ? 'foreman@demo.invalid' : null; },
-    async getAccess() { return [{ company: 'Демо-компания', role: 'Прораб / мастер', projectId: null }]; }, out: () => { signed = false; } };
+    async getAccess() { return [{ company: 'Демо-компания', role: 'Прораб / мастер', projectId: null }]; },
+    onAuthChange(fn: () => void) { cb = fn; fn(); return () => {}; }, out: () => { signed = false; cb(); } };
 }
 /** Доступ к одной компании без права на сметы (как у прораба): PlanfactApp спрашивает только myAccess. */
 const projects = (): N => ({ async myAccess() { return [{ company_id: 'c1', company_name: 'Демо-компания', can_manage_projects: false, can_manage_units: false, can_manage_roles: false }]; } });
@@ -57,11 +59,11 @@ test('#/planfact и адрес раздела без права (Смета бе
 
 test('вход → шапка оболочки «почта · роль»; выход → прежний пользователь', async () => {
   const s = shell();
-  const el = mount('#/planfact', auth()); await tick();
+  const a = auth();
+  const el = mount('#/planfact', a); await tick();
   assert.deepEqual(s.calls[s.calls.length - 1], { name: 'foreman@demo.invalid', role: 'Прораб / мастер' });
   assert.equal(win.document.getElementById('header-user-block')!.textContent, 'foreman@demo.invalid · Прораб / мастер');
-  const out = Array.from(el.querySelectorAll('button') as N[]).find((b: N) => b.textContent === 'Выйти') as N;
-  out.dispatchEvent(new win.Event('click', { bubbles: true })); await tick();
+  a.out(); await tick();   // P2-0041: выход — в «Настройки → Моё»; раздел узнаёт о нём по смене входа
   assert.equal(win.document.getElementById('desk-user-name')!.textContent, 'Инженер');
   assert.equal(win.document.getElementById('desk-user-avatar')!.textContent, 'ИН');
   assert.equal(win.document.getElementById('header-user-block')!.textContent, 'Инженер · engineer');

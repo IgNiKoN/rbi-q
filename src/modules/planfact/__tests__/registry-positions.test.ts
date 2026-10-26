@@ -117,13 +117,13 @@ test('экран на подставном сервере: 600 позиций, �
   assert.deepEqual(counts(groups[2]), ['red:1', 'grey:199']);
 
   const t0 = Date.now();
-  click(box.querySelector('[data-testid="p2-reg-overdue"]'));
+  click(box.querySelector('[data-testid=\"p2-reg-filter\"]')); click(box.querySelector('[data-testid=\"p2-reg-overdue\"]'));
   const dt = Date.now() - t0;
   assert.ok(dt < 1500, `«Только просроченные» на 600 позициях: ${dt} мс`);
   assert.deepEqual(qa(box, 'tr[data-row]').map((x) => x.getAttribute('data-row')), ['p1-1-2']);
   assert.match(win.location.hash, /^#\/planfact\/vor\/positions\?overdue=1$/, 'вид в адресе');
   assert.ok(box.querySelector('tr[data-row="p1-1-2"] [data-testid="vr-overdue"]'), 'бейдж «Просрочено»');
-  click(box.querySelector('[data-testid="p2-reg-overdue"]'));
+  click(box.querySelector('[data-testid=\"p2-reg-filter\"]')); click(box.querySelector('[data-testid=\"p2-reg-overdue\"]'));
 
   // сверка со «Сводкой»: план, факт, %, остаток — те же числа pf_summary_positions
   const sum = (await stand.summary.positions('pr1', null) as N).value.find((p: N) => p.position_id === 'p1-1-3');
@@ -174,6 +174,7 @@ test('нет срока объекта: «Только просроченные�
   win.history.replaceState(null, '', '#/planfact/vor/positions');
   const stand = makeStand(standPositions(1, 1, 2), { finish: null });
   const box = await mount(h(PositionsRegistry, { fact: stand.fact, summary: stand.summary, projectId: 'pr1', companyId: 'c1', user: 'pto@x', today: T }));
+  click(box.querySelector('[data-testid=\"p2-reg-filter\"]'));   // P2-0041: «Только просроченные» — в «Фильтре»
   assert.equal(box.querySelector('[data-testid="p2-reg-overdue"]').disabled, true);
   assert.match(box.querySelector('[data-testid="p2-reg-overdue-hint"]').textContent, /Нет срока объекта/);
   const empty = await mount(h(PositionsRegistry, { fact: makeStand([]).fact, summary: makeStand([]).summary, projectId: 'pr1', companyId: 'c1', user: 'pto@x', today: T }));

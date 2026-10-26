@@ -21,11 +21,14 @@ before(() => {
 });
 const tick = (): Promise<void> => settle();
 
-function fakeAuth(opts: { password: string; signedIn?: boolean }): AuthApi & { calls: string[] } {
+function fakeAuth(opts: { password: string; signedIn?: boolean }): AuthApi & { calls: string[]; changed: () => void } {
   let signed = !!opts.signedIn;
   const calls: string[] = [];
+  let cb: () => void = () => {};
   return {
     calls,
+    changed: () => cb(),
+    onAuthChange(fn: () => void) { cb = fn; fn(); return () => {}; },
     async signIn(email, password) { calls.push('signIn'); if (password === opts.password) { signed = true; return { ok: true }; } return { ok: false, message: 'Неверная почта или пароль' }; },
     async signOut() { calls.push('signOut'); signed = false; },
     async getEmail() { return signed ? 'pto@test.invalid' : null; },
@@ -67,30 +70,18 @@ test('есть сервер, нет сессии → своей формы вх�
   delete (win as N).RBI;
 });
 
-test('вошёл → полоса «почта · компания · роль»; «Выйти» — общий выход платформы, данные скрыты', async () => {
+test('вошёл → «почта · компания · роль» есть (для диктора), своей кнопки «Выйти» нет (P2-0041); выход в «Настройках» → данные скрыты', async () => {
   const auth = fakeAuth({ password: 'ok', signedIn: true });
-  let out = 0;
-  (win as N).RBI = { platform2: { signOut: async () => { out++; await auth.signOut(); } } };
   const { el } = mount(auth);
   await tick();
   const bar = el.querySelector('[data-testid="pf-user"]');
   assert.ok(bar && /pto@test\.invalid/.test(bar.textContent || '') && /Альфа · Инженер ПТО/.test(bar.textContent || ''));
   assert.match(el.querySelector('[data-testid="pf-hint"]')?.textContent || '', /Нет доступных объектов/);
-  click(Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Выйти')!);
+  assert.ok(!Array.from(el.querySelectorAll('button')).some((b) => (b as N).textContent === 'Выйти'));
+  await auth.signOut(); auth.changed();   // вышел в «Настройки → Моё» — раздел перечитывает, кто вошёл
   await tick();
-  assert.equal(out, 1);
   assert.match(el.querySelector('[data-testid="pf-hint"]')?.textContent || '', /Войдите/);
   assert.ok(!el.querySelector('[data-testid="pf-user"]'));
-  delete (win as N).RBI;
-});
-
-test('без оболочки «Выйти» завершает сессию сервиса входа', async () => {
-  const auth = fakeAuth({ password: 'ok', signedIn: true });
-  const { el } = mount(auth);
-  await tick();
-  click(Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Выйти')!);
-  await tick();
-  assert.ok(auth.calls.includes('signOut'));
 });
 
 test('mapAuthError: понятные сообщения', () => {

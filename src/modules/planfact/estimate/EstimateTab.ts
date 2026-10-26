@@ -11,7 +11,8 @@ import { EstimateView } from './EstimateView.ts';
 import { EstimateOverheads } from './OverheadsEditor.ts';
 import { KpBlock } from './KpBlock.ts';
 import { parsePriceInput } from './prices.ts';
-import { firstProjectId, ProjectPicker } from '../ProjectPicker.ts';
+import { initialProjectId, ProjectPicker } from '../ProjectPicker.ts';
+import { InHead } from '../PageHead.ts';
 
 const dateFmt = (iso: string): string => { try { return new Date(iso).toLocaleDateString('ru-RU'); } catch { return iso; } };
 
@@ -33,7 +34,7 @@ export function EstimateTab(props: { api: EstimateApi; vor: VorApi }): ReactElem
       const ok: VorProject[] = [];
       for (const p of all) if ((await vor.permissions(p.id)).includes(ESTIMATE_MANAGE)) ok.push(p);
       setProjects(ok);
-      if (ok.length) setProjectId(firstProjectId(ok));
+      if (ok.length) setProjectId(initialProjectId(ok, window.location.hash));
     })();
   }, []);
 
@@ -73,8 +74,8 @@ export function EstimateTab(props: { api: EstimateApi; vor: VorApi }): ReactElem
             h(EstimateOverheads, { api, estimateId: open.id, companyId: projects.find((p) => p.id === projectId)?.company_id || '', base: totals, area }),
             h(KpBlock, { api, vor, estimate: open, imports, projectId, rows })), onBack: () => { setOpenId(''); void loadProject(projectId); } })
       : h('div', { className: 'pj-tab' },
-          h('div', { className: 'pj-actions' },
-            h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'es-new', onClick: () => setCreating(!creating) }, creating ? 'Отмена' : 'Новая смета')),
+          h(InHead, { slot: 'actions' },
+            h('button', { type: 'button', className: creating ? 'pf-btn pf-btn--ghost' : 'pf-btn', 'data-testid': 'es-new', onClick: () => setCreating(!creating) }, creating ? 'Отмена' : 'Новая смета')),
           creating
             ? h('form', { className: 'pf-card pj-form es-new', onSubmit: create, 'data-testid': 'es-create' },
                 h('label', { className: 'pf-field pj-grow' }, 'Название', h('input', { name: 'name', type: 'text', className: 'pj-input', maxLength: 300, defaultValue: 'Тендерная смета' })),

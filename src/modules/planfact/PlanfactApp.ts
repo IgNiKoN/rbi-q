@@ -1,10 +1,12 @@
 /**
- * Оболочка экрана «План/Факт»: шапка «кто · компания · роль», выход. Вход — общий экран «Вход» платформы (P2-0013), своей формы нет.
+ * Оболочка экрана «План/Факт»: шапка раздела «заголовок · объект · главное действие» (P2-0041; почта, роль и «Выйти» —
+ * в шапке оболочки и «Настройки → Моё», здесь не повторяются; выбор компании — в шапке раздела, если компаний несколько). Вход — общий экран «Вход» платформы (P2-0013), своей формы нет.
  * Нет настроек сервера → локальный режим без входа (только разбор файла ВОР). «Работать локально» остаётся всегда.
  * P2-0009: страница по умолчанию и для разделов без права — «Сводка»; старая демо-таблица «Работы» больше не показывается
  * (PlanfactTable/PlanfactWorks не удалены — отдельным решением, ТД).
  */
 import { createElement as h, useEffect, useState } from 'react';
+import { HeadSlotsContext } from './PageHead.ts';
 import type { ReactElement, ReactNode } from 'react';
 import type { AccessEntry, AuthApi } from '../../platform/auth/auth.service.ts';
 import { PLATFORM_AUTH_CSS } from '../../platform/auth/LoginForm.ts';
@@ -20,7 +22,7 @@ import { OverheadTemplateTab } from './estimate/OverheadsEditor.ts';
 import type { EstimateApi } from './estimate/estimate.service.ts';
 import { Ks2Tab } from './ks2/Ks2Tab.ts';
 import { SummaryTab } from './summary/SummaryTab.ts';
-import { showShellUser, restoreShellUser, openPlatformLogin, platformSignOut, readPlatformView, setPlatformCompany, platformRoleLabel, PLATFORM_ACCESS_EVENT } from '../../platform/auth/shell-user.ts';
+import { showShellUser, restoreShellUser, openPlatformLogin, readPlatformView, setPlatformCompany, platformRoleLabel, PLATFORM_ACCESS_EVENT } from '../../platform/auth/shell-user.ts';
 import type { SummaryApi } from './summary/summary.service.ts';
 import type { Ks2Api } from './ks2/ks2.service.ts';
 import { KS2_EDIT, KS2_VIEW } from './ks2/ks2.service.ts';
@@ -116,6 +118,8 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
   const [canKs2, setCanKs2] = useState(false);
   const [factApprove, setFactApprove] = useState<number | null>(null);   // ждут РП в выбранном объекте; null — нет права fact.approve
   const [p2, setP2] = useState(readPlatformView());
+  const [pickEl, setPickEl] = useState<HTMLElement | null>(null);       // P2-0041: места в шапке раздела для выбора объекта
+  const [actEl, setActEl] = useState<HTMLElement | null>(null);         // и главного действия экрана (InHead)
 
   // P2-0026: в демо (без входа) меню оболочки показывает все подвкладки, закрытые открывают подсказку «Войдите».
   useEffect(() => { if (onDemo) onDemo(mode === 'demo'); }, [mode]);
@@ -183,29 +187,28 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     setWho(''); setAccess([]); setCompanies([]); setCanEstimate(false); setCanKs2(false); if (onAccess) onAccess(false, false, false);
   }
 
-  async function logout(): Promise<void> {
-    await platformSignOut(auth ? () => auth.signOut() : null);
-    reset(); setMode('demo');
-  }
-
   if (mode === 'loading') return h('div', { className: 'pf-root pf-muted' }, 'Загрузка…');
 
-  const bar = mode === 'authed'
-    ? h('div', { className: 'pf-bar', 'data-testid': 'pf-user' },
-        p2
-          ? h('span', { className: 'pf-bar-who' }, h('b', null, who), ' · ',
-              p2.companies.length > 1
-                ? h('select', { className: 'pf-bar-company', 'aria-label': 'Компания', 'data-testid': 'pf-company', value: p2.companyId || '',
-                    onChange: (e: { target: EventTarget | null }) => setPlatformCompany((e.target as HTMLSelectElement).value) },
-                    p2.companies.map((c) => h('option', { key: c.id, value: c.id }, 'Компания: ' + c.name)))
-                : (p2.companies.find((c) => c.id === p2.companyId)?.name || ''),
-              ' · ', platformRoleLabel(p2))
-          : h('span', null, h('b', null, who), ' · ', accessLabel(access)),
-        h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: logout }, 'Выйти'))
-    : auth
-      ? h('div', { className: 'pf-bar' }, h('span', null, 'Локальный демо-режим, без входа'),
-          h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: openPlatformLogin }, 'Войти'))
-      : null;
+  // P2-0041: строки «почта · компания · роль · Выйти» больше нет — всё это в шапке оболочки и «Настройки → Моё».
+  // Без входа — подсказка «демо» с кнопкой «Войти»; несколько компаний — выбор компании в шапке раздела.
+  const bar = mode !== 'authed' && auth
+    ? h('div', { className: 'pf-bar' }, h('span', null, 'Локальный демо-режим, без входа'),
+        h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: openPlatformLogin }, 'Войти'))
+    : null;
+  const company = mode === 'authed' && p2 && p2.companies.length > 1
+    ? h('select', { className: 'pj-input pf-bar-company', 'aria-label': 'Компания', 'data-testid': 'pf-company', value: p2.companyId || '',
+        onChange: (e: { target: EventTarget | null }) => setPlatformCompany((e.target as HTMLSelectElement).value) },
+        p2.companies.map((c) => h('option', { key: c.id, value: c.id }, 'Компания: ' + c.name)))
+    : null;
+  const userTag = mode === 'authed' ? h('span', { className: 'pf-visually-hidden', 'data-testid': 'pf-user' }, who, ' · ', p2 ? platformRoleLabel(p2) : accessLabel(access)) : null;
+  /** Шапка раздела: заголовок, места для объекта и главного действия (их заполняет экран), подвкладки под ней. */
+  const pageHead = (title: string, tabs?: ReactNode): ReactElement => h('div', { className: 'pf-root pf-dirhead' },
+    h('div', { className: 'pf-pagehead' },
+      h('h2', { className: 'pf-title' }, title),
+      company,
+      h('div', { className: 'pf-head-pick', ref: setPickEl, 'data-testid': 'pf-head-pick' }),
+      h('div', { className: 'pf-head-actions', ref: setActEl, 'data-testid': 'pf-head-actions' })),
+    tabs || null);
 
   // «Справочники» открываются, только если сервер дал доступ к компании (пункт меню показывается по тому же признаку).
   const dirs = mode === 'authed' && projects && companies.length > 0 && route.page === 'directories';
@@ -257,23 +260,21 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
         h('div', null, hint),
         mode === 'demo' ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'pf-hint-vor', onClick: () => nav(`${BASE}/vor`) }, 'Разбор файла ВОР') : null));
   const head = inb
-    ? h('div', { className: 'pf-root pf-dirhead' }, h('h2', { className: 'pf-title' }, 'Требует моего участия'))
+    ? pageHead('Требует моего участия')
     : sm
-    ? h('div', { className: 'pf-root pf-dirhead' }, h('h2', { className: 'pf-title' }, 'Сводка — готовность объектов'))
+    ? pageHead('Сводка — готовность объектов')
     : k2
-    ? h('div', { className: 'pf-root pf-dirhead' }, h('h2', { className: 'pf-title' }, 'КС-2 — акты о приёмке выполненных работ'))
+    ? pageHead('КС-2 — акты о приёмке')
     : fct
-    ? h('div', { className: 'pf-root pf-dirhead' },
-        h('h2', { className: 'pf-title' }, 'Факт — выполненные объёмы'),
+    ? pageHead('Факт — выполненные объёмы',
         h('div', { className: 'pf-seg', role: 'tablist', 'data-testid': 'pf-facttabs' },
           FACT_SUBS.filter((t) => !t.approve || factApprove !== null).map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': fsub === t.id, 'data-sub': t.id,
             className: 'pf-seg-btn' + (fsub === t.id ? ' pf-seg-btn--active' : ''), onClick: () => nav(`${BASE}${t.path}`) },
             ...segLabel(t.label, t.short, t.approve && factApprove !== null ? factApprove : null)))))
     : est
-    ? h('div', { className: 'pf-root pf-dirhead' }, h('h2', { className: 'pf-title' }, 'Смета — тендерная стоимость по ВОР заказчика'))
+    ? pageHead('Смета — тендерная стоимость')
     : vor
-    ? h('div', { className: 'pf-root pf-dirhead' },
-        h('h2', { className: 'pf-title' }, vsub === 'positions' && mode === 'authed' ? 'ВОР — позиции' : 'ВОР — загрузка ведомости объёмов работ'),
+    ? pageHead(vsub === 'positions' && mode === 'authed' ? 'ВОР — позиции' : 'ВОР — загрузка ведомости',
         mode === 'authed'
           ? h('div', { className: 'pf-seg', role: 'tablist', 'data-testid': 'pf-vortabs' },
               VOR_SUBS.map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': vsub === t.id, 'data-sub': t.id,
@@ -281,22 +282,23 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
                 t.id === 'positions' && vorCount !== null ? `${t.label} (${vorCount})` : t.label)))
           : null)
     : dirs
-    ? h('div', { className: 'pf-root pf-dirhead' },
-        h('h2', { className: 'pf-title' }, 'Справочники'),
+    ? pageHead('Справочники',
         h('div', { className: 'pf-seg', role: 'tablist', 'data-testid': 'pf-dirtabs' },
           SUBS.filter((t) => !t.estimate || canEstimate).map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': route.sub === t.id, 'data-sub': t.id,
             className: 'pf-seg-btn' + (route.sub === t.id ? ' pf-seg-btn--active' : ''), onClick: () => go(t.id) }, t.label))))
     : null;
-  return h('div', null, bar, head, body);
+  return h(HeadSlotsContext.Provider, { value: { picker: head ? pickEl : null, actions: head ? actEl : null } }, h('div', { className: 'pf-page' }, bar, userTag, head, body));
 }
 
 export const PLANFACT_TABS_CSS = `
-.pf-bar-who{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:0}
-.pf-bar-company{max-width:100%;font-size:12px;font-weight:700;min-height:36px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
+.pf-bar-company{width:auto;max-width:100%;font-size:12px;font-weight:700;min-height:40px}
+.pf-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .pf-dirhead{padding-bottom:0;display:flex;flex-direction:column;gap:12px}
+/* P2-0041: страница План/Факта — во всю ширину рабочей области; общий список компании (CompanyScope) здесь тоже без предела */
+.pf-page .pj-root{max-width:none}
 .pf-hint{padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:12px;font-size:14px}
-.pf-seg{display:flex;flex-wrap:nowrap;gap:var(--rbi-subtab-gap,6px);padding:4px;border:1px solid var(--card-border);border-radius:12px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch}
-.pf-seg-btn{flex:1 1 0;min-width:5rem;min-height:40px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;padding:8px 12px;border-radius:8px;border:0;background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap;text-align:center}
+.pf-seg{display:flex;flex-wrap:nowrap;gap:var(--rbi-subtab-gap,6px);padding:4px;border:1px solid var(--card-border);border-radius:12px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.pf-seg-btn{flex:1 0 auto;min-width:5rem;min-height:40px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;padding:8px 12px;border-radius:8px;border:0;background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap;text-align:center}
 .pf-seg-short{display:none}
 @media (max-width:760px){.pf-seg-full{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.pf-seg-short{display:inline}}
 .pf-seg-btn--active{background:var(--accent,var(--primary));color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}

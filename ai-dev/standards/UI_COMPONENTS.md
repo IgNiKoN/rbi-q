@@ -43,6 +43,15 @@
 
 Без внешних библиотек графиков; цвета — только токены `--p2-*`. Компоненты не вызывают бизнес-API и не считают показателей.
 
+### Реализовано: шапка раздела и панель списка (P2-0041)
+
+| Компонент | API (props) | Классы | Примечания |
+| --- | --- | --- | --- |
+| `InHead` (`src/modules/planfact/PageHead.ts`) | `slot: 'picker' \| 'actions'`, `children` | `.pf-pagehead`, `.pf-head-pick`, `.pf-head-actions` | переносит выбор объекта / главную кнопку экрана в шапку раздела (портал); места даёт `HeadSlotsContext` из `PlanfactApp`; без него — на месте |
+| `ProjectPicker` | `list`, `value`, `onChange`, `testId?`, `alwaysSelect?` | `.pj-input` | сам встаёт в шапку (`InHead`); выбор запоминается (`rememberProject`); `initialProjectId(list, hash)`: адрес `?p=` → память → первый действующий |
+| `RegistryTable` (доп.) | `tools?` (правая часть панели), `lead?` (левая) | `.p2-reg__tools`, `.p2-reg__right`, `.p2-reg__more`, `.p2-reg__pop--right` | панель «Фильтр · Показано \| tools · ⋯»; «Только просроченные» — в панели «Фильтр»; группировка, колонки, виды, ссылка — в «⋯» |
+| `RegistryExport` | `count`, `testId`, `onClick` | `.pf-btn` | «Excel (N)», на телефоне «Excel»; полная подпись — `aria-label` |
+
 ### По мере появления спроса
 
 `DatePicker`, `FileUpload`, `Tree/LocationPicker`, `Breadcrumbs`, `Toolbar`, `FilterPanel`, `Pagination`, `Chart`, `Progress`, `Drawer`, `DataGrid` для больших объёмов, `MobileActionBar`, `DocumentPreview`, `TableColumnSettings`, `ThemePreview` и др. Добавляются только под конкретное утверждённое применение.

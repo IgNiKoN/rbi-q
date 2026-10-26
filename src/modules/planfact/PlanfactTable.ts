@@ -51,7 +51,7 @@ export function PlanfactTable(props: { data: PlanfactDemo }): ReactElement {
 }
 
 export const PLANFACT_CSS = `
-.pf-root{padding:24px;max-width:1100px;color:var(--text-main)}
+.pf-root{padding:24px;color:var(--text-main);min-width:0}
 .pf-head{margin-bottom:16px}
 .pf-title{font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:-.01em;margin:0}
 .pf-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
