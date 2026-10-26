@@ -130,6 +130,7 @@ function _openDbCurrent() {
                     showToast('⚠️ База данных обновлена. Пожалуйста, перезагрузите страницу.');
                 }
             };
+            _watchDbClose(db);
             resolve(db);
         };
         request.onerror = () => reject(request.error);
@@ -183,6 +184,7 @@ function _openDbAtVersion(version) {
                     showToast('⚠️ База данных обновлена. Пожалуйста, перезагрузите страницу.');
                 }
             };
+            _watchDbClose(db);
             resolve(db);
         };
 
@@ -190,6 +192,33 @@ function _openDbAtVersion(version) {
             reject(request.error);
         };
     });
+}
+
+/** P2-0032: браузер закрыл соединение (Safari/iPhone после сворачивания) — следующее обращение откроет базу заново. */
+function _watchDbClose(db) {
+    db.onclose = () => {
+        db.__rbiClosed = true;
+        if (_dbPromise) _dbPromise.then((cur) => { if (cur === db) _dbPromise = null; }, () => {});
+    };
+}
+
+/** Обрыв связи с базой: закрыта (InvalidStateError) или «Connection to Indexed Database server lost» (UnknownError). */
+function _isDbConnectionLost(e) {
+    return !!e && (e.name === 'InvalidStateError' || e.name === 'UnknownError' || /connection.*lost|database connection is closing/i.test(String(e.message || '')));
+}
+
+/** Выполнить чтение; при обрыве связи — открыть базу заново и повторить один раз. */
+async function _withDbReconnect(run) {
+    const db = await openAppDb();
+    try {
+        return await run(db);
+    } catch (e) {
+        if (!_isDbConnectionLost(e)) throw e;
+        console.warn('[DB] Связь с базой потеряна — открываем заново', e && e.name);
+        if (_dbPromise) { try { if ((await _dbPromise) === db) _dbPromise = null; } catch (_) { _dbPromise = null; } }
+        try { db.close(); } catch (_) { /* уже закрыта */ }
+        return run(await openAppDb());
+    }
 }
 
 function openAppDb() {
@@ -553,14 +582,13 @@ async function dbPutBatch(storeName, itemsArray, retryAfterCleanup = true) {
     }
 }
 async function dbGet(storeName, key) {
-    const db = await openAppDb();
-    return new Promise((resolve, reject) => {
+    return _withDbReconnect((db) => new Promise((resolve, reject) => {
         const tx = db.transaction(storeName, 'readonly');
         const store = tx.objectStore(storeName);
         const req = store.get(key);
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
-    });
+    }));
 }
 
 /** Есть ли ключ в store без чтения value (не поднимает blob в RAM). */
