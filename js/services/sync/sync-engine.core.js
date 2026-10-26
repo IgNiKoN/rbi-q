@@ -152,6 +152,10 @@ window.triggerSync = async function (mode = 'silent') {
     const pCode = window.syncConfig.projectCode;
     const iName = window.syncConfig.engineerName;
     const stableInspectorId = `${pCode}_${iName}`.replace(/\s+/g, '_');
+    // P2-0035b (ADR-070): «своё» (проверки, черновик, задачи, профиль, рейтинг) — по номеру учётки; ФИО — только подпись
+    let myAuthId = null;
+    try { const { data: me } = await window.supabaseClient.auth.getUser(); myAuthId = (me && me.user && me.user.id) || null; } catch (e) { myAuthId = null; }
+    const own = (q, col) => (myAuthId ? q.eq(col, myAuthId) : q.eq('engineer_name', iName));   // без входа — как раньше
     // P2-0023: догрузка «с прошлого раза» — с запасом 15 мин назад (запись, отправленная во время
     // прошлой синхронизации или с отстающими часами, иначе не приходила никогда).
     let lastPullAt = window.RbiSyncPullPolicy
@@ -792,6 +796,7 @@ window.triggerSync = async function (mode = 'silent') {
                 .from('rbi_engineer_ratings')
                 .select('*')
                 .eq('project_code', pCode)
+                .or('is_deleted.is.null,is_deleted.eq.false')   // P2-0035b: скрытые (тестовые учётки старого РБИ) — не в рейтинге
                 .order('pi', { ascending: false });
 
             window.serverGlobalRating = (data || []).map(row => ({
@@ -817,7 +822,7 @@ window.triggerSync = async function (mode = 'silent') {
             const { data, error } = await window.supabaseClient
                 .from('rbi_engineer_profiles')
                 .select('profile_data')
-                .eq('inspector_id', stableInspectorId)
+                .eq(myAuthId ? 'auth_user_id' : 'inspector_id', myAuthId || stableInspectorId)   // P2-0035b: свой профиль — по номеру учётки
                 .limit(1);
             if (error) throw error;
             const cloudLogs = data && data[0] && data[0].profile_data && Array.isArray(data[0].profile_data.gameLogs)
@@ -1043,14 +1048,14 @@ window.triggerSync = async function (mode = 'silent') {
                 const assignedProjects = window.RBI.services.permissions ? window.RBI.services.permissions.getAssignedProjects() : [];
                 const assignedKeys = _syncAssignedCanonicalKeys(assignedProjects);
 
-                q = q.eq('engineer_name', iName);
+                q = own(q, 'core_created_by');
 
                 if (assignedKeys && assignedKeys.length > 0) {
                     q = q.in('project_canonical_key', assignedKeys);
                 }
             }
             else if (window.syncConfig.syncMode === 'personal') {
-                q = q.eq('engineer_name', iName);
+                q = own(q, 'core_created_by');
             }
             // dataScope === 'all' (директор/менеджер/зам) качают всё (условий не добавляем)
             // ---------------------------------------
@@ -1270,8 +1275,9 @@ window.triggerSync = async function (mode = 'silent') {
             let draftQuery = window.supabaseClient
                 .from('rbi_draft_sessions')
                 .select('*')
-                .eq('project_code', pCode)
-                .eq('engineer_name', iName);
+                .eq('project_code', pCode);
+            // P2-0035b: свой черновик — по номеру учётки (автор, ставит сервер; старые — владелец по привязке 040a)
+            draftQuery = myAuthId ? draftQuery.or(`core_created_by.eq.${myAuthId},owner_auth_user_id.eq.${myAuthId}`) : draftQuery.eq('engineer_name', iName);
 
             // ИСПРАВЛЕНИЕ: Тянем черновик только если он обновился с прошлой синхронизации
             if (lastPullAt) {
@@ -1371,14 +1377,14 @@ window.triggerSync = async function (mode = 'silent') {
                 const assignedProjects = window.RBI.services.permissions ? window.RBI.services.permissions.getAssignedProjects() : [];
                 const assignedKeys = _syncAssignedCanonicalKeys(assignedProjects);
 
-                taskQuery = taskQuery.eq('engineer_name', iName);
+                taskQuery = own(taskQuery, 'assigned_to_auth_user_id');   // «Мои задачи» — кому задача (сервер по ФИО исполнителя)
 
                 if (assignedKeys && assignedKeys.length > 0) {
                     taskQuery = taskQuery.in('project_canonical_key', assignedKeys);
                 }
             }
             else if (window.syncConfig.syncMode === 'personal') {
-                taskQuery = taskQuery.eq('engineer_name', iName);
+                taskQuery = own(taskQuery, 'assigned_to_auth_user_id');
             }
             // Если это полная синхронизация - берем только живые. 
             // Если быстрая - берем все измененные (включая удаленные)
@@ -1420,6 +1426,7 @@ window.triggerSync = async function (mode = 'silent') {
                     if (!existingLocal || cloudTime > localTime) {
                         const t = row.task_data || {};
                         t.id = row.id;
+                        t.assignedToId = row.assigned_to_auth_user_id || null;   // P2-0035b: кому задача — номер учётки (сервер)
                         t.status = row.status || t.status;
                         t.updatedAt = row.updated_at;
                         t.project_canonical_key = row.project_canonical_key || t.project_canonical_key || t.project || t.projectName || '';
@@ -2778,7 +2785,7 @@ window.triggerSync = async function (mode = 'silent') {
 
                     const { error: profileError } = await window.supabaseClient
                         .from('rbi_engineer_profiles')
-                        .upsert(profilePayload, { onConflict: 'inspector_id' });
+                        .upsert(profilePayload, { onConflict: 'auth_user_id' });   // P2-0035b: один профиль на учётку в компании (040b)
 
                     if (profileError) {
                         console.error('[Sync] Ошибка записи профиля:', profileError);
@@ -2990,7 +2997,7 @@ window.triggerSync = async function (mode = 'silent') {
                                 level_name: rating.levelObj?.name || '',
                                 is_deleted: false,
                                 updated_at: new Date().toISOString()
-                            }, { onConflict: 'project_code,engineer_name' });
+                            }, { onConflict: authUserId ? 'auth_user_id' : 'project_code,engineer_name' });   // P2-0035b: рейтинг — по учётке (040b)
                     }
                 }
             } catch (e) {

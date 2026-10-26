@@ -358,3 +358,10 @@ test('P2-0037: уборка облака администратором — фа
   ]);
   for (const [, paths] of calls) for (const p of paths as string[]) assert.ok(p.startsWith(A + '/'), p);
 });
+
+test('P2-0035b: мост пишет номер учётки в настройки синхронизации; ключ записи профиля/рейтинга по номеру — с компанией (040b)', async () => {
+  const { d, win } = deps({ access: { actions: ['quality.view'], templates: [], container: '33333333-3333-4333-8333-333333333333' } });
+  await applyQualityBridge(st({ userId: '55555555-5555-4555-8555-555555555555' }), d);
+  assert.equal(win.syncConfig.authUserId, '55555555-5555-4555-8555-555555555555');
+  assert.equal(companyConflict('auth_user_id'), 'core_company_id,auth_user_id');
+});

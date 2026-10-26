@@ -229,7 +229,7 @@ export interface QualitySync {
 
 interface SyncWin {
   supabaseClient?: unknown;
-  syncConfig?: { enabled?: boolean; engineerName?: string; projectCode?: string; pinHash?: string | null; syncMode?: string };
+  syncConfig?: { enabled?: boolean; engineerName?: string; projectCode?: string; pinHash?: string | null; syncMode?: string; authUserId?: string | null };
   appSettings?: Record<string, unknown>;
   applySyncConnect?: (name: string, code: string, pin: string | null) => Promise<void>;
   initSync?: () => Promise<void>;
@@ -342,6 +342,7 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
     const c = (deps.win.syncConfig = deps.win.syncConfig || {});
     c.enabled = !!pid;
     c.engineerName = engineerName;
+    c.authUserId = st.userId || null;   // P2-0035b: «своё» в Качестве — по номеру учётки (ФИО — подпись)
     c.projectCode = pid || '';
     c.pinHash = null;
     if (!c.syncMode) c.syncMode = 'personal';

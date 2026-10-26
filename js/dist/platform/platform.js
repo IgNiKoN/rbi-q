@@ -18102,7 +18102,7 @@ async function Za(t, e) {
     typeof A == "function" && A.call(e.win, new Event(Xa));
   }, v = (S) => {
     const T = e.win.syncConfig = e.win.syncConfig || {};
-    T.enabled = !!S, T.engineerName = g, T.projectCode = S || "", T.pinHash = null, T.syncMode || (T.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(T));
+    T.enabled = !!S, T.engineerName = g, T.authUserId = t.userId || null, T.projectCode = S || "", T.pinHash = null, T.syncMode || (T.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(T));
   }, _ = {
     active: !0,
     companyId: r,
