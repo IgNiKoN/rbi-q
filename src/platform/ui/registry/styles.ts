@@ -5,6 +5,12 @@
 export const P2_REGISTRY_CSS = `
 .p2-reg{display:flex;flex-direction:column;gap:10px;min-width:0}
 .p2-reg__tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.p2-reg__right{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto}
+.p2-reg__more{min-width:44px;font-size:18px;line-height:1;padding:6px 10px}
+.p2-reg__pop[hidden]{display:none}
+.p2-reg__pop.p2-reg__pop--right{left:auto;right:0}
+.p2-reg__item{font:inherit;font-size:13px;text-align:left;min-height:36px;padding:6px 8px;border:0;border-radius:8px;background:transparent;color:var(--text-main);cursor:pointer}
+.p2-reg__item:hover{background:var(--hover-bg,var(--card-border))}
 .p2-reg__tools .pf-btn{min-height:40px}
 .p2-reg__muted{font-size:12px;color:var(--text-muted)}
 .p2-reg__n{display:inline-block;margin-left:6px;min-width:18px;padding:0 6px;border-radius:999px;background:var(--p2-status-blue-bg);color:var(--p2-status-blue-fg);font-size:11px;font-variant-numeric:tabular-nums}
@@ -87,11 +93,11 @@ export const P2_REGISTRY_CSS = `
 .p2-reg__group{margin:8px 0 6px}
 .p2-reg__group td{background:transparent;padding:0}
 .p2-reg__panel{width:100%}
-.p2-reg__tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
-.p2-reg__tools>*{width:100%;min-width:0;box-sizing:border-box}
-.p2-reg__tools>.p2-reg__muted{grid-column:1/-1}
-.p2-reg__wrap>.pf-btn{width:100%}
-.p2-reg__groupby{justify-content:center;border:1px solid var(--card-border);border-radius:10px;padding:0 8px}
-.p2-reg__pop{left:0;right:auto}
+.p2-reg__tools{flex-wrap:nowrap;gap:6px}
+.p2-reg__tools>*{min-width:0}
+.p2-reg__long{display:none}
+.p2-reg__shown{white-space:nowrap}
+.p2-reg__right{flex-wrap:nowrap;gap:6px}
+.p2-reg__tools .pf-btn{padding:8px 10px}
 }
 `;

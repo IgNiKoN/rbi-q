@@ -75,11 +75,9 @@ test('период: по умолчанию 30 дней (запрос с гра�
   click(box.querySelector('[data-testid="fj-7"]')); await tick();
   assert.deepEqual(journalCalls(f).slice(-1)[0], { from: '2026-10-18', to: TODAY, limit: 2000 });
   typeIn(box.querySelector('[data-testid="fj-from"]'), '2026-09-01'); await tick();
-  click(box.querySelector('[data-testid="fj-apply"]')); await tick();
   assert.deepEqual(rowIds(box).sort(), ['j1', 'j2', 'j3', 'j4', 'j5', 'j6']);
   const n = journalCalls(f).length;
   typeIn(box.querySelector('[data-testid="fj-from"]'), '2026-10-25'); await tick();
-  click(box.querySelector('[data-testid="fj-apply"]')); await tick();
   assert.equal(journalCalls(f).length, n, 'запроса нет');
   assert.match(box.querySelector('[data-testid="fj-error"]').textContent, /Начало периода позже конца/);
   assert.equal(shiftDate('2026-03-01', -1), '2026-02-28');
@@ -89,7 +87,6 @@ test('статусы палитрой, группы по корпусу со с�
   const f = stand();
   const box = await mount(journal(f));
   typeIn(box.querySelector('[data-testid="fj-from"]'), '2026-09-01'); await tick();
-  click(box.querySelector('[data-testid="fj-apply"]')); await tick();
   const st = (id: string) => box.querySelector(`tr[data-row="${id}"] [data-testid="fj-status"]`);
   assert.deepEqual(['j1', 'j2', 'j3', 'j4'].map((id) => [st(id).textContent, st(id).className.match(/--(\w+)/)?.[1]]),
     [['Принято', 'green'], ['Ждёт РП', 'blue'], ['Отклонено', 'red'], ['Заменено', 'grey']]);
@@ -119,7 +116,7 @@ test('выгрузка в Excel: видимые колонки, отфильтр
   const f = stand();
   const box = await mount(journal(f, { save: (bytes: Uint8Array, name: string) => files.push({ bytes, name }) }));
   await filterBy(box, 'status', 'pending_approval');
-  assert.equal(box.querySelector('[data-testid="fj-export-all"]').textContent, 'Выгрузить список в Excel (1)');
+  assert.equal(box.querySelector('[data-testid="fj-export-all"]').getAttribute('aria-label'), 'Выгрузить список в Excel (1)');
   click(box.querySelector('[data-testid="fj-export-all"]')); await tick();
   assert.equal(files.length, 1);
   assert.match(files[0].name, /^Журнал факта \d\d\.\d\d\.\d{4}\.xlsx$/);
