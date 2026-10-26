@@ -3,8 +3,13 @@
  * Доступ решает сервер (pf_my_admin_companies → security.roles.assign); без права — понятное сообщение.
  * P2-0011: открытая вкладка — только адрес оболочки #/settings/company/<roles|members|counterparties|audit> (назад/вперёд, F5, ссылка).
  * P2-0015: вкладка «Контрагенты» — справочник ядра (сервис src/platform/core).
+ * P2-0038: «Компания» — уровень «Администрирования»: Сотрудники · Роли · Объекты (+структура) · Контрагенты · Справочники (единицы) ·
+ * Оформление · Модули компании · Журнал. Вкладки — по правам сервера: управление ролями (pf_my_admin_companies) — люди, роли,
+ * контрагенты, оформление, модули, журнал; объекты и единицы — по правам planfact.projects.manage / planfact.units.manage
+ * (pf_my_company_access; РП и ПТО правят их, как раньше в План/Факте). «Оформление» — блок старых Настроек (логотип, цвет),
+ * его показывает settings.render.js под этой вкладкой.
  */
-import { createElement as h, useEffect, useState } from 'react';
+import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { AuthApi } from '../auth/auth.service.ts';
 import { openPlatformLogin, platformSignOut } from '../auth/shell-user.ts';
@@ -15,33 +20,82 @@ import { SETTINGS_UI_CSS } from '../ui/settings.ts';
 import type { CompanyApi, CompanyRef } from './company.service.ts';
 import { CounterpartiesTab, COUNTERPARTIES_CSS } from './CounterpartiesTab.ts';
 import type { CoreApi } from '../core/core.service.ts';
+import type { CompanyAccess, ProjectsApi } from '../core/projects.service.ts';
+import { CompanyScope } from './CompanyScope.ts';
+import { ProjectsTab } from './ProjectsTab.ts';
+import { UnitsTab } from './UnitsTab.ts';
 
 type Mode = 'loading' | 'login' | 'noaccess' | 'ready';
-type Tab = 'roles' | 'members' | 'counterparties' | 'audit';
+type Tab = 'members' | 'roles' | 'objects' | 'counterparties' | 'directories' | 'branding' | 'modules' | 'audit';
 
 const BASE = '#/settings/company';
 /** Событие раздела: адрес #/settings/company… показан снова (index.ts — при повторном монтировании в тот же контейнер). */
 export const COMPANY_ROUTE_EVENT = 'company:route';
-/** #/settings/company[/roles|/members|/counterparties|/audit] → вкладка; без вкладки и неизвестная — «Роли». */
-export function tabFromHash(hash: string): Tab {
-  const t = String(hash || '').replace(/^#\/settings\/company\/?/, '').split('/')[0];
-  return t === 'members' || t === 'counterparties' || t === 'audit' ? t : 'roles';
+/** #/settings/company[/<вкладка>] → вкладка; без вкладки и неизвестная — null (откроется первая доступная). */
+export function tabFromHash(hash: string): Tab | null {
+  const t = String(hash || '').replace(/^#\/settings\/company\/?/, '').split(/[/?]/)[0];
+  return TABS.some((x) => x.id === t) ? t as Tab : null;
 }
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'roles', label: 'Роли' },
-  { id: 'members', label: 'Сотрудники' },
-  { id: 'counterparties', label: 'Контрагенты' },
-  { id: 'audit', label: 'Журнал' }
+/** admin — управление ролями компании; dirs — объекты/единицы (planfact.projects.manage / units.manage). */
+const TABS: { id: Tab; label: string; need: 'admin' | 'projects' | 'units' }[] = [
+  { id: 'members', label: 'Сотрудники', need: 'admin' },
+  { id: 'roles', label: 'Роли', need: 'admin' },
+  { id: 'objects', label: 'Объекты', need: 'projects' },
+  { id: 'counterparties', label: 'Контрагенты', need: 'admin' },
+  { id: 'directories', label: 'Справочники', need: 'units' },
+  { id: 'branding', label: 'Оформление', need: 'admin' },
+  { id: 'modules', label: 'Модули компании', need: 'admin' },
+  { id: 'audit', label: 'Журнал', need: 'admin' }
 ];
 
-export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null; core?: CoreApi | null }): ReactElement {
-  const { auth, api, core } = props;
+export interface CompanyRights { admin: boolean; projects: boolean; units: boolean }
+/** Какие вкладки видны: по правам сервера (без права вкладки нет, прямой адрес → первая доступная). */
+export function visibleTabs(r: CompanyRights): Tab[] {
+  return TABS.filter((t) => r[t.need]).map((t) => t.id);
+}
+export function rightsFrom(admin: CompanyRef[], access: CompanyAccess[]): CompanyRights {
+  return { admin: admin.length > 0, projects: access.some((c) => c.can_manage_projects), units: access.some((c) => c.can_manage_units) };
+}
+
+/** Модули платформы (просмотр «что включено у компании»; включает администратор платформы). */
+const MODULES: { code: string; name: string }[] = [
+  { code: 'planfact', name: 'План/Факт' }, { code: 'quality', name: 'Качество' }, { code: 'construction', name: 'Стройконтроль' },
+  { code: 'knowledge', name: 'База знаний' }, { code: 'ai', name: 'ИИ-помощник' }
+];
+interface P2Company { id: string; name: string; modules: string[] }
+function platformCompanies(): P2Company[] {
+  const p2 = (window as unknown as { RBI?: { platform2?: { getState?: () => { companies?: P2Company[] } } } }).RBI?.platform2;
+  const st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
+  return st && Array.isArray(st.companies) ? st.companies : [];
+}
+function ModulesView(props: { companyId: string }): ReactElement {
+  const c = platformCompanies().find((x) => x.id === props.companyId);
+  const on = new Set(c ? c.modules : []);
+  return h('div', { className: 'sui-cards', 'data-testid': 'co-modules' },
+    h('div', { className: 'co-hint' }, 'Какие модули включены у компании. Включает и выключает администратор платформы.'),
+    h('div', { className: 'co-card co-modules-list' }, MODULES.map((m) => h('div', { key: m.code, className: 'co-module-row', 'data-module': m.code },
+      h('span', { className: 'co-module-name' }, m.name),
+      h('span', { className: 'co-badge' + (on.has(m.code) ? ' co-badge--on' : '') }, on.has(m.code) ? 'включён' : 'выключен')))));
+}
+
+export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null; core?: CoreApi | null; projects?: ProjectsApi | null }): ReactElement {
+  const { auth, api, core, projects } = props;
   const [mode, setMode] = useState<Mode>('loading');
   const [who, setWho] = useState('');
   const [companies, setCompanies] = useState<CompanyRef[]>([]);
   const [companyId, setCompanyId] = useState('');
-  const [tab, setTab] = useState<Tab>(tabFromHash(window.location.hash));
+  const [tab, setTab] = useState<Tab | null>(tabFromHash(window.location.hash));
+  const [rights, setRights] = useState<CompanyRights>({ admin: false, projects: false, units: false });
+  const tabsRef = useRef<HTMLDivElement | null>(null);
+  // телефон: активная вкладка видна в полосе (прокрутка только полосы, не страницы)
+  useEffect(() => {
+    const strip = tabsRef.current;
+    const act = strip ? strip.querySelector('.co-tab--active') as HTMLElement | null : null;
+    if (!strip || !act || strip.scrollWidth <= strip.clientWidth) return;
+    const l = act.offsetLeft - strip.offsetLeft;
+    if (l < strip.scrollLeft || l + act.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = Math.max(0, l - 8);
+  });
 
   useEffect(() => {
     const onRoute = (): void => setTab(tabFromHash(window.location.hash));
@@ -55,15 +109,30 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
     if (r && typeof r.navigate === 'function') r.navigate(`${BASE}/${t}`); else { window.history.pushState(null, '', `${BASE}/${t}`); setTab(t); }
   };
 
+  // Вкладка из адреса закрыта или не указана → первая доступная, и адрес тоже (без лишней записи в истории).
+  useEffect(() => {
+    if (mode !== 'ready') return;
+    const tabs = visibleTabs(rights);
+    if (tab && tabs.includes(tab)) return;
+    const first = tabs[0];
+    const r = (window as unknown as { AppRouter?: { navigate?: (p: string, replace?: boolean) => void } }).AppRouter;
+    if (/^#\/settings\/company(\/|$)/.test(window.location.hash || '')) {
+      if (r && typeof r.navigate === 'function') r.navigate(`${BASE}/${first}`, true); else window.history.replaceState(null, '', `${BASE}/${first}`);
+    }
+    setTab(first);
+  }, [mode, rights, tab]);
+
   async function enter(): Promise<void> {
     if (!auth || !api) return;
     const mail = await auth.getEmail();
     if (!mail) { setMode('login'); return; }
     setWho(mail);
-    const list = await api.myAdminCompanies();
+    const [list, access] = await Promise.all([api.myAdminCompanies(), projects ? projects.myAccess().catch(() => [] as CompanyAccess[]) : Promise.resolve([] as CompanyAccess[])]);
+    const r = rightsFrom(list, access);
     setCompanies(list);
     setCompanyId(list.length ? list[0].company_id : '');
-    setMode(list.length ? 'ready' : 'noaccess');
+    setRights(r);
+    setMode(visibleTabs(r).length ? 'ready' : 'noaccess');
   }
 
   // Вход и выход — на общем экране «Вход» платформы (P2-0013); раздел перечитывает, кто вошёл.
@@ -75,7 +144,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
 
   async function logout(): Promise<void> {
     await platformSignOut(auth ? () => auth.signOut() : null);
-    setWho(''); setCompanies([]); setCompanyId(''); setMode('login');
+    setWho(''); setCompanies([]); setCompanyId(''); setRights({ admin: false, projects: false, units: false }); setMode('login');
   }
 
   if (!auth || !api) {
@@ -97,19 +166,27 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
 
   if (mode === 'noaccess') {
     return h('div', null, bar,
-      h('div', { className: 'pf-root pf-muted', 'data-testid': 'co-noaccess' }, 'Нет права управлять ролями. Раздел доступен администратору компании.'));
+      h('div', { className: 'pf-root pf-muted', 'data-testid': 'co-noaccess' }, 'Нет права управлять компанией. Раздел доступен администратору компании (объекты и единицы — тем, кто их ведёт).'));
   }
 
+  const tabs = visibleTabs(rights);
+  const cur: Tab = tab && tabs.includes(tab) ? tab : tabs[0];
+  const body = cur === 'members' ? h(CompanyMembers, { api, companyId, me: who, key: companyId })
+    : cur === 'roles' ? h(CompanyRoles, { api, companyId, key: companyId })
+    : cur === 'objects' && projects ? h(CompanyScope, { api: projects, render: (c) => h(ProjectsTab, { api: projects, company: c, core: core || null }) })
+    : cur === 'counterparties' && core ? h(CounterpartiesTab, { core, companyId, key: companyId })
+    : cur === 'directories' && projects ? h(CompanyScope, { api: projects, render: (c) => h(UnitsTab, { api: projects, company: c }) })
+    : cur === 'branding' ? h('div', { className: 'co-hint', 'data-testid': 'co-branding' }, 'Логотип и фирменный цвет — для отчётов и шапки у всех сотрудников компании.')
+    : cur === 'modules' ? h(ModulesView, { companyId, key: companyId })
+    : cur === 'audit' ? h(CompanyAudit, { api, companyId, key: companyId })
+    : null;
   return h('div', null, bar,
-    h('div', { className: 'pf-root co-root' },
+    h('div', { className: 'pf-root co-root', 'data-company-tab': cur },
       h('div', { className: 'co-head' },
-        h('div', { className: 'co-tabs', role: 'tablist', 'data-testid': 'co-tabs' },
-          TABS.map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': tab === t.id, 'data-tab': t.id,
-            className: 'co-tab' + (tab === t.id ? ' co-tab--active' : ''), onClick: () => go(t.id) }, t.label)))),
-      tab === 'roles' ? h(CompanyRoles, { api, companyId, key: companyId }) : null,
-      tab === 'members' ? h(CompanyMembers, { api, companyId, me: who, key: companyId }) : null,
-      tab === 'counterparties' && core ? h(CounterpartiesTab, { core, companyId, key: companyId }) : null,
-      tab === 'audit' ? h(CompanyAudit, { api, companyId, key: companyId }) : null));
+        h('div', { className: 'co-tabs', role: 'tablist', 'data-testid': 'co-tabs', ref: tabsRef },
+          TABS.filter((t) => tabs.includes(t.id)).map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': cur === t.id, 'data-tab': t.id,
+            className: 'co-tab' + (cur === t.id ? ' co-tab--active' : ''), onClick: () => go(t.id) }, t.label)))),
+      body));
 }
 
 export const COMPANY_CSS = SETTINGS_UI_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT_CSS + COUNTERPARTIES_CSS + `
@@ -140,4 +217,9 @@ export const COMPANY_CSS = SETTINGS_UI_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT
 .co-check input{margin-top:2px;accent-color:var(--primary)}
 .co-check input:disabled+span{color:var(--text-muted)}
 .co-danger{background:var(--color-red);border-color:var(--color-red)}
+.co-modules-list{display:flex;flex-direction:column;padding:4px 0}
+.co-module-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--card-border);min-height:44px}
+.co-module-row:last-child{border-bottom:0}
+.co-module-name{font-weight:700;color:var(--text-main)}
+.co-badge--on{color:var(--color-green);border-color:var(--color-green)}
 `;

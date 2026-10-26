@@ -7,7 +7,7 @@ import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { CompanyRoles } from '../CompanyRoles.ts';
-import { CompanyApp } from '../CompanyApp.ts';
+import { CompanyApp, visibleTabs, rightsFrom } from '../CompanyApp.ts';
 import { groupCatalog } from '../action-groups.ts';
 import { mapCompanyError } from '../company.service.ts';
 import type { CompanyApi, RoleRow, Result } from '../company.service.ts';
@@ -185,9 +185,42 @@ test('не вошёл — своей формы входа нет, «Войти�
   assert.ok(off.querySelector('[data-testid=co-offline]'));
 });
 
-test('администратор — вкладка «Роли» с ролями компании', async () => {
-  const el = mountApp(fakeAuth(true), fakeApi().api);
+test('администратор — вкладки компании, первая «Сотрудники»; «Роли» — по вкладке', async () => {
+  win.history.replaceState(null, '', '/');
+  const el = win.document.createElement('div') as N; win.document.body.appendChild(el);
+  const root = createRoot(el);
+  flushSync(() => root.render(createElement(CompanyApp, { auth: fakeAuth(true), api: fakeApi().api })));
   await tick(); await tick();
   assert.match(el.querySelector('[data-testid=co-user]').textContent, /Альфа/);
+  assert.deepEqual([...el.querySelectorAll('[data-testid=co-tabs] [role=tab]')].map((t: N) => t.textContent),
+    ['Сотрудники', 'Роли', 'Контрагенты', 'Оформление', 'Модули компании', 'Журнал'], 'без права на объекты/единицы — их вкладок нет');
+  assert.ok(el.querySelector('[data-testid=co-members]'));
+  click(el.querySelector('[data-tab=roles]')); await tick(); await tick();
   assert.ok(el.querySelector('[data-testid=co-roles]'));
+  flushSync(() => root.unmount());   // экран «Компании» в приложении один — следующий тест не должен видеть этот
+});
+
+// P2-0038 этап 3: вкладки — по правам сервера
+test('права на вкладки: управление ролями / объекты / единицы', () => {
+  const acc = (p: boolean, u: boolean) => ({ company_id: 'c1', company_name: 'Альфа', can_manage_projects: p, can_manage_units: u, can_manage_roles: false, can_manage_counterparties: false });
+  assert.deepEqual(visibleTabs(rightsFrom([], [acc(true, false)])), ['objects'], 'РП: только объекты');
+  assert.deepEqual(visibleTabs(rightsFrom([], [acc(true, true)])), ['objects', 'directories'], 'ПТО: объекты и единицы');
+  assert.deepEqual(visibleTabs(rightsFrom([], [acc(false, false)])), [], 'инженер — ничего');
+  assert.deepEqual(visibleTabs(rightsFrom([{ company_id: 'c1', company_name: 'Альфа' }], [acc(true, true)])),
+    ['members', 'roles', 'objects', 'counterparties', 'directories', 'branding', 'modules', 'audit']);
+});
+
+test('без права управлять ролями, но с правом на объекты — раздел открыт только с «Объектами»', async () => {
+  win.history.replaceState(null, '', '/#/settings/company/members');
+  const { api } = fakeApi();
+  const projects = { async myAccess() { return [{ company_id: 'c1', company_name: 'Альфа', can_manage_projects: true, can_manage_units: false, can_manage_roles: false, can_manage_counterparties: false }]; },
+    async listProjects() { return []; } } as N;
+  const el = win.document.createElement('div'); win.document.body.appendChild(el);
+  const root = createRoot(el as N);
+  flushSync(() => root.render(createElement(CompanyApp, { auth: fakeAuth(true), api: { ...api, async myAdminCompanies() { return []; } }, projects })));
+  await tick(); await tick(); await tick();
+  assert.deepEqual([...(el as N).querySelectorAll('[data-testid=co-tabs] [role=tab]')].map((t: N) => t.textContent), ['Объекты']);
+  assert.equal((el as N).querySelector('[data-testid=co-members]'), null, 'сотрудников не видно');
+  assert.equal(win.location.hash, '#/settings/company/objects', 'прямой адрес закрытой вкладки → доступная');
+  flushSync(() => root.unmount());
 });

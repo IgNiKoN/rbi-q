@@ -11,6 +11,12 @@ import { CompanyApp, COMPANY_CSS, COMPANY_ROUTE_EVENT } from './CompanyApp.ts';
 import { createCompanyService } from './company.service.ts';
 import { createCoreService } from '../core/core.service.ts';
 import type { CoreApi } from '../core/core.service.ts';
+import { createProjectsService } from '../core/projects.service.ts';
+import type { ProjectsApi } from '../core/projects.service.ts';
+import { SCOPE_CSS } from './CompanyScope.ts';
+import { PROJECTS_CSS } from './ProjectsTab.ts';
+import { LOCATIONS_CSS } from './LocationsTree.ts';
+import { UNITS_CSS } from './UnitsTab.ts';
 import type { CompanyApi } from './company.service.ts';
 import { createAuthService, readAuthConfig } from '../auth/auth.service.ts';
 import type { AuthApi } from '../auth/auth.service.ts';
@@ -23,6 +29,7 @@ let mountedEl: HTMLElement | null = null;
 let auth: AuthApi | null | undefined;
 let api: CompanyApi | null = null;
 let core: CoreApi | null = null;
+let projects: ProjectsApi | null = null;
 
 function getAuth(): AuthApi | null {
   if (auth === undefined) {
@@ -30,6 +37,7 @@ function getAuth(): AuthApi | null {
     auth = cfg ? createAuthService(cfg) : null;
     api = auth ? createCompanyService() : null;
     core = auth ? createCoreService() : null;
+    projects = auth ? createProjectsService() : null;   // P2-0038: объекты и единицы — в «Компании»
   }
   return auth;
 }
@@ -38,7 +46,7 @@ function ensureStyle(doc: Document): void {
   if (doc.getElementById(STYLE_ID)) return;
   const style = doc.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = PLATFORM_AUTH_CSS + COMPANY_CSS;
+  style.textContent = PLATFORM_AUTH_CSS + COMPANY_CSS + SCOPE_CSS + PROJECTS_CSS + LOCATIONS_CSS + UNITS_CSS;
   doc.head.appendChild(style);
 }
 
@@ -52,7 +60,7 @@ export function mount(el: HTMLElement): void {
   root = createRoot(el);
   const r = root;
   const a = getAuth();
-  flushSync(() => r.render(createElement(CompanyApp, { auth: a, api, core })));
+  flushSync(() => r.render(createElement(CompanyApp, { auth: a, api, core, projects })));
 }
 
 export function unmount(): void {

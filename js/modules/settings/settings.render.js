@@ -1083,7 +1083,60 @@ var SettingsRender = {
                     Developed by Igor Kondratiev
                 </div>
             </div>
-            <div id="settings-panel-company" data-settings-panel="company" hidden></div>
+            <div id="settings-panel-company" data-settings-panel="company" hidden>
+                <!-- P2-0038: экран «Компания» (React, js/dist/company) — сюда; под вкладкой «Оформление» — блок логотипа и цвета ниже -->
+                <div id="settings-company-app"></div>
+                <div id="settings-company-branding" class="space-y-3 mt-3" hidden>
+                    <div id="settings-company-branding-off" class="text-rbi-caption text-muted" hidden>Логотип и цвет применяются в отчётах и шапке «Качества» — модуль «Качество» у компании не подключён.</div>
+                <!-- БРЕНДИРОВАНИЕ -->
+                <details
+                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
+                    <summary
+                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01">
+                                </path>
+                            </svg>
+                            <span data-i18n="settings.accordion.branding">Брендирование (PRO)</span>
+                        </span>
+                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
+                    </summary>
+                    <div>
+                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-sm" data-i18n="settings.body.branding.color">Фирменный цвет</div>
+                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.color_hint">Цвет акцентов в PDF</div>
+                            </div>
+                            <input type="color" id="set-brand-color"
+                                class="w-10 h-10 p-0 border-0 rounded cursor-pointer"
+                                data-settings-action="toggleSetting" data-settings-action-key="brandColor" data-settings-action-val-type="element" data-action-event="change">
+                        </div>
+                        <div class="p-4 border-b border-[var(--card-border)]">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <div class="font-bold text-sm" data-i18n="settings.body.branding.logo">Логотип компании</div>
+                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.logo_hint">Отобразится в шапке отчетов</div>
+                                </div>
+                                <button onclick="document.getElementById('brand-logo-upload').click()"
+                                    class="bg-brand-soft text-brand px-3 py-1.5 rounded-lg text-rbi-caption font-bold active:scale-95 border border-brand-soft" data-i18n="settings.body.branding.upload">Загрузить</button>
+                                <input type="file" id="brand-logo-upload" accept="image/png, image/jpeg" class="hidden"
+                                    data-settings-action="handleLogoUpload" data-settings-action-val-type="event" data-action-event="change">
+                            </div>
+                            <div id="brand-logo-preview"
+                                class="hidden mt-3 border border-[var(--card-border)] rounded-lg p-2 bg-[var(--card-bg)] flex justify-between items-center shadow-inner">
+                                <img id="brand-logo-img" src="" class="h-10 max-w-[60%] object-contain bg-transparent">
+                                <button data-settings-action="removeBrandLogo"
+                                    class="text-danger text-rbi-caption font-bold px-3 py-1.5 bg-[var(--card-bg)] rounded border border-danger-soft shadow-sm active:scale-90" data-i18n="settings.body.branding.remove">Удалить</button>
+                            </div>
+                            <!-- УПРАВЛЕНИЕ КОРПОРАТИВНЫМ СТИЛЕМ -->
+                            <div id="corp-branding-controls" class="mt-3"></div>
+                        </div>
+                    </div>
+                </details>
+                </div>
+            </div>
             <div id="settings-panel-platform-admin" data-settings-panel="platform-admin" hidden></div>
             <div id="settings-panel-admin" data-settings-panel="admin" class="space-y-3" hidden>
                 <!-- P2-0038: «Панель руководителя» — была кнопкой-замком в шапке Настроек -->
@@ -1325,54 +1378,6 @@ var SettingsRender = {
                                 <span data-i18n="settings.body.storage.export_library">Выгрузить Библиотеку в код</span>
                             </button>
                 </div>
-                <!-- P2-0038: оформление компании — до этапа 3 (Компания → Оформление) здесь, как в P2-0037 -->
-                <!-- БРЕНДИРОВАНИЕ -->
-                <details
-                    class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
-                    <summary
-                        class="p-4 font-black text-rbi-body text-brand uppercase tracking-tight cursor-pointer flex justify-between items-center bg-brand-soft transition-colors select-none group-open:border-b border-brand-soft rounded-2xl group-open:rounded-b-none">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01">
-                                </path>
-                            </svg>
-                            <span data-i18n="settings.accordion.branding">Брендирование (PRO)</span>
-                        </span>
-                        <span class="transition-transform group-open:rotate-180 text-brand">▼</span>
-                    </summary>
-                    <div>
-                        <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
-                            <div>
-                                <div class="font-bold text-sm" data-i18n="settings.body.branding.color">Фирменный цвет</div>
-                                <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.color_hint">Цвет акцентов в PDF</div>
-                            </div>
-                            <input type="color" id="set-brand-color"
-                                class="w-10 h-10 p-0 border-0 rounded cursor-pointer"
-                                data-settings-action="toggleSetting" data-settings-action-key="brandColor" data-settings-action-val-type="element" data-action-event="change">
-                        </div>
-                        <div class="p-4 border-b border-[var(--card-border)]">
-                            <div class="flex justify-between items-center mb-2">
-                                <div>
-                                    <div class="font-bold text-sm" data-i18n="settings.body.branding.logo">Логотип компании</div>
-                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.branding.logo_hint">Отобразится в шапке отчетов</div>
-                                </div>
-                                <button onclick="document.getElementById('brand-logo-upload').click()"
-                                    class="bg-brand-soft text-brand px-3 py-1.5 rounded-lg text-rbi-caption font-bold active:scale-95 border border-brand-soft" data-i18n="settings.body.branding.upload">Загрузить</button>
-                                <input type="file" id="brand-logo-upload" accept="image/png, image/jpeg" class="hidden"
-                                    data-settings-action="handleLogoUpload" data-settings-action-val-type="event" data-action-event="change">
-                            </div>
-                            <div id="brand-logo-preview"
-                                class="hidden mt-3 border border-[var(--card-border)] rounded-lg p-2 bg-[var(--card-bg)] flex justify-between items-center shadow-inner">
-                                <img id="brand-logo-img" src="" class="h-10 max-w-[60%] object-contain bg-transparent">
-                                <button data-settings-action="removeBrandLogo"
-                                    class="text-danger text-rbi-caption font-bold px-3 py-1.5 bg-[var(--card-bg)] rounded border border-danger-soft shadow-sm active:scale-90" data-i18n="settings.body.branding.remove">Удалить</button>
-                            </div>
-                            <!-- УПРАВЛЕНИЕ КОРПОРАТИВНЫМ СТИЛЕМ -->
-                            <div id="corp-branding-controls" class="mt-3"></div>
-                        </div>
-                    </div>
-                </details>
                 <!-- САМООБУЧЕНИЕ СИСТЕМЫ (AI) -->
                 <details id="ai-optimizer-settings"
                     class="bg-[var(--card-bg)] border border-purple-200 dark:border-purple-800 rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden mb-3">
@@ -1702,8 +1707,11 @@ console.log('[SettingsRender] settings.render.js markup mounted');
     var SETTINGS_SUBSECTIONS = SETTINGS_KEYS;
 
     /** Platform 2.0: «Компания» (роли, сотрудники, журнал) — подраздел Настроек; виден, когда сервер подтвердил право (RBI.platformMenuAccess.company). */
+    /** «Компания»: управление ролями (флаг сервера) или ведение объектов/единиц (P2-0038; решает обёртка js/modules/company по ответу сервера). */
     function _companyAllowed() {
-        return !!(window.RBI && window.RBI.platformMenuAccess && window.RBI.platformMenuAccess.company === true);
+        if (window.RBI && window.RBI.platformMenuAccess && window.RBI.platformMenuAccess.company === true) return true;
+        var host = window.RBI && window.RBI.platformPanels && window.RBI.platformPanels.company;
+        return !!(host && typeof host.allowed === 'function' && host.allowed());
     }
     /** P2-0013: «Администрирование платформы» — только администратору платформы (флаг по ответу сервера pf_my_platform; сервер проверяет каждый вызов). */
     function _platformAdminAllowed() {
@@ -1753,7 +1761,8 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         return false;
     }
     window.addEventListener('rbi:platform-access', _syncCompanyTab);
-    window.addEventListener('rbi:quality-access', _syncCompanyTab);   // P2-0037: права компании в Качестве пришли / сменились
+    window.addEventListener('rbi:quality-access', _syncCompanyTab);
+    window.addEventListener('rbi:company-access', _syncCompanyTab);   // P2-0038: право на объекты/единицы пришло   // P2-0037: права компании в Качестве пришли / сменились
 
     /**
      * P2-0013: «Настройки → Платформа» — как вы вошли (до переноса «Качества» в Platform 2.0 это два разных входа и две админки):
@@ -1844,10 +1853,25 @@ console.log('[SettingsRender] settings.render.js markup mounted');
     }
     function _mountCompanyPanel(on) {
         var host = window.RBI && window.RBI.platformPanels && window.RBI.platformPanels.company;
-        var panel = document.getElementById('settings-panel-company');
-        if (!host || !panel) return;
-        if (on) host.mount(panel); else host.unmount();
+        var panel = document.getElementById('settings-company-app');
+        if (host && panel) { if (on) host.mount(panel); else host.unmount(); }
+        _syncCompanyBranding();
     }
+    /** P2-0038: «Компания → Оформление» — блок логотипа и цвета (прежний «Брендирование») под экраном «Компании». */
+    function _syncCompanyBranding() {
+        var box = document.getElementById('settings-company-branding');
+        if (!box) return;
+        var hash = window.location.hash || '';
+        var on = settingsKeyFromHash(hash) === 'company' && /^#\/settings\/company\/branding(?:[/?]|$)/.test(hash);
+        box.hidden = !on;
+        var q = _qualityModuleAllowed();
+        var off = document.getElementById('settings-company-branding-off');
+        if (off) off.hidden = q;
+        box.querySelectorAll('details').forEach(function (d) { d.hidden = !q; if (q) d.open = true; });
+    }
+    window.addEventListener('rbi:route', _syncCompanyBranding);
+    window.addEventListener('popstate', _syncCompanyBranding);
+    window.addEventListener('hashchange', _syncCompanyBranding);
 
     /** Старые ключи подразделов (сохранённые в сессии, вызовы извне) → ключи двух зон. */
     var LEGACY_SUBSECTION_KEYS = { directories: 'admin', platform: 'my-profile', quality: 'my-quality', construction: 'my-profile' };

@@ -53,7 +53,7 @@ test('модель: реквизиты без пустых полей и стр�
 
 test('адрес вкладки: #/settings/company/counterparties → «Контрагенты»', () => {
   assert.equal(tabFromHash('#/settings/company/counterparties'), 'counterparties');
-  assert.equal(tabFromHash('#/settings/company/xxx'), 'roles');
+  assert.equal(tabFromHash('#/settings/company/xxx'), null);   // P2-0038: неизвестная — первая доступная (решает экран)
 });
 
 test('журнал компании: записи о контрагентах — по-русски', () => {

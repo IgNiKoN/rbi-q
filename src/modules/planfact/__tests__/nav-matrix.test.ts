@@ -84,23 +84,28 @@ const ALL: RouteAccess = { company: true, estimate: true, ks2: true, fact: true,
 test('План/Факт: адрес = открытый экран (раздел без права, неизвестный адрес, вкладка справочников без права)', () => {
   const rows: [string, Partial<RouteAccess>, string | null][] = [
     ['#/planfact', {}, null], ['#/planfact/summary', {}, null], ['#/planfact/vor', {}, null], ['#/planfact/directories', {}, null],
-    ['#/planfact/directories/units', {}, null], ['#/planfact/ks2', {}, null], ['#/planfact/ks2', { ks2: false }, '#/planfact'],
+    ['#/planfact/directories/units', {}, '#/planfact/directories/brigades'], ['#/planfact/ks2', {}, null],   // P2-0038: единицы — в «Компании» ['#/planfact/ks2', { ks2: false }, '#/planfact'],
     ['#/planfact/estimate', { estimate: false }, '#/planfact'], ['#/planfact/fact', { fact: false }, '#/planfact'],
-    ['#/planfact/что-то', {}, '#/planfact'], ['#/planfact/directories/prices', { estimate: false }, '#/planfact/directories/objects'],
-    ['#/planfact/directories/overheads', { estimate: false }, '#/planfact/directories/objects'], ['#/planfact/directories/prices', {}, null],
-    ['#/planfact/directories/brigades', { brigades: false }, '#/planfact/directories/objects'], ['#/planfact/directories/xyz', {}, '#/planfact/directories/objects'],
+    ['#/planfact/что-то', {}, '#/planfact'], ['#/planfact/directories/prices', { estimate: false }, '#/planfact/directories/brigades'],
+    ['#/planfact/directories/overheads', { estimate: false }, '#/planfact/directories/brigades'], ['#/planfact/directories/prices', {}, null],
+    ['#/planfact/directories/brigades', { brigades: false }, '#/planfact'], ['#/planfact/directories/xyz', {}, '#/planfact/directories/brigades'],
     ['#/planfact/ks2', { company: false, ks2: false }, null],            // нет доступа к компании — экран-подсказка, адрес не трогаем
     ['#/settings/company/members', { ks2: false }, null], ['#/quality/audit', {}, null]   // чужие адреса — никогда
   ];
   for (const [hash, a, want] of rows) assert.equal(canonicalHash(hash, { ...ALL, ...a }), want, hash + ' ' + JSON.stringify(a));
-  assert.deepEqual(routeFromHash('#/planfact/directories/units'), { page: 'directories', sub: 'units' });
+  assert.deepEqual(routeFromHash('#/planfact/directories/units'), { page: 'directories', sub: 'brigades' });
 });
 
 test('Компания: вкладка — из адреса #/settings/company/<вкладка>', () => {
-  assert.equal(tabFromHash('#/settings/company'), 'roles');
-  assert.equal(tabFromHash('#/settings/company/'), 'roles');
+  // P2-0038: без вкладки и неизвестная — null: экран открывает первую доступную по правам
+  assert.equal(tabFromHash('#/settings/company'), null);
+  assert.equal(tabFromHash('#/settings/company/'), null);
   assert.equal(tabFromHash('#/settings/company/members'), 'members');
   assert.equal(tabFromHash('#/settings/company/audit'), 'audit');
-  assert.equal(tabFromHash('#/settings/company/чужое'), 'roles');
-  assert.equal(tabFromHash('#/settings/platform'), 'roles');
+  assert.equal(tabFromHash('#/settings/company/objects'), 'objects');
+  assert.equal(tabFromHash('#/settings/company/directories'), 'directories');
+  assert.equal(tabFromHash('#/settings/company/branding'), 'branding');
+  assert.equal(tabFromHash('#/settings/company/modules'), 'modules');
+  assert.equal(tabFromHash('#/settings/company/чужое'), null);
+  assert.equal(tabFromHash('#/settings/platform'), null);
 });

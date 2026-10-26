@@ -20,7 +20,9 @@ test('старые адреса «Настроек» → новые', () => {
     ['#/settings/my/xxx', '#/settings/my/profile'],
     ['#/settings/modules', '#/settings/modules/quality'],
     ['#/settings/platform/xxx', '#/settings/platform/companies'],
-    ['#/settings/unknown', '#/settings/my/profile']
+    ['#/settings/unknown', '#/settings/my/profile'],
+    ['#/planfact/directories/objects', '#/settings/company/objects'],
+    ['#/planfact/directories/units', '#/settings/company/directories']
   ];
   for (const [from, to] of cases) assert.equal(R.settingsLegacyRedirect(from), to, from);
 });
@@ -28,7 +30,7 @@ test('старые адреса «Настроек» → новые', () => {
 test('новые адреса и чужие маршруты не меняются', () => {
   for (const p of ['#/settings/my/profile', '#/settings/my/help', '#/settings/my/quality', '#/settings/modules/quality',
     '#/settings/platform/companies', '#/settings/company', '#/settings/company/members', '#/settings/company/audit',
-    '#/planfact/vor', '#/quality/audit', '#/settingsx']) {
+    '#/planfact/vor', '#/quality/audit', '#/settingsx', '#/planfact/directories', '#/planfact/directories/brigades', '#/planfact/directories/prices']) {
     assert.equal(R.settingsLegacyRedirect(p), p, p);
   }
 });

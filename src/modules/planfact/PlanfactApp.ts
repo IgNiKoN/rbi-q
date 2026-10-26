@@ -9,9 +9,7 @@ import type { ReactElement, ReactNode } from 'react';
 import type { AccessEntry, AuthApi } from '../../platform/auth/auth.service.ts';
 import { PLATFORM_AUTH_CSS } from '../../platform/auth/LoginForm.ts';
 import { CompanyScope } from '../../platform/company/CompanyScope.ts';
-import { ProjectsTab } from '../../platform/company/ProjectsTab.ts';
 import type { CoreApi } from '../../platform/core/core.service.ts';
-import { UnitsTab } from '../../platform/company/UnitsTab.ts';
 import { VorTab } from './vor/VorTab.ts';
 import { BrigadesTab } from './fact/BrigadesTab.ts';
 import { FactTab } from './fact/FactTab.ts';
@@ -37,15 +35,16 @@ const BASE = '#/planfact';
 /** Событие модуля: маршрут #/planfact… показан (его шлёт index.ts при каждом переходе роутера). */
 export const ROUTE_EVENT = 'planfact:route';
 type Page = 'directories' | 'vor' | 'estimate' | 'fact' | 'ks2' | 'summary' | 'inbox';
-type Sub = 'objects' | 'units' | 'brigades' | 'prices' | 'overheads';
+type Sub = 'brigades' | 'prices' | 'overheads';
 /** «Цены» — только с правом planfact.estimate.manage (коммерческая тайна; прораб вкладку не видит, сервер тоже не отдаст). */
-const SUBS: { id: Sub; label: string; estimate?: boolean }[] = [{ id: 'objects', label: 'Объекты' }, { id: 'units', label: 'Единицы' }, { id: 'brigades', label: 'Бригады' }, { id: 'prices', label: 'Цены', estimate: true }, { id: 'overheads', label: 'Надбавки', estimate: true }];
+/** P2-0038: «Объекты» и «Единицы» переехали в «Настройки → Компания» (старые адреса перенаправляет оболочка); здесь — рабочие справочники сметчика. */
+const SUBS: { id: Sub; label: string; estimate?: boolean }[] = [{ id: 'brigades', label: 'Бригады' }, { id: 'prices', label: 'Цены', estimate: true }, { id: 'overheads', label: 'Надбавки', estimate: true }];
 
-/** Адрес #/planfact[/vor|/estimate|/fact|/ks2|/summary|/inbox|/directories[/objects|/units|/prices|/overheads]] → страница и вкладка справочников.
+/** Адрес #/planfact[/vor|/estimate|/fact|/ks2|/summary|/inbox|/directories[/brigades|/prices|/overheads]] → страница и вкладка справочников.
  *  #/planfact и неизвестный адрес — «Сводка». Пункты верхнего уровня — в боковом меню (манифест модуля). */
 export function routeFromHash(hash: string): { page: Page; sub: Sub } {
   const parts = String(hash || '').replace(/^#\/planfact\/?/, '').split('?')[0].split('/');
-  return { page: parts[0] === 'directories' ? 'directories' : parts[0] === 'fact' ? 'fact' : parts[0] === 'ks2' ? 'ks2' : parts[0] === 'summary' ? 'summary' : parts[0] === 'vor' ? 'vor' : parts[0] === 'estimate' ? 'estimate' : parts[0] === 'inbox' ? 'inbox' : 'summary', sub: parts[1] === 'units' ? 'units' : parts[1] === 'brigades' ? 'brigades' : parts[1] === 'prices' ? 'prices' : parts[1] === 'overheads' ? 'overheads' : 'objects' };
+  return { page: parts[0] === 'directories' ? 'directories' : parts[0] === 'fact' ? 'fact' : parts[0] === 'ks2' ? 'ks2' : parts[0] === 'summary' ? 'summary' : parts[0] === 'vor' ? 'vor' : parts[0] === 'estimate' ? 'estimate' : parts[0] === 'inbox' ? 'inbox' : 'summary', sub: parts[1] === 'prices' ? 'prices' : parts[1] === 'overheads' ? 'overheads' : 'brigades' };
 }
 
 /** Подвкладка «Факта» (P2-0017): #/planfact/fact — «Ввод», #/planfact/fact/chessboard — «Шахматка»;
@@ -71,7 +70,7 @@ export function factSubFromHash(hash: string): FactSub {
 export interface RouteAccess { company: boolean; estimate: boolean; ks2: boolean; fact: boolean; brigades: boolean }
 
 /** P2-0011: адрес = то, что открыто (единый источник — маршрут оболочки). Раздел без права и неизвестный адрес показывают
- *  «Сводку» → адрес #/planfact; вкладка справочников без права («Цены», «Надбавки», «Бригады») или неизвестная → «Объекты».
+ *  «Сводку» → адрес #/planfact; вкладка справочников без права («Цены», «Надбавки») или неизвестная → «Бригады» (P2-0038).
  *  null — адрес уже верный (или нет доступа к компании: тогда экран-подсказка, адрес не трогаем). */
 export function canonicalHash(hash: string, a: RouteAccess): string | null {
   // Экран модуля остаётся смонтированным, пока открыт другой раздел, — чужие адреса не трогаем.
@@ -84,7 +83,7 @@ export function canonicalHash(hash: string, a: RouteAccess): string | null {
   if (!pageOk) return BASE;
   if (r.page === 'directories' && parts.length > 1 && parts[1] !== '') {
     const subOk = parts[1] === r.sub && !((r.sub === 'prices' || r.sub === 'overheads') && !a.estimate) && !(r.sub === 'brigades' && !a.brigades);
-    if (!subOk) return `${BASE}/directories/objects`;
+    if (!subOk) return a.brigades ? `${BASE}/directories/brigades` : BASE;
   }
   if (r.page === 'fact' && parts.length > 1 && parts[1].split('?')[0] !== '' && !FACT_SUB_IDS.includes(parts[1].split('?')[0])) return `${BASE}/fact`;
   if (r.page === 'vor' && parts.length > 1 && parts[1].split('?')[0] !== '' && parts[1].split('?')[0] !== 'positions') return `${BASE}/vor`;
@@ -250,11 +249,10 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     ? h('div', { className: 'pf-root' }, h(VorTab, { api: mode === 'authed' ? vorApi || null : null, projects: mode === 'authed' ? projects || null : null,
         sub: mode === 'authed' ? vsub : 'load', fact: mode === 'authed' ? factApi || null : null, summary: mode === 'authed' ? summaryApi || null : null, user: who, onCount: setVorCount }))
     : dirs && projects
-    ? h(CompanyScope, { api: projects, render: (c) => route.sub === 'units' ? h(UnitsTab, { api: projects, company: c })
-        : route.sub === 'brigades' && factApi ? h(BrigadesTab, { api: factApi, company: c })
-        : route.sub === 'prices' && canEstimate && estimate ? h(PricesTab, { api: estimate, vor: vorApi || null, company: c })
+    ? h(CompanyScope, { api: projects, render: (c) => route.sub === 'prices' && canEstimate && estimate ? h(PricesTab, { api: estimate, vor: vorApi || null, company: c })
         : route.sub === 'overheads' && canEstimate && estimate ? h(OverheadTemplateTab, { api: estimate, company: c })
-        : h(ProjectsTab, { api: projects, company: c, core: props.core }) })
+        : factApi ? h(BrigadesTab, { api: factApi, company: c })
+        : h('div', { className: 'pf-muted' }, 'Справочник недоступен') })
     : h('div', { className: 'pf-root' }, h('div', { className: 'pf-card pf-hint', 'data-testid': 'pf-hint' },
         h('div', null, hint),
         mode === 'demo' ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'pf-hint-vor', onClick: () => nav(`${BASE}/vor`) }, 'Разбор файла ВОР') : null));

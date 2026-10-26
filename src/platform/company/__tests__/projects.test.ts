@@ -135,8 +135,8 @@ test('нет доступа ни к одной компании — сообще
 });
 
 test('адрес → страница модуля', () => {
-  assert.deepEqual(routeFromHash('#/planfact'), { page: 'summary', sub: 'objects' });
-  assert.equal(routeFromHash('#/planfact/directories/units').sub, 'units');
+  assert.deepEqual(routeFromHash('#/planfact'), { page: 'summary', sub: 'brigades' });
+  assert.equal(routeFromHash('#/planfact/directories/units').sub, 'brigades', 'P2-0038: единицы — в «Компании»');
   assert.equal(routeFromHash('#/planfact/directories').page, 'directories');
   assert.equal(routeFromHash('#/planfact/directories/objects').page, 'directories');
   assert.equal(routeFromHash('#/planfact/что-то').page, 'summary');
@@ -153,12 +153,13 @@ function mountApp(projects: ProjectsApi | null, onAccess?: (h: boolean) => void)
   return el;
 }
 
-test('План/Факт: «Справочники» (#/planfact/directories) показывают проекты; модуль сообщает оболочке, что доступ есть', async () => {
+test('План/Факт: «Справочники» (#/planfact/directories) открываются; объектов там больше нет (P2-0038 — в «Компании»); модуль сообщает оболочке, что доступ есть', async () => {
   win.location.hash = '#/planfact/directories';
   const seen: boolean[] = [];
   const el = mountApp(fakeApi().api, (h) => seen.push(h)); await tick();
   assert.deepEqual(seen, [true]);
-  assert.ok(el.querySelector('[data-testid="pj-projects"]'));
+  assert.ok(el.querySelector('[data-testid="pf-dirtabs"]'));
+  assert.ok(!el.querySelector('[data-testid="pj-projects"]'));
   assert.ok(el.textContent.includes('Справочники'));
   assert.ok(!el.querySelector('[data-testid="pf-tabs"]'), 'внутри страницы нет собственной панели вкладок — пункты в боковом меню');
 });
@@ -166,9 +167,9 @@ test('План/Факт: «Справочники» (#/planfact/directories) п�
 test('План/Факт: #/planfact — не справочники (по умолчанию «Сводка», P2-0009); смена адреса переключает страницу', async () => {
   win.location.hash = '#/planfact';
   const el = mountApp(fakeApi().api); await tick();
-  assert.ok(!el.querySelector('[data-testid="pj-projects"]'));
+  assert.ok(!el.querySelector('[data-testid="pf-dirtabs"]'));
   win.location.hash = '#/planfact/directories'; win.dispatchEvent(new win.Event('hashchange')); await tick();
-  assert.ok(el.querySelector('[data-testid="pj-projects"]'));
+  assert.ok(el.querySelector('[data-testid="pf-dirtabs"]'));
 });
 
 test('План/Факт: нет доступа к компании — справочники не открываются, оболочке сообщено «нет»', async () => {
@@ -176,18 +177,18 @@ test('План/Факт: нет доступа к компании — спра�
   const seen: boolean[] = [];
   const el = mountApp(fakeApi({ access: [] }).api, (h) => seen.push(h)); await tick();
   assert.deepEqual(seen, [false]);
-  assert.ok(!el.querySelector('[data-testid="pj-projects"]'));
+  assert.ok(!el.querySelector('[data-testid="pf-dirtabs"]'));
 });
 
 test('переход через роутер оболочки (history.pushState, без hashchange) тоже открывает «Справочники»', async () => {
   win.location.hash = '#/planfact';
   const el = mountApp(fakeApi().api); await tick();
-  assert.ok(!el.querySelector('[data-testid="pj-projects"]'));
+  assert.ok(!el.querySelector('[data-testid="pf-dirtabs"]'));
   win.history.pushState(null, '', '#/planfact/directories');   // так переходит AppRouter.navigate — hashchange не приходит
   win.dispatchEvent(new win.Event(ROUTE_EVENT)); await tick();
-  assert.ok(el.querySelector('[data-testid="pj-projects"]'));
+  assert.ok(el.querySelector('[data-testid="pf-dirtabs"]'));
   win.history.pushState(null, '', '#/planfact'); win.dispatchEvent(new win.Event(ROUTE_EVENT)); await tick();
-  assert.ok(!el.querySelector('[data-testid="pj-projects"]'));
+  assert.ok(!el.querySelector('[data-testid="pf-dirtabs"]'));
 });
 
 function mountUnits(api: ProjectsApi, company: CompanyAccess) {
@@ -242,17 +243,10 @@ test('единицы: без права — только чтение', async ()
   assert.ok(!el.querySelector('[data-testid="un-add"]') && !el.querySelector('[data-testid="un-delete"]'));
 });
 
-test('справочники: вкладки «Объекты» / «Единицы» / «Бригады», переключение идёт через роутер оболочки', async () => {
+test('справочники План/Факта: только «Бригады» (без права сметчика); «Объекты» и «Единицы» — в «Компании» (P2-0038)', async () => {
   win.location.hash = '#/planfact/directories';
-  const nav: string[] = [];
-  (win as N).AppRouter = { navigate: (p: string) => { nav.push(p); win.history.pushState(null, '', p); win.dispatchEvent(new win.Event(ROUTE_EVENT)); } };
   const el = mountApp(fakeApi().api); await tick();
-  assert.deepEqual([...el.querySelectorAll('[data-testid="pf-dirtabs"] [role="tab"]')].map((t: N) => t.textContent), ['Объекты', 'Единицы', 'Бригады']);
-  assert.ok(el.querySelector('[data-testid="pj-projects"]'));
-  click(el.querySelector('[data-sub="units"]')); await tick();
-  assert.deepEqual(nav, ['#/planfact/directories/units']);
-  assert.ok(el.querySelector('[data-testid="un-units"]') && !el.querySelector('[data-testid="pj-projects"]'));
-  click(el.querySelector('[data-sub="objects"]')); await tick();
-  assert.ok(el.querySelector('[data-testid="pj-projects"]'));
-  delete (win as N).AppRouter;
+  assert.deepEqual([...el.querySelectorAll('[data-testid="pf-dirtabs"] [role="tab"]')].map((t: N) => t.textContent), ['Бригады']);
+  assert.ok(!el.querySelector('[data-sub="objects"]') && !el.querySelector('[data-sub="units"]'));
+  assert.ok(!el.querySelector('[data-testid="pj-projects"]') && !el.querySelector('[data-testid="un-units"]'));
 });

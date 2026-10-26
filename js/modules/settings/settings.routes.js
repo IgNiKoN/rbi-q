@@ -8,7 +8,8 @@
  *
  * Ключ подраздела (key) — id панели `data-settings-panel` в settings.render.js; старые ключи «admin» и «platform-admin»
  * сохранены (на них завязаны замок админки, игровая панель руководителя, монтирование «Админа платформы»).
- * Старые адреса (#/settings/platform, /platform-admin, /admin, /directories, /quality, /construction) перенаправляет
+ * Старые адреса (#/settings/platform, /platform-admin, /admin, /directories, /quality, /construction; с этапа 3 —
+ * #/planfact/directories/objects|units: объекты и единицы переехали в «Компанию») перенаправляет
  * settingsLegacyRedirect — его вызывает AppRouter.normalizeSubPath (замена адреса, без лишней записи в истории).
  * Права здесь не проверяются: закрытый подраздел без права settings.render.js открывает как «Моё → Профиль».
  */
@@ -39,6 +40,12 @@ export const ADMIN_KEYS = ['company', 'admin', 'platform-admin'];
 
 const DEFAULT_PATH = SETTINGS_BASE + '/my/profile';
 
+/** P2-0038 этап 3: справочники План/Факта, переехавшие в «Компанию». */
+const PLANFACT_MOVED = {
+    objects: SETTINGS_BASE + '/company/objects',
+    units: SETTINGS_BASE + '/company/directories'
+};
+
 /** Старый одноуровневый адрес → новый. */
 const LEGACY = {
     platform: DEFAULT_PATH,
@@ -60,6 +67,8 @@ function segments(path) {
  * Старый #/settings/platform (без второго уровня) — это личная «Платформа» → «Моё»; #/settings/platform/<…> — уровень «Платформа».
  */
 export function settingsLegacyRedirect(path) {
+    const pf = /^#\/planfact\/directories\/(objects|units)(?:[/?]|$)/.exec(String(path || ''));
+    if (pf) return PLANFACT_MOVED[pf[1]];
     const seg = segments(path);
     if (!seg) return path;
     const [a, b] = seg;
