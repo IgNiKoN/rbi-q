@@ -122,6 +122,11 @@
 - **Откат:** `041_close_public_anon_down.sql` — из копий `p2_backup.p2_0042_*` (ТД №244); на PGlite отпечаток прав `public` (`tests/server/041_public_acl_fingerprint.sql`) до и после совпадает.
 - **Storage РБИ (P2-0043, `042_close_rbi_storage`):** старые бакеты (все, кроме `quality-*`) — `public = false`; в `storage.objects` только правила Качества `quality_files_*` (8). Новые бакеты — только `quality-*` через `companyBucket` и правила 018d.
 
+## Одно дерево мест, шаг 1 (P2-0045, ТД №246)
+
+- **Миграция `044_one_places_tree`** (на сервере 26.10.2026): места объекта ведёт Качество (`quality.places_led_by_quality`: объект ядра связан с узлом-объектом Качества и у него нет своих мест План/Факта) — любая запись в `core.locations` такого объекта, кроме переноса из Качества (`quality.place_sync`, флаг сеанса `quality.place_sync`), — отказ `42501` (триггер `zz_locations_quality_guard`), независимо от права `planfact.projects.manage`. Экран спрашивает `pf_locations_from_quality` (член проекта).
+- **Видимость замечаний и приёмок v2:** `core_project_id` пишет сервер (триггер `*_v2_bind_object` после `bind_company`) — объект узла-объекта над `"locationId"`; правило — прежнее `quality.row_visible_id` (043). Назначение «на объект» видит записи своего объекта и записи без объекта; назначение на всю компанию — все. На сервере 26.10.2026 все 18 назначений RBI с `construction.view` — на всю компанию: видимость не изменилась (21 → 21).
+
 ## Кабинет подрядчика: Стройконтроль по номеру фирмы (P2-0044, ТД №109)
 
 - **Миграция `043_contractor_cabinet`** (на сервере 26.10.2026): `construction_defects_v2`, `construction_acceptance_v2` — `core_counterparty_id` (пишет сервер: `"contractorId"` → справочник фирм объекта `contractor_directory` или `contractors` → ключ/название → `quality.counterparty_of`; правка без смены подрядчика — прежний id); правила — `quality.row_visible_id` (как `row_visible`, «только своя фирма» — по id, `assignment_sees_id`).
