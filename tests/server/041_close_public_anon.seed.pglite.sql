@@ -43,3 +43,15 @@ insert into public.contractors(id) values ('c-041');
 insert into public.contracts(id, "contractorId") values ('ct-041', 'c-041');
 insert into public.allowed_projects(code) values ('P041');
 insert into public.shared_report_snapshots(id, html_content, public_token) values ('rs-041', '<p>отчёт</p>', 'tok-041');
+
+-- правила Storage с сервера (pg_policies, 26.10.2026): загрузка/правка в старые бакеты сверяется с public.rbi_engineer_profiles —
+-- authenticated должен сохранить чтение этой таблицы (иначе загрузка файлов падает с «permission denied»).
+create or replace function auth.role() returns text language sql stable as
+  $f$ select coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role', 'anon') $f$;
+grant execute on function auth.role() to anon, authenticated;
+create policy storage_insert_transition on storage.objects for insert
+  with check (bucket_id = any (array['custom-assets', 'inspection-photos', 'reports']) and ((exists (select 1 from public.rbi_engineer_profiles p
+    where p.auth_user_id = auth.uid() and p.cloud_status = 'approved' and p.project_code = split_part(objects.name, '/', 1))) or auth.role() = 'authenticated'));
+create policy storage_update_transition on storage.objects for update
+  using (bucket_id = any (array['custom-assets', 'inspection-photos', 'reports']) and ((exists (select 1 from public.rbi_engineer_profiles p
+    where p.auth_user_id = auth.uid() and p.cloud_status = 'approved' and p.project_code = split_part(objects.name, '/', 1))) or auth.role() = 'authenticated'));

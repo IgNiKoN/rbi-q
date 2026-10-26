@@ -12,8 +12,8 @@ do $$
 declare r record;
 begin
   -- права, выданные миграцией, — снять
-  for r in select obj from p2_backup.p2_0042_grants where kind = 'function' and added loop
-    execute format('revoke execute on function %s from authenticated', r.obj);
+  for r in select kind, obj, privilege from p2_backup.p2_0042_grants where added loop
+    execute format('revoke %s on %s %s from authenticated', r.privilege, r.kind, r.obj);
   end loop;
   -- прежние права — вернуть
   for r in select kind, obj, grantee, privilege, grantable from p2_backup.p2_0042_grants where not added loop

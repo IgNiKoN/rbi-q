@@ -22,6 +22,8 @@ begin
     e := pg_temp.err(format('select 1 from public.%I limit 1', t));
     if e <> '42501' then fails := fails + 1; res := res || format('FAIL anon читает public.%s (%s); ', t, e); end if;
   end loop;
+  e := pg_temp.err($q$insert into storage.objects(bucket_id, name) values ('inspection-photos', 'P041/anon.jpg')$q$);
+  if e = 'OK' then fails := fails + 1; res := res || 'FAIL anon загружает файл в старый бакет; '; end if;
   -- 2. Без входа: запись и последовательность — отказ
   e := pg_temp.err($q$insert into public.rbi_sync_queue(project_code, engineer_name, action_type, payload) values ('x', 'x', 'x', '{}')$q$);
   if e <> '42501' then fails := fails + 1; res := res || 'FAIL anon пишет rbi_sync_queue (' || e || '); '; end if;
@@ -42,6 +44,11 @@ begin
   if e <> 'OK' then fails := fails + 1; res := res || 'FAIL authenticated — pf_my_projects (' || e || '); '; end if;
   e := pg_temp.err('select public.rbi_current_role()');
   if e <> 'OK' then fails := fails + 1; res := res || 'FAIL authenticated — rbi_current_role (' || e || '); '; end if;
+  -- Storage: старые правила загрузки читают public.rbi_engineer_profiles — загрузка вошедшим работает
+  e := pg_temp.err($q$insert into storage.objects(bucket_id, name) values ('inspection-photos', 'P041/photo.jpg')$q$);
+  if e <> 'OK' then fails := fails + 1; res := res || 'FAIL authenticated не загружает файл в Storage (' || e || '); '; end if;
+  e := pg_temp.err($q$update storage.objects set metadata = '{}' where name = 'P041/photo.jpg'$q$);
+  if e <> 'OK' then fails := fails + 1; res := res || 'FAIL authenticated не правит файл в Storage (' || e || '); '; end if;
   e := pg_temp.err('select 1 from p2_backup.p2_0042_grants limit 1');
   if e <> '42501' then fails := fails + 1; res := res || 'FAIL authenticated читает p2_backup (' || e || '); '; end if;
   reset role;

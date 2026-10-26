@@ -3,6 +3,9 @@
 -- функции pf_* и вход не трогаются. Что было — в p2_backup.p2_0042_* (для отката 041_close_public_anon_down.sql).
 --  1. Таблицы, представления, последовательности public: все права anon, authenticated и PUBLIC сняты
 --     (новое приложение работает со схемами quality/core/planfact и функциями pf_*; потребителей public нет).
+--     Исключение (решение владельца 26.10.2026): authenticated сохраняет SELECT на таблицы public, которые читают правила
+--     RLS других схем (на сервере — public.rbi_engineer_profiles в правилах загрузки Storage storage_*_transition);
+--     что видно — по-прежнему решают правила самой таблицы.
 --  2. Правила RLS «для всех» (using(true) / with check(true) для anon/public) удалены.
 --  3. Функции public, кроме pf_*: выполнение снято у anon и PUBLIC; у authenticated — как было.
 --  4. Права по умолчанию (схема public; владельцы postgres и supabase_admin — на сервере объекты создаёт supabase_admin):
@@ -50,6 +53,24 @@ declare r record;
 begin
   for r in select distinct kind, obj from p2_backup.p2_0042_grants where kind in ('table', 'sequence') loop
     execute format('revoke all on %s %s from anon, authenticated, public', r.kind, r.obj);
+  end loop;
+end $$;
+
+-- 1а. Таблицы public, которые читают правила RLS других схем, — SELECT для authenticated остаётся
+insert into p2_backup.p2_0042_grants(kind, obj, grantee, privilege, grantable, added)
+select distinct 'table', c.oid::regclass::text, 'authenticated', 'SELECT', false, true
+  from pg_depend d
+  join pg_policy pol on d.classid = 'pg_policy'::regclass and d.objid = pol.oid
+  join pg_class pt on pt.oid = pol.polrelid join pg_namespace pn on pn.oid = pt.relnamespace
+  join pg_class c on c.oid = d.refobjid and d.refclassid = 'pg_class'::regclass
+  join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and pn.nspname <> 'public' and c.relkind in ('r', 'v', 'm', 'p', 'f');
+
+do $$
+declare r record;
+begin
+  for r in select obj from p2_backup.p2_0042_grants where kind = 'table' and added loop
+    execute format('grant select on table %s to authenticated', r.obj);
   end loop;
 end $$;
 
