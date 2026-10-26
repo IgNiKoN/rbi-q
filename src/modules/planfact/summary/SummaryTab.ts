@@ -28,7 +28,6 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
   const [list, setList] = useState<SummaryProject[] | null>(null);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
-  const [thresholds, setThresholds] = useState(false);
   // P2-0021: переход «Требует моего участия» → объект (p=…) и блок «Требует внимания» (focus=attention)
   const [sel, setSel] = useState(() => hashParam(window.location.hash, 'p') || 'all');
   const [focus] = useState(() => hashParam(window.location.hash, 'focus'));
@@ -61,7 +60,7 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
   if (list === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
   const sorted = [...list].sort(byLag);
   const opened = sel === 'all' ? (list.length === 1 ? list[0] : null) : list.find((p) => p.project_id === sel) || null;
-  const pick = (id: string): void => { setEditing(false); setThresholds(false); setSel(id); };
+  const pick = (id: string): void => { setEditing(false); setSel(id); };
   const chip = (on: boolean, label: string, onClick: () => void, key: string, testId?: string) =>
     h('button', { key, type: 'button', className: 'sm-chip' + (on ? ' sm-chip--on' : ''), 'aria-pressed': on, 'data-testid': testId, onClick }, label);
   const filters = list.length
@@ -77,10 +76,10 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
   const dash = (p: SummaryProject): ReactElement => h('div', { className: 'sm-dash' },
     h(Dashboard, { api, p, period, links, onDates: p.can_manage ? () => setEditing(true) : undefined, actions: p.can_manage || p.can_thresholds
       ? [p.can_manage ? h('button', { key: 'd', type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'sm-dates-btn', onClick: () => setEditing(!editing) }, editing ? 'Закрыть даты' : 'Даты проекта') : null,
-         p.can_thresholds ? h('button', { key: 't', type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'sm-th-btn', onClick: () => setThresholds(!thresholds) }, thresholds ? 'Закрыть пороги' : 'Пороги светофора') : null]
+         // P2-0038: пороги — в «Настройки → Администрирование → Модули → План/Факт»; отсюда — ссылка на объект там
+         p.can_thresholds ? h('button', { key: 't', type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'sm-th-btn', onClick: () => openThresholds(p.project_id) }, 'Пороги светофора →') : null]
       : null }),
-    editing && p.can_manage ? h(DatesForm, { api, p, onSaved: () => { setEditing(false); void load(); } }) : null,
-    thresholds && p.can_thresholds ? h(ThresholdsForm, { api, p, onSaved: () => { setThresholds(false); void load(); } }) : null);
+    editing && p.can_manage ? h(DatesForm, { api, p, onSaved: () => { setEditing(false); void load(); } }) : null);
   return h('div', { className: 'pj-tab sm-tab', 'data-testid': 'sm-tab' },
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     !error && !list.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'sm-empty' }, 'Нет объектов: сводка видна по проектам, где у вас есть право просмотра факта.') : null,
@@ -135,8 +134,16 @@ function DatesForm(props: { api: SummaryApi; p: SummaryProject; onSaved: () => v
     h('div', { className: 'pj-actions' }, h('button', { type: 'submit', className: 'pf-btn', disabled: busy, 'data-testid': 'sm-dates-save' }, 'Сохранить')));
 }
 
+/** P2-0038: адрес порогов объекта в Настройках (единственное место правки). */
+export const THRESHOLDS_PATH = '#/settings/modules/planfact';
+function openThresholds(projectId: string): void {
+  const path = `${THRESHOLDS_PATH}?p=${encodeURIComponent(projectId)}`;
+  const r = (window as unknown as { AppRouter?: { navigate?: (p: string) => void } }).AppRouter;
+  if (r && typeof r.navigate === 'function') r.navigate(path); else window.location.hash = path;
+}
+
 /** Пороги светофора объекта (ТЗ 8.2 «пороги в настройках объекта»): у кого право planfact.thresholds.edit (РП, руководство). Проверяет сервер. */
-function ThresholdsForm(props: { api: SummaryApi; p: SummaryProject; onSaved: () => void }): ReactElement {
+export function ThresholdsForm(props: { api: SummaryApi; p: SummaryProject; onSaved: () => void }): ReactElement {
   const { api, p, onSaved } = props;
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);

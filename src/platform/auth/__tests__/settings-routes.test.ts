@@ -29,7 +29,7 @@ test('старые адреса «Настроек» → новые', () => {
 
 test('новые адреса и чужие маршруты не меняются', () => {
   for (const p of ['#/settings/my/profile', '#/settings/my/help', '#/settings/my/quality', '#/settings/modules/quality',
-    '#/settings/platform/companies', '#/settings/company', '#/settings/company/members', '#/settings/company/audit',
+    '#/settings/platform/companies', '#/settings/modules/planfact', '#/settings/company', '#/settings/company/members', '#/settings/company/audit',
     '#/planfact/vor', '#/quality/audit', '#/settingsx', '#/planfact/directories', '#/planfact/directories/brigades', '#/planfact/directories/prices']) {
     assert.equal(R.settingsLegacyRedirect(p), p, p);
   }
@@ -46,6 +46,7 @@ test('адрес ↔ ключ панели, зона', () => {
   assert.equal(R.settingsKeyFromHash('#/settings/platform'), 'my-profile');
   assert.equal(R.settingsKeyFromHash('#/planfact'), null);
   assert.equal(R.settingsPathForKey('нет такого'), '#/settings/my/profile');
-  assert.deepEqual(R.SETTINGS_KEYS.filter((k: string) => R.settingsZoneForKey(k) === 'admin'), ['company', 'admin', 'platform-admin']);
+  assert.deepEqual(R.SETTINGS_KEYS.filter((k: string) => R.settingsZoneForKey(k) === 'admin'), ['company', 'admin', 'modules-planfact', 'platform-admin']);
+  assert.equal(R.settingsKeyFromHash('#/settings/modules/planfact?p=x1'), 'modules-planfact');
   assert.ok(R.SETTINGS_KEYS.filter((k: string) => R.settingsZoneForKey(k) === 'my').every((k: string) => k.startsWith('my-')));
 });

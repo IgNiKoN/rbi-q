@@ -258,3 +258,26 @@ body.rbi-settings-desktop-wide .settings-desk-rail .settings-zone-tabs {
   background: transparent;
   overflow: visible;
 }
+
+/* P2-0038: вкладки уровня «Модули» (Качество · План/Факт) — внутри панели, телефон и ПК */
+.settings-module-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  overflow-x: auto;
+}
+
+.settings-module-tabs[hidden],
+.settings-module-tabs .settings-subnav-btn[hidden] {
+  display: none !important;
+}
+
+.settings-module-tabs .settings-subnav-btn {
+  flex: 1 1 0;
+  min-width: max-content;
+  min-height: 40px;
+}

@@ -111,8 +111,43 @@ export function refreshInbox() {
     }).catch(function () { /* прежние числа */ });
 }
 
+/**
+ * P2-0038: «Настройки → Администрирование → Модули → План/Факт» (пороги светофора). Вкладка видна, если модуль положен и хотя бы
+ * в одном объекте есть право planfact.thresholds.edit (сервер: pf_summary_portfolio → can_thresholds — тот же ответ, что строит
+ * «Сводку»); экран — из бандла (mountSettings). Событие rbi:planfact-settings-access — право пришло/пропало.
+ */
+var thresholdsAllowed = false;
+var thSeq = 0;
+function refreshSettingsAccess() {
+    var p2 = window.RBI && window.RBI.platform2;
+    var st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
+    var my = ++thSeq;
+    var set = function (v) {
+        if (my !== thSeq || v === thresholdsAllowed) return;
+        thresholdsAllowed = v;
+        if (!v) unmountSettings();
+        try { window.dispatchEvent(new Event('rbi:planfact-settings-access')); } catch (_) { /* ignore */ }
+    };
+    if (!isAllowed() || !st || st.mode !== 'email' || typeof p2.rpc !== 'function') { set(false); return; }
+    p2.rpc('pf_summary_portfolio', {}).then(function (r) {
+        var rows = r && !r.error && Array.isArray(r.data) ? r.data : [];
+        set(rows.some(function (x) { return x && x.can_thresholds === true; }));
+    }, function () { set(false); });
+}
+function mountSettings(el) {
+    if (!thresholdsAllowed) return Promise.resolve();
+    return loadBundle().then(function (m) { if (thresholdsAllowed && el.isConnected) m.mountSettings(el); });
+}
+function unmountSettings() { if (loaded && typeof loaded.unmountSettings === 'function') loaded.unmountSettings(); }
+
 export function init(ctx) {
     savedCtx = ctx || null;
+    var rbi = (window.RBI = window.RBI || {});
+    rbi.platformPanels = Object.assign(rbi.platformPanels || {}, {
+        planfact: { mount: mountSettings, unmount: unmountSettings, allowed: function () { return thresholdsAllowed; } }
+    });
+    window.addEventListener('rbi:platform-access', refreshSettingsAccess);
+    refreshSettingsAccess();
     var router = window.AppRouter;
     if (router && typeof router.addRoute === 'function') router.addRoute(ROUTE, route);
     // Вход / выход / смена компании: на адресе модуля — показать модуль или «не подключён».

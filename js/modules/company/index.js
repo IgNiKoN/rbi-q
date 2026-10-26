@@ -22,7 +22,8 @@ function allowed() {
 function refreshDirs() {
     var seq = ++dirsSeq;
     var a = (window.RBI && window.RBI.platformMenuAccess) || {};
-    var c = globalThis.__platform2SupabaseClient;
+    var p2 = window.RBI && window.RBI.platform2;
+    var st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
     var set = function (v) {
         if (seq !== dirsSeq) return;
         var was = dirsAllowed;
@@ -32,8 +33,8 @@ function refreshDirs() {
             try { window.dispatchEvent(new Event('rbi:company-access')); } catch (_) { /* ignore */ }
         }
     };
-    if (!a.planfact || !c || typeof c.rpc !== 'function') { set(false); return; }
-    c.rpc('pf_my_company_access').then(function (res) {
+    if (!a.planfact || !st || st.mode !== 'email' || typeof p2.rpc !== 'function') { set(false); return; }
+    p2.rpc('pf_my_company_access', {}).then(function (res) {
         var rows = res && Array.isArray(res.data) ? res.data : [];
         set(rows.some(function (r) { return r.can_manage_projects === true || r.can_manage_units === true; }));
     }, function () { set(false); });

@@ -311,27 +311,48 @@ test('проваливание: корпус → секция → этаж → �
   assert.ok(panel().querySelector('[data-location-id="b1"]'));
 });
 
-test('пороги светофора: только с правом; проверка до запроса; сохранение — запрос и перечитанная сводка', async () => {
-  const f = makeFakeSummary([PTO_PROJECT]);
-  const el = mount(f.api);
+// P2-0038: пороги правятся в «Настройки → Модули → План/Факт»; в «Сводке» — ссылка туда (на объект)
+test('пороги светофора: «Сводка» ведёт в Настройки на объект; без права — ссылки нет', async () => {
+  const nav: string[] = [];
+  (win as N).AppRouter = { navigate: (p: string) => nav.push(p) };
+  const el = mount(makeFakeSummary([PTO_PROJECT]).api);
   await tick();
   el.querySelector('[data-testid="sm-th-btn"]').click(); await tick();
-  const form = el.querySelector('[data-testid="sm-th-form"]');
+  assert.deepEqual(nav, ['#/settings/modules/planfact?p=pr1']);
+  assert.equal(el.querySelector('[data-testid="sm-th-form"]'), null, 'формы в «Сводке» больше нет — одно место правки');
+  delete (win as N).AppRouter;
+  const el2 = mount(makeFakeSummary([{ ...PTO_PROJECT, can_thresholds: false }]).api);
+  await tick();
+  assert.equal(el2.querySelector('[data-testid="sm-th-btn"]'), null, 'без права — кнопки нет');
+});
+
+test('Настройки → Модули → План/Факт: только объекты с правом; объект из адреса открыт; проверка до запроса; сохранение — запрос и перечитанные пороги', async () => {
+  const { ThresholdsSettings } = await import('../summary/ThresholdsSettings.ts');
+  win.history.replaceState(null, '', '/#/settings/modules/planfact?p=pr1');
+  const f = makeFakeSummary([PTO_PROJECT, { ...PTO_PROJECT, project_id: 'pr2', name: 'Без права', can_thresholds: false }]);
+  const el = win.document.createElement('div') as N; win.document.body.appendChild(el);
+  flushSync(() => createRoot(el).render(createElement(ThresholdsSettings, { api: f.api } as N)));
+  await tick();
+  assert.equal(el.querySelectorAll('[data-project-id]').length, 1, 'объект без права не показан');
+  const form = el.querySelector('[data-project-id="pr1"] [data-testid="sm-th-form"]');
+  assert.ok(form, 'объект из адреса открыт сразу');
   assert.equal(form.querySelector('[name="yellow"]').value, '3');
   typeIn(form.querySelector('[name="yellow"]'), '12');
   submit(form); await tick();
   assert.match(form.querySelector('[role="alert"]').textContent, /жёлтый < красный/);
-  assert.ok(!f.calls.some((c) => c.startsWith('setThresholds')));
+  assert.ok(!f.calls.some((c: string) => c.startsWith('setThresholds')));
   typeIn(form.querySelector('[name="yellow"]'), '5');
   typeIn(form.querySelector('[name="red"]'), '25');
   typeIn(form.querySelector('[name="days"]'), '7');
   submit(form); await tick(); await tick();
   assert.ok(f.calls.includes('setThresholds:pr1:5:25:7'));
-  assert.equal(f.calls.filter((c) => c === 'portfolio').length, 2, 'светофор перечитан с сервера');
+  assert.equal(f.calls.filter((c: string) => c === 'portfolio').length, 2, 'пороги перечитаны с сервера');
   assert.equal(el.querySelector('[data-testid="sm-th-form"]'), null);
-  const el2 = mount(makeFakeSummary([{ ...PTO_PROJECT, can_thresholds: false }]).api);
+  assert.match(el.querySelector('[data-testid="th-notice"]').textContent, /«Сводка» считает светофор/);
+  const empty = win.document.createElement('div') as N; win.document.body.appendChild(empty);
+  flushSync(() => createRoot(empty).render(createElement(ThresholdsSettings, { api: makeFakeSummary([{ ...PTO_PROJECT, can_thresholds: false }]).api } as N)));
   await tick();
-  assert.equal(el2.querySelector('[data-testid="sm-th-btn"]'), null, 'без права — кнопки нет');
+  assert.ok(empty.querySelector('[data-testid="th-empty"]'), 'нет права ни в одном объекте — понятное сообщение');
 });
 
 // P2-0022: прогноз окончания по видам работ и позициям — числа с сервера (030), здесь только подписи и цвет.

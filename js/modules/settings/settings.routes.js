@@ -3,7 +3,7 @@
  *
  *   Моё (видят все):          #/settings/my/<profile|interface|device|notifications|quality|help>
  *   Администрирование:        #/settings/company/<вкладка CompanyApp>
- *                             #/settings/modules/<quality>
+ *                             #/settings/modules/<quality|planfact>
  *                             #/settings/platform/companies
  *
  * Ключ подраздела (key) — id панели `data-settings-panel` в settings.render.js; старые ключи «admin» и «platform-admin»
@@ -17,7 +17,7 @@
 export const SETTINGS_BASE = '#/settings';
 
 export const MY_TABS = ['profile', 'interface', 'device', 'notifications', 'quality', 'help'];
-export const MODULE_TABS = ['quality'];
+export const MODULE_TABS = ['quality', 'planfact'];
 export const PLATFORM_TABS = ['companies'];
 
 /** Ключ панели → адрес без базы. */
@@ -30,13 +30,16 @@ const KEY_TO_PATH = {
     'my-help': 'my/help',
     company: 'company',
     admin: 'modules/quality',
+    'modules-planfact': 'modules/planfact',
     'platform-admin': 'platform/companies'
 };
 
 export const SETTINGS_KEYS = Object.keys(KEY_TO_PATH);
 export const DEFAULT_KEY = 'my-profile';
 /** Ключи зоны «Администрирование». */
-export const ADMIN_KEYS = ['company', 'admin', 'platform-admin'];
+export const ADMIN_KEYS = ['company', 'admin', 'modules-planfact', 'platform-admin'];
+/** Ключи уровня «Модули» (вкладка на модуль). */
+export const MODULE_KEYS = ['admin', 'modules-planfact'];
 
 const DEFAULT_PATH = SETTINGS_BASE + '/my/profile';
 
@@ -108,6 +111,7 @@ if (typeof window !== 'undefined') {
         BASE: SETTINGS_BASE,
         KEYS: SETTINGS_KEYS,
         ADMIN_KEYS: ADMIN_KEYS,
+        MODULE_KEYS: MODULE_KEYS,
         DEFAULT_KEY: DEFAULT_KEY,
         legacyRedirect: settingsLegacyRedirect,
         keyFromHash: settingsKeyFromHash,

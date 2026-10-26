@@ -12151,6 +12151,9 @@ const Fb = `
 .sui-dialog-actions .pf-btn{min-height:44px}
 .sui-danger{background:var(--color-red);border-color:var(--color-red)}
 .sui-cards{display:flex;flex-direction:column;gap:10px}
+.sui-hint{font-size:12px;color:var(--text-muted)}
+.sui-notice{font-size:12px;color:var(--color-green)}
+.sui-title{font-weight:700;color:var(--text-main);overflow-wrap:anywhere}
 .sui-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;box-shadow:var(--shadow-card);padding:12px 14px;min-width:0}
 .sui-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .sui-card-main{min-width:0;flex:1 1 auto}

@@ -33,7 +33,9 @@ async function wrapper(opts: { mode?: string; allowed?: boolean; rows?: InboxRow
   const mod: N = await import(url);
   mod.init({});
   await settle();
-  return { win, mod, st, badges, calls, last: () => badges[badges.length - 1] };
+  // P2-0038: обёртка ещё спрашивает pf_summary_portfolio (право на пороги для «Настроек») — здесь считаем только запросы точек
+  const inbox = { get length() { return calls.filter((c) => c === 'pf_my_inbox').length; } };
+  return { win, mod, st, badges, calls, inbox, last: () => badges[badges.length - 1] };
 }
 
 test('правило точек: только «дела», сумма по объектам; null и 0 не считаются', async () => {
@@ -48,7 +50,7 @@ test('правило точек: только «дела», сумма по об
 test('сразу после входа (без открытия модуля): точки из pf_my_inbox; бандл не загружен', async () => {
   const w = await wrapper({ rows: [row({ pending: 2, my_rejected: 1, ks2_drafts: 1, ks2_gap: 40, stale: 9 })] });
   assert.deepEqual(w.last(), { '#/planfact/fact': 3, '#/planfact/ks2': 1, '#/planfact/inbox': 4, 'module:planfact': 4 });
-  assert.deepEqual(w.calls, ['pf_my_inbox']);
+  assert.deepEqual(w.calls.filter((c: string) => c !== 'pf_summary_portfolio'), ['pf_my_inbox']);
   assert.equal(w.mod.isMounted(), false, 'модуль (бандл) не загружался');
 });
 
@@ -60,7 +62,7 @@ test('перечитать: своё действие модуля, заход �
   w.win.dispatchEvent(new w.win.Event('planfact:route')); await settle();
   w.win.document.dispatchEvent(new w.win.Event('visibilitychange')); await settle();
   w.win.dispatchEvent(new w.win.Event('rbi:platform-access')); await settle();
-  assert.equal(w.calls.length, 5);
+  assert.equal(w.inbox.length, 5);
 });
 
 test('выход / модуль не положен / демо — точек нет и запроса нет; ошибка сервера — прежние числа', async () => {

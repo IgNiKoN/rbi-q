@@ -16,7 +16,7 @@ import { mountCloudDeletedPurgeUI } from './features/cloud-deleted-purge-ui.js';
 import { mountCloudOrphanUrlsUI } from './features/cloud-orphan-urls-ui.js';
 import { mountRoleMatrixUI } from './features/role-matrix-ui.js';
 import { mountOfficialTemplatesUI } from './features/official-templates-ui.js';
-import { SETTINGS_KEYS, ADMIN_KEYS, DEFAULT_KEY, settingsKeyFromHash, settingsPathForKey, settingsZoneForKey } from './settings.routes.js';
+import { SETTINGS_KEYS, ADMIN_KEYS, MODULE_KEYS, DEFAULT_KEY, settingsKeyFromHash, settingsPathForKey, settingsZoneForKey } from './settings.routes.js';
 
 var SettingsRender = {
     // =====================================================================
@@ -68,7 +68,7 @@ var SettingsRender = {
                             <div class="settings-zone-title">Администрирование</div>
                             <div class="settings-zone-tabs no-scrollbar" role="tablist">
                                 <button type="button" data-settings-subsection="company" role="tab" id="settings-subnav-company" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Компания</button>
-                                <button type="button" data-settings-subsection="admin" role="tab" id="settings-subnav-admin" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Модули</button>
+                                <button type="button" data-settings-subsection="modules" data-settings-level="modules" role="tab" id="settings-subnav-admin" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Модули</button>
                                 <button type="button" data-settings-subsection="platform-admin" role="tab" id="settings-subnav-platform-admin" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Платформа</button>
                             </div>
                         </div>
@@ -1139,6 +1139,11 @@ var SettingsRender = {
             </div>
             <div id="settings-panel-platform-admin" data-settings-panel="platform-admin" hidden></div>
             <div id="settings-panel-admin" data-settings-panel="admin" class="space-y-3" hidden>
+                <!-- P2-0038: вкладки уровня «Модули» (по модулю; видны по правам сервера) -->
+                <div class="settings-module-tabs no-scrollbar" role="tablist" data-settings-module-tabs>
+                    <button type="button" data-settings-subsection="admin" data-settings-module-tab="quality" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Качество</button>
+                    <button type="button" data-settings-subsection="modules-planfact" data-settings-module-tab="planfact" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">План/Факт</button>
+                </div>
                 <!-- P2-0038: «Панель руководителя» — была кнопкой-замком в шапке Настроек -->
                 <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex items-center justify-between gap-3">
                     <div class="min-w-0">
@@ -1409,6 +1414,15 @@ var SettingsRender = {
                         </div>
                     </div>
                 </details>
+            </div>
+            <div id="settings-panel-modules-planfact" data-settings-panel="modules-planfact" class="space-y-3" hidden>
+                <!-- P2-0038: вкладки уровня «Модули» (по модулю; видны по правам сервера) -->
+                <div class="settings-module-tabs no-scrollbar" role="tablist" data-settings-module-tabs>
+                    <button type="button" data-settings-subsection="admin" data-settings-module-tab="quality" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Качество</button>
+                    <button type="button" data-settings-subsection="modules-planfact" data-settings-module-tab="planfact" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">План/Факт</button>
+                </div>
+                <!-- P2-0038: пороги светофора объектов (экран из js/dist/planfact, mountSettings) -->
+                <div id="settings-planfact-settings"></div>
             </div>
             </div>
             </div>
@@ -1725,9 +1739,26 @@ console.log('[SettingsRender] settings.render.js markup mounted');
     function _subsectionAllowed(key) {
         if (key === 'company') return _companyAllowed();
         if (key === 'platform-admin') return _platformAdminAllowed();
-        if (key === 'admin') return _canSeeAdminTab();   // P2-0037: почта — по праву сервера (quality.manage); P2-0038: без права вкладки — «Моё»
+        if (key === 'admin') return _qualityAdminAllowed();   // P2-0037: почта — по праву сервера (quality.manage); P2-0038: + модуль у компании, без права — «Моё»
         if (key === 'my-quality') return _qualityModuleAllowed();
+        if (key === 'modules-planfact') return _planfactSettingsAllowed();
         return true;
+    }
+    /** P2-0038: «Модули → План/Факт» — модуль положен и есть право на пороги хотя бы в одном объекте (решает обёртка по ответу сервера). */
+    function _planfactSettingsAllowed() {
+        var host = window.RBI && window.RBI.platformPanels && window.RBI.platformPanels.planfact;
+        return !!(host && typeof host.allowed === 'function' && host.allowed());
+    }
+    /** P2-0038: «Модули → Качество» — админка Качества (право сервера / замок) и модуль Качество или Стройконтроль у компании. */
+    function _qualityAdminAllowed() {
+        if (!_canSeeAdminTab()) return false;
+        if (_legacyAllowed()) return true;
+        var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
+        if (!sh || typeof sh.legacyModuleAllowed !== 'function') return true;
+        return sh.legacyModuleAllowed('quality') || sh.legacyModuleAllowed('construction');
+    }
+    function _firstModuleKey() {
+        return MODULE_KEYS.filter(function (k) { return _subsectionAllowed(k); })[0] || null;
     }
     /** P2-0016: почта — личные настройки Качества, если модуль включён у компании. */
     function _qualityModuleAllowed() {
@@ -1745,24 +1776,39 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         if (!_legacyAllowed()) _syncAdminSectionsForEmail();
         show('settings-subnav-my-quality', _subsectionAllowed('my-quality'));
         show('settings-subnav-company', _companyAllowed());
-        show('settings-subnav-admin', _canSeeAdminTab());
+        var modQ = _subsectionAllowed('admin'), modP = _subsectionAllowed('modules-planfact');
+        show('settings-subnav-admin', modQ || modP);
+        document.querySelectorAll('[data-settings-module-tab]').forEach(function (b) {
+            var on = b.getAttribute('data-settings-module-tab') === 'quality' ? modQ : modP;
+            b.hidden = !on; b.classList.toggle('hidden', !on);
+        });
+        document.querySelectorAll('[data-settings-module-tabs]').forEach(function (st) { st.hidden = !(modQ && modP); });
         show('settings-subnav-platform-admin', _platformAdminAllowed());
         var anyAdmin = ADMIN_KEYS.some(function (k) { return _adminTabVisible(k); });
         show('settings-zone-admin', anyAdmin);
         show('settings-zone-switch', anyAdmin);
         var cur = _getSettingsSubsection();
         var curPanel = document.getElementById('settings-panel-' + cur);
-        if (curPanel && !curPanel.hidden && !_subsectionAllowed(cur)) _setSettingsSubsection(DEFAULT_KEY, { skipGate: true, fromRouter: true });
+        if (curPanel && !curPanel.hidden && !_subsectionAllowed(cur)) {
+            // право пропало, пока подраздел открыт → «Моё», и адрес тоже (без лишней записи в истории)
+            if (window.AppRouter && typeof window.AppRouter.navigate === 'function' && settingsKeyFromHash(window.location.hash || '') === cur) {
+                window.AppRouter.navigate(settingsPathForKey(DEFAULT_KEY), true);
+            } else {
+                _setSettingsSubsection(DEFAULT_KEY, { skipGate: true, fromRouter: true });
+            }
+        }
     }
     function _adminTabVisible(key) {
         if (key === 'company') return _companyAllowed();
         if (key === 'platform-admin') return _platformAdminAllowed();
-        if (key === 'admin') return _canSeeAdminTab();
+        if (key === 'admin') return _subsectionAllowed('admin');
+        if (key === 'modules-planfact') return _subsectionAllowed('modules-planfact');
         return false;
     }
     window.addEventListener('rbi:platform-access', _syncCompanyTab);
     window.addEventListener('rbi:quality-access', _syncCompanyTab);
-    window.addEventListener('rbi:company-access', _syncCompanyTab);   // P2-0038: право на объекты/единицы пришло   // P2-0037: права компании в Качестве пришли / сменились
+    window.addEventListener('rbi:company-access', _syncCompanyTab);   // P2-0038: право на объекты/единицы пришло
+    window.addEventListener('rbi:planfact-settings-access', _syncCompanyTab);   // P2-0038: право на пороги План/Факта пришло   // P2-0037: права компании в Качестве пришли / сменились
 
     /**
      * P2-0013: «Настройки → Платформа» — как вы вошли (до переноса «Качества» в Platform 2.0 это два разных входа и две админки):
@@ -1856,6 +1902,12 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         var panel = document.getElementById('settings-company-app');
         if (host && panel) { if (on) host.mount(panel); else host.unmount(); }
         _syncCompanyBranding();
+    }
+    function _mountPlanfactPanel(on) {
+        var host = window.RBI && window.RBI.platformPanels && window.RBI.platformPanels.planfact;
+        var el = document.getElementById('settings-planfact-settings');
+        if (!host || !el) return;
+        if (on && _planfactSettingsAllowed()) host.mount(el); else host.unmount();
     }
     /** P2-0038: «Компания → Оформление» — блок логотипа и цвета (прежний «Брендирование») под экраном «Компании». */
     function _syncCompanyBranding() {
@@ -1967,6 +2019,7 @@ console.log('[SettingsRender] settings.render.js markup mounted');
     function _setSettingsSubsection(key, opts) {
         opts = opts || {};
         key = _normalizeSettingsSubsection(key);
+        if (key === 'modules') key = _firstModuleKey() || DEFAULT_KEY;   // P2-0038: уровень «Модули» → первая доступная вкладка модуля
         if (SETTINGS_SUBSECTIONS.indexOf(key) === -1) key = DEFAULT_KEY;
 
         if (!_subsectionAllowed(key)) {
@@ -2001,7 +2054,8 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             if (panel) panel.hidden = id !== key;
         });
         root.querySelectorAll('[data-settings-subsection]').forEach(function (btn) {
-            var active = btn.getAttribute('data-settings-subsection') === key;
+            var lvl = btn.getAttribute('data-settings-level');
+            var active = lvl === 'modules' ? MODULE_KEYS.indexOf(key) !== -1 : btn.getAttribute('data-settings-subsection') === key;
             btn.setAttribute('aria-selected', active ? 'true' : 'false');
             btn.classList.toggle('bg-brand', active);
             btn.classList.toggle('text-white', active);
@@ -2021,6 +2075,7 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             _mountAdminOpsContent();
         }
         _mountCompanyPanel(key === 'company');
+        _mountPlanfactPanel(key === 'modules-planfact');
         _mountPlatformAdminPanel(key === 'platform-admin');
         if (!opts.fromRouter && window.AppRouter && typeof window.AppRouter.navigate === 'function') {
             var hash = window.location.hash || '';

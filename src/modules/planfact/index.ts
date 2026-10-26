@@ -19,6 +19,8 @@ import { createCoreService } from '../../platform/core/core.service.ts';
 import type { CoreApi } from '../../platform/core/core.service.ts';
 import type { ProjectsApi } from '../../platform/core/projects.service.ts';
 import { PLANFACT_WORKS_CSS } from './PlanfactWorks.ts';
+import { ThresholdsSettings, THRESHOLDS_SETTINGS_CSS } from './summary/ThresholdsSettings.ts';
+import { SETTINGS_UI_CSS } from '../../platform/ui/settings.ts';
 import { VOR_CSS } from './vor/VorTab.ts';
 import { VOR_COLUMNS_CSS } from './vor/VorColumns.ts';
 import { VOR_DRAFT_CSS } from './vor/VorDraft.ts';
@@ -139,7 +141,7 @@ function ensureStyle(doc: Document): void {
   if (doc.getElementById(STYLE_ID)) return;
   const style = doc.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = P2_UI_CSS + P2_CHESS_CSS + PLANFACT_CSS + PLANFACT_AUTH_CSS + PLANFACT_WORKS_CSS + PLANFACT_TABS_CSS + SCOPE_CSS + PROJECTS_CSS + LOCATIONS_CSS + UNITS_CSS + VOR_CSS + VOR_COLUMNS_CSS + VOR_DRAFT_CSS + VOR_WORKS_CSS + VOR_POSITIONS_CSS + PRICES_CSS + PRICES_IMPORT_CSS + ESTIMATE_CSS + OVERHEADS_CSS + KP_CSS + FACT_CSS + FACT_ENTRY_CSS + CHESSBOARD_CSS + KS2_CSS + KS2_ACT_CSS + KS2_TPL_CSS + SUMMARY_CSS + SUMMARY_PROJECT_CSS + SUMMARY_GAP_CSS + DASHBOARD_CSS + ATTENTION_CSS + INBOX_CSS;
+  style.textContent = P2_UI_CSS + P2_CHESS_CSS + PLANFACT_CSS + PLANFACT_AUTH_CSS + PLANFACT_WORKS_CSS + PLANFACT_TABS_CSS + SCOPE_CSS + PROJECTS_CSS + LOCATIONS_CSS + UNITS_CSS + VOR_CSS + VOR_COLUMNS_CSS + VOR_DRAFT_CSS + VOR_WORKS_CSS + VOR_POSITIONS_CSS + PRICES_CSS + PRICES_IMPORT_CSS + ESTIMATE_CSS + OVERHEADS_CSS + KP_CSS + FACT_CSS + FACT_ENTRY_CSS + CHESSBOARD_CSS + KS2_CSS + KS2_ACT_CSS + KS2_TPL_CSS + SUMMARY_CSS + SUMMARY_PROJECT_CSS + SUMMARY_GAP_CSS + DASHBOARD_CSS + ATTENTION_CSS + INBOX_CSS + SETTINGS_UI_CSS + THRESHOLDS_SETTINGS_CSS;
   doc.head.appendChild(style);
 }
 
@@ -160,6 +162,28 @@ export function unmount(): void {
   root = null;
   if (mountedEl) mountedEl.replaceChildren();
   mountedEl = null;
+}
+
+/** P2-0038: «Настройки → Модули → План/Факт» (пороги светофора) — отдельный корень в контейнере Настроек. */
+let settingsRoot: Root | null = null;
+let settingsEl: HTMLElement | null = null;
+export function mountSettings(el: HTMLElement): void {
+  if (settingsRoot && settingsEl === el && el.isConnected) return;
+  unmountSettings();
+  getAuth();
+  ensureStyle(el.ownerDocument);
+  settingsEl = el;
+  settingsRoot = createRoot(el);
+  const r = settingsRoot;
+  flushSync(() => r.render(summaryApi
+    ? createElement(ThresholdsSettings, { api: summaryApi })
+    : createElement('div', { className: 'pf-muted' }, 'Пороги светофора доступны после входа по почте.')));
+}
+export function unmountSettings(): void {
+  if (settingsRoot) settingsRoot.unmount();
+  settingsRoot = null;
+  if (settingsEl) settingsEl.replaceChildren();
+  settingsEl = null;
 }
 
 export function isMounted(): boolean {
