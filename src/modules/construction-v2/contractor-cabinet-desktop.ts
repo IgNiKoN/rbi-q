@@ -1,7 +1,7 @@
 /**
  * Desktop-вид subview «Кабинет» подрядчика construction-v2 (≥1280px).
  * Тот же контракт вызова, что у mobile `renderContractorCabinet` — переиспользует бизнес-логику
- * (`isOverdueNow`, `filterAcceptancesForRole`/`filterDefectsForRole`/`resolveMyContractorId`,
+ * (`isOverdueNow`, `filterAcceptancesForRole`/`filterDefectsForRole`/`contractorBound`,
  * `listSlotOccupancy`/`slotBoardHtml`), не копирует и не импортирует приватные view-хелперы
  * `contractor-cabinet.ts` (не экспортированы). Без собственного module-state — чистая
  * презентационная функция, как mobile-версия. Отличие от mobile: 4 секции (открытые/на
@@ -14,7 +14,8 @@ import { isOverdueNow } from './defect-sla-metrics';
 import {
   filterAcceptancesForRole,
   filterDefectsForRole,
-  resolveMyContractorId
+  contractorBound,
+  myContractorName
 } from './contractor-scope';
 import { listSlotOccupancy, slotBoardHtml } from './acceptance-slots';
 import type { CabinetCallbacks } from './contractor-cabinet';
@@ -153,11 +154,12 @@ export function renderContractorCabinetDesktop(
     cb: CabinetCallbacks;
   }
 ): void {
-  const myId = resolveMyContractorId();
+  const bound = contractorBound();
+  const firm = myContractorName();
   const defects = filterDefectsForRole(opts.defects || []);
   const acceptances = filterAcceptancesForRole(opts.acceptances || []);
 
-  if (!myId) {
+  if (!bound) {
     host.innerHTML = `
       <div class="p-6 max-w-lg">
         <div class="rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 text-rbi-body font-medium text-amber-900 dark:text-amber-100">
@@ -192,7 +194,7 @@ export function renderContractorCabinetDesktop(
     <div class="flex flex-col gap-3 p-4">
       <div class="flex items-center justify-between gap-2">
         <div class="text-rbi-caption font-black uppercase tracking-widest text-brand">${_escape(_t('construction.v2.cabinet.title', 'Кабинет подрядчика'))}</div>
-        <div class="text-rbi-caption text-muted font-bold truncate max-w-[14rem]" title="${_escape(myId)}">${_escape(_t('construction.v2.cabinet.my_id', 'мой id · {id}', { id: myId.length > 10 ? `${myId.slice(0, 8)}…` : myId }))}</div>
+        <div class="text-rbi-caption text-muted font-bold truncate max-w-[14rem]" title="${_escape(firm)}">${_escape(firm)}</div>
       </div>
       <div class="flex gap-3">
         ${_kpiDesk(_t('construction.v2.cabinet.kpi_open', 'Открытые'), open.length)}

@@ -3004,6 +3004,106 @@ window.triggerSync = async function (mode = 'silent') {
                 console.warn("[Sync] Рейтинг не отправлен:", e.message);
             }
         }
+        // P2-0044: отправка замечаний Стройконтроля 2.0 — отдельным шагом: подрядчику (без права «создавать»)
+        // она тоже нужна («В работу», «Устранено»); что он может менять — решает сервер (043, сторож подрядчика).
+        const pushConstructionDefectsV2 = async () => {
+            // Push замечаний construction-v2 (как legacy const_defect — любой авторизованный push-capable, не только admin)
+            if (STORES.CONST_DEFECTS_V2 && typeof window.prepareConstructionDefectV2ForCloud === 'function') {
+                try {
+                    const defectItems = await dbGetAll(STORES.CONST_DEFECTS_V2) || [];
+                    let defectsToPush = defectItems.filter(d => {
+                        const status = d.syncStatus || d.sync_status || '';
+                        const source = d.source || '';
+                        return status === 'not_synced' || status === 'blocked' || source === 'local';
+                    });
+                    const permsDef = window.RBI && window.RBI.services && window.RBI.services.permissions;
+                    const isAdminDefects = permsDef ? permsDef.isAdmin() : false;
+                    if (!isAdminDefects) {
+                        const roleDef = permsDef && typeof permsDef.getCurrentRole === 'function'
+                            ? permsDef.getCurrentRole()
+                            : '';
+                        const isContractorDef = roleDef === 'contractor';
+                        let myContractorIdDef = '';
+                        if (isContractorDef && permsDef && typeof permsDef.getAssignedContractor === 'function') {
+                            const assignedName = String(permsDef.getAssignedContractor() || '').trim();
+                            const contractorsSvc = window.RBI && window.RBI.services && window.RBI.services.contractors;
+                            if (assignedName && contractorsSvc && typeof contractorsSvc.resolveIdFromNormalized === 'function') {
+                                myContractorIdDef = String(
+                                    contractorsSvc.resolveIdFromNormalized({
+                                        display_name: assignedName,
+                                        contractor_name: assignedName
+                                    }) || ''
+                                ).trim();
+                                if (myContractorIdDef === 'pending') myContractorIdDef = '';
+                            }
+                        }
+                        // P2-0044: своя фирма — по номеру контрагента (core_counterparty_id), без номера — по карточке справочника
+                        const myCpDef = String((window.appSettings && window.appSettings.assignedCounterpartyId) || '').trim();
+                        defectsToPush = defectsToPush.filter(d => {
+                            if (isContractorDef && myCpDef && d.core_counterparty_id) {
+                                return String(d.core_counterparty_id) === myCpDef;
+                            }
+                            if (isContractorDef && myContractorIdDef) {
+                                return String(d.contractorId || d.contractor_id || '') === String(myContractorIdDef);
+                            }
+                            const owner = d.owner || d.created_by || d.author || '';
+                            return !owner || owner === iName;
+                        });
+                    }
+                    for (const item of defectsToPush) {
+                        // Upload local:// / data:image из photos + history (+ legacy photo)
+                        // в bucket construction-defects до upsert (как const_defect).
+                        if (
+                            item.is_deleted !== true &&
+                            item._deleted !== true &&
+                            typeof window.uploadObjectFilesToCloud === 'function'
+                        ) {
+                            const pCode = (window.syncConfig && window.syncConfig.projectCode) || 'shared';
+                            const uploaded = await window.uploadObjectFilesToCloud(
+                                {
+                                    photos: Array.isArray(item.photos) ? item.photos : [],
+                                    history: item.history != null ? item.history : [],
+                                    photo: item.photo || null
+                                },
+                                'construction-defects',
+                                `${pCode}/const_defect_v2/${item.id}`,
+                                'photo'
+                            );
+                            if (uploaded) {
+                                if (Array.isArray(uploaded.photos)) item.photos = uploaded.photos;
+                                if (uploaded.history != null) item.history = uploaded.history;
+                                if (uploaded.photo != null) item.photo = uploaded.photo;
+                                // если photos залиты, а photo остался local — синхронизируем mirror
+                                if (Array.isArray(item.photos) && item.photos.length) {
+                                    item.photo = item.photos[0];
+                                }
+                            }
+                        }
+                        const cloudItem = window.prepareConstructionDefectV2ForCloud(item);
+                        if (!cloudItem) continue;
+                        const { error } = await window.supabaseClient
+                            .from('construction_defects_v2')
+                            .upsert(cloudItem, { onConflict: 'id' });
+                        if (error) throw error;
+                        item.source = 'cloud';
+                        item.syncStatus = 'synced';
+                        item.sync_status = 'synced';
+                        item.updatedAt = new Date().toISOString();
+                        item.updated_at = item.updatedAt;
+                        await dbPut(STORES.CONST_DEFECTS_V2, item);
+                    }
+                    const defSvcPush = window.RBI && window.RBI.services && window.RBI.services.constructionDefects;
+                    if (defSvcPush && typeof defSvcPush.init === 'function') {
+                        await defSvcPush.init();
+                    }
+                } catch (e) {
+                    console.warn('[Sync][Стройконтроль v2] Ошибка отправки construction_defects_v2:', e);
+                    pushErrors++; rbiNoteErr(e);
+                    localStorage.setItem('rbi_cloud_dirty', '1');
+                }
+            }
+        };
+
         // =====================================================
         // 8.1. PUSH: прочие модули через rbi_cloud_objects
         // =====================================================
@@ -3014,6 +3114,10 @@ window.triggerSync = async function (mode = 'silent') {
 
                 if (!canCreatePush) {
                     console.log('[Sync] Push прочих проектных модулей пропущен из-за ограничений роли');
+                    if (projectObjectPushRole === 'contractor' && typeof dbGetAll === 'function' && window.supabaseClient
+                        && typeof STORES !== 'undefined') {
+                        await pushConstructionDefectsV2();
+                    }
                 } else {
                     const lastPushTime = lastPushAt ? new Date(lastPushAt).getTime() : 0;
                     const filterNew = (arr) => arr.filter(i => {
@@ -3791,96 +3895,7 @@ window.triggerSync = async function (mode = 'silent') {
                             }
                         }
 
-                        // Push замечаний construction-v2 (как legacy const_defect — любой авторизованный push-capable, не только admin)
-                        if (STORES.CONST_DEFECTS_V2 && typeof window.prepareConstructionDefectV2ForCloud === 'function') {
-                            try {
-                                const defectItems = await dbGetAll(STORES.CONST_DEFECTS_V2) || [];
-                                let defectsToPush = defectItems.filter(d => {
-                                    const status = d.syncStatus || d.sync_status || '';
-                                    const source = d.source || '';
-                                    return status === 'not_synced' || status === 'blocked' || source === 'local';
-                                });
-                                const permsDef = window.RBI && window.RBI.services && window.RBI.services.permissions;
-                                const isAdminDefects = permsDef ? permsDef.isAdmin() : false;
-                                if (!isAdminDefects) {
-                                    const roleDef = permsDef && typeof permsDef.getCurrentRole === 'function'
-                                        ? permsDef.getCurrentRole()
-                                        : '';
-                                    const isContractorDef = roleDef === 'contractor';
-                                    let myContractorIdDef = '';
-                                    if (isContractorDef && permsDef && typeof permsDef.getAssignedContractor === 'function') {
-                                        const assignedName = String(permsDef.getAssignedContractor() || '').trim();
-                                        const contractorsSvc = window.RBI && window.RBI.services && window.RBI.services.contractors;
-                                        if (assignedName && contractorsSvc && typeof contractorsSvc.resolveIdFromNormalized === 'function') {
-                                            myContractorIdDef = String(
-                                                contractorsSvc.resolveIdFromNormalized({
-                                                    display_name: assignedName,
-                                                    contractor_name: assignedName
-                                                }) || ''
-                                            ).trim();
-                                            if (myContractorIdDef === 'pending') myContractorIdDef = '';
-                                        }
-                                    }
-                                    defectsToPush = defectsToPush.filter(d => {
-                                        if (isContractorDef && myContractorIdDef) {
-                                            return String(d.contractorId || d.contractor_id || '') === String(myContractorIdDef);
-                                        }
-                                        const owner = d.owner || d.created_by || d.author || '';
-                                        return !owner || owner === iName;
-                                    });
-                                }
-                                for (const item of defectsToPush) {
-                                    // Upload local:// / data:image из photos + history (+ legacy photo)
-                                    // в bucket construction-defects до upsert (как const_defect).
-                                    if (
-                                        item.is_deleted !== true &&
-                                        item._deleted !== true &&
-                                        typeof window.uploadObjectFilesToCloud === 'function'
-                                    ) {
-                                        const pCode = (window.syncConfig && window.syncConfig.projectCode) || 'shared';
-                                        const uploaded = await window.uploadObjectFilesToCloud(
-                                            {
-                                                photos: Array.isArray(item.photos) ? item.photos : [],
-                                                history: item.history != null ? item.history : [],
-                                                photo: item.photo || null
-                                            },
-                                            'construction-defects',
-                                            `${pCode}/const_defect_v2/${item.id}`,
-                                            'photo'
-                                        );
-                                        if (uploaded) {
-                                            if (Array.isArray(uploaded.photos)) item.photos = uploaded.photos;
-                                            if (uploaded.history != null) item.history = uploaded.history;
-                                            if (uploaded.photo != null) item.photo = uploaded.photo;
-                                            // если photos залиты, а photo остался local — синхронизируем mirror
-                                            if (Array.isArray(item.photos) && item.photos.length) {
-                                                item.photo = item.photos[0];
-                                            }
-                                        }
-                                    }
-                                    const cloudItem = window.prepareConstructionDefectV2ForCloud(item);
-                                    if (!cloudItem) continue;
-                                    const { error } = await window.supabaseClient
-                                        .from('construction_defects_v2')
-                                        .upsert(cloudItem, { onConflict: 'id' });
-                                    if (error) throw error;
-                                    item.source = 'cloud';
-                                    item.syncStatus = 'synced';
-                                    item.sync_status = 'synced';
-                                    item.updatedAt = new Date().toISOString();
-                                    item.updated_at = item.updatedAt;
-                                    await dbPut(STORES.CONST_DEFECTS_V2, item);
-                                }
-                                const defSvcPush = window.RBI && window.RBI.services && window.RBI.services.constructionDefects;
-                                if (defSvcPush && typeof defSvcPush.init === 'function') {
-                                    await defSvcPush.init();
-                                }
-                            } catch (e) {
-                                console.warn('[Sync][Стройконтроль v2] Ошибка отправки construction_defects_v2:', e);
-                                pushErrors++; rbiNoteErr(e);
-                                localStorage.setItem('rbi_cloud_dirty', '1');
-                            }
-                        }
+                        await pushConstructionDefectsV2();
 
                         // Push заявок на приёмку construction-v2 (без upload фото — zone jsonb)
                         if (STORES.CONST_ACCEPTANCE_V2 && typeof window.prepareConstructionAcceptanceV2ForCloud === 'function') {

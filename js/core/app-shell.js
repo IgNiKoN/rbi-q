@@ -83,12 +83,23 @@
     return null;
   }
 
+  // P2-0044: представитель подрядчика (роль экрана contractor, фирма из назначения) — кабинет Стройконтроля 2.0
+  function isContractorRole() {
+    var p = window.RBI && window.RBI.services && window.RBI.services.permissions;
+    return !!(p && typeof p.getCurrentRole === 'function' && p.getCurrentRole() === 'contractor');
+  }
+  function constructionV2Label() {
+    return isContractorRole()
+      ? _navLabel('contractor_cabinet', 'Кабинет подрядчика')
+      : _navLabel('construction_v2', 'Стройконтроль в2 (тест)');
+  }
+
   function businessModuleLabels() {
     return {
       quality: _navLabel('quality', 'Качество'),
       construction: _navLabel('construction', 'Стройконтроль'),
       knowledge: _navLabel('knowledge', 'База знаний'),
-      'construction-v2': _navLabel('construction_v2', 'Стройконтроль в2 (тест)')
+      'construction-v2': constructionV2Label()
     };
   }
 
@@ -424,7 +435,7 @@
         // Тестовый вход construction-v2 — сразу под обычным Стройконтролем
         if (mod.id === 'construction') {
           var v2Active = currentMode === 'construction-v2';
-          var v2Label = _navLabel('construction_v2', 'Стройконтроль в2 (тест)');
+          var v2Label = constructionV2Label();
           html += '<button type="button" data-sidebar-module-id="construction-v2"' +
             ' onclick="window.changeAppMode(\'construction-v2\')"' +
             ' class="app-sidebar-item' + (v2Active ? ' active' : '') + '" title="' + v2Label + '">' +
@@ -771,6 +782,42 @@
   bindShellActionDelegation();
   ShellService.renderSidebar();
   ShellService.renderMobileModuleMenu();
+
+  // P2-0044: подрядчику вкладки «Осмотр» и «Инженер» (новая проверка, план — ему недоступны) скрыты; вход — в кабинет.
+  (function wireContractorCabinet() {
+    var STYLE_ID = 'shell-contractor-style';
+    var HIDDEN = ['#/quality/audit', '#/quality/engineer'];
+    var CABINET = '#/construction-v2/cabinet';
+    var css = HIDDEN.map(function (p) {
+      return 'body.rbi-role-contractor #main-bottom-nav .nav-item[data-path="' + p + '"],' +
+        'body.rbi-role-contractor #app-nav2 [data-path="' + p + '"]{display:none!important}';
+    }).join('');
+    var apply = function () {
+      var on = isContractorRole();
+      document.body.classList.toggle('rbi-role-contractor', on);
+      if (on && !document.getElementById(STYLE_ID)) {
+        var st = document.createElement('style');
+        st.id = STYLE_ID;
+        st.textContent = css;
+        document.head.appendChild(st);
+      }
+      ShellService.renderSidebar();
+      ShellService.renderMobileModuleMenu();
+      var h = String(window.location.hash || '');
+      var allowed = getRoleAllowedBusinessModuleIds();
+      if (on && allowed.indexOf('construction') !== -1 && legacyModuleAllowed('construction-v2')
+          && (h === '' || h === '#/' || HIDDEN.indexOf(h.split('?')[0]) !== -1)) {
+        // режим следует за адресом (rbi:route) — уводим адресом, не сменой режима (иначе стартовый маршрут вернёт «Осмотр»)
+        if (window.AppRouter && typeof window.AppRouter.navigate === 'function') window.AppRouter.navigate(CABINET, true);
+        else window.location.replace(CABINET);
+      }
+    };
+    // роль приходит с мостом (rbi:quality-access), доступ модулей меню — отдельно (rbi:platform-access): проверка на оба
+    window.addEventListener('rbi:quality-access', apply);
+    window.addEventListener('rbi:platform-access', apply);
+    window.addEventListener('load', apply);
+    apply();
+  })();
 
   // P2-0030: строка «☰» следит за шапкой — её прячут/показывают экраны (switchViewNode, План/Факт, Аналитика…)
   // и смена маршрута/ширины; несколько изменений подряд — одна проверка.

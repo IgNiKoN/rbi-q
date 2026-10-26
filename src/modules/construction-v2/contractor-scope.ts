@@ -37,22 +37,52 @@ export function resolveMyContractorId(): string | null {
   return id;
 }
 
-export function filterDefectsForRole<T extends { contractorId?: string | null }>(
-  list: T[]
-): T[] {
-  if (!isContractorRole()) return list;
-  const myId = resolveMyContractorId();
-  if (!myId) return [];
-  return (list || []).filter((d) => String(d.contractorId || '').trim() === myId);
+/** P2-0044: id контрагента ядра фирмы подрядчика — из назначения роли (мост, quality.my_access). Пусто — не назначена. */
+export function myCounterpartyId(): string {
+  const s = (window as unknown as { appSettings?: { assignedCounterpartyId?: unknown } }).appSettings;
+  return String(s?.assignedCounterpartyId || '').trim();
 }
 
-export function filterAcceptancesForRole<T extends { contractorId?: string | null }>(
-  list: T[]
-): T[] {
+/** Название фирмы подрядчика из назначения (для заголовка кабинета). */
+export function myContractorName(): string {
+  const perms = window.RBI?.services?.permissions as Perms | undefined;
+  return String(perms?.getAssignedContractor?.() || '').trim();
+}
+
+/** Фирма подрядчика известна: номер из назначения или карточка справочника. */
+export function contractorBound(): boolean {
+  return !!myCounterpartyId() || !!resolveMyContractorId();
+}
+
+type ContractorRow = { contractorId?: string | null; core_counterparty_id?: string | null };
+
+/** Запись своей фирмы: по номеру контрагента (сервер пишет core_counterparty_id, 043) — написание названия не важно;
+ *  запись без номера (создана на устройстве, ещё не отправлена) — по карточке справочника, как раньше. */
+export function ownsRecord(row: ContractorRow, myCp: string, myDirId: string | null): boolean {
+  const cp = String(row?.core_counterparty_id || '').trim();
+  if (myCp && cp) return cp === myCp;
+  return !!myDirId && String(row?.contractorId || '').trim() === myDirId;
+}
+
+/** Своя ли запись у текущего подрядчика (номер фирмы → карточка справочника). */
+export function isMyRecord(row: ContractorRow): boolean {
+  return ownsRecord(row, myCounterpartyId(), resolveMyContractorId());
+}
+
+function _filterForRole<T extends ContractorRow>(list: T[]): T[] {
   if (!isContractorRole()) return list;
-  const myId = resolveMyContractorId();
-  if (!myId) return [];
-  return (list || []).filter((a) => String(a.contractorId || '').trim() === myId);
+  const myCp = myCounterpartyId();
+  const myDirId = resolveMyContractorId();
+  if (!myCp && !myDirId) return [];
+  return (list || []).filter((r) => ownsRecord(r, myCp, myDirId));
+}
+
+export function filterDefectsForRole<T extends ContractorRow>(list: T[]): T[] {
+  return _filterForRole(list);
+}
+
+export function filterAcceptancesForRole<T extends ContractorRow>(list: T[]): T[] {
+  return _filterForRole(list);
 }
 
 /** Удобный тип-алиас для callers. */

@@ -9,7 +9,7 @@ import type {
   DefectStatusV2
 } from '../../services/construction-defects/types';
 import { DEFECT_CATEGORIES_V2 } from '../../services/construction-defects/types';
-import { isContractorRole, resolveMyContractorId } from './contractor-scope';
+import { isContractorRole, isMyRecord } from './contractor-scope';
 
 export type DefectFormCreateInput = {
   locationId: string;
@@ -802,8 +802,7 @@ export function openViewDefectForm(
   onChangeStatus?: (id: string, input: DefectFormChangeStatusInput) => void | Promise<void>
 ): void {
   if (isContractorRole()) {
-    const myId = resolveMyContractorId();
-    if (!myId || String(defect.contractorId || '').trim() !== myId) {
+    if (!isMyRecord(defect)) {
       window.showToast?.(_t('construction.form.no_access', '⚠️ Нет доступа к чужому замечанию'));
       return;
     }

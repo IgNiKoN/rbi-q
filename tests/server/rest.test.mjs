@@ -745,6 +745,7 @@ else {
           const patch = async (t, id, k, body) => { const r = await q(`${t}?id=eq.${s18}-${id}`, k, cA, { method: 'PATCH', body: JSON.stringify(body), headers: { Prefer: 'return=representation' } });
             return r.ok ? (await r.json()).length : -r.status; };
           const kName = `REST-0018 Фирма ${s18}`, kKey = `rest-0018-${s18}`;
+          const accC0044 = (acc, cpId) => !!cpId && acc?.contractor?.id === cpId;
           let cp18 = null;
           try {
             await q('contractor_directory', 'alfaAdmin', cA, { method: 'POST', body: JSON.stringify({ project_code: pRest, canonical_key: kKey, display_name: kName }) });
@@ -756,6 +757,14 @@ else {
             await w('rbi_inspections', 'i2', { contractor_name: 'REST-0018 чужая фирма' });
             await w('construction_defects', 'd1', { contractor: kName });
             await w('construction_defects', 'd2', { contractor: 'REST-0018 чужая фирма' });
+            // P2-0044 (043): замечание Стройконтроля 2.0 — фирма через справочник объекта (contractorId → contractor_directory)
+            const dir18 = (await j(await q(`contractor_directory?select=id&canonical_key=eq.${kKey}&project_code=eq.${pRest}`, 'alfaAdmin', cA)))?.[0]?.id;
+            const has043 = (await q('construction_defects_v2?select=core_counterparty_id&limit=1', 'alfaAdmin', cA)).ok;
+            const rowV2 = (extra) => { const r = row('construction_defects_v2', extra); delete r.project_code; return r; };   // у таблиц v2 нет project_code
+            if (has043) for (const [id, cid] of [['v1', dir18], ['v2', null]]) {
+              const r = await q('construction_defects_v2', 'alfaAdmin', cA, { method: 'POST', body: JSON.stringify(rowV2({ id: `${s18}-${id}`, contractorId: cid, status: 'issued', history: [] })) });
+              check(`0044: админ пишет замечание v2 ${id}`, r.ok, r.ok ? '' : `статус ${r.status} ${(await r.text()).slice(0, 120)}`);
+            }
 
             const aE = await assign('qc_engineer');
             const iE = await q('rbi_inspections', 'alfaForeman', cA, { method: 'POST', body: JSON.stringify(row('rbi_inspections', { id: `${s18}-i3` })) });
@@ -774,6 +783,26 @@ else {
             check('0018: подрядчик правит замечание своей фирмы', await patch('construction_defects', 'd1', 'alfaForeman', { updated_at: new Date().toISOString() }) === 1);
             check('0018: подрядчик не правит замечание чужой фирмы', await patch('construction_defects', 'd2', 'alfaForeman', { updated_at: new Date().toISOString() }) <= 0);
             check('0018: подрядчик не правит проверку Качества', await patch('rbi_inspections', 'i1', 'alfaForeman', { location: 'z' }) <= 0);
+            if (!has043) { console.log('NOT RUN: 043 на сервере не применена — проверки P2-0044 пропущены'); fails++; }
+            else {
+              // у alfa-foreman есть ещё «Прораб / мастер» с construction.view на другом объекте, а у строк v2 нет объекта (core_project_id
+              // пуст, ТД №246) — по этой роли он видит и строки без фирмы; «только своя фирма» для чистого подрядчика — PGlite 043
+              check('0044: подрядчик видит замечание v2 своей фирмы (по номеру)', (await ids('construction_defects_v2', 'alfaForeman')).split(',').includes('v1'),
+                await ids('construction_defects_v2', 'alfaForeman'));
+              check('0044: подрядчик — «В работу»', await patch('construction_defects_v2', 'v1', 'alfaForeman', { status: 'in_progress' }) === 1);
+              check('0044: подрядчик — «Устранено» с фото в истории', await patch('construction_defects_v2', 'v1', 'alfaForeman',
+                { status: 'fixed', history: [{ status: 'fixed', photo: 'rest.jpg' }] }) === 1);
+              check('0044: подрядчик не принимает сам', await patch('construction_defects_v2', 'v1', 'alfaForeman', { status: 'closed' }) < 0);
+              check('0044: подрядчик не меняет текст (сервер оставляет прежний)', await patch('construction_defects_v2', 'v1', 'alfaForeman', { text: 'REST-0044 чужой текст' }) === 1
+                && (await j(await q(`construction_defects_v2?select=text&id=eq.${s18}-v1`, 'alfaAdmin', cA)))?.[0]?.text !== 'REST-0044 чужой текст');
+              const delC = await q(`construction_defects_v2?id=eq.${s18}-v1`, 'alfaForeman', cA, { method: 'DELETE', headers: { Prefer: 'return=representation' } });
+              check('0044: подрядчик не удаляет замечание', !delC.ok && (await j(await q(`construction_defects_v2?select=id&id=eq.${s18}-v1`, 'alfaAdmin', cA)))?.length === 1, `статус ${delC.status}`);
+              const insC = await q('construction_defects_v2', 'alfaForeman', cA, { method: 'POST', body: JSON.stringify(rowV2({ id: `${s18}-v3`, contractorId: dir18, status: 'issued' })) });
+              check('0044: подрядчик не создаёт замечание', !insC.ok, `статус ${insC.status}`);
+              check('0044: подрядчик не правит замечание без своей фирмы', await patch('construction_defects_v2', 'v2', 'alfaForeman', { status: 'in_progress' }) <= 0);
+              check('0044: экран получает номер фирмы', accC0044(await accQ('alfaForeman'), cp18?.id));
+              check('0044: администратор принимает замечание', await patch('construction_defects_v2', 'v1', 'alfaAdmin', { status: 'closed' }) === 1);
+            }
             const accC = await accQ('alfaForeman');
             check('0018: экран Качества получает фирму и объект подрядчика', accC?.contractor?.name === kName && Array.isArray(accC?.projects) && accC.projects.includes(pRest), JSON.stringify(accC).slice(0, 200));
             const memC = (await j(await rpc('pf_list_company_members', { p_company: cA }, tok.alfaAdmin))).find((m) => m.assignment_id === aC);
@@ -788,7 +817,7 @@ else {
           } finally {
             for (const id of [...asg18]) await revoke(id);
             check('0018: временные назначения alfa-foreman отозваны', asg18.length === 0);
-            for (const [t, l] of [['rbi_inspections', ['i1', 'i2', 'i3']], ['construction_defects', ['d1', 'd2']]])
+            for (const [t, l] of [['rbi_inspections', ['i1', 'i2', 'i3']], ['construction_defects', ['d1', 'd2']], ['construction_defects_v2', ['v1', 'v2', 'v3']]])
               for (const id of l) await q(`${t}?id=eq.${s18}-${id}`, 'alfaAdmin', cA, { method: 'DELETE' });
             if (cp18) await rpc('pf_counterparties_archive', { p_id: cp18.id, p_archived: true }, tok.alfaAdmin);
             await q(`contractor_directory?canonical_key=eq.${kKey}`, 'alfaAdmin', cA, { method: 'DELETE' });
