@@ -15,7 +15,8 @@ g.HTMLInputElement = win.HTMLInputElement; g.HTMLSelectElement = win.HTMLSelectE
 const { createElement } = await import('react');
 const { flushSync } = await import('react-dom');
 const { createRoot } = await import('react-dom/client');
-const { ProjectPicker, firstProjectId, visibleProjects } = await import('../ProjectPicker.ts');
+const { ProjectPicker, firstProjectId, initialProjectId, visibleProjects } = await import('../ProjectPicker.ts');
+const { rememberedProject } = await import('../PageHead.ts');
 const { FactTab } = await import('../fact/FactTab.ts');
 const tick = (): Promise<void> => settle();
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -55,13 +56,31 @@ test('ProjectPicker: архив скрыт → «Показать архив (1)
   assert.deepEqual(opts(el), ['ЖК Альфа', 'ЖК Бета']);
 });
 
+test('P2-0041: объект общий для разделов — адрес (?p=) важнее памяти, память важнее «первого»; чужой/пропавший — первый', () => {
+  assert.equal(initialProjectId(LIST, '#/planfact/fact?p=b', 'a'), 'b');
+  assert.equal(initialProjectId(LIST, '#/planfact/fact', 'b'), 'b');
+  assert.equal(initialProjectId(LIST, '#/planfact/fact?p=zzz', 'zzz'), 'a');
+  assert.equal(initialProjectId(LIST, '#/planfact/fact', ''), 'a');
+});
+
+test('P2-0041: выбор в списке запоминается на устройстве', () => {
+  const el = win.document.createElement('div') as N;
+  win.document.body.appendChild(el);
+  let got = '';
+  flushSync(() => createRoot(el as unknown as HTMLElement).render(createElement(ProjectPicker, { list: LIST, value: 'a', onChange: (id: string) => { got = id; } })));
+  const sel = el.querySelector('select');
+  sel.value = 'b'; sel.dispatchEvent(new win.Event('change', { bubbles: true }));
+  assert.equal(got, 'b');
+  assert.equal(rememberedProject(), 'b');
+});
+
 test('ProjectPicker: без архива кнопки нет; один объект — подпись вместо списка', () => {
   const el = win.document.createElement('div') as N;
   win.document.body.appendChild(el);
   flushSync(() => createRoot(el as unknown as HTMLElement).render(createElement(ProjectPicker, { list: [LIST[1]], value: 'a', onChange: () => {} })));
   assert.equal(el.querySelector('[data-testid="pp-archive"]'), null);
   assert.equal(el.querySelector('select'), null);
-  assert.match(el.textContent, /Проект: ЖК Альфа/);
+  assert.match(el.textContent, /Объект: ЖК Альфа/);
 });
 
 const POS: FakePos[] = [{ id: 'p5', ancestors: ['f5'], location_id: 'f5', location_path: '5 этаж', location_type: 'floor', work: 'Штукатурка стен', unit: 'м²', plan: 100 }];
@@ -82,7 +101,7 @@ async function factFor(list: N[]): Promise<N> {
 
 test('Факт: по умолчанию действующий объект с «Внести факт»; архивный — «только просмотр», кнопки ввода нет', async () => {
   const a = await factFor([{ id: 'old', name: 'ЖК Старый', company_id: 'c1', archived_at: '2026-01-01T00:00:00Z' }, { id: 'pr1', name: 'ЖК Тест', company_id: 'c1', archived_at: null }]);
-  assert.match(a.textContent, /Проект: ЖК Тест/);
+  assert.match(a.textContent, /Объект: ЖК Тест/);
   assert.ok(a.querySelector('[data-testid="ft-enter"]'), 'действующий: кнопка ввода есть');
   const b = await factFor([{ id: 'old', name: 'ЖК Старый', company_id: 'c1', archived_at: '2026-01-01T00:00:00Z' }]);
   assert.ok(b.querySelector('[data-testid="pp-archived"]'));

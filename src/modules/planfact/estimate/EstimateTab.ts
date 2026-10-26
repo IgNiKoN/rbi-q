@@ -11,7 +11,7 @@ import { EstimateView } from './EstimateView.ts';
 import { EstimateOverheads } from './OverheadsEditor.ts';
 import { KpBlock } from './KpBlock.ts';
 import { parsePriceInput } from './prices.ts';
-import { firstProjectId, ProjectPicker } from '../ProjectPicker.ts';
+import { initialProjectId, ProjectPicker } from '../ProjectPicker.ts';
 
 const dateFmt = (iso: string): string => { try { return new Date(iso).toLocaleDateString('ru-RU'); } catch { return iso; } };
 
@@ -33,7 +33,7 @@ export function EstimateTab(props: { api: EstimateApi; vor: VorApi }): ReactElem
       const ok: VorProject[] = [];
       for (const p of all) if ((await vor.permissions(p.id)).includes(ESTIMATE_MANAGE)) ok.push(p);
       setProjects(ok);
-      if (ok.length) setProjectId(firstProjectId(ok));
+      if (ok.length) setProjectId(initialProjectId(ok, window.location.hash));
     })();
   }, []);
 

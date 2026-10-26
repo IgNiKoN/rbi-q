@@ -138,7 +138,7 @@ function NewActForm(props: { api: Ks2Api; projectId: string; nextNo: string; onC
 }
 
 export const KS2_CSS = KS2_REGISTRY_CSS + `
-.k2-tab{max-width:1400px}
+.k2-tab{min-width:0}
 .k2-card{display:flex;flex-direction:column;gap:8px;padding:12px 14px;overflow:visible}
 .k2-card .pj-input{max-width:560px}
 .k2-hint{flex-basis:100%;font-size:12px}

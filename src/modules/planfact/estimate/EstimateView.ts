@@ -180,7 +180,7 @@ export function EstimateView(props: EstimateViewProps): ReactElement {
 }
 
 export const ESTIMATE_CSS = `
-.es-tab{max-width:1400px}
+.es-tab{min-width:0}
 .es-new{align-items:flex-start}
 .es-imports{flex:1 1 100%;display:flex;flex-direction:column;gap:2px}
 .es-head{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}

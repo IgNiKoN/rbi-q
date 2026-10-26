@@ -194,7 +194,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
 }
 
 export const FACT_CSS = PENDING_REGISTRY_CSS + FACT_JOURNAL_CSS + FACT_WINDOW_CSS + `
-.ft-tab{max-width:900px}
+.ft-tab{min-width:0}
 .ft-tab--wide{max-width:none}
 .ft-crumbs{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
 .ft-crumb-wrap{display:inline-flex;gap:6px;align-items:center}

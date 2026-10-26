@@ -15,6 +15,7 @@ import type { Period } from './Dashboard.ts';
 import { StatusBadge } from '../../../platform/ui/index.ts';
 import type { SummaryLinks } from './Attention.ts';
 import { hashParam } from '../ProjectPicker.ts';
+import { InHead, rememberProject } from '../PageHead.ts';
 
 /** Порядок объектов: сначала самые отстающие (дни отставания с сервера), без данных — в конце. */
 export function byLag(a: SummaryProject, b: SummaryProject): number {
@@ -63,12 +64,16 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
   const pick = (id: string): void => { setEditing(false); setSel(id); };
   const chip = (on: boolean, label: string, onClick: () => void, key: string, testId?: string) =>
     h('button', { key, type: 'button', className: 'sm-chip' + (on ? ' sm-chip--on' : ''), 'aria-pressed': on, 'data-testid': testId, onClick }, label);
+  // P2-0041: объект — тот же выпадающий список, что в других разделах, в шапке раздела; «Все объекты» — первым пунктом.
+  const objectPick = list.length
+    ? h(InHead, { slot: 'picker' },
+        h('select', { className: 'pj-input', 'aria-label': 'Объект', value: sel, 'data-testid': 'sm-project',
+          onChange: (e: { target: EventTarget | null }) => { const id = (e.target as HTMLSelectElement).value; if (id !== 'all') rememberProject(id); pick(id); } },
+          h('option', { value: 'all' }, `Все объекты (${list.length})`),
+          sorted.map((p) => h('option', { key: p.project_id, value: p.project_id }, p.name))))
+    : null;
   const filters = list.length
-    ? h('div', { className: 'sm-filters', 'data-testid': 'sm-filters' },
-        h('div', { className: 'sm-chips', role: 'group', 'aria-label': 'Объект' },
-          h('span', { className: 'pf-muted sm-flabel' }, 'Объект'),
-          chip(sel === 'all', `Все объекты (${list.length})`, () => pick('all'), 'all', 'sm-chip-all'),
-          sorted.map((p) => chip(sel === p.project_id, p.name, () => pick(p.project_id), p.project_id, 'sm-chip-project'))),
+    ? h('div', { className: 'sm-filters', 'data-testid': 'sm-filters' }, objectPick,
         h('div', { className: 'sm-chips', role: 'group', 'aria-label': 'Период' },
           h('span', { className: 'pf-muted sm-flabel' }, 'Период'),
           PERIODS.map((w) => chip(period === w, `${w} недель`, () => setPeriod(w), String(w), 'sm-chip-period'))))
@@ -177,7 +182,7 @@ export function ThresholdsForm(props: { api: SummaryApi; p: SummaryProject; onSa
 }
 
 export const SUMMARY_CSS = `
-.sm-tab{max-width:1400px;display:flex;flex-direction:column;gap:14px}
+.sm-tab{display:flex;flex-direction:column;gap:14px}
 .sm-note{font-size:12px}
 .sm-filters{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}
 .sm-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
