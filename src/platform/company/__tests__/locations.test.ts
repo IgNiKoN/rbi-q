@@ -167,3 +167,30 @@ test('отказ сервера показан текстом сервера', a
   const form: N = el.querySelector('[data-testid="lt-add-form"]'); form.elements.namedItem('name').value = 'Корпус'; submit(form); await tick();
   assert.equal(el.querySelector('[role="alert"]').textContent, 'Узел с таким названием уже есть на этом уровне');
 });
+
+test('места ведутся в Качестве (P2-0045): только просмотр с пометкой, кнопок правки нет', async () => {
+  const t = fakeTree(); t.add(null, 'building', 'Корпус 1');
+  const asked: string[] = [];
+  const api = { ...t.api, async locationsFromQuality(p: string) { asked.push(p); return true; } } as ProjectsApi;
+  const el: N = mountTree(api); await tick();
+  assert.deepEqual(asked, ['p1']);
+  assert.ok(rowOf(el, 'Корпус 1'));
+  assert.ok(el.querySelector('[data-testid="lt-from-quality"]').textContent.includes('ведутся в Качестве'));
+  assert.ok(!el.querySelector('[data-testid="lt-gen-open"]') && !el.querySelector('[data-testid="lt-add-root"]')
+    && !el.querySelector('[data-testid="lt-add"]') && !el.querySelector('[data-testid="lt-rename"]') && !el.querySelector('[data-testid="lt-delete"]'));
+});
+
+test('места ведёт План/Факт (P2-0045): правка как раньше, пометки нет', async () => {
+  const t = fakeTree(); t.add(null, 'building', 'Корпус 1');
+  const api = { ...t.api, async locationsFromQuality() { return false; } } as ProjectsApi;
+  const el: N = mountTree(api); await tick();
+  assert.ok(!el.querySelector('[data-testid="lt-from-quality"]'));
+  assert.ok(el.querySelector('[data-testid="lt-gen-open"]') && el.querySelector('[data-testid="lt-add"]'));
+});
+
+test('объект из Качества без мест: подсказка добавить корпус в Качестве', async () => {
+  const t = fakeTree();
+  const api = { ...t.api, async locationsFromQuality() { return true; } } as ProjectsApi;
+  const el: N = mountTree(api); await tick();
+  assert.equal(el.querySelector('[data-testid="lt-empty"]').textContent, 'Мест пока нет — добавьте корпус в Качестве.');
+});

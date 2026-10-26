@@ -32732,6 +32732,10 @@ function HT() {
     addLocation: (s, c, u, d) => r("pf_add_location", { p_project: s, p_parent: c, p_type: u, p_name: d }),
     renameLocation: (s, c) => r("pf_rename_location", { p_location: s, p_name: c }),
     deleteLocation: (s, c) => r("pf_delete_location", { p_location: s, p_cascade: c }),
+    locationsFromQuality: async (s) => {
+      const c = await r("pf_locations_from_quality", { p_project: s });
+      return c.ok && c.value === !0;
+    },
     generateBuilding: (s) => r("pf_generate_building", {
       p_project: s.projectId,
       p_parent: s.parentId,

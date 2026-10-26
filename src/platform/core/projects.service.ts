@@ -34,6 +34,8 @@ export interface ProjectsApi {
   addLocation(projectId: string, parentId: string | null, type: PlanNodeType, name: string): Promise<Result<string>>;
   renameLocation(locationId: string, name: string): Promise<Result>;
   deleteLocation(locationId: string, cascade: boolean): Promise<Result<number>>;
+  /** Места объекта ведутся в Качестве (P2-0045) — в Платформе только просмотр. Ошибка — false (правку всё равно проверяет сервер). */
+  locationsFromQuality?(projectId: string): Promise<boolean>;
   generateBuilding(p: GenerateParams): Promise<Result<string>>;
   listUnits(companyId: string): Promise<UnitItem[]>;
   addUnit(companyId: string, code: string, name: string): Promise<Result<string>>;
@@ -82,6 +84,7 @@ export function createProjectsService(): ProjectsApi | null {
     addLocation: (project, parent, type, name) => call<string>('pf_add_location', { p_project: project, p_parent: parent, p_type: type, p_name: name }),
     renameLocation: (id, name) => call('pf_rename_location', { p_location: id, p_name: name }),
     deleteLocation: (id, cascade) => call<number>('pf_delete_location', { p_location: id, p_cascade: cascade }),
+    locationsFromQuality: async (project) => { const r = await call<boolean>('pf_locations_from_quality', { p_project: project }); return r.ok && r.value === true; },
     generateBuilding: (p) => call<string>('pf_generate_building', {
       p_project: p.projectId, p_parent: p.parentId, p_name: p.name, p_sections: p.sections, p_floors: p.floors,
       p_apartments_per_floor: p.apartmentsPerFloor, p_first_floor: p.firstFloor

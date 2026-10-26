@@ -181,6 +181,14 @@ else {
     check('Бета не видит своих единиц Альфы в своём списке', !(await j(await rpc('pf_list_units', { p_company: cbId }, tok.betaPto))).some((u) => u.code === unitCode));
     const aud5 = await j(await rpc('pf_list_company_audit', { p_company: cA5, p_limit: 50 }, tok.alfaAdmin));
     check('журнал компании: проект, локации, единицы', ['projects', 'locations', 'units'].every((t) => aud5.some((r) => r.table_name === t)));
+    // P2-0045 (044): объект автопроверок — со своими местами План/Факта, их ведёт План/Факт (не Качество)
+    const fq = await rpc('pf_locations_from_quality', { p_project: pid }, tok.alfaAdmin);
+    if (fq.status === 404) { console.log('NOT RUN: 044 на сервере не применена — проверки P2-0045 пропущены'); fails++; }
+    else {
+      check('0045: места объекта автопроверок ведёт План/Факт', fq.ok && (await j(fq)) === false, `статус ${fq.status}`);
+      check('0045: без входа — нет ответа', !(await rpc('pf_locations_from_quality', { p_project: pid })).ok);
+      check('0045: Бета-ПТО — нет доступа к объекту Альфы', !(await rpc('pf_locations_from_quality', { p_project: pid }, tok.betaPto)).ok);
+    }
   } finally {
     if (bld5) check('ветка корпуса удалена (53 узла)', (await j(await rpc('pf_delete_location', { p_location: bld5, p_cascade: true }, tok.alfaAdmin))) === 53);
     if (unitId) check('своя единица удалена', (await rpc('pf_delete_unit', { p_unit: unitId }, tok.alfaAdmin)).ok);
