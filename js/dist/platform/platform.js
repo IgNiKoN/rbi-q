@@ -18150,6 +18150,10 @@ function eo() {
     addLocation: (s, n, i, a) => r("pf_add_location", { p_project: s, p_parent: n, p_type: i, p_name: a }),
     renameLocation: (s, n) => r("pf_rename_location", { p_location: s, p_name: n }),
     deleteLocation: (s, n) => r("pf_delete_location", { p_location: s, p_cascade: n }),
+    locationsFromQuality: async (s) => {
+      const n = await r("pf_locations_from_quality", { p_project: s });
+      return n.ok && n.value === !0;
+    },
     generateBuilding: (s) => r("pf_generate_building", {
       p_project: s.projectId,
       p_parent: s.parentId,

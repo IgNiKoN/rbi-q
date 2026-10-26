@@ -2,6 +2,7 @@
  * «Структура проекта»: дерево локаций (корпус → секция → этаж → квартира, уровни можно пропускать) и генератор корпуса.
  * Дети грузятся лениво — при раскрытии узла (дерево на тысячи квартир не грузится целиком).
  * Без права planfact.projects.manage (can_manage) — только просмотр. Права проверяет сервер.
+ * Места объекта ведутся в Качестве (P2-0045, pf_locations_from_quality) — только просмотр с пометкой.
  */
 import { createElement as h, useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
@@ -19,7 +20,8 @@ function num(v: string, fallback: number): number {
 
 export function LocationsTree(props: { api: ProjectsApi; project: ProjectItem; canManage: boolean; onBack: () => void }): ReactElement {
   const { api, project, canManage, onBack } = props;
-  const manage = canManage && project.can_manage && !project.archived_at;
+  const [fromQuality, setFromQuality] = useState<boolean | null>(api.locationsFromQuality ? null : false);
+  const manage = canManage && project.can_manage && !project.archived_at && fromQuality === false;
   const [kids, setKids] = useState<Record<string, LocationNode[]>>({});   // '' = корень
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [mode, setMode] = useState<Mode>(null);
@@ -33,7 +35,10 @@ export function LocationsTree(props: { api: ProjectsApi; project: ProjectItem; c
     const list = await api.listLocations(project.id, parent);
     setKids((k) => ({ ...k, [parent || '']: list }));
   }
-  useEffect(() => { void loadKids(null); }, []);
+  useEffect(() => {
+    void loadKids(null);
+    if (api.locationsFromQuality) void api.locationsFromQuality(project.id).then(setFromQuality);
+  }, []);
 
   async function reload(parent: string | null): Promise<void> {
     await loadKids(parent);
@@ -150,6 +155,8 @@ export function LocationsTree(props: { api: ProjectsApi; project: ProjectItem; c
       h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: onBack }, '← К проектам'),
       h('h3', { className: 'pf-title lt-title' }, project.name)),
     project.archived_at ? h('div', { className: 'pf-muted' }, 'Проект в архиве — структура доступна только для просмотра.') : null,
+    fromQuality ? h('div', { className: 'pj-notice lt-quality', 'data-testid': 'lt-from-quality', role: 'note' },
+      'Места этого объекта ведутся в Качестве — здесь только просмотр. Добавить, переименовать или удалить корпус, этаж, квартиру можно в Качестве.') : null,
     manage ? h('div', { className: 'lt-tools' },
       h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'lt-gen-open', disabled: busy, onClick: () => { setGenOpen(!genOpen); setError(''); } }, 'Сгенерировать корпус'),
       h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'lt-add-root', disabled: busy, onClick: () => { setMode({ kind: 'add', parent: null }); setError(''); } }, '+ Узел в корень')) : null,
@@ -171,7 +178,8 @@ export function LocationsTree(props: { api: ProjectsApi; project: ProjectItem; c
     h('div', { className: 'pf-card lt-card' },
       roots === undefined ? h('div', { className: 'pf-muted lt-empty' }, 'Загрузка…')
         : roots.length ? h('ul', { className: 'lt-list lt-list--root' }, roots.map(row))
-        : h('div', { className: 'pf-muted lt-empty', 'data-testid': 'lt-empty' }, manage ? 'Структура пока пуста — сгенерируйте корпус или добавьте узел.' : 'Структура пока пуста.')));
+        : h('div', { className: 'pf-muted lt-empty', 'data-testid': 'lt-empty' }, manage ? 'Структура пока пуста — сгенерируйте корпус или добавьте узел.'
+            : fromQuality ? 'Мест пока нет — добавьте корпус в Качестве.' : 'Структура пока пуста.')));
 }
 
 export const LOCATIONS_CSS = `
