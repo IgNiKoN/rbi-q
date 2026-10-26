@@ -4,7 +4,7 @@
 2. Получи одну явную роль (`ARCHITECT` или `EXECUTOR`; Исполнитель сам тестирует и документирует — ADR-062), ID утверждённой задачи и прочитай `ai-dev/WORKFLOW.md` и `ai-dev/roles/<ROLE>.md`.
 3. Если нет роли/утверждённой задачи, действуй **только read-only как Архитектор**: предложи карточку, но не редактируй продуктовый код.
 4. Работай только в отдельном репозитории Platform 2.0. **Production RBI Platform/Quality не трогать**.
-4а. Сотрудникам RBI приложение попадает только через выпуск в `IgNiKoN/rbi-q` (`scripts/release-rbi-q.mjs`, по разрешению владельца) — см. `ai-dev/CORE_RULES.md` и `docs/SERVERS.md`. В `rbi-q` код не править.
+4а. Репозиторий — `IgNiKoN/rbi-q` (с 26.10.2026; `platform-2-core` — архив, не коммитить и не пушить). `main` = боевое приложение `app.rbi-q.ru` (`git pull` на сервере) — в `main` только принятые задачи; merge/push/выкладка — по разрешению владельца. См. `ai-dev/CORE_RULES.md`, `docs/SERVERS.md`.
 5. Результат отдавай в формате, установленном для роли. Не переключайся к следующей роли и не объявляй задачу принятой.
 
 Архитектурный приоритет: `ai-dev/reference/ARCHITECTURE_v1_3_MVP_FINAL.md` → «ТЗ для программы» (`ai-dev/reference/TZ_PLAN_FACT.md`) для функций Plan/Fact → `ai-dev/reference/ARCHITECTURE_v1_2.md` для деталей и перспективы.

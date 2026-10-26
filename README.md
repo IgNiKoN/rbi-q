@@ -1,4 +1,6 @@
-# platform-2-core
+# rbi-q — Платформа 2.0 (RBI)
+
+> С 26.10.2026 рабочий репозиторий — `IgNiKoN/rbi-q` (история `platform-2-core` присоединена). `main` — боевое приложение `app.rbi-q.ru`.
 
 Оболочка Platform 2.0 с модулем «План/Факт СМР».
 Источник: локальный снимок `rbi-q-main` (коммит c6f6b02 + незакоммиченные правки на 20.10.2026). Старое приложение (production Quality) этим репозиторием не изменяется.
@@ -9,7 +11,7 @@
 
 Нужен Node.js 24+ (проверить: `node -v`).
 
-1. Скачать проект: `git clone https://github.com/IgNiKoN/platform-2-core.git` и перейти в папку `cd platform-2-core`.
+1. Скачать проект: `git clone https://github.com/IgNiKoN/rbi-q.git` и перейти в папку `cd rbi-q`.
 2. Установить зависимости (нужен интернет, один раз): `npm ci`.
 3. Запустить: `npm run dev`.
 4. Открыть в браузере http://localhost:8781 → нажать **«Работать локально»**.

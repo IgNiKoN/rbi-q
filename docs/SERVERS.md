@@ -89,11 +89,12 @@
 
 ## Боевое приложение `app.rbi-q.ru` (P2-0032, с 26.10.2026)
 
-- Сотрудники RBI открывают `app.rbi-q.ru` — nginx на VPS Beget «rbi-q supabase», каталог `/var/www/rbi-quality` = клон `IgNiKoN/rbi-q`, ветка `main`; обновление — `git pull --ff-only` в терминале сервера.
-- Содержимое `rbi-q` — выпуск Платформы 2.0 из `platform-2-core`: `node scripts/release-rbi-q.mjs <клон rbi-q>` (только файлы приложения, `RELEASE.json` — коммит-источник) → commit → push. Каждый шаг — по разрешению владельца.
-- Проверка после выкладки: `curl -s https://app.rbi-q.ru/RELEASE.json` — нужный коммит; `sw.js` — нужная `SW_VERSION`.
-- Откат: в `/var/www/rbi-quality` — `git reset --hard <прежний коммит>` (старое приложение РБИ — `c6f6b02`); полная копия старого репозитория — `IgNiKoN/rbi-q-old` (`ignikon.github.io/rbi-q-old/`).
-- `ignikon.github.io/platform-2-core/` — тесты и демо, сотрудникам не выдаётся.
+- Сотрудники RBI открывают `app.rbi-q.ru` — nginx на VPS Beget «rbi-q supabase» (`/etc/nginx/sites-available/rbi-router`, блок `app.rbi-q.ru`), каталог `/var/www/rbi-quality` = клон `IgNiKoN/rbi-q`, ветка `main`; обновление — `git pull --ff-only` в терминале сервера (владелец).
+- **Репозиторий — `IgNiKoN/rbi-q`** (переезд 26.10.2026, решение владельца): код, регламент и история; `main` = то, что получат сотрудники после `git pull`. `IgNiKoN/platform-2-core` — архив. Скрипт `scripts/release-rbi-q.mjs` больше не нужен (оставлен как история P2-0032).
+- nginx: `Cache-Control: no-cache` для файлов приложения; служебное не отдаётся (404): точечные файлы и `.git` (кроме `.well-known`), папки `ai-dev|docs|scripts|src|sql|supabase|tests|node_modules`, файлы `*.md|mjs|ts|json|sql|txt|yml|yaml` в корне. Новая служебная папка в корне репозитория — добавить в правило. После правки: `nginx -t` → `systemctl reload nginx`.
+- Проверка после выкладки: `sw.js` — нужная `SW_VERSION`; `/ai-dev/CORE_RULES.md`, `/.git/HEAD` → 404.
+- Откат: в `/var/www/rbi-quality` — `git reset --hard <прежний коммит>` (старое приложение РБИ — `c6f6b02`); полная копия старого репозитория — `IgNiKoN/rbi-q-old` (GitHub Pages выключены).
+- `ignikon.github.io/rbi-q/` — проба/демо (GitHub Pages из `main`; nginx-правило там не действует — всё содержимое репозитория публично, как раньше у `platform-2-core`).
 
 ## Выпуск Platform 2.0 (P2-0013) — отменён в P2-0016
 
