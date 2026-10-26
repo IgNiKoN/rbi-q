@@ -2,11 +2,16 @@
 // ОБЯЗАТЕЛЬНО МЕНЯЕМ ВЕРСИЮ при любых изменениях в коде!
 // ОБЯЗАТЕЛЬНО МЕНЯЕМ ВЕРСИЮ при любых изменениях в коде!
 const APP_VERSION = '18.59.0';
-const SW_VERSION = '18.86.0';
+const SW_VERSION = '18.86.2';
 // P2-0013: «разработка / выпуск» — из единственного переключателя js/services/config.service.js (выпуск: rbi-quality-* вместо старой версии).
 importScripts('./js/services/config.service.js');
 const CACHE_PREFIX = (self.APP_CONFIG && self.APP_CONFIG.SW_CACHE_PREFIX) || 'platform2-';
 const CACHE_NAME = `${CACHE_PREFIX}v${SW_VERSION}`;
+// P2-0032: кэш старого приложения РБИ (тот же адрес app.rbi-q.ru) — удаляется при установке Платформы 2.0.
+const LEGACY_CACHE_PREFIX = 'rbi-quality-';
+function hasLegacyCache() {
+  return caches.keys().then((names) => names.some((n) => n.startsWith(LEGACY_CACHE_PREFIX))).catch(() => false);
+}
 
 /**
  * Business path prefix → shortId (app.entry allowSet / RBI_SW_ALLOWLIST).
@@ -311,6 +316,7 @@ const urlsToCache = [
 // кнопку «Обновить» → postMessage('SKIP_WAITING'), иначе controllerchange
 // + location.reload на iPhone выглядят как внезапная перезагрузка.
 self.addEventListener('install', event => {
+  const legacyAtStart = hasLegacyCache();   // P2-0032: до скачивания — пока кэш старого приложения на месте
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       console.log('[SW] Кэшируем ядро и библиотеки...');
@@ -355,8 +361,9 @@ self.addEventListener('install', event => {
         })
 
       );
-    }).then(() => {
-      if (!self.registration.active) {
+    }).then(() => Promise.all([legacyAtStart, hasLegacyCache()])).then(([a, b]) => a || b).then((legacy) => {
+      // P2-0032: поверх старого приложения РБИ — сразу (его страница не знает новых файлов и может зависнуть)
+      if (!self.registration.active || legacy) {
         return self.skipWaiting();
       }
     })
@@ -367,18 +374,23 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
+      const legacy = cacheNames.some((n) => n.startsWith(LEGACY_CACHE_PREFIX));
       return Promise.all(
         cacheNames.map(cacheName => {
-          // Platform 2.0: удаляем только свои старые кэши, чужие (другие приложения на origin) не трогаем
-          if (cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME) {
+          // Platform 2.0: удаляем свои старые кэши и кэш старого приложения РБИ (P2-0032); прочие не трогаем
+          if ((cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME) || cacheName.startsWith(LEGACY_CACHE_PREFIX)) {
             console.log('[SW] Удаляем старый кэш:', cacheName);
             return caches.delete(cacheName);
           }
         })
-      );
+      ).then(() => self.clients.claim()).then(() => {
+        if (!legacy) return;
+        // окна, открытые старым приложением (или зависшие на смеси старых и новых файлов), — перезагрузить один раз
+        return self.clients.matchAll({ type: 'window' }).then((list) => Promise.all(list.map((c) =>
+          typeof c.navigate === 'function' ? c.navigate(c.url).catch(() => null) : null)));
+      });
     })
   );
-  self.clients.claim();
 });
 
 // 4. ПЕРЕХВАТ ЗАПРОСОВ
@@ -454,8 +466,9 @@ self.addEventListener('fetch', event => {
   const isApi = /\/(rest|auth|functions|realtime)\/v1\//.test(event.request.url);
   if (isApi) return;
 
+  // P2-0032: только свой кэш — caches.match искал бы и в кэше старого приложения РБИ (смесь старых и новых файлов)
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.open(CACHE_NAME).then((c) => c.match(event.request)).then((cachedResponse) => {
       // Сеть (обновление кэша) запускаем всегда, но НЕ ждём её для ответа,
       // если есть кэш — см. ветку ниже. .catch(() => null) не даёт упасть
       // необработанным réjection'ом (сеть недоступна/CORS).

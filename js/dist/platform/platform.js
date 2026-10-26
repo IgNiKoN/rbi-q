@@ -18468,8 +18468,8 @@ function po() {
     le = null;
   }
 }
-const Wr = "platform2_legacy_cleanup_v1", go = "RBI_QUALITY_DB", mo = "rbi-quality-", yo = "platform2_quality_state_";
-async function vo(t) {
+const Wr = "platform2_legacy_cleanup_v1", go = "RBI_QUALITY_DB", mo = "platform2_quality_state_";
+async function yo(t) {
   const e = t.store;
   if (!e) return "retry";
   try {
@@ -18480,16 +18480,13 @@ async function vo(t) {
   try {
     if (!e.getItem(ce)) {
       for (const r of Bt) e.removeItem(r);
-      e.removeItem(yo);
+      e.removeItem(mo);
     }
   } catch {
     return "retry";
   }
   try {
-    if (t.deleteDatabase && await t.deleteDatabase(go), t.cacheKeys && t.deleteCache) {
-      const r = (await t.cacheKeys()).filter((s) => s.startsWith(mo));
-      for (const s of r) await t.deleteCache(s);
-    }
+    t.deleteDatabase && await t.deleteDatabase(go);
   } catch {
     return "retry";
   }
@@ -18500,7 +18497,7 @@ async function vo(t) {
   }
   return "done";
 }
-function _o(t, e, r = 5e3) {
+function vo(t, e, r = 5e3) {
   return new Promise((s, n) => {
     let i;
     try {
@@ -18517,7 +18514,7 @@ function _o(t, e, r = 5e3) {
     };
   });
 }
-const wo = "auth-gate-overlay", Kr = "p2-login-style";
+const _o = "auth-gate-overlay", Kr = "p2-login-style";
 let re = null, Ye = null;
 function Ft() {
   return window;
@@ -18550,14 +18547,14 @@ function j() {
     })(),
     // P2-0016: в Платформе 2.0 вход только почтой (+ демо); PIN — в старом приложении РБИ.
     pinActive: () => !1
-  }), re.subscribe(Eo), e && e.onAuthChange && e.onAuthChange(() => {
+  }), re.subscribe(ko), e && e.onAuthChange && e.onAuthChange(() => {
     re.refresh();
   }), window.addEventListener("platform2:refresh", () => {
     re.refresh();
   }), re;
 }
 function Wt() {
-  return document.getElementById(wo);
+  return document.getElementById(_o);
 }
 function Kt() {
   const t = Wt();
@@ -18575,7 +18572,7 @@ function Kt() {
   }), t.classList.remove("hidden");
 }
 let dt = !1;
-function bo(t) {
+function wo(t) {
   const e = Wt();
   if (!e) return;
   vt();
@@ -18591,7 +18588,7 @@ function bo(t) {
     }
   }), dt = !0), e.classList.remove("hidden");
 }
-function So() {
+function bo() {
   dt = !1;
   const t = Wt();
   t && t.classList.add("hidden");
@@ -18608,7 +18605,7 @@ function Ts(t) {
   const e = Ft().AppRouter;
   e && typeof e.navigate == "function" ? e.navigate(t, !0) : window.location.hash = t;
 }
-function ko(t) {
+function So(t) {
   if (!t) return;
   const e = j().getState();
   vt();
@@ -18622,10 +18619,10 @@ function ko(t) {
     return n.value = s.id, n.textContent = "Компания: " + s.name, n;
   })), r.value = e.companyId || "";
 }
-function Eo(t) {
+function ko(t) {
   var n;
   const e = Ht();
-  e.platformMenuAccess = j().access(), e.platform2 = Co, window.dispatchEvent(new Event("rbi:platform-access"));
+  e.platformMenuAccess = j().access(), e.platform2 = Oo, window.dispatchEvent(new Event("rbi:platform-access"));
   const r = (n = e.services) == null ? void 0 : n.shell;
   r && typeof r.renderSidebar == "function" && r.renderSidebar(), r && typeof r.renderMobileModuleMenu == "function" && r.renderMobileModuleMenu();
   const s = Ft().AppModeManager;
@@ -18635,17 +18632,17 @@ function Eo(t) {
   } else
     po();
   if (t.mode === "email" && t.mustChangePassword && t.email) {
-    bo(t.email);
+    wo(t.email);
     return;
   }
-  t.mode === "none" ? (dt = !1, Kt()) : So(), Ao(), To(t);
+  t.mode === "none" ? (dt = !1, Kt()) : bo(), To(), Eo(t);
 }
 let Vr = !1;
 function Gr() {
   const t = window.localStorage, e = t.getItem(ce) || "";
   return e ? e + ":" + (t.getItem(et) || "") : "";
 }
-async function To(t) {
+async function Eo(t) {
   var e;
   try {
     const r = bs(), s = yt();
@@ -18682,7 +18679,7 @@ async function To(t) {
     console.warn("[Platform2] Качество: подключение к хранилищу компании не удалось", r);
   }
 }
-function Ao() {
+function To() {
   var s;
   const t = (s = Ht().services) == null ? void 0 : s.shell, e = j().access(), r = [];
   t && typeof t.isPlatformModuleAllowed == "function" && t.isPlatformModuleAllowed("planfact") && r.push("planfact"), e.company && r.push("company"), e.platformAdmin && r.push("platform-admin");
@@ -18692,28 +18689,26 @@ function Ao() {
   } catch {
   }
 }
-function Ro() {
+function Ao() {
   let t = null;
   try {
     t = window.localStorage;
   } catch {
     t = null;
   }
-  vo({
+  yo({
     store: t,
-    deleteDatabase: typeof indexedDB < "u" ? (e) => _o(indexedDB, e) : null,
-    cacheKeys: typeof caches < "u" ? () => caches.keys() : null,
-    deleteCache: typeof caches < "u" ? (e) => caches.delete(e) : null
+    deleteDatabase: typeof indexedDB < "u" ? (e) => vo(indexedDB, e) : null
   }).catch(() => {
   });
 }
-function Oo() {
+function Ro() {
   return Ye ? Ye.then((t) => {
     t.mode === "none" && Kt();
-  }) : (Ro(), Ye = j().boot()), Ye;
+  }) : (Ao(), Ye = j().boot()), Ye;
 }
-const Co = {
-  start: Oo,
+const Oo = {
+  start: Ro,
   getState: () => j().getState(),
   access: () => j().access(),
   setCompany: (t) => j().setCompany(t),
@@ -18723,7 +18718,7 @@ const Co = {
     await j().signOut();
   },
   showLogin: Kt,
-  renderCompanySwitch: ko,
+  renderCompanySwitch: So,
   /** P2-0028: «Настройки → Платформа → Мой профиль» (вызывают Настройки при показе). Не вошёл почтой — пусто. */
   renderMyProfile: (t) => {
     if (!t) return;
@@ -18750,7 +18745,7 @@ const Co = {
   }
 };
 export {
-  Co as api,
-  Oo as start
+  Oo as api,
+  Ro as start
 };
 //# sourceMappingURL=platform.js.map
