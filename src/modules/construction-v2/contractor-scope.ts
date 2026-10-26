@@ -43,6 +43,17 @@ export function myCounterpartyId(): string {
   return String(s?.assignedCounterpartyId || '').trim();
 }
 
+/** Название фирмы подрядчика из назначения (для заголовка кабинета). */
+export function myContractorName(): string {
+  const perms = window.RBI?.services?.permissions as Perms | undefined;
+  return String(perms?.getAssignedContractor?.() || '').trim();
+}
+
+/** Фирма подрядчика известна: номер из назначения или карточка справочника. */
+export function contractorBound(): boolean {
+  return !!myCounterpartyId() || !!resolveMyContractorId();
+}
+
 type ContractorRow = { contractorId?: string | null; core_counterparty_id?: string | null };
 
 /** Запись своей фирмы: по номеру контрагента (сервер пишет core_counterparty_id, 043) — написание названия не важно;
@@ -51,6 +62,11 @@ export function ownsRecord(row: ContractorRow, myCp: string, myDirId: string | n
   const cp = String(row?.core_counterparty_id || '').trim();
   if (myCp && cp) return cp === myCp;
   return !!myDirId && String(row?.contractorId || '').trim() === myDirId;
+}
+
+/** Своя ли запись у текущего подрядчика (номер фирмы → карточка справочника). */
+export function isMyRecord(row: ContractorRow): boolean {
+  return ownsRecord(row, myCounterpartyId(), resolveMyContractorId());
 }
 
 function _filterForRole<T extends ContractorRow>(list: T[]): T[] {

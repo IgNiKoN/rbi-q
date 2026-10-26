@@ -8,7 +8,8 @@ import { isOverdueNow } from './defect-sla-metrics';
 import {
   filterAcceptancesForRole,
   filterDefectsForRole,
-  resolveMyContractorId
+  contractorBound,
+  myContractorName
 } from './contractor-scope';
 import { listSlotOccupancy, slotBoardHtml } from './acceptance-slots';
 
@@ -151,11 +152,12 @@ export function renderContractorCabinet(
     cb: CabinetCallbacks;
   }
 ): void {
-  const myId = resolveMyContractorId();
+  const bound = contractorBound();
+  const firm = myContractorName();
   const defects = filterDefectsForRole(opts.defects || []);
   const acceptances = filterAcceptancesForRole(opts.acceptances || []);
 
-  if (!myId) {
+  if (!bound) {
     host.innerHTML = `
       <div class="p-6 max-w-lg mx-auto">
         <div class="rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 text-rbi-body font-medium text-amber-900 dark:text-amber-100">
@@ -190,7 +192,7 @@ export function renderContractorCabinet(
     <div class="space-y-3 p-1 sm:p-2">
       <div class="flex items-center justify-between gap-2 flex-wrap">
         <div class="text-rbi-caption font-black uppercase tracking-widest text-brand">${_escape(_t('construction.v2.cabinet.title', 'Кабинет подрядчика'))}</div>
-        <div class="text-rbi-caption text-muted font-bold truncate max-w-[14rem]" title="${_escape(myId)}">${_escape(_t('construction.v2.cabinet.my_id', 'мой id · {id}', { id: myId.length > 10 ? `${myId.slice(0, 8)}…` : myId }))}</div>
+        <div class="text-rbi-caption text-muted font-bold truncate max-w-[14rem]" title="${_escape(firm)}">${_escape(firm)}</div>
       </div>
       <div class="flex flex-wrap gap-2">
         ${_kpi(_t('construction.v2.cabinet.kpi_open', 'Открытые'), open.length)}

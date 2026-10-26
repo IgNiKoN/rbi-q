@@ -22,7 +22,8 @@ import { renderContractorCabinet, type CabinetCallbacks } from './contractor-cab
 import { renderContractorCabinetDesktop } from './contractor-cabinet-desktop';
 import {
   filterAcceptancesForRole,
-  filterDefectsForRole
+  filterDefectsForRole,
+  isContractorRole
 } from './contractor-scope';
 import {
   type PinCategory,
@@ -996,8 +997,10 @@ export function mountConstructionV2Shell(): void {
   const section = document.createElement('div');
   section.id = 'tab-construction-v2';
   section.className = 'view-section hidden';
-  section.innerHTML = `
-    <div class="p-3 sm:p-4">
+  // P2-0044: подрядчику шапка тестового контура и «Старый СК» не нужны — заголовок даёт сам кабинет («Кабинет подрядчика · фирма»)
+  const head = isContractorRole()
+    ? ''
+    : `
       <div class="flex items-center justify-between mb-3 gap-2">
         <div class="min-w-0">
           <h2 class="text-rbi-title font-bold tracking-tight text-ink">Стройконтроль в2</h2>
@@ -1005,7 +1008,9 @@ export function mountConstructionV2Shell(): void {
         </div>
         <a href="#/construction/defects"
           class="shrink-0 text-rbi-caption font-bold text-brand border border-brand-soft px-2.5 py-1.5 rounded-xl">Старый СК</a>
-      </div>
+      </div>`;
+  section.innerHTML = `
+    <div class="p-3 sm:p-4">${head}
       <div id="construction-v2-root"></div>
     </div>`;
   content.appendChild(section);

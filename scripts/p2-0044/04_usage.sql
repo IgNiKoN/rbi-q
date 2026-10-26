@@ -1,0 +1,6 @@
+-- P2-0044: чем пользуются — Стройконтроль 1 и 2.0 (ТОЛЬКО ЧТЕНИЕ)
+select 'v1 defects' t, count(*) all_rows, count(*) filter (where not coalesce(is_deleted,false)) live, max(updated_at)::date last, count(*) filter (where updated_at > now() - interval '30 day') d30 from quality.construction_defects
+union all select 'v2 defects', count(*), count(*) filter (where not is_deleted), max(updated_at)::date, count(*) filter (where updated_at > now() - interval '30 day') from quality.construction_defects_v2
+union all select 'v1 acceptance', count(*), count(*) filter (where not coalesce(is_deleted,false)), max(updated_at)::date, count(*) filter (where updated_at > now() - interval '30 day') from quality.construction_acceptance
+union all select 'v2 acceptance', count(*), count(*) filter (where not is_deleted), max(updated_at)::date, count(*) filter (where updated_at > now() - interval '30 day') from quality.construction_acceptance_v2
+union all select 'contractor reps', count(distinct a.user_id), count(distinct a.user_id) filter (where a.revoked_at is null), null, null from core.role_assignments a join core.company_role_permissions rp on rp.role_id = a.role_id and rp.action = 'quality.scope.contractor';

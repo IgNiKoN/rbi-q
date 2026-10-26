@@ -37,10 +37,21 @@ function myCounterpartyId() {
   const s = window.appSettings;
   return String((s == null ? void 0 : s.assignedCounterpartyId) || "").trim();
 }
+function myContractorName() {
+  var _a, _b, _c;
+  const perms = (_b = (_a = window.RBI) == null ? void 0 : _a.services) == null ? void 0 : _b.permissions;
+  return String(((_c = perms == null ? void 0 : perms.getAssignedContractor) == null ? void 0 : _c.call(perms)) || "").trim();
+}
+function contractorBound() {
+  return !!myCounterpartyId() || !!resolveMyContractorId();
+}
 function ownsRecord(row, myCp, myDirId) {
   const cp = String((row == null ? void 0 : row.core_counterparty_id) || "").trim();
   if (myCp && cp) return cp === myCp;
   return !!myDirId && String((row == null ? void 0 : row.contractorId) || "").trim() === myDirId;
+}
+function isMyRecord(row) {
+  return ownsRecord(row, myCounterpartyId(), resolveMyContractorId());
 }
 function _filterForRole(list) {
   if (!isContractorRole()) return list;
@@ -679,8 +690,7 @@ function _actionButtonsHtml(defect) {
 function openViewDefectForm(defect, onDelete, onSave, onChangeStatus) {
   var _a, _b, _c, _d;
   if (isContractorRole()) {
-    const myId = resolveMyContractorId();
-    if (!myId || String(defect.contractorId || "").trim() !== myId) {
+    if (!isMyRecord(defect)) {
       (_a = window.showToast) == null ? void 0 : _a.call(window, _t$k("construction.form.no_access", "⚠️ Нет доступа к чужому замечанию"));
       return;
     }
@@ -5699,10 +5709,11 @@ function _section(title, rows, empty) {
     </section>`;
 }
 function renderContractorCabinet(host, opts) {
-  const myId = resolveMyContractorId();
+  const bound = contractorBound();
+  const firm = myContractorName();
   const defects = filterDefectsForRole(opts.defects || []);
   const acceptances = filterAcceptancesForRole(opts.acceptances || []);
-  if (!myId) {
+  if (!bound) {
     host.innerHTML = `
       <div class="p-6 max-w-lg mx-auto">
         <div class="rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 text-rbi-body font-medium text-amber-900 dark:text-amber-100">
@@ -5730,7 +5741,7 @@ function renderContractorCabinet(host, opts) {
     <div class="space-y-3 p-1 sm:p-2">
       <div class="flex items-center justify-between gap-2 flex-wrap">
         <div class="text-rbi-caption font-black uppercase tracking-widest text-brand">${_escape$2(_t$2("construction.v2.cabinet.title", "Кабинет подрядчика"))}</div>
-        <div class="text-rbi-caption text-muted font-bold truncate max-w-[14rem]" title="${_escape$2(myId)}">${_escape$2(_t$2("construction.v2.cabinet.my_id", "мой id · {id}", { id: myId.length > 10 ? `${myId.slice(0, 8)}…` : myId }))}</div>
+        <div class="text-rbi-caption text-muted font-bold truncate max-w-[14rem]" title="${_escape$2(firm)}">${_escape$2(firm)}</div>
       </div>
       <div class="flex flex-wrap gap-2">
         ${_kpi(_t$2("construction.v2.cabinet.kpi_open", "Открытые"), open.length)}
@@ -5855,10 +5866,11 @@ function _sectionDesk(title, rows, empty, gridColCls) {
     </section>`;
 }
 function renderContractorCabinetDesktop(host, opts) {
-  const myId = resolveMyContractorId();
+  const bound = contractorBound();
+  const firm = myContractorName();
   const defects = filterDefectsForRole(opts.defects || []);
   const acceptances = filterAcceptancesForRole(opts.acceptances || []);
-  if (!myId) {
+  if (!bound) {
     host.innerHTML = `
       <div class="p-6 max-w-lg">
         <div class="rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 text-rbi-body font-medium text-amber-900 dark:text-amber-100">
@@ -5886,7 +5898,7 @@ function renderContractorCabinetDesktop(host, opts) {
     <div class="flex flex-col gap-3 p-4">
       <div class="flex items-center justify-between gap-2">
         <div class="text-rbi-caption font-black uppercase tracking-widest text-brand">${_escape$1(_t$1("construction.v2.cabinet.title", "Кабинет подрядчика"))}</div>
-        <div class="text-rbi-caption text-muted font-bold truncate max-w-[14rem]" title="${_escape$1(myId)}">${_escape$1(_t$1("construction.v2.cabinet.my_id", "мой id · {id}", { id: myId.length > 10 ? `${myId.slice(0, 8)}…` : myId }))}</div>
+        <div class="text-rbi-caption text-muted font-bold truncate max-w-[14rem]" title="${_escape$1(firm)}">${_escape$1(firm)}</div>
       </div>
       <div class="flex gap-3">
         ${_kpiDesk(_t$1("construction.v2.cabinet.kpi_open", "Открытые"), open.length)}
@@ -6734,8 +6746,7 @@ function mountConstructionV2Shell() {
   const section = document.createElement("div");
   section.id = "tab-construction-v2";
   section.className = "view-section hidden";
-  section.innerHTML = `
-    <div class="p-3 sm:p-4">
+  const head = isContractorRole() ? "" : `
       <div class="flex items-center justify-between mb-3 gap-2">
         <div class="min-w-0">
           <h2 class="text-rbi-title font-bold tracking-tight text-ink">Стройконтроль в2</h2>
@@ -6743,7 +6754,9 @@ function mountConstructionV2Shell() {
         </div>
         <a href="#/construction/defects"
           class="shrink-0 text-rbi-caption font-bold text-brand border border-brand-soft px-2.5 py-1.5 rounded-xl">Старый СК</a>
-      </div>
+      </div>`;
+  section.innerHTML = `
+    <div class="p-3 sm:p-4">${head}
       <div id="construction-v2-root"></div>
     </div>`;
   content.appendChild(section);
