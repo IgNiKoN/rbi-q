@@ -99,7 +99,9 @@ begin
   n := pg_temp.rows('delete from storage.objects where bucket_id like ''quality-%''');
   res := res || pg_temp.t(n = 0, 'руководитель РБИ не удаляет файлы компаний (' || n || ')');
   s := pg_temp.err('insert into storage.objects(bucket_id, name) values (''library-docs'', ''RBI-018D/x.pdf'')');
-  res := res || pg_temp.t(s = 'OK', 'руководитель РБИ работает с бакетом РБИ как раньше (' || s || ')');
+  -- P2-0043: после 042 старые бакеты РБИ закрыты (правила РБИ удалены) — тогда загрузка должна не пройти
+  res := res || pg_temp.t((s = 'OK') = exists (select 1 from pg_policies where schemaname = 'storage' and policyname = 'rbi_admin_storage_access'),
+                          'руководитель РБИ и бакет РБИ: до 042 — как раньше, после 042 — закрыт (' || s || ')');
 
   -- своя компания удаляет
   perform pg_temp.as_user(ua);

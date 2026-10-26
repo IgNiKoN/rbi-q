@@ -117,7 +117,7 @@
 ## Схема public без входа закрыта (P2-0042, ТД №95)
 
 - **Миграция `041_close_public_anon`** (на сервере 26.10.2026): у `anon`, `authenticated` и `PUBLIC` сняты все права на таблицы и последовательности `public` (старые таблицы РБИ, прототип `plan_fact_*`); удалены правила RLS «для всех» (`using(true)` / `with check(true)` для `anon`/`public`); у старых функций `public` (всё, кроме `pf_*`) снято выполнение для `anon` и `PUBLIC` (`authenticated` — как было); права по умолчанию в `public` для `anon` сняты у владельцев `postgres` и `supabase_admin` (на сервере объекты создаёт `supabase_admin`).
-- **Исключение:** `authenticated` сохраняет SELECT на таблицы `public`, которые читают правила RLS других схем (по `pg_depend`; сейчас — `rbi_engineer_profiles` в правилах Storage `storage_*_transition`, ТД №242).
+- **Исключение:** `authenticated` сохраняет SELECT на таблицы `public`, которые читают правила RLS других схем (по `pg_depend`). Было — `rbi_engineer_profiles` (правила Storage `storage_*_transition`); снято в P2-0043 вместе с этими правилами — сейчас таких таблиц нет.
 - **Правило для новых миграций:** приложение не читает `public` — только схемы `quality`/`core`/`planfact` и функции `pf_*`; каждая новая функция `pf_*` явно `revoke … from public, anon` + `grant … to authenticated` (права по умолчанию `anon` больше не дают, `authenticated` — дают).
 - **Откат:** `041_close_public_anon_down.sql` — из копий `p2_backup.p2_0042_*` (ТД №244); на PGlite отпечаток прав `public` (`tests/server/041_public_acl_fingerprint.sql`) до и после совпадает.
-- **Не закрыто:** Storage старых бакетов РБИ без входа (ТД №241).
+- **Storage РБИ (P2-0043, `042_close_rbi_storage`):** старые бакеты (все, кроме `quality-*`) — `public = false`; в `storage.objects` только правила Качества `quality_files_*` (8). Новые бакеты — только `quality-*` через `companyBucket` и правила 018d.
