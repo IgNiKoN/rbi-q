@@ -1,0 +1,40 @@
+{
+  "name": "rbi-platform",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "build:ts": "vite build",
+    "build:locations": "vite build --config vite.locations.config.ts",
+    "build:construction-defects": "vite build --config vite.construction-defects.config.ts",
+    "build:construction-acceptance": "vite build --config vite.construction-acceptance.config.ts",
+    "build:construction-units": "vite build --config vite.construction-units.config.ts",
+    "build:construction-v2": "vite build --config vite.construction-v2.config.ts",
+    "build:modules": "npm run build:locations && npm run build:construction-defects && npm run build:construction-acceptance && npm run build:construction-units && npm run build:construction-v2",
+    "build:planfact": "vite build --config vite.planfact.config.ts",
+    "build:company": "vite build --config vite.company.config.ts",
+    "build:platform": "vite build --config vite.platform.config.ts",
+    "build:platform-admin": "vite build --config vite.platform-admin.config.ts",
+    "check:ts": "tsc --noEmit",
+    "test:unit": "node --test js/shared/__tests__/*.test.js js/modules/knowledge/__tests__/*.test.js js/modules/quality/features/analytics/__tests__/*.test.js js/modules/quality/features/reports/__tests__/*.test.js supabase/functions/__tests__/*.test.ts src/modules/planfact/__tests__/*.test.ts src/platform/company/__tests__/*.test.ts src/platform/auth/__tests__/*.test.ts src/platform/admin/__tests__/*.test.ts src/platform/core/__tests__/*.test.ts",
+    "smoke:knowledge": "node _ai/scripts/smoke-knowledge.mjs --reload",
+    "smoke:construction-knowledge": "node _ai/scripts/smoke-construction-knowledge.mjs --reload",
+    "test": "npm run test:unit",
+    "test:server": "node tests/server/rest.test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "happy-dom": "21.0.3",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
+    "exceljs": "4.4.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

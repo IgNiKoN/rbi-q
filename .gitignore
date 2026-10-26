@@ -1,0 +1,27 @@
+# dependencies / build
+node_modules/
+/dist/
+*.tsbuildinfo
+
+# secrets / local env
+.env
+.env.*
+!.env.example
+*.local.js
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.code-workspace
+
+# legacy AI runtime (history only, never commit)
+_ai/
+.cursor/
+.superpowers/
+_backup/
+
+# personal / bulky files
+RBI_Feedback_*.json
+*.docx
+*.pdf
