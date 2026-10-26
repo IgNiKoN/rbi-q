@@ -2,7 +2,7 @@
 // ОБЯЗАТЕЛЬНО МЕНЯЕМ ВЕРСИЮ при любых изменениях в коде!
 // ОБЯЗАТЕЛЬНО МЕНЯЕМ ВЕРСИЮ при любых изменениях в коде!
 const APP_VERSION = '18.59.0';
-const SW_VERSION = '18.86.4';
+const SW_VERSION = '18.86.5';
 // P2-0013: «разработка / выпуск» — из единственного переключателя js/services/config.service.js (выпуск: rbi-quality-* вместо старой версии).
 importScripts('./js/services/config.service.js');
 const CACHE_PREFIX = (self.APP_CONFIG && self.APP_CONFIG.SW_CACHE_PREFIX) || 'platform2-';
@@ -472,7 +472,10 @@ self.addEventListener('fetch', event => {
       // Сеть (обновление кэша) запускаем всегда, но НЕ ждём её для ответа,
       // если есть кэш — см. ветку ниже. .catch(() => null) не даёт упасть
       // необработанным réjection'ом (сеть недоступна/CORS).
-      const networkUpdate = fetch(event.request).then((networkResponse) => {
+      // P2-0032: с перепроверкой у сервера (ответ «не изменилось» дешёвый). Сервер не отдаёт Cache-Control для js/css —
+      // без этого браузер брал из своего кэша старый файл прежнего приложения (с тем же путём) рядом с новыми.
+      const netInit = event.request.mode === 'navigate' ? undefined : { cache: 'no-cache' };
+      const networkUpdate = fetch(event.request, netInit).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200 && mayCachePut(event.request.url)) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
