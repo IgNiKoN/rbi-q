@@ -395,17 +395,6 @@ var SettingsRender = {
                                 </svg>
                                 <span data-i18n="settings.body.storage.dl_all">Скачать всё для Офлайна</span>
                             </button>
-
-
-                            <button data-interventions-action="exportLibraryToJsCode"
-                                class="w-full bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 py-3 rounded-xl font-black text-[11px] uppercase active:scale-95 transition-colors flex items-center justify-center gap-2 shadow-sm">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                                </svg>
-                                <span data-i18n="settings.body.storage.export_library">Выгрузить Библиотеку в код</span>
-                            </button>
                         </div>
 
                         <!-- Ручной экспорт -->
@@ -983,28 +972,6 @@ var SettingsRender = {
                         </div>
                 </details>
 
-                <!-- КНОПКА КОНСТРУКТОРА PDF (Качество) -->
-                <div class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm mb-3 overflow-hidden">
-                    <!-- НОВАЯ КНОПКА: КОНСТРУКТОР ШАБЛОНОВ -->
-                    <div
-                        class="p-4 flex justify-between items-center bg-brand-soft">
-                        <div>
-                            <div class="font-bold text-sm text-brand" data-i18n="settings.body.auto_reports.pdf_templates">Шаблоны отчетов (PDF)</div>
-                            <div class="text-rbi-caption text-brand mt-1" data-i18n="settings.body.auto_reports.pdf_templates_hint">Настройка блоков и дизайна</div>
-                        </div>
-
-                        <button data-reports-action="openPdfTemplateModal"
-                            class="bg-brand text-white px-4 py-2 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-md flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
-                                </path>
-                            </svg> <span data-i18n="settings.body.auto_reports.configure">Настроить</span>
-                        </button>
-                    </div>
-
-                </div>
             </div>
             <div id="settings-panel-my-help" data-settings-panel="my-help" class="space-y-3" hidden>
                 <!-- P2-0038: «По умолчанию» — была кнопкой в шапке Настроек -->
@@ -1324,6 +1291,40 @@ var SettingsRender = {
                         <div id="settings-official-templates-root"></div>
                     </div>
                 </details>
+                <!-- P2-0038: шаблоны PDF общие для компании — решение владельца 26.10.2026: в Администрирование (было: Качество) -->
+                <div class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm mb-3 overflow-hidden">
+                    <!-- НОВАЯ КНОПКА: КОНСТРУКТОР ШАБЛОНОВ -->
+                    <div
+                        class="p-4 flex justify-between items-center bg-brand-soft">
+                        <div>
+                            <div class="font-bold text-sm text-brand" data-i18n="settings.body.auto_reports.pdf_templates">Шаблоны отчетов (PDF)</div>
+                            <div class="text-rbi-caption text-brand mt-1" data-i18n="settings.body.auto_reports.pdf_templates_hint">Настройка блоков и дизайна</div>
+                        </div>
+
+                        <button data-reports-action="openPdfTemplateModal"
+                            class="bg-brand text-white px-4 py-2 rounded-lg text-rbi-caption font-black uppercase active:scale-95 shadow-md flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                                </path>
+                            </svg> <span data-i18n="settings.body.auto_reports.configure">Настроить</span>
+                        </button>
+                    </div>
+
+                </div>
+                <!-- P2-0038: «Выгрузить Библиотеку в код» — инструмент разработчика, решение владельца 26.10.2026: в Администрирование (было: Моё → Хранилище) -->
+                <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4">
+                            <button data-interventions-action="exportLibraryToJsCode"
+                                class="w-full bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 py-3 rounded-xl font-black text-[11px] uppercase active:scale-95 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                </svg>
+                                <span data-i18n="settings.body.storage.export_library">Выгрузить Библиотеку в код</span>
+                            </button>
+                </div>
                 <!-- P2-0038: оформление компании — до этапа 3 (Компания → Оформление) здесь, как в P2-0037 -->
                 <!-- БРЕНДИРОВАНИЕ -->
                 <details
