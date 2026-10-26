@@ -94,7 +94,9 @@
 |---|---|
 | `js/modules/quality/` | legacy Quality с внутренними features; не импортировать приватное состояние |
 | `js/modules/construction/` | legacy Construction, дефекты и приёмка |
-| `js/modules/settings/` | существующие настройки, каталог, role UI |
+| `js/modules/settings/` | существующие настройки, каталог, role UI; P2-0038: две зоны «Моё / Администрирование» — адреса и перенаправления `settings.routes.js`, панели `settings.render.js` |
+| `src/platform/ui/settings.ts` | P2-0038: общие элементы разделов «Настроек» — меню «⋯», окно подтверждения, карточки, адаптивная таблица (`sui-*`) |
+| `src/modules/planfact/summary/ThresholdsSettings.ts` | P2-0038: «Настройки → Модули → План/Факт» — пороги светофора |
 | `js/modules/knowledge/` | существующий Knowledge |
 | `src/modules/construction-v2/index.ts`, `manifest.ts` | пример независимого TS/Vite-сборочного пути в **старой оболочке**, не готовый React-контракт |
 | `vite.construction-v2.config.ts`, `js/dist/` | настройки и артефакты старой Vite-сборки |
