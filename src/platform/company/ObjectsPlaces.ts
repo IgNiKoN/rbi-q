@@ -19,7 +19,8 @@ const TYPE_LABEL: Record<string, string> = { object: 'объект', building: '
 const INNER: PlanNodeType[] = ['section', 'floor', 'apartment', 'other'];
 const SUGGEST: Record<string, PlanNodeType> = { object: 'section', building: 'section', section: 'floor', floor: 'apartment', apartment: 'other', other: 'other' };
 const KIND_FALLBACK: DictItem[] = [{ code: 'building', name: 'Корпус', sort_order: 1 }, { code: 'parking', name: 'Паркинг', sort_order: 2 },
-  { code: 'networks', name: 'Сети', sort_order: 3 }, { code: 'landscaping', name: 'Благоустройство', sort_order: 4 }, { code: 'other', name: 'Прочее', sort_order: 5 }];
+  { code: 'networks', name: 'Сети', sort_order: 3 }, { code: 'landscaping', name: 'Благоустройство', sort_order: 4 },
+  { code: 'kindergarten', name: 'Детский сад', sort_order: 5 }, { code: 'school', name: 'Школа', sort_order: 6 }, { code: 'other', name: 'Прочее', sort_order: 7 }];
 
 const int = (v: string, fallback: number): number => { const n = Number(String(v).trim().replace(',', '.')); return Number.isFinite(n) ? Math.trunc(n) : fallback; };
 const numberIn = (name: string): number | null => { const m = String(name).match(/(\d+)/); return m ? Number(m[1]) : null; };
