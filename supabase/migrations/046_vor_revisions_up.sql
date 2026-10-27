@@ -37,7 +37,8 @@ create unique index vor_imports_chain_revision on planfact.vor_imports(root_impo
 
 -- 2. Действующая редакция цепочки (цепочка = первая редакция).
 create table planfact.vor_heads (
-  root_import_id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
+  root_import_id uuid not null unique,
   company_id uuid not null,
   project_id uuid not null,
   current_import_id uuid not null unique,
