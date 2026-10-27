@@ -3,6 +3,7 @@
  * Разные ЕИ не суммируются: у вида работ по строке на каждую ЕИ. Все числа — с сервера (pf_summary_worktypes / pf_summary_positions).
  * P2-0022: по каждой ЕИ — «Прогноз окончания», «Δ к финишу, дн.» (позже финиша — красным), «% отклонения» с заливкой по порогам объекта.
  */
+import { emptyText, useMyArea } from '../area.ts';
 import { createElement as h, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { SummaryApi, SummaryPosition, SummaryProject, SummaryWorkType } from './summary.service.ts';
@@ -58,6 +59,7 @@ export function ProjectView(props: { api: SummaryApi; p: SummaryProject; card: R
 
 function WorkTypes(props: { api: SummaryApi; p: SummaryProject }): ReactElement {
   const { api, p } = props;
+  const area = useMyArea(p.project_id);
   const [rows, setRows] = useState<SummaryWorkType[] | null>(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState<string | null>(null);
@@ -72,7 +74,7 @@ function WorkTypes(props: { api: SummaryApi; p: SummaryProject }): ReactElement 
   if (rows === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
   return h('div', { className: 'sm-wts', 'data-testid': 'sm-worktypes' },
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
-    !error && !rows.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'sm-wt-empty' }, 'В проекте нет позиций: они появляются после подтверждения ВОР.') : null,
+    !error && !rows.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'sm-wt-empty' }, emptyText(area, 'В проекте нет позиций: они появляются после подтверждения ВОР.')) : null,
     rows.map((w) => {
       const key = w.work_type_id || 'none';
       const isOpen = open === key;

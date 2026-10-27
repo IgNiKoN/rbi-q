@@ -99,6 +99,16 @@ export async function fetchMyProjects<T>(): Promise<T[]> {
   return error || !Array.isArray(data) ? [] : (data as T[]);
 }
 
+/** P2-0048: путь места «Корпус 1 · Секция 2» по id (pf_location_path; нет доступа к проекту — null). Для плашки «Ваша область». */
+export async function fetchLocationPath(locationId: string): Promise<string | null> {
+  const c = getClient();
+  if (!c) return null;
+  try {
+    const { data, error } = await c.rpc('pf_location_path', { p_location: locationId });
+    return error || typeof data !== 'string' ? null : data;
+  } catch { return null; }
+}
+
 /** Число узлов, которое создаст генератор: корпус + N·(секция + M·(этаж + K квартир)). Та же формула, что на сервере. */
 export function generatedNodeCount(sections: number, floors: number, apartmentsPerFloor: number): number {
   return 1 + sections * (1 + floors * (1 + apartmentsPerFloor));

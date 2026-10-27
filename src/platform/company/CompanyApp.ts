@@ -8,12 +8,14 @@
  * контрагенты, оформление, модули, журнал; объекты и единицы — по правам planfact.projects.manage / planfact.units.manage
  * (pf_my_company_access; РП и ПТО правят их, как раньше в План/Факте). «Оформление» — блок старых Настроек (логотип, цвет),
  * его показывает settings.render.js под этой вкладкой.
+ * P2-0048 этап 3: разделы «Компании» — пункты левой колонки / главной «Настроек» (js/modules/settings/settings.nav.js);
+ * здесь — только внутренние вкладки «Сотрудники · Роли и права» и строка «почта · компания · Выйти».
  */
 import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { AuthApi } from '../auth/auth.service.ts';
 import { openPlatformLogin, platformSignOut } from '../auth/shell-user.ts';
-import { CompanyRoles } from './CompanyRoles.ts';
+import { CompanyRoles, COMPANY_ROLES_CSS } from './CompanyRoles.ts';
 import { CompanyMembers, COMPANY_MEMBERS_CSS } from './CompanyMembers.ts';
 import { CompanyAudit, COMPANY_AUDIT_CSS } from './CompanyAudit.ts';
 import { SETTINGS_UI_CSS } from '../ui/settings.ts';
@@ -50,6 +52,10 @@ const TABS: { id: Tab; label: string; need: 'admin' | 'projects' | 'units' | 'pl
   { id: 'audit', label: 'Журнал', need: 'admin' },
   { id: 'patterns', label: 'Образцы', need: 'platform' }   // P2-0047: детали дизайн-системы — администратору платформы
 ];
+
+/** P2-0048: внутренние вкладки раздела «Сотрудники и доступ» (остальные вкладки — пункты левой колонки «Настроек»). */
+const INNER_TABS: Tab[] = ['members', 'roles'];
+const INNER_LABELS: Partial<Record<Tab, string>> = { members: 'Сотрудники', roles: 'Роли и права' };
 
 export interface CompanyRights { admin: boolean; projects: boolean; units: boolean; platform?: boolean }
 /** Какие вкладки видны: по правам сервера (без права вкладки нет, прямой адрес → первая доступная). */
@@ -170,8 +176,8 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
       h('button', { type: 'button', className: 'pf-btn', onClick: openPlatformLogin }, 'Войти'));
   }
 
-  const bar = h('div', { className: 'pf-bar', 'data-testid': 'co-user' },
-    h('span', null, h('b', null, who),
+  const bar = h('div', { className: 'pf-bar co-userbar', 'data-testid': 'co-user' },
+    h('span', { className: 'co-who' }, h('b', null, who),
       companies.length > 1
         ? h('select', { className: 'co-select', 'aria-label': 'Компания', value: companyId, onChange: (e) => setCompanyId((e.target as HTMLSelectElement).value) },
             companies.map((c) => h('option', { key: c.company_id, value: c.company_id }, c.company_name)))
@@ -185,7 +191,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
 
   const tabs = visibleTabs(rights);
   const cur: Tab = tab && tabs.includes(tab) ? tab : tabs[0];
-  const body = cur === 'members' ? h(CompanyMembers, { api, companyId, me: who, key: companyId })
+  const body = cur === 'members' ? h(CompanyMembers, { api, companyId, me: who, projects: projects || null, key: companyId })
     : cur === 'roles' ? h(CompanyRoles, { api, companyId, key: companyId })
     : cur === 'objects' && projects ? h(CompanyScope, { api: projects, render: (c) => h(ProjectsTab, { api: projects, company: c, core: core || null, people: () => peopleOf(api, c.company_id) }) })
     : cur === 'counterparties' && core ? h(CounterpartiesTab, { core, companyId, key: companyId })
@@ -195,22 +201,27 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
     : cur === 'audit' ? h(CompanyAudit, { api, companyId, key: companyId })
     : cur === 'patterns' ? h(Patterns)
     : null;
+  // P2-0048: разделы «Компании» — в левой колонке / на главной «Настроек»; здесь только внутренние вкладки «Сотрудники и доступ».
+  const inner = INNER_TABS.includes(cur) ? INNER_TABS.filter((t) => tabs.includes(t)) : [];
   return h('div', null, bar,
     h('div', { className: 'pf-root co-root', 'data-company-tab': cur },
-      h('div', { className: 'co-head' },
+      inner.length > 1 ? h('div', { className: 'co-head' },
         h('div', { className: 'co-tabs', role: 'tablist', 'data-testid': 'co-tabs', ref: tabsRef },
-          TABS.filter((t) => tabs.includes(t.id)).map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': cur === t.id, 'data-tab': t.id,
-            className: 'co-tab' + (cur === t.id ? ' co-tab--active' : ''), onClick: () => go(t.id) }, t.label)))),
+          inner.map((id) => h('button', { key: id, type: 'button', role: 'tab', 'aria-selected': cur === id, 'data-tab': id,
+            className: 'co-tab' + (cur === id ? ' co-tab--active' : ''), onClick: () => go(id) }, INNER_LABELS[id])))) : null,
       body));
 }
 
 export const COMPANY_CSS = SETTINGS_UI_CSS + PATTERNS_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT_CSS + COUNTERPARTIES_CSS + `
 .co-root{max-width:1200px}
 .co-head{margin-bottom:16px}
-.co-tabs{display:flex;flex-wrap:nowrap;gap:var(--rbi-subtab-gap,6px);padding:4px;border:1px solid var(--card-border);border-radius:12px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch}
-.co-tab{flex:1 1 0;min-width:max-content;min-height:40px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;padding:8px 12px;border-radius:8px;border:0;background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap;text-align:center}
-.co-tab--active{background:var(--accent,var(--primary));color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
-.co-select{margin-left:8px;font-size:12px;padding:6px 8px;border:1px solid var(--card-border);border-radius:8px;background:var(--card-bg);color:var(--text-main)}
+.co-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.co-tab{min-height:44px;font-size:14px;font-weight:600;padding:9px 14px;border-radius:10px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);cursor:pointer;white-space:nowrap;text-align:center}
+.co-tab--active{background:var(--accent,var(--primary));border-color:var(--accent,var(--primary));color:#fff}
+.co-userbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;font-size:13px;color:var(--text-muted);padding:0 0 10px;margin-bottom:12px}
+.co-who{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0;overflow-wrap:anywhere}
+.co-who b{color:var(--text-main);font-weight:600}
+.co-select{font-size:16px;min-height:40px;padding:6px 10px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);max-width:100%}
 .co-split{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:16px;align-items:start}
 @media (max-width:760px){.co-split{grid-template-columns:1fr}}
 .co-card,.co-list,.co-panel{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;box-shadow:var(--shadow-card)}
@@ -230,4 +241,4 @@ export const COMPANY_CSS = SETTINGS_UI_CSS + PATTERNS_CSS + COMPANY_MEMBERS_CSS 
 .co-check input{margin-top:2px;accent-color:var(--primary)}
 .co-check input:disabled+span{color:var(--text-muted)}
 .co-danger{background:var(--color-red);border-color:var(--color-red)}
-`;
+`+ COMPANY_ROLES_CSS;

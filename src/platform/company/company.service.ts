@@ -17,6 +17,15 @@ export interface MemberRow {
   full_name?: string | null; disabled_at?: string | null; must_change_password?: boolean; managed?: boolean;
   /** P2-0033 (033): закреплённые объекты Качества назначения; null — все объекты. */
   quality_objects?: QualityObjectRef[] | null;
+  /** P2-0048 (047): область назначения — узел дерева мест проекта (null — весь проект / вся компания), его путь, «отвечает за факт». */
+  location_id?: string | null; location_path?: string | null; fact_owner?: boolean | null;
+}
+/** P2-0048 (047): pf_set_participation — сколько назначений добавлено, изменено (без отзыва) и отозвано. */
+export interface ParticipationResult { added: number; changed: number; revoked: number }
+/** P2-0048: пакетное участие — люди × роль × (вся компания | проект × места) × «отвечает за факт» × срок × объекты Качества × фирма. */
+export interface ParticipationInput {
+  users: string[]; roleId: string; projectId: string | null; locations: string[]; factOwner: boolean;
+  validTo: string | null; objects: string[]; counterpartyId: string | null;
 }
 /** P2-0033: объект Качества компании (постоянный id, ADR-070) — для закрепления сотрудника при назначении роли. */
 export interface QualityObjectRef { id: string; name: string }
@@ -50,6 +59,8 @@ export interface CompanyApi {
   assignRole(userId: string, roleId: string, projectId: string | null, validTo: string | null, counterpartyId?: string | null,
     objectIds?: string[]): Promise<Result<string>>;
   revoke(assignmentId: string): Promise<Result>;
+  /** P2-0048 (047): назначить пакетом и «Изменить» (набор назначений «сотрудник × роль × проект» приводится к выбранной области). */
+  setParticipation(p: ParticipationInput): Promise<Result<ParticipationResult>>;
   /** P2-0028: сотрудники — добавить (учётка + роль), сбросить пароль (новый временный), отключить доступ. */
   addMember(companyId: string, email: string, fullName: string, roleId: string, projectId: string | null): Promise<Result<AddMemberResult>>;
   resetPassword(companyId: string, userId: string): Promise<Result<string>>;
@@ -101,6 +112,14 @@ export function createCompanyService(): CompanyApi | null {
     assignRole: (u, r, p, to, cp, objs) => call<string>('pf_assign_role', { p_user: u, p_role: r, p_project: p, p_valid_to: to,
       ...(cp ? { p_counterparty: cp } : {}), ...(objs && objs.length ? { p_objects: objs } : {}) }),
     revoke: (id) => call('pf_revoke_assignment', { p_assignment: id }),
+    setParticipation: async (p) => {
+      const r = await call<Partial<ParticipationResult> | null>('pf_set_participation', { p_users: p.users, p_role: p.roleId, p_project: p.projectId,
+        p_locations: p.locations.length ? p.locations : null, p_fact_owner: p.factOwner, p_valid_to: p.validTo,
+        p_objects: p.objects.length ? p.objects : null, p_counterparty: p.counterpartyId });
+      if (!r.ok) return r;
+      const v = r.value || {};
+      return { ok: true, value: { added: Number(v.added) || 0, changed: Number(v.changed) || 0, revoked: Number(v.revoked) || 0 } };
+    },
     addMember: async (co, email, name, role, project) => {
       const r = await call<AddMemberResult[]>('pf_company_add_member', { p_company: co, p_email: email, p_full_name: name, p_role: role, p_project: project });
       if (!r.ok) return r;

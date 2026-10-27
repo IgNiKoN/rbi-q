@@ -3,6 +3,7 @@
  * «Сохранить черновик» (строки исходника на сервер порциями). Без сервера (демо) — только предпросмотр.
  * Библиотека Excel и чтение файла подгружаются лениво (import('./xlsx-reader.ts')) — только когда выбран файл.
  */
+import { isPartial, useMyArea } from '../area.ts';
 import { createElement as h, Fragment, useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import { parseSheet, contextLabel, columnMapFrom, editColumn } from './parse.ts';
@@ -108,6 +109,7 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
   const [projectId, setProjectId] = useState('');
   const [perms, setPerms] = useState<string[]>([]);
   const [imports, setImports] = useState<VorImport[] | null>(null);
+  const [posCount, setPosCount] = useState<number | null>(null);
   const [saving, setSaving] = useState('');
   const [notice, setNotice] = useState('');
   const [file, setFile] = useState<LoadedFile | null>(null);
@@ -157,10 +159,15 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
   }, []);
 
   // Счётчик подвкладки «Позиции (N)» — позиции подтверждённых загрузок проекта.
+  // P2-0048: при назначении на часть проекта загрузки ВОР — файлы всего проекта (сервер их по области не делит, 047 —
+  // только позиции и факт): содержимое загрузок не показываем, счётчик — по позициям области (реестр «Позиции»).
+  const area = useMyArea(projectId);
+  const partial = isPartial(area);
   useEffect(() => {
     if (!props.onCount) return;
+    if (partial) { props.onCount(posCount); return; }
     props.onCount(imports ? imports.filter((i) => i.status === 'confirmed' && i.is_current !== false).reduce((a, i) => a + (i.positions || 0), 0) : null);
-  }, [imports]);
+  }, [imports, partial, posCount]);
 
   async function reloadImports(p: string): Promise<void> {
     if (!api || !p) return;
@@ -276,11 +283,16 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
     return h('div', { className: 'pj-tab vor-tab', 'data-testid': 'vor-tab' }, picker,
       !projectId ? null
         : registry
-          ? h(PositionsRegistry, { key: projectId, fact: props.fact!, summary: props.summary!, projectId, companyId: company, user: props.user || '',
-              ...positionRegistryActions(props.fact!, perms, projectId, company, isArchived((projects || []).find((p) => p.id === projectId)), props.save) })
+          ? h(PositionsRegistry, { key: projectId, fact: props.fact!, summary: props.summary!, projectId, companyId: company, user: props.user || '', onCount: setPosCount,
+              ...positionRegistryActions(props.fact!, perms, projectId, company, isArchived((projects || []).find((p) => p.id === projectId)), props.save, props.user || '') })
           : h(VorPositions, { key: projectId, api, projectId }));
   }
 
+  if (api && partial) {
+    return h('div', { className: 'pj-tab vor-tab', 'data-testid': 'vor-tab' }, picker,
+      h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'vor-area-only' },
+        'Загрузки ВОР ведут ПТО и РП по всему проекту. Позиции вашей области — на вкладке «Позиции».'));
+  }
   return h('div', { className: 'pj-tab vor-tab', 'data-testid': 'vor-tab' },
     picker,
     // итог принятия редакции / сохранения — сразу под шапкой, не под формой

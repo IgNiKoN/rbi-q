@@ -8,6 +8,8 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { CompanyRoles } from '../CompanyRoles.ts';
 import { CompanyApp, visibleTabs, rightsFrom } from '../CompanyApp.ts';
+// @ts-expect-error — обёртка оболочки на JS без типов
+import { companyTabsFor } from '../../../../js/modules/company/index.js';
 import { groupCatalog } from '../action-groups.ts';
 import { mapCompanyError } from '../company.service.ts';
 import type { CompanyApi, RoleRow, Result } from '../company.service.ts';
@@ -45,7 +47,10 @@ function fakeApi(opts: { fail?: string } = {}) {
     async myAdminCompanies() { return [{ company_id: 'c1', company_name: 'Альфа' }]; },
     async catalog() { return CATALOG; },
     async listRoles() { return roles; },
-    async listMembers() { return []; },
+    async listMembers() { return [
+      { user_id: 'u1', email: 'a@x', assignment_id: 'a1', role_id: 'tpl-for', role_name: 'Прораб / мастер', project_id: 'p1', project_name: 'А', valid_from: null, valid_to: null, is_active: true },
+      { user_id: 'u1', email: 'a@x', assignment_id: 'a2', role_id: 'tpl-for', role_name: 'Прораб / мастер', project_id: 'p1', project_name: 'А', valid_from: null, valid_to: null, is_active: true },
+      { user_id: 'u2', email: 'b@x', assignment_id: 'a3', role_id: 'tpl-for', role_name: 'Прораб / мастер', project_id: null, project_name: null, valid_from: null, valid_to: null, is_active: false }]; },
     async addMember() { return { ok: false, message: 'нет' }; }, async resetPassword() { return { ok: false, message: 'нет' }; }, async disableMember() { return res(null); }, async setFullName() { return res(0); },
     async listProjects() { return []; },
     async listAudit() { return []; },
@@ -60,6 +65,7 @@ function fakeApi(opts: { fail?: string } = {}) {
     async setRoleActions(id, actions) { calls.push(`actions:${id}:${[...actions].sort().join(',')}`); if (!opts.fail) roles = roles.map((r) => r.id === id ? { ...r, actions: [...actions].sort() } : r); return res(null); },
     async deleteRole(id) { calls.push(`delete:${id}`); if (!opts.fail) roles = roles.filter((r) => r.id !== id); return res(null); },
     async assignRole() { return res('a1'); },
+    async setParticipation() { return { ok: true, value: { added: 0, changed: 0, revoked: 0 } }; },
     async revoke() { return res(null); }
   };
   return { api, calls };
@@ -85,7 +91,7 @@ test('шаблон: пометка «только копия», галочки �
 test('галочки сгруппированы по-русски, подписи — из каталога сервера', async () => {
   const el = mountRoles(fakeApi().api);
   await tick();
-  const legends = Array.from(el.querySelectorAll('legend')).map((l: N) => l.textContent);
+  const legends = Array.from(el.querySelectorAll('.cr-group summary b')).map((l: N) => l.textContent);
   assert.deepEqual(legends, ['Работы и план', 'Факт', 'Безопасность']);
   assert.match(el.textContent, /Добавление и правка работ/);
 });
@@ -185,7 +191,7 @@ test('не вошёл — своей формы входа нет, «Войти�
   assert.ok(off.querySelector('[data-testid=co-offline]'));
 });
 
-test('администратор — вкладки компании, первая «Сотрудники»; «Роли» — по вкладке', async () => {
+test('администратор — первая «Сотрудники»; внутри только вкладки «Сотрудники · Роли и права» (P2-0048), «Роли» — по вкладке', async () => {
   win.history.replaceState(null, '', '/');
   const el = win.document.createElement('div') as N; win.document.body.appendChild(el);
   const root = createRoot(el);
@@ -193,10 +199,13 @@ test('администратор — вкладки компании, перва
   await tick(); await tick();
   assert.match(el.querySelector('[data-testid=co-user]').textContent, /Альфа/);
   assert.deepEqual([...el.querySelectorAll('[data-testid=co-tabs] [role=tab]')].map((t: N) => t.textContent),
-    ['Сотрудники', 'Роли', 'Контрагенты', 'Оформление', 'Модули компании', 'Журнал'], 'без права на объекты/единицы — их вкладок нет');
+    ['Сотрудники', 'Роли и права'], 'остальные разделы — в левой колонке «Настроек»');
   assert.ok(el.querySelector('[data-testid=co-members]'));
   click(el.querySelector('[data-tab=roles]')); await tick(); await tick();
   assert.ok(el.querySelector('[data-testid=co-roles]'));
+  assert.equal(el.querySelector('[data-tab=roles]').getAttribute('aria-selected'), 'true');
+  win.history.replaceState(null, '', '/#/settings/company/audit'); win.dispatchEvent(new win.Event('hashchange')); await tick(); await tick();
+  assert.equal(el.querySelector('[data-testid=co-tabs]'), null, 'в «Журнале» своей полосы вкладок нет');
   flushSync(() => root.unmount());   // экран «Компании» в приложении один — следующий тест не должен видеть этот
 });
 
@@ -210,6 +219,15 @@ test('права на вкладки: управление ролями / объ
     ['members', 'roles', 'objects', 'counterparties', 'directories', 'branding', 'modules', 'audit']);
 });
 
+// P2-0048: левая колонка «Настроек» узнаёт вкладки без загрузки бандла — та же таблица прав, что у CompanyApp
+test('обёртка «Компании»: вкладки по правам совпадают с visibleTabs', () => {
+  const keys = ['admin', 'projects', 'units', 'platform'] as const;
+  for (let m = 0; m < 16; m++) {
+    const r = { admin: !!(m & 1), projects: !!(m & 2), units: !!(m & 4), platform: !!(m & 8) };
+    assert.deepEqual(companyTabsFor(r), visibleTabs(r), keys.filter((k) => r[k]).join('+') || 'нет прав');
+  }
+});
+
 test('без права управлять ролями, но с правом на объекты — раздел открыт только с «Проектами» (P2-0047)', async () => {
   win.history.replaceState(null, '', '/#/settings/company/members');
   const { api } = fakeApi();
@@ -219,8 +237,29 @@ test('без права управлять ролями, но с правом н
   const root = createRoot(el as N);
   flushSync(() => root.render(createElement(CompanyApp, { auth: fakeAuth(true), api: { ...api, async myAdminCompanies() { return []; } }, projects })));
   await tick(); await tick(); await tick();
-  assert.deepEqual([...(el as N).querySelectorAll('[data-testid=co-tabs] [role=tab]')].map((t: N) => t.textContent), ['Проекты']);
+  assert.equal((el as N).querySelector('[data-testid=co-tabs]'), null, 'полосы вкладок нет (разделы — в левой колонке «Настроек»)');
+  assert.equal((el as N).querySelector('[data-company-tab]').getAttribute('data-company-tab'), 'objects');
   assert.equal((el as N).querySelector('[data-testid=co-members]'), null, 'сотрудников не видно');
   assert.equal(win.location.hash, '#/settings/company/objects', 'прямой адрес закрытой вкладки → доступная');
   flushSync(() => root.unmount());
+});
+
+test('P2-0048: строка роли «что может · у N чел.» (люди, не назначения); группы — счётчик «k из n»; телефон — список → роль и «‹ Роли»', async () => {
+  const el = mountRoles(fakeApi().api);
+  await tick();
+  const metas = Array.from(el.querySelectorAll('[data-testid=co-role-meta]')).map((m: N) => m.textContent);
+  assert.deepEqual(metas, ['Работы и план, Факт · у 1 чел.', 'Работы и план · не назначена']);
+  assert.equal(el.querySelector('[data-testid=co-roles]').dataset.detail, '0', 'сначала список');
+  click(el.querySelector('[data-role-id=own]')); await tick();
+  assert.equal(el.querySelector('[data-testid=co-roles]').dataset.detail, '1', 'выбрана роль — её панель');
+  const counts = Array.from(el.querySelectorAll('[data-testid=co-group-count]')).map((c: N) => c.textContent);
+  assert.deepEqual(counts, ['1 из 2', '0 из 1', '0 из 1']);
+  box(el, 'planfact.fact.create').click(); await tick();
+  assert.equal(el.querySelectorAll('[data-testid=co-group-count]')[1].textContent, '1 из 1');
+  assert.match(el.querySelector('[data-testid=co-role-sum]').textContent, /Может: Работы и план, Факт/);
+  assert.ok(el.querySelector('[data-testid=co-cancel-actions]'));
+  click(el.querySelector('[data-testid=co-cancel-actions]')); await tick();
+  assert.equal(el.querySelectorAll('[data-testid=co-group-count]')[1].textContent, '0 из 1', '«Отменить изменения» вернул галочки');
+  click(el.querySelector('[data-testid=co-roles-back]')); await tick();
+  assert.equal(el.querySelector('[data-testid=co-roles]').dataset.detail, '0');
 });

@@ -30,6 +30,9 @@ export function auditText(r: CompanyAuditRow): string {
     }
     case 'ASSIGN': return `Назначена роль «${str(n.role_name)}» → ${r.subject_email || 'сотрудник'}` + (n.project_id ? ' (проект)' : ' (все проекты)') + (n.valid_to ? `, до ${WHEN.format(new Date(str(n.valid_to)))}` : '');
     case 'REVOKE': return `Отозвана роль «${str(o.role_name)}» у ${r.subject_email || 'сотрудника'}`;
+    // P2-0048 (047): pf_set_participation изменил действующее назначение без отзыва (ответственный за факт, срок, объекты Качества, фирма)
+    case 'CHANGE': return `Изменено назначение ${r.subject_email ? '— ' + r.subject_email : ''}`.trim()
+      + (o.fact_owner !== n.fact_owner ? (n.fact_owner ? ': отвечает за факт' : ': больше не отвечает за факт') : '');
     default: return r.action;
   }
 }
@@ -42,7 +45,7 @@ export const AUDIT_KINDS: { id: AuditKind; label: string }[] = [
 export function auditKind(r: CompanyAuditRow): AuditKind {
   if (r.table_name === 'counterparties') return 'counterparties';
   if (r.action.startsWith('ROLE_')) return 'roles';
-  if (r.action === 'ASSIGN' || r.action === 'REVOKE') return 'assign';
+  if (r.action === 'ASSIGN' || r.action === 'REVOKE' || r.action === 'CHANGE') return 'assign';
   return 'other';
 }
 

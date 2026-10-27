@@ -6,6 +6,7 @@ import type { HistoryItem, Status } from '../../../platform/ui/index.ts';
 import type { FactHistoryRow, FactStatus } from './fact.service.ts';
 import { fmtPeriod, fmtQty } from './fact.ts';
 import { ruDate } from '../ks2/form.ts';
+import { authorText } from '../area.ts';
 
 export const FACT_LABEL: Record<FactStatus, { label: string; tone: Status }> = {
   accepted: { label: 'Принято', tone: 'green' }, pending_approval: { label: 'Ждёт РП', tone: 'blue' },
@@ -23,8 +24,11 @@ export function historyItem(e: FactHistoryRow, unit: string): HistoryItem {
   const parts = [`${fmtQty(e.qty)} ${unit}`, e.brigade_name, e.period_from ? fmtPeriod(e.period_from, e.work_date) : `за ${ruDate(e.work_date)}`];   // P2-0022: запись «за период»
   if (e.correction_reason) parts.push(`исправление: ${e.correction_reason}`);
   if (e.note) parts.push(e.note);
+  // P2-0048: запись РП «за кого» — «внёс … за …» (у решённой записи «кто» — РП, принявший решение, поэтому — в тексте)
+  if (decided && e.on_behalf_email) parts.push(authorText(e.created_by_email, e.on_behalf_email, ''));
   return {
-    id: e.id, when: ruDate((decided ? e.decided_at! : e.created_at).slice(0, 10)), who: decided ? e.decided_by_email : e.created_by_email,
+    id: e.id, when: ruDate((decided ? e.decided_at! : e.created_at).slice(0, 10)),
+    who: decided ? e.decided_by_email : e.on_behalf_email ? authorText(e.created_by_email, e.on_behalf_email, '') : e.created_by_email,
     text: parts.join(' · '), from, to: FACT_LABEL[e.status], note: e.decision_note ? `Решение: ${e.decision_note}` : null,
   };
 }

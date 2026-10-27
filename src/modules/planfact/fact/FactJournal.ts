@@ -16,6 +16,7 @@ import { FACT_LABEL, FACT_STATUS_ORDER, historyItem } from './factStatus.ts';
 import { corpOf } from '../vor/PositionsRegistry.ts';
 import { ruDate } from '../ks2/form.ts';
 import { hashParam } from '../ProjectPicker.ts';
+import { authorText, personName, useMyArea, isPartial } from '../area.ts';
 
 export const JOURNAL_LINK = '#/planfact/fact/journal';
 /** Записей за один запрос (сервер отдаёт не больше; постраничность — ТД). */
@@ -25,6 +26,8 @@ export const JOURNAL_DAYS = 30;
 export interface JournalRow {
   id: string; positionId: string; corp: string; place: string; work: string; unit: string; qty: number; date: string; periodFrom: string | null;
   status: FactStatus; brigade: string; workers: number | null; manHours: number | null; author: string; createdAt: string;
+  /** P2-0048: за кого внёс РП (почта ответственного); '' — автор вносил за себя. */
+  behalf?: string;
   decidedBy: string; decidedAt: string | null; decision: string; note: string; correction: string;
 }
 
@@ -32,7 +35,7 @@ export function toJournalRow(e: FactJournalRow): JournalRow {
   return {
     id: e.id, positionId: e.position_id, corp: corpOf(e.location_path), place: e.location_path, work: e.work_name, unit: e.unit_code,
     qty: e.qty, date: e.work_date, periodFrom: e.period_from ?? null, status: e.status, brigade: e.brigade_name, workers: e.workers, manHours: e.man_hours,
-    author: e.created_by_email || '—', createdAt: e.created_at, decidedBy: e.decided_by_email || '', decidedAt: e.decided_at,
+    author: e.created_by_email || '—', behalf: e.on_behalf_email || '', createdAt: e.created_at, decidedBy: e.decided_by_email || '', decidedAt: e.decided_at,
     decision: e.decision_note || '', note: e.note || '', correction: e.corrects_id ? (e.correction_reason || 'исправление') : '',
   };
 }
@@ -54,7 +57,7 @@ export const JOURNAL_COLUMNS: RegistryColumn<JournalRow>[] = [
   { id: 'unit', label: 'ЕИ', value: (r) => r.unit, hidden: true },
   { id: 'status', label: 'Статус', value: (r) => FACT_LABEL[r.status].label, render: (r) => h(StatusBadge, { status: FACT_LABEL[r.status].tone, label: FACT_LABEL[r.status].label, testId: 'fj-status' }) },
   { id: 'brigade', label: 'Бригада', value: (r) => r.brigade },
-  { id: 'author', label: 'Внёс', value: (r) => r.author, hidden: true },
+  { id: 'author', label: 'Внёс', value: (r) => (r.behalf ? authorText(r.author, r.behalf, '') : r.author), hidden: true },
   { id: 'workers', label: 'Люди', value: (r) => r.workers, align: 'right', hidden: true },
   { id: 'manHours', label: 'Чел.-ч', value: (r) => r.manHours, align: 'right', hidden: true, numFmt: QTY },
   { id: 'decision', label: 'Решение РП', value: (r) => (r.decidedBy ? `${r.decidedBy}${r.decision ? ': ' + r.decision : ''}` : null) },
@@ -68,7 +71,7 @@ export const JOURNAL_FILTERS: RegistryFilter<JournalRow>[] = [
   { id: 'corp', label: 'Корпус', get: (r) => r.corp },
   { id: 'work', label: 'Работа', get: (r) => r.work },
   { id: 'brigade', label: 'Бригада', get: (r) => r.brigade },
-  { id: 'author', label: 'Внёс', get: (r) => r.author },
+  { id: 'author', label: 'Внёс', get: (r) => (r.behalf ? authorText(r.author, r.behalf, '') : r.author) },
   { id: 'status', label: 'Статус', get: (r) => r.status, options: FACT_STATUS_ORDER.map((s) => ({ value: s, label: FACT_LABEL[s].label })) },
 ];
 const GROUP = { label: 'Корпус', key: (r: JournalRow) => r.corp };
@@ -95,7 +98,7 @@ function JournalCard(props: { api: FactApi; row: JournalRow; index: number; tota
     h('dl', { className: 'vr-nums', 'data-testid': 'fj-card-nums' },
       dd('Объём', `${fmtQty(row.qty)} ${row.unit}`, true), dd('Дата работ', row.periodFrom ? `${ruDate(row.periodFrom)} — ${ruDate(row.date)}` : ruDate(row.date), true), dd('Бригада', row.brigade),
       row.workers !== null ? dd('Люди', String(row.workers), true) : [], row.manHours !== null ? dd('Чел.-ч', fmtQty(row.manHours), true) : [],
-      dd('Внёс', `${row.author}, ${fmtWhen(row.createdAt)}`),
+      dd('Внёс', `${personName(row.author)}${row.behalf ? ' за ' + personName(row.behalf) : ''}, ${fmtWhen(row.createdAt)}`),
       row.decidedBy ? dd(row.status === 'superseded' ? 'Заменил' : 'Решение РП', `${row.decidedBy}${row.decidedAt ? ', ' + fmtWhen(row.decidedAt) : ''}`) : [],
       row.decision ? dd('Причина', row.decision) : [], row.note ? dd('Пометка', row.note) : [], row.correction ? dd('Исправление', row.correction) : []),
     h('h4', { className: 'vr-h' }, 'История позиции'),
@@ -119,6 +122,7 @@ export function FactJournal(props: FactJournalProps): ReactElement {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState('');
   const [custom, setCustom] = useState(false);
+  const area = useMyArea(projectId);
 
   async function load(f: string, t: string): Promise<void> {
     if (f && t && f > t) { setError('Начало периода позже конца'); return; }
@@ -166,7 +170,7 @@ export function FactJournal(props: FactJournalProps): ReactElement {
       toneOf: (r) => FACT_LABEL[r.status].tone, toneLabel: TONE_LABEL,
       selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId, quick: { filter: 'status' }, compact, selectMode: true,
       actions: (sel) => h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'fj-export-selected', onClick: () => { void exportRows(visibleCols, sel, save); } }, 'Выгрузить в Excel'),
-      empty: 'За выбранный период записей факта нет.',
+      empty: isPartial(area) ? 'В вашей области за выбранный период записей факта нет.' : 'За выбранный период записей факта нет.',
       views: { registry: 'fact-journal', company: props.companyId, user: props.user }, linkBase: JOURNAL_LINK,
     }),
     open ? h(JournalCard, { key: open.id, api, row: open, index: idx, total: ordered.length,

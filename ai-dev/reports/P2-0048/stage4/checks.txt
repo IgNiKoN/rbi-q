@@ -1,0 +1,95 @@
+P2-0048 этап 4 — «Сотрудники и доступ». Проверки 27.10.2026.
+
+Команды:
+  npm test → tests 738, pass 738, fail 0
+  npx tsc --noEmit -p tsconfig.json → 0 строк вывода (ошибок нет)
+  npm run build:company → js/dist/company/company.js 1 245,38 kB (+ .map), built
+  node --test src/platform/company/__tests__/{company-members,company-roles,participation}.test.ts → 29 + 15 + 6 pass, 0 fail
+  SW_VERSION 18.95.0 → 18.96.0
+
+Стенд: подставной сервер localhost:8868 (scratchpad/stand48: seed.js, p47.js, p48.js — pf_set_participation по смыслу 047, pf_list_company_members с location_id/location_path/fact_owner,
+проекты «ЖК Альфа» (Корпус 1 → Секции 1–3 → этажи 1–5, Паркинг) и «ЖК Бета»), headless Chrome через DevTools-протокол. Запросов к api.rbi-q.ru нет (guard.js).
+
+Ширины × темы (строка: снимок, ширина окна, scrollWidth, OK = нет прокрутки вбок, cm = ширина раскладки раздела):
+members-375-light: iw=375 scrollWidth=375 OK hash=#/settings/company/members page=section cols=359px theme=rbi-light-v3 cm=359 act=1
+roles-375-light: iw=375 scrollWidth=375 OK hash=#/settings/company/roles page=section cols=359px theme=rbi-light-v3 cm=359 act=1
+members-375-dark: iw=375 scrollWidth=375 OK hash=#/settings/company/members page=section cols=359px theme=rbi-dark-v3 cm=359 act=1
+roles-375-dark: iw=375 scrollWidth=375 OK hash=#/settings/company/roles page=section cols=359px theme=rbi-dark-v3 cm=359 act=1
+members-414-light: iw=414 scrollWidth=414 OK hash=#/settings/company/members page=section cols=398px theme=rbi-light-v3 cm=398 act=1
+roles-414-light: iw=414 scrollWidth=414 OK hash=#/settings/company/roles page=section cols=398px theme=rbi-light-v3 cm=398 act=1
+members-414-dark: iw=414 scrollWidth=414 OK hash=#/settings/company/members page=section cols=398px theme=rbi-dark-v3 cm=398 act=1
+roles-414-dark: iw=414 scrollWidth=414 OK hash=#/settings/company/roles page=section cols=398px theme=rbi-dark-v3 cm=398 act=1
+members-600-light: iw=600 scrollWidth=600 OK hash=#/settings/company/members page=section cols=568px theme=rbi-light-v3 cm=568 act=1
+roles-600-light: iw=600 scrollWidth=600 OK hash=#/settings/company/roles page=section cols=568px theme=rbi-light-v3 cm=568 act=1
+members-600-dark: iw=600 scrollWidth=600 OK hash=#/settings/company/members page=section cols=568px theme=rbi-dark-v3 cm=568 act=1
+roles-600-dark: iw=600 scrollWidth=600 OK hash=#/settings/company/roles page=section cols=568px theme=rbi-dark-v3 cm=568 act=1
+members-768-light: iw=768 scrollWidth=768 OK hash=#/settings/company/members page=section cols=250px 398px theme=rbi-light-v3 cm=378 act=1
+roles-768-light: iw=768 scrollWidth=768 OK hash=#/settings/company/roles page=section cols=250px 398px theme=rbi-light-v3 cm=378 act=1
+members-768-dark: iw=768 scrollWidth=768 OK hash=#/settings/company/members page=section cols=250px 398px theme=rbi-dark-v3 cm=378 act=1
+roles-768-dark: iw=768 scrollWidth=768 OK hash=#/settings/company/roles page=section cols=250px 398px theme=rbi-dark-v3 cm=378 act=1
+members-1023-light: iw=1023 scrollWidth=1023 OK hash=#/settings/company/members page=section cols=250px 653px theme=rbi-light-v3 cm=633 act=1
+roles-1023-light: iw=1023 scrollWidth=1023 OK hash=#/settings/company/roles page=section cols=250px 653px theme=rbi-light-v3 cm=633 act=1
+members-1023-dark: iw=1023 scrollWidth=1023 OK hash=#/settings/company/members page=section cols=250px 653px theme=rbi-dark-v3 cm=633 act=1
+roles-1023-dark: iw=1023 scrollWidth=1023 OK hash=#/settings/company/roles page=section cols=250px 653px theme=rbi-dark-v3 cm=633 act=1
+members-1024-light: iw=1024 scrollWidth=1024 OK hash=#/settings/company/members page=section cols=250px 654px theme=rbi-light-v3 cm=634 act=1
+roles-1024-light: iw=1024 scrollWidth=1024 OK hash=#/settings/company/roles page=section cols=250px 654px theme=rbi-light-v3 cm=634 act=1
+members-1024-dark: iw=1024 scrollWidth=1024 OK hash=#/settings/company/members page=section cols=250px 654px theme=rbi-dark-v3 cm=634 act=1
+roles-1024-dark: iw=1024 scrollWidth=1024 OK hash=#/settings/company/roles page=section cols=250px 654px theme=rbi-dark-v3 cm=634 act=1
+members-1280-light: iw=1280 scrollWidth=1280 OK hash=#/settings/company/members page=section cols=250px 710px theme=rbi-light-v3 cm=690 act=1
+roles-1280-light: iw=1280 scrollWidth=1280 OK hash=#/settings/company/roles page=section cols=250px 710px theme=rbi-light-v3 cm=690 act=1
+members-1280-dark: iw=1280 scrollWidth=1280 OK hash=#/settings/company/members page=section cols=250px 710px theme=rbi-dark-v3 cm=690 act=1
+roles-1280-dark: iw=1280 scrollWidth=1280 OK hash=#/settings/company/roles page=section cols=250px 710px theme=rbi-dark-v3 cm=690 act=1
+members-1440-light: iw=1440 scrollWidth=1440 OK hash=#/settings/company/members page=section cols=270px 850px theme=rbi-light-v3 cm=822 act=1
+roles-1440-light: iw=1440 scrollWidth=1440 OK hash=#/settings/company/roles page=section cols=270px 850px theme=rbi-light-v3 cm=822 act=1
+members-1440-dark: iw=1440 scrollWidth=1440 OK hash=#/settings/company/members page=section cols=270px 850px theme=rbi-dark-v3 cm=822 act=1
+roles-1440-dark: iw=1440 scrollWidth=1440 OK hash=#/settings/company/roles page=section cols=270px 850px theme=rbi-dark-v3 cm=822 act=1
+members-1920-light: iw=1920 scrollWidth=1920 OK hash=#/settings/company/members page=section cols=270px 1302px theme=rbi-light-v3 cm=1200 act=1
+roles-1920-light: iw=1920 scrollWidth=1920 OK hash=#/settings/company/roles page=section cols=270px 1302px theme=rbi-light-v3 cm=1200 act=1
+members-1920-dark: iw=1920 scrollWidth=1920 OK hash=#/settings/company/members page=section cols=270px 1302px theme=rbi-dark-v3 cm=1200 act=1
+roles-1920-dark: iw=1920 scrollWidth=1920 OK hash=#/settings/company/roles page=section cols=270px 1302px theme=rbi-dark-v3 cm=1200 act=1
+members-2560-light: iw=2560 scrollWidth=2560 OK hash=#/settings/company/members page=section cols=270px 1170px theme=rbi-light-v3 cm=1142 act=1
+roles-2560-light: iw=2560 scrollWidth=2560 OK hash=#/settings/company/roles page=section cols=270px 1170px theme=rbi-light-v3 cm=1142 act=1
+members-2560-dark: iw=2560 scrollWidth=2560 OK hash=#/settings/company/members page=section cols=270px 1170px theme=rbi-dark-v3 cm=1142 act=1
+roles-2560-dark: iw=2560 scrollWidth=2560 OK hash=#/settings/company/roles page=section cols=270px 1170px theme=rbi-dark-v3 cm=1142 act=1
+wizard-375-dark: iw=375 scrollWidth=375 OK hash=#/settings/company/members page=section cols=359px theme=rbi-dark-v3 cm=359 act=1
+wizard-768-light: iw=768 scrollWidth=768 OK hash=#/settings/company/members page=section cols=250px 398px theme=rbi-light-v3 cm=378 act=1
+wizard-1024-dark: iw=1024 scrollWidth=1024 OK hash=#/settings/company/members page=section cols=250px 654px theme=rbi-dark-v3 cm=634 act=1
+wizard-1440-light: iw=1440 scrollWidth=1440 OK hash=#/settings/company/members page=section cols=270px 850px theme=rbi-light-v3 cm=822 act=1
+wizard-2560-dark: iw=2560 scrollWidth=2560 OK hash=#/settings/company/members page=section cols=270px 1170px theme=rbi-dark-v3 cm=1142 act=1
+byproject-414-light: iw=414 scrollWidth=414 OK hash=#/settings/company/members page=section cols=398px theme=rbi-light-v3 cm=undefined act=1
+byproject-1920-dark: iw=1920 scrollWidth=1920 OK hash=#/settings/company/members page=section cols=270px 1302px theme=rbi-dark-v3 cm=undefined act=1
+
+Сценарии (шаг: факт; снимки scen-*):
+== (а) назначить 2 людей прорабами на секции 1–2, «отвечают за факт» (1280×900, light)
+  открыть мастер, отметить Новикова и Соколова: Выбрано: 2 [снимок scen-a1-who-1280-light]
+  шаг 2: Прораб, ЖК Альфа, Секции 1–2, отвечают за факт: Отмечено: Корпус 1 · Секция 1, Корпус 1 · Секция 2 [снимок scen-a2-where-1280-light]
+  шаг 3: проверка: ["Новиков Н. Н., Соколов Д. А.","→ Прораб · ЖК Альфа · Секция 1, Секция 2 · отвечают за факт · бессрочно","Будет 4 назначения."] [снимок scen-a3-check-1280-light]
+  Сохранить → ответ сервера: ["Добавлено 4, изменено 0, отозвано 0 — права действуют со следующего запроса","Прораб · ЖК Альфа (Секция 1, Секция 2)","Прораб · ЖК Альфа (Секция 1, Секция 2)"] [снимок scen-a4-saved-1280-light]
+  «По проектам»: ЖК Альфа: ["pa-s1: Новиков · фактПетров · фактСоколов · факт","pa-s2: Новиков · фактПетров · фактСоколов · факт","pa-s3: Сидорова · Прорабнет ответственного за факт — вносит любой прораб проекта","pa-park: нет ответственного за факт — вносит любой прораб проекта"] [снимок scen-a5-byproject-1280-light]
+== (б) «Изменить» у Петрова → убрать Секцию 1 (1440×900, dark)
+  карточка Петрова: ["ЖК Альфа · ПрорабСекция 1, Секция 2отвечает за фактдо 31.12.2026Изменить","ЖК Бета · Прорабвесь проектбессрочноИзменить"] [снимок scen-b1-card-1440-dark]
+  «Изменить» у ЖК Альфа — мастер на шаге 2: ["r-for","pa",true,"Отмечено: Корпус 1 · Секция 1, Корпус 1 · Секция 2","2026-12-31"] [снимок scen-b2-edit-1440-dark]
+  снять Секцию 1 → Проверка → Сохранить: ["→ Прораб · ЖК Альфа · Секция 2 · отвечает за факт · до 31.12.2026","Добавлено 0, изменено 0, отозвано 1 — права действуют со следующего запроса","Секция 2"] [снимок scen-b3-saved-1440-dark]
+== (в) Инженер СК: привязать к объекту 1, затем «Изменить» → объект 2 (1280×900, dark)
+  назначить Новикова Инженером СК, объект 1: ["Роль Качества — назначается на всю компанию; доступ ограничивается объектами Качества.",false] [снимок scen-c1-objects-1280-dark]
+  Проверка → Сохранить: ["→ Инженер СК · вся компания · объекты Качества: Большевиков,22 (Гений) · бессрочно","Добавлено 1, изменено 0, отозвано 0 — права действуют со следующего запроса",["as111:obj_mpoh020f"]]
+  карточка Новикова → «Изменить» → снять объект 1, отметить объект 2 → Сохранить: ["было отмечено: true","Добавлено 0, изменено 1, отозвано 0 — права действуют со следующего запроса",["as111:obj_mpoh0305"],"то же назначение: true","Объекты Качества: Школа 400 (Крыленко)"] [снимок scen-c3-changed-1280-dark]
+== (г) «Отозвать» группу с подтверждением (1024×800, light)
+  Сидорова → «Изменить» → «Отозвать» → диалог: Отозвать роль?Сидорова Е. В.: роль «Прораб» · ЖК Альфа · Секция 3. Права пропадут со следующего запроса.НетДа, отозвать [снимок scen-d1-confirm-1024-light]
+  «Да, отозвать»: ["Назначение отозвано","нет ролей","[\"as108\"]"] [снимок scen-d2-revoked-1024-light]
+== (д) добавить сотрудника — временный пароль (375×812, light)
+  «+ Сотрудник» внизу экрана → лист: ["16px","16px","16px","16px"] [снимок scen-e1-add-375-light]
+  «Добавить» → пароль один раз: ["Временный пароль — Смирнов С. С.","пароль показан",null,12] [снимок scen-e2-temp-375-light]
+  «Готово» → пароль исчез: [false,"Прораб · ЖК Альфа"]
+== (е) роли: изменить права, отменить, сохранить (1440×900, light)
+  роль ПТО: ["Работы и план · у 1 чел.","Работы и план 3 из 4; Факт 0 из 2; Чек-листы 0 из 1; Деньги и выплаты 0 из 1; КС-2 0 из 1; Настройки и журнал 0 из 1; Безопасность 0 из 1; Прочее 0 из 6"] [снимок scen-f1-role-1440-light]
+  отметить «Смотреть факт» → «Отменить изменения»: ["1 из 2","0 из 2"]
+  снова отметить → «Сохранить действия»: ["Действия роли сохранены — права действуют со следующего запроса","Работы и план · у 1 чел."] [снимок scen-f3-saved-1440-light]
+== телефон 375, тёмная: список → карточка → мастер; роли список → роль (375×812, dark)
+  карточка Петрова (список скрыт, есть «‹ Сотрудники»): ["none","block"] [снимок scen-m1-card-375-dark]
+  «Изменить» → лист снизу на шаге 2: [0,375,812] [снимок scen-m2-sheet-375-dark]
+  «По проектам» на телефоне: 2 [снимок scen-m3-byproject-375-dark]
+  роли: список → роль (кнопки внизу закреплены): ["0","1","sticky"] [снимок scen-m4-role-375-dark]
+== главная «Настроек»: «+ Назначить» открывает мастер (1440×900, dark)
+  кнопки на главной: ["Назначить","Сотрудник"] [снимок scen-h1-home-1440-dark]
+  «+ Назначить» → раздел и мастер: ["#/settings/company/members",true,"Назначить"] [снимок scen-h2-wizard-1440-dark]

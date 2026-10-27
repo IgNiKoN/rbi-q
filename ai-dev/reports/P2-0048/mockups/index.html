@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Компания — сейчас / предлагаю</title>
+<style>
+:root{--bg:#0b121b;--ui:#e7ecf1;--uim:#8d99a6;--line:rgba(255,255,255,.12);--gold:#c49a5f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ui);font:14px/1.45 Inter,'IBM Plex Sans',-apple-system,system-ui,sans-serif}
+header.top{position:sticky;top:0;z-index:5;background:#0b121bf2;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+header.top h1{font-size:15px;margin:0 8px 0 0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{background:none;border:0;color:var(--uim);padding:7px 11px;font:inherit;cursor:pointer;min-height:36px}
+.seg button.on{background:var(--gold);color:#111}
+.tabsel{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.tabsel button{background:#141e2a;border:1px solid var(--line);color:var(--ui);border-radius:999px;padding:6px 12px;font:inherit;cursor:pointer}
+.tabsel button.on{border-color:var(--gold);color:var(--gold)}
+.intro{padding:12px 16px;color:var(--uim);max-width:1100px}
+.intro b{color:var(--ui)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;padding:0 16px 16px}
+.cols.one{grid-template-columns:minmax(0,1fr)}
+.col h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--uim);margin:6px 0 8px}
+.col h2 span{color:var(--gold)}
+.scr-cap{font-size:12px;color:var(--uim);margin:14px 0 6px}
+.scr-cap b{color:var(--ui)}
+.stage{max-width:100%;background:#05090e;border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+.stage img{display:block;width:100%;height:auto}
+.scaler{transform-origin:0 0}
+.map{padding:0 16px 40px;max-width:1300px}
+.map h3{font-size:14px;margin:14px 0 6px}
+.map table{width:100%;border-collapse:collapse;font-size:13px}
+.map td,.map th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.map th{color:var(--uim);font-weight:600}
+.map .n{color:var(--gold);white-space:nowrap}
+@media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+
+/* ===== Предлагаемый экран (тема приложения) ===== */
+.app{--bg-main:#101923;--card-bg:#172331;--card-2:#1c2a3a;--card-border:rgba(255,255,255,.12);--text-main:#f4f4f4;--text-muted:#a8b2bd;--accent:#c49a5f;--ok:#4caf7d;--danger:#e06b5f;
+  background:var(--bg-main);color:var(--text-main);font:15px/1.45 Inter,'IBM Plex Sans',-apple-system,system-ui,sans-serif;min-height:400px}
+.app.light{--bg-main:#f6f3ee;--card-bg:#fff;--card-2:#faf8f4;--card-border:rgba(28,43,57,.14);--text-main:#1c2b39;--text-muted:#66727f}
+.app *{box-sizing:border-box}
+.a-shell{display:flex;min-height:100%}
+.a-rail{width:200px;flex:none;border-right:1px solid var(--card-border);padding:14px 10px;display:none}
+.a-rail .g{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin:12px 8px 6px}
+.a-rail a{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:10px;color:var(--text-main);text-decoration:none;font-size:14px;min-height:40px}
+.a-rail a.on{background:var(--accent);color:#111;font-weight:700}
+.a-main{flex:1;min-width:0;padding:14px 16px 90px}
+.a-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.a-title{font-size:20px;font-weight:700;margin:0;flex:1;min-width:0}
+.a-sub{color:var(--text-muted);font-size:13px}
+.a-company{font:16px inherit;min-height:44px;border-radius:10px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);padding:0 12px}
+.a-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 14px}
+.a-chips a{display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;padding:4px 6px;border-radius:10px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);text-decoration:none;font-size:13px;font-weight:600}
+.a-chips a.on{background:var(--accent);border-color:var(--accent);color:#111}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);font:600 15px inherit;cursor:pointer;white-space:nowrap}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#111}
+.btn.d{color:var(--danger)}
+.btn.s{min-height:40px;padding:0 12px;font-size:14px}
+.ico{width:44px;padding:0}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.inp{font:16px inherit;min-height:44px;border-radius:10px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);padding:0 12px;min-width:0}
+.grow{flex:1 1 220px}
+.card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:14px;margin-bottom:10px}
+.row{display:flex;gap:10px;align-items:flex-start}
+.row .x{flex:1;min-width:0}
+.nm{font-weight:700;font-size:16px}
+.mt{color:var(--text-muted);font-size:13px}
+.asg{border-top:1px solid var(--card-border);margin-top:10px;padding-top:10px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.asg .x{flex:1 1 220px;min-width:0}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;border:1px solid var(--card-border);margin:3px 4px 0 0}
+.pill.g{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.pill.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,transparent)}
+.pill.w{color:#e0b34f;border-color:#e0b34f80}
+.pill.r{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 50%,transparent)}
+.note{border:1px dashed var(--accent);color:var(--accent);border-radius:10px;padding:8px 10px;font-size:12.5px;margin:8px 0}
+.sheet{background:var(--card-2);border:1px solid var(--card-border);border-radius:16px;padding:14px;margin:14px 0}
+.sheet h4{margin:0 0 2px;font-size:17px}
+.f{display:grid;gap:4px;margin:10px 0}
+.f label{font-size:13px;color:var(--text-muted);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr;gap:0 12px}
+.tree{border:1px solid var(--card-border);border-radius:10px;padding:4px 8px;background:var(--card-bg)}
+.tree div{display:flex;align-items:center;gap:8px;min-height:40px}
+.tree input,.chk input{width:20px;height:20px;accent-color:var(--accent)}
+.chk{display:flex;align-items:center;gap:10px;min-height:44px}
+.radio{display:flex;flex-wrap:wrap;gap:6px}
+.radio span{border:1px solid var(--card-border);border-radius:10px;padding:10px 12px;min-height:44px;font-size:14px}
+.radio span.on{border-color:var(--accent);color:var(--accent);font-weight:700}
+.foot{position:sticky;bottom:0;display:flex;gap:8px;justify-content:flex-end;background:var(--card-2);padding:10px 0 0;border-top:1px solid var(--card-border);margin-top:10px}
+.acc{border:1px solid var(--card-border);border-radius:12px;margin:8px 0;overflow:hidden}
+.acc>div:first-child{display:flex;justify-content:space-between;align-items:center;padding:12px;font-weight:700;background:var(--card-bg);min-height:48px}
+.acc .body{padding:4px 12px 8px}
+.list .it{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-bottom:1px solid var(--card-border)}
+.list .it:last-child{border-bottom:0}
+.list{background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;overflow:hidden;margin-bottom:12px}
+.sw{width:46px;height:28px;border-radius:999px;background:var(--card-border);position:relative;flex:none}
+.sw.on{background:var(--ok)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff}
+.sw.on::after{left:21px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{font-size:12px;color:var(--text-muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--card-border)}
+.tbl td{padding:10px;border-bottom:1px solid var(--card-border)}
+.only-wide{display:none}
+.split{display:block}
+.split>.l{margin-bottom:12px}
+.fab{position:sticky;bottom:12px;display:flex;justify-content:flex-end;gap:8px;pointer-events:none}
+.fab .btn{pointer-events:auto;box-shadow:0 6px 20px #0006}
+/* ширина экрана: класс на .app */
+.app.w768 .a-chips{grid-template-columns:repeat(5,minmax(0,1fr))}
+.app.w768 .grid2,.app.w1280 .grid2{grid-template-columns:1fr 1fr}
+.app.w1280 .a-rail{display:block}
+.app.w1280 .a-chips{display:none}
+.app.w1280 .a-main{padding:20px 28px 40px}
+.app.w1280 .only-wide{display:table-cell}
+.app.w1280 .split{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+.app.w1280 .split>.l{margin:0}
+.app.w1280 .split.wide{grid-template-columns:1fr 440px}
+.app.w768 .split.wide .card{margin-bottom:10px}
+.app.w1280 .sheet.side{position:relative}
+.app.w1280 .fab{display:none}
+.app.w768 .fab{display:none}
+.app:not(.w375) .ph-only{display:none!important}
+.app.w375 .pc-only{display:none}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>«Компания» — сейчас / предлагаю · P2-0048 этап 2</h1>
+  <div class="seg" id="sz"><button data-w="375" class="on">Телефон 375</button><button data-w="768">Планшет 768</button><button data-w="1280">ПК 1280</button></div>
+  <div class="seg" id="th"><button data-t="dark" class="on">Тёмная</button><button data-t="light">Светлая</button></div>
+  <div class="seg" id="vr"><button data-r="A" class="on">Вариант А</button><button data-r="B">Вариант Б</button><button data-r="C">Вариант В</button></div>
+  <div class="seg" id="vw"><button data-v="both" class="on">Рядом</button><button data-v="now">Сейчас</button><button data-v="new">Предлагаю</button></div>
+</header>
+<nav class="tabsel" id="tabs"></nav>
+<div class="intro" id="intro"></div>
+<div class="cols" id="cols">
+  <div class="col" id="cnow"><h2>Сейчас <span id="nowlbl"></span></h2><div class="stage"><img id="nowimg" alt="Экран сейчас"></div></div>
+  <div class="col" id="cnew"><h2>Предлагаю <span id="newlbl"></span></h2><div id="newstage"></div></div>
+</div>
+<section class="map" id="map"></section>
+
+<script>
+const TABS = [
+  ['settings','Все настройки'],['members','Сотрудники'],['roles','Роли'],['objects','Проекты'],['counterparties','Контрагенты'],['directories','Справочники'],
+  ['branding','Оформление'],['modules','Модули'],['audit','Журнал'],['patterns','Образцы']];
+const st = {tab:'settings', w:375, theme:'dark', view:'both', variant:'A'};
+
+// общая шапка раздела (Ш1–Ш14)
+function shell(active, body){
+  if(st.variant==='C') return shellC(active, body);
+  if(st.variant==='B') return shellB(active, body);
+  const groups=[['Люди',['members','roles']],['Данные компании',['objects','counterparties','directories']],['Компания',['branding','modules','audit']],['Платформа',['patterns']]];
+  const rail = groups.map(([g,ids])=>`<div class="g">${g}</div>`+ids.map(id=>`<a class="${id===active?'on':''}">${TABS.find(t=>t[0]===id)[1]}</a>`).join('')).join('');
+  const chips = TABS.map(([id,l])=>`<a class="${id===active?'on':''}">${l}</a>`).join('');
+  return `<div class="a-shell"><aside class="a-rail"><select class="a-company" style="width:100%"><option>RBI-стенд</option></select>${rail}</aside>
+  <main class="a-main">
+    <div class="a-head"><div style="flex:1;min-width:0"><div class="a-sub">Настройки · Компания</div><h1 class="a-title">${TABS.find(t=>t[0]===active)[1]}</h1></div>
+      <select class="a-company ph-only" aria-label="Компания"><option>RBI-стенд</option></select>
+      <span class="a-sub pc-only">admin@stand.invalid</span><button class="btn s">Выйти</button></div>
+    <nav class="a-chips">${chips}</nav>${body}</main></div>`;
+}
+const P = (t,c='')=>`<span class="pill ${c}">${t}</span>`;
+
+const NEW = {
+members(){
+  const ppl=[['Иванов А.И.','ivanov@…',[['Инженер СК','Вся компания',[P('Объекты Качества: Большевиков, 22','g')]]]],
+    ['Петров П.П.','petrov@…',[['Прораб','ЖК Альфа · Секции 1–2',[P('отвечает за факт','ok'),P('до 31.12.2026')]],['Прораб','ЖК Бета · весь проект',[]]]],
+    ['Капустин М.А.','kapustin@…',[['Руководство','Вся компания',[]]]],
+    ['Тарасов С.Ю.','tarasov@…',[['Инженер СК','Вся компания',[P('Объекты Качества: Струны, ЛИТЕРА','g')]]]],
+    ['Сидорова Е.В.','sidorova@…',[['Прораб','ЖК Альфа · Секция 3',[P('временный пароль не сменён','w')]]]],
+    ['guest@other.invalid','',[]]];
+  const cards=ppl.map(([n,e,a])=>`<div class="card"><div class="row"><div class="x"><div class="nm">${n}</div><div class="mt">${e}</div></div><button class="btn ico" title="Изменить ФИО · Сбросить пароль · Отключить доступ">⋯</button></div>
+   ${a.length?a.map(([r,w,p])=>`<div class="asg"><div class="x"><b>${r}</b><div class="mt">${w}</div>${p.join('')}</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn s">Изменить область</button><button class="btn s d">Отозвать</button></div></div>`).join(''):'<div class="asg mt">нет ролей · <a style="color:var(--accent)">назначить</a></div>'}</div>`).join('');
+  const sheet=`<div class="sheet side"><h4>Участие</h4><div class="mt">Назначить или изменить область. Можно сразу нескольких людей.</div>
+   <div class="f"><label>Сотрудники</label><div class="inp" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:6px 10px">${P('Петров П.П. ×')}${P('Сидорова Е.В. ×')}<span class="mt">+ добавить</span></div></div>
+   <div class="grid2"><div class="f"><label>Роль</label><select class="inp"><option>Прораб</option></select></div>
+   <div class="f"><label>Где</label><div class="radio"><span>Вся компания</span><span class="on">Проект</span></div></div></div>
+   <div class="f"><label>Проект</label><select class="inp"><option>ЖК Альфа</option></select></div>
+   <div class="f"><label>Область — отметьте места (ничего — весь проект)</label><div class="tree">
+     <div>▾ <input type="checkbox"> Корпус 1</div><div style="padding-left:24px">▸ <input type="checkbox" checked> Секция 1</div>
+     <div style="padding-left:24px">▸ <input type="checkbox" checked> Секция 2</div><div style="padding-left:24px">▸ <input type="checkbox"> Секция 3</div></div></div>
+   <label class="chk"><input type="checkbox" checked> Ответственный за факт по этим местам</label>
+   <div class="grid2"><div class="f"><label>Срок до (необязательно)</label><input class="inp" placeholder="дд.мм.гггг"></div>
+   <div class="f"><label>Фирма подрядчика</label><select class="inp" disabled><option>— только для роли «подрядчик»</option></select></div></div>
+   <div class="note">Для роли Качества вместо дерева — галочки «Объекты Качества» (ничего — все объекты). Так привязывают и перепривязывают инженера: «Изменить область» у его назначения.</div>
+   <div class="foot"><button class="btn">Отмена</button><button class="btn p">Сохранить · 2 чел. × 2 места</button></div></div>`;
+  const add=`<div class="sheet"><h4>Новый сотрудник</h4><div class="grid2"><div class="f"><label>Почта (логин)</label><input class="inp" value="new@company.ru"></div><div class="f"><label>ФИО</label><input class="inp" value="Новиков Н.Н."></div>
+   <div class="f"><label>Роль</label><select class="inp"><option>Прораб</option></select></div><div class="f"><label>Проект</label><select class="inp"><option>Все проекты компании</option></select></div></div>
+   <div class="foot"><button class="btn">Отмена</button><button class="btn p">Добавить</button></div><div class="mt" style="margin-top:8px">После «Добавить» — временный пароль: «Скопировать» / «Готово» (как сейчас).</div></div>`;
+  return shell('members',`<div class="bar"><input class="inp grow" placeholder="Найти по ФИО или почте"><button class="btn p pc-only">+ Участие</button><button class="btn pc-only">+ Сотрудник</button></div>
+   <div class="split wide"><div class="l">${cards}</div><div>${sheet}${add}</div></div>
+   <div class="fab"><button class="btn">+ Сотрудник</button><button class="btn p">+ Участие</button></div>`);
+},
+roles(){
+  const roles=[['Администратор компании','шаблон',3],['Руководитель проекта','шаблон',2],['Прораб','шаблон',6],['ПТО','шаблон',1],['Инженер СК','',4],['Подрядчик (своя фирма)','',2]];
+  const list=`<div class="list">${roles.map(([n,t,c],i)=>`<div class="it" style="${i===2?'box-shadow:inset 3px 0 var(--accent)':''}"><div class="x" style="flex:1"><b>${n}</b> ${t?P('шаблон'):''}<div class="mt">назначена: ${c}</div></div><span class="mt">›</span></div>`).join('')}</div>`;
+  const grp=[['Работы и план',['Просмотр работ плана ✓','Добавление и правка работ','ВОР: загрузка и подтверждение']],['Факт',['Просмотр фактических объёмов ✓','Ввод фактического объёма ✓','Подтверждение перебора и чужих записей']],['Деньги и КС-2',['Просмотр денежных сумм','Проект КС-2']],['Качество и стройконтроль',['Просмотр','Правка']],['Администрирование',['Назначение ролей','Журнал']]];
+  const ed=`<div class="sheet"><div class="ph-only mt" style="margin-bottom:6px">‹ Все роли</div><h4>Прораб ${P('шаблон')}</h4><div class="mt">Шаблон: правка действий меняет роль у всех, кому она назначена (6 чел.).</div>
+   <div class="grid2"><div class="f"><label>Название роли</label><div class="bar" style="margin:0"><input class="inp grow" value="Прораб"><button class="btn s">Переименовать</button></div></div>
+   <div class="f"><label>Копировать в новую роль</label><div class="bar" style="margin:0"><input class="inp grow" placeholder="Название копии"><button class="btn s">Копировать</button></div></div></div>
+   ${grp.map(([g,a],i)=>`<div class="acc"><div>${g}<span class="mt">${a.filter(x=>x.includes('✓')).length} из ${a.length} ${i<2?'▾':'▸'}</span></div>${i<2?`<div class="body">${a.map(x=>`<label class="chk"><input type="checkbox" ${x.includes('✓')?'checked':''}> ${x.replace(' ✓','')}</label>`).join('')}</div>`:''}</div>`).join('')}
+   <div class="foot"><button class="btn d" style="margin-right:auto">Удалить роль</button><button class="btn">Отменить изменения</button><button class="btn p">Сохранить действия</button></div></div>`;
+  return shell('roles',`<div class="note ph-only">Телефон: сначала список ролей; нажатие открывает роль на весь экран (ниже — как это выглядит), кнопки «Сохранить / Отменить» закреплены внизу.</div><div class="split"><div class="l">${list}</div><div>${ed}</div></div>`);
+},
+objects(){
+  return shell('objects',`<div class="bar"><input class="inp grow" placeholder="Найти проект по названию или коду"><button class="btn">Фильтр · 1</button><button class="btn ico">⋯</button><button class="btn p pc-only">+ Проект</button></div>
+   <div class="bar"><select class="inp ph-only" style="flex:1"><option>Сортировка: по названию ↑</option><option>по стадии</option><option>по срокам</option></select>${P('Стадия: Стройка ×')}<span class="mt">Показано: 4 из 6</span></div>
+   <div class="list">${[['ЖК Альфа','ALF-1','Стройка','Петров П.П.','2 объекта'],['ЖК Бета','BET','Стройка','Иванов А.И.','1 объект'],['Школа 400','SH400','Проект','—','1 объект'],['Паркинг Восток','PV','Стройка','Сидорова Е.В.','1 объект']].map(r=>`<div class="it"><div style="flex:1;min-width:0"><b>${r[0]}</b> ${P(r[2],'g')}<div class="mt">${r[1]} · рук. ${r[3]} · ${r[4]}</div></div><span class="mt">›</span></div>`).join('')}</div>
+   <div class="note">Проекты, карточка проекта и «Объекты и места» уже переделаны в P2-0046/0047 — оставляем как есть. Правки: на телефоне — выбор сортировки (сейчас сортировки нет, заголовки скрыты); «В архив» проекта и подразделения — с подтверждением; поля 16 px; кнопки дерева мест — не меньше 44 px.</div>
+   <div class="fab"><button class="btn p">+ Проект</button></div>`);
+},
+counterparties(){
+  const rows=[['ООО «СтройМонолит»','7801234567','Подрядчик'],['АО «Заказчик-Инвест»','7709876543','Заказчик'],['ООО «Фасад Про»','7812345678','Подрядчик'],['ИП Сергеев','780512345678','Подрядчик · черновик']];
+  return shell('counterparties',`<div class="bar"><input class="inp grow" placeholder="Поиск по названию или ИНН"><label class="chk" style="min-height:44px"><input type="checkbox"> Показать архив</label><button class="btn p pc-only">+ Контрагент</button></div>
+   <div class="split"><div class="l"><div class="list">${rows.map(r=>`<div class="it"><div style="flex:1;min-width:0"><b>${r[0]}</b><div class="mt">ИНН ${r[1]} · ${r[2]}</div></div><span class="mt">›</span></div>`).join('')}</div></div>
+   <div class="sheet"><h4>Карточка контрагента</h4><div class="grid2"><div class="f"><label>Название *</label><input class="inp" value="ООО «СтройМонолит»"></div><div class="f"><label>ИНН *</label><input class="inp" value="7801234567"></div><div class="f"><label>КПП</label><input class="inp"></div></div>
+   <div class="f"><label>Кто это</label><div class="radio"><span>Заказчик</span><span>Генподрядчик</span><span class="on">Подрядчик</span><span>Поставщик</span></div></div>
+   <div class="acc"><div>Реквизиты <span class="mt">▸</span></div></div>
+   <div class="foot"><button class="btn d" style="margin-right:auto">В архив…</button><button class="btn">Отмена</button><button class="btn p">Сохранить</button></div><div class="mt">«В архив» — теперь с подтверждением.</div></div></div>
+   <div class="fab"><button class="btn p">+ Контрагент</button></div>`);
+},
+directories(){
+  return shell('directories',`<div class="card"><b>Добавить единицу измерения</b><div class="grid2"><div class="f"><label>Обозначение *</label><input class="inp" value="пог. м"></div><div class="f"><label>Название *</label><input class="inp" value="погонный метр"></div></div><div class="bar" style="justify-content:flex-end;margin:0"><button class="btn p">Добавить единицу</button></div></div>
+   <h3 style="font-size:15px">Свои единицы компании</h3><div class="list">${[['пог. м','погонный метр'],['компл.','комплект']].map(r=>`<div class="it"><b style="width:80px">${r[0]}</b><span style="flex:1">${r[1]}</span><button class="btn s d">Удалить</button></div>`).join('')}</div>
+   <h3 style="font-size:15px">Общие единицы (для всех компаний)</h3><div class="list">${[['м²','квадратный метр'],['м³','кубический метр'],['шт','штука'],['т','тонна']].map(r=>`<div class="it"><b style="width:80px">${r[0]}</b><span class="mt">${r[1]}</span></div>`).join('')}</div>
+   <div class="note">Подтверждение удаления — как во всех разделах (диалог), а не в строке.</div>`);
+},
+branding(){
+  return shell('branding',`<div class="card"><b>Оформление компании</b><div class="mt">Логотип и фирменный цвет — для отчётов и шапки у всех сотрудников компании.</div>
+   <div class="grid2"><div class="f"><label>Фирменный цвет</label><div class="bar" style="margin:0"><span style="width:44px;height:44px;border-radius:10px;background:#c49a5f;display:inline-block"></span><input class="inp grow" value="#C49A5F"></div><div class="mt">Цвет кнопок и акцентов.</div></div>
+   <div class="f"><label>Логотип компании</label><div class="bar" style="margin:0"><span style="width:44px;height:44px;border-radius:10px;border:1px dashed var(--card-border);display:grid;place-items:center" class="mt">лого</span><button class="btn s">Загрузить…</button><button class="btn s d">Удалить</button></div><div class="mt">PNG или SVG, до 1 МБ.</div></div></div>
+   <div class="foot" style="background:none"><button class="btn" style="margin-right:auto">Вернуть корпоративный стиль</button><button class="btn p">Сделать для всей команды</button></div></div>
+   <div class="note">Тот же блок, что сейчас в «Настройках» (Tailwind), — переносится в общий стиль раздела; функции те же (О1–О9). Сохранение — как сейчас (тот же адрес на сервере), переносить на функцию сервера — отдельной задачей.</div>`);
+},
+modules(){
+  const m=[['План/Факт','Сметы, ВОР, факт, КС-2',1],['Качество','Осмотры, проверки, аналитика',1],['Стройконтроль','Замечания и приёмки',1],['Склад','—',0]];
+  return shell('modules',`<div class="mt" style="margin-bottom:10px">Какие модули включены у компании. Включает администратор платформы.</div><div class="list">${m.map(r=>`<div class="it"><div style="flex:1"><b>${r[0]}</b><div class="mt">${r[1]}</div></div>${P(r[2]?'включён':'выключен',r[2]?'ok':'')}</div>`).join('')}</div>`);
+},
+audit(){
+  const rows=[['27.10 14:05','admin@…','Назначил «Прораб» Петрову: ЖК Альфа · Секции 1–2, отвечает за факт'],['27.10 13:58','admin@…','Изменил область Иванова: объект Большевиков, 22 → Струны'],['26.10 18:20','admin@…','Создал роль «Инженер СК»'],['26.10 10:02','admin@…','Отозвал роль «ПТО» у Сидоровой']];
+  return shell('audit',`<div class="grid2"><div class="f"><label>С даты</label><input class="inp" placeholder="дд.мм.гггг"></div><div class="f"><label>По дату</label><input class="inp" placeholder="дд.мм.гггг"></div><div class="f"><label>Кто</label><select class="inp"><option>Все</option></select></div><div class="f"><label>Действие</label><select class="inp"><option>Все</option><option>Роли</option><option>Назначения</option></select></div></div>
+   <div class="bar"><button class="btn s">Сбросить</button><span class="mt">Показано 4 из 120 последних</span></div>
+   <div class="list">${rows.map(r=>`<div class="it" style="align-items:flex-start"><div style="flex:1;min-width:0"><div class="mt">${r[0]} · ${r[1]}</div>${r[2]}</div></div>`).join('')}</div><div class="bar" style="justify-content:center"><button class="btn">Показать ещё</button></div>`);
+},
+patterns(){
+  return shell('patterns',`<div class="mt">Образцы экранов дизайн-системы — только администратору платформы. Без изменений, кроме общей шапки и подвкладок.</div>
+   <div class="card"><b>Шапка раздела · Вкладки · Справочник · Карточка записи · Дерево мест · Метки · Лист снизу · Плитки итогов</b><div class="mt">9 блоков (Об1–Об9) остаются как есть.</div></div>`);
+}};
+
+
+// ===== Вариант Б: оглавление вместо полосы вкладок, список → карточка, пошаговое назначение =====
+const COUNTS={members:24,roles:8,objects:6,counterparties:31,directories:12,branding:'',modules:'3 из 4',audit:'',patterns:''};
+const HINTS={members:'Люди, их роли и где работают',roles:'Наборы прав',objects:'Проекты, объекты и места',counterparties:'Заказчики, подрядчики, поставщики',directories:'Единицы измерения',branding:'Логотип и цвет',modules:'Что включено у компании',audit:'Кто что менял',patterns:'Образцы экранов (платформа)'};
+function shellB(active, body, opts={}){
+  const groups=[['Люди',['members','roles']],['Данные компании',['objects','counterparties','directories']],['Компания',['branding','modules','audit']],['Платформа',['patterns']]];
+  const rail = groups.map(([g,ids])=>`<div class="g">${g}</div>`+ids.map(id=>`<a class="${id===active?'on':''}">${TABS.find(t=>t[0]===id)[1]}<span style="opacity:.7;font-weight:400">${COUNTS[id]}</span></a>`).join('')).join('');
+  const title=opts.title||TABS.find(t=>t[0]===active)[1];
+  return `<div class="a-shell"><aside class="a-rail"><select class="a-company" style="width:100%"><option>RBI-стенд</option></select>${rail}</aside>
+  <main class="a-main"><div class="ph-only mt" style="min-height:32px;display:flex;align-items:center">‹ ${opts.back||'Настройки'}</div>
+    <div class="a-head"><h1 class="a-title">${title}</h1>${opts.right||''}<span class="a-sub pc-only">admin@stand.invalid · RBI-стенд</span></div>${body}</main></div>`;
+}
+function hub(){
+  const groups=[['Люди',['members','roles']],['Данные компании',['objects','counterparties','directories']],['Компания',['branding','modules','audit']],['Платформа',['patterns']]];
+  return `<div class="a-main"><div class="a-head"><div style="flex:1"><div class="a-sub">Настройки</div><h1 class="a-title">Компания</h1></div><select class="a-company"><option>RBI-стенд</option></select></div>
+   ${groups.map(([g,ids])=>`<div class="mt" style="margin:12px 4px 6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px">${g}</div><div class="list">${ids.map(id=>`<div class="it"><div style="flex:1"><b>${TABS.find(t=>t[0]===id)[1]}</b><div class="mt">${HINTS[id]}</div></div><span class="mt">${COUNTS[id]} ›</span></div>`).join('')}</div>`).join('')}
+   <div class="bar" style="justify-content:space-between"><span class="mt">admin@stand.invalid</span><button class="btn s">Выйти</button></div></div>`;
+}
+const PEOPLE=[['ИА','Иванов А.И.','Инженер СК · объект Большевиков, 22',''],['ПП','Петров П.П.','Прораб · ЖК Альфа (2 секции), ЖК Бета','факт'],['КМ','Капустин М.А.','Руководство · вся компания',''],['ТС','Тарасов С.Ю.','Инженер СК · 2 объекта',''],['СЕ','Сидорова Е.В.','Прораб · ЖК Альфа (секция 3)','пароль'],['НН','Новиков Н.Н.','нет ролей','нет'],['ОК','Орлова К.Д.','ПТО · вся компания',''],['ЛВ','Лебедев В.А.','Подрядчик · ООО «Фасад Про»','']];
+const av=(t)=>`<span style="width:40px;height:40px;border-radius:50%;background:var(--card-2);border:1px solid var(--card-border);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none">${t}</span>`;
+function peopleList(sel){
+  return `<div class="bar"><input class="inp grow" placeholder="Найти: ФИО, почта, проект"></div>
+   <div class="bar" style="flex-wrap:nowrap;overflow:hidden">${P('Все 24','g')}${P('Без ролей 2')}${P('Не сменили пароль 1')}${P('Отключены 1')}</div>
+   <div class="radio" style="margin-bottom:10px"><span class="on">Люди</span><span>По проектам</span></div>
+   <div class="list">${PEOPLE.map(([a,n,w,f],i)=>`<div class="it" style="${i===sel?'box-shadow:inset 3px 0 var(--accent)':''}">${av(a)}<div style="flex:1;min-width:0"><b>${n}</b><div class="mt" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w}</div></div>${f==='факт'?P('факт','ok'):f==='пароль'?P('пароль','w'):f==='нет'?P('нет ролей','r'):''}<span class="mt">›</span></div>`).join('')}
+   <div class="it mt" style="justify-content:center">ещё 16 · показать</div></div>`;
+}
+function personCard(){
+  return `<div class="card"><div class="row">${av('ПП')}<div class="x"><div class="nm">Петров П.П.</div><div class="mt">petrov@company.ru</div></div><button class="btn ico" title="Изменить ФИО · Сбросить пароль · Отключить доступ">⋯</button></div></div>
+   <div class="mt" style="margin:12px 4px 6px;font-weight:700">Где работает</div>
+   <div class="list">
+    <div class="it" style="align-items:flex-start"><div style="flex:1;min-width:0"><b>ЖК Альфа</b> · Прораб<div class="mt">Секция 1, Секция 2</div>${P('отвечает за факт','ok')}${P('до 31.12.2026')}</div><button class="btn s">Изменить</button></div>
+    <div class="it" style="align-items:flex-start"><div style="flex:1;min-width:0"><b>ЖК Бета</b> · Прораб<div class="mt">весь проект · бессрочно</div></div><button class="btn s">Изменить</button></div>
+   </div>
+   <button class="btn p" style="width:100%">+ Добавить участие</button>
+   <div class="mt" style="margin-top:8px">«Отозвать» — внутри «Изменить» (с подтверждением). Пароль, ФИО, отключение — в «⋯».</div>`;
+}
+function byProject(){
+  const row=(n,who,lvl,warn)=>`<div class="it" style="padding-left:${12+lvl*18}px;align-items:flex-start"><div style="flex:1;min-width:0"><b>${n}</b><div>${who}</div>${warn?`<div class="mt" style="color:#e0b34f">${warn}</div>`:''}</div><button class="btn s">+</button></div>`;
+  return `<div class="radio" style="margin-bottom:10px"><span>Люди</span><span class="on">По проектам</span></div>
+   <select class="inp" style="width:100%;margin-bottom:10px"><option>ЖК Альфа</option></select>
+   <div class="list">${row('Весь проект',P('Капустин · РП')+P('Орлова · ПТО'),0)}${row('Корпус 1','',0)}
+   ${row('Секция 1',P('Петров · факт','ok')+P('Лебедев · подрядчик'),1)}${row('Секция 2',P('Петров · факт','ok'),1)}${row('Секция 3',P('Сидорова'),1,'нет ответственного за факт — вносит любой прораб проекта')}</div>
+   <div class="mt">Нажатие на человека — его карточка; «+» — назначить на это место.</div>`;
+}
+function wizard(step){
+  const steps=['Кто','Роль и где','Проверить'];
+  const head=`<div class="row" style="gap:6px;margin-bottom:10px">${steps.map((t,i)=>`<div style="flex:1;text-align:center"><div style="height:4px;border-radius:2px;background:${i<=step?'var(--accent)':'var(--card-border)'}"></div><div class="mt" style="margin-top:4px;${i===step?'color:var(--text-main);font-weight:700':''}">${i+1}. ${t}</div></div>`).join('')}</div>`;
+  const body = step===1 ? `<div class="f"><label>Роль</label><select class="inp"><option>Прораб</option></select><div class="mt">Даёт: работы, факт — смотреть и вносить.</div></div>
+     <div class="f"><label>Где</label><div class="radio"><span>Вся компания</span><span class="on">Проект</span></div></div>
+     <div class="f"><label>Проект</label><select class="inp"><option>ЖК Альфа</option></select></div>
+     <div class="f"><label>Места (ничего — весь проект)</label><div class="tree"><div>▾ <input type="checkbox"> Корпус 1</div><div style="padding-left:24px"><input type="checkbox" checked> Секция 1</div><div style="padding-left:24px"><input type="checkbox" checked> Секция 2</div><div style="padding-left:24px"><input type="checkbox"> Секция 3</div></div></div>
+     <label class="chk"><input type="checkbox" checked> Отвечает за факт по этим местам</label>
+     <div class="acc"><div>Ещё: срок, фирма подрядчика <span class="mt">▸</span></div></div>`
+   : `<div class="card"><b>Петров П.П., Сидорова Е.В.</b><div style="margin-top:6px">→ <b>Прораб</b> · ЖК Альфа · Секция 1, Секция 2</div>${P('отвечают за факт','ok')}${P('бессрочно')}<div class="mt" style="margin-top:8px">Будет: 4 назначения. Увидят в План/Факте только эти секции.</div></div>`;
+  return `<div class="sheet" style="margin:0">${head}<h4>${step===1?'Роль и где':'Проверьте'}</h4>${body}<div class="foot"><button class="btn">Назад</button><button class="btn p">${step===1?'Далее':'Сохранить'}</button></div></div>`;
+}
+const NEW_B={
+ members(){
+  if(st.w===1280) return [
+   ['<b>Список и карточка рядом</b> — слева люди (одна строка на человека), справа карточка выбранного', shellB('members', `<div class="split" style="grid-template-columns:420px 1fr">${'<div class="l">'+peopleList(1)+'</div>'}<div>${personCard()}</div></div>`, {right:'<button class="btn p">+ Назначить</button><button class="btn">+ Сотрудник</button>'})],
+   ['<b>По проектам</b> — кто где работает и кто отвечает за факт', shellB('members', byProject(), {right:'<button class="btn p">+ Назначить</button>'})],
+   ['<b>Назначение — окно из 3 шагов</b> (шаг 2 и шаг 3)', shellB('members', `<div class="split" style="grid-template-columns:1fr 1fr">${wizard(1)}${wizard(2)}</div>`)]];
+  return [
+   ['<b>1. Оглавление настроек</b> — вместо полосы из 9 вкладок', hub()],
+   ['<b>2. Сотрудники</b> — короткий список, фильтры-счётчики', shellB('members', peopleList(-1)+`<div class="fab"><button class="btn p">+ Назначить</button></div>`, {right:'<button class="btn ico">⋯</button>'})],
+   ['<b>3. Карточка сотрудника</b> — всё о человеке в одном месте', shellB('members', personCard(), {back:'Сотрудники', title:'Сотрудник'})],
+   ['<b>4. По проектам</b> — кто где и кто отвечает за факт', shellB('members', byProject(), {back:'Настройки'})],
+   ['<b>5. Назначение — шаг 2 из 3</b>', shellB('members', wizard(1), {back:'Отмена', title:'Назначить'})],
+   ['<b>6. Назначение — шаг 3 из 3</b>', shellB('members', wizard(2), {back:'Отмена', title:'Назначить'})]];
+ },
+ roles(){
+  const roles=[['Администратор компании','всё',3],['Руководитель проекта','проекты, факт, деньги, КС-2',2],['Прораб','работы, факт',6],['ПТО','ВОР, работы',1],['Инженер СК','Качество, стройконтроль',4],['Подрядчик (своя фирма)','замечания своей фирмы',2]];
+  const list=`<div class="list">${roles.map(([n,d,c])=>`<div class="it"><div style="flex:1;min-width:0"><b>${n}</b><div class="mt">${d} · у ${c} чел.</div></div><span class="mt">›</span></div>`).join('')}</div><button class="btn" style="width:100%">+ Новая роль (копия существующей)</button>`;
+  const role=`<div class="card"><div class="nm">Прораб ${P('шаблон')}</div><div class="mt">Может: смотреть работы, смотреть и вносить факт, чек-лист. У 6 человек.</div><div class="bar" style="margin:8px 0 0"><button class="btn s">Переименовать</button><button class="btn s">Копировать</button><button class="btn s d">Удалить</button></div></div>
+   ${[['Работы и план','1 из 3'],['Факт','2 из 3'],['Деньги и КС-2','0 из 2'],['Качество','0 из 2'],['Администрирование','0 из 2']].map(([g,c],i)=>`<div class="acc"><div>${g}<span class="mt">${c} ${i===1?'▾':'▸'}</span></div>${i===1?'<div class="body"><label class="chk"><input type="checkbox" checked> Смотреть факт</label><label class="chk"><input type="checkbox" checked> Вносить факт</label><label class="chk"><input type="checkbox"> Подтверждать перебор и чужие записи</label></div>':''}</div>`).join('')}
+   <div class="foot"><button class="btn">Отменить</button><button class="btn p">Сохранить</button></div>`;
+  if(st.w===1280) return [['<b>Роли</b> — список слева, права роли справа простыми словами', shellB('roles', `<div class="split" style="grid-template-columns:380px 1fr"><div class="l">${list}</div><div>${role}</div></div>`)]];
+  return [['<b>1. Роли</b> — у каждой коротко «что может» и у скольких', shellB('roles', list)],['<b>2. Роль</b> — права группами, итог одной строкой', shellB('roles', role, {back:'Роли', title:'Роль'})]];
+ }
+};
+const INTRO_B={
+ members:'<b>Вариант Б — меньше всего на одном экране.</b> В настройки входят через оглавление со счётчиками. Сотрудники — короткий список (одна строка на человека, фильтры «Без ролей / Не сменили пароль / Отключены»), всё о человеке — в его карточке. Второй взгляд «По проектам»: кто где работает и где нет ответственного за факт. Назначение — 3 простых шага с проверкой перед сохранением. На ПК список и карточка — рядом.',
+ roles:'<b>Вариант Б.</b> У каждой роли — одна строка «что может» и у скольких человек. Права — группами, сверху итог простыми словами.'
+};
+const MAP_B={
+ members:[['Ш1–Ш14','Шапка и полоса из 9 вкладок','Телефон: оглавление «Компания» (разделы со счётчиками), внутри раздела — «‹ Настройки». ПК: список разделов слева со счётчиками. Компания, почта, «Выйти» — в оглавлении'],
+  ['С2–С15','«Добавить сотрудника», временный пароль','«⋯» в шапке списка → «Новый сотрудник» (те же поля, тот же пароль)'],
+  ['С16–С27','Форма «Назначить роль» над списком','«+ Назначить» → 3 шага: кто → роль и где (дерево мест, «отвечает за факт», «Ещё: срок, фирма») → проверить; объекты Качества — на шаге 2 для роли Качества'],
+  ['С28–С30','Карточка: ФИО, почта, метки','Строка списка: ФИО, «где работает» одной строкой, метка; полная карточка — по нажатию'],
+  ['С31–С37','«⋯»: ФИО, пароль, отключить','Карточка сотрудника → «⋯» (те же пункты и диалоги)'],
+  ['С38–С43','Строки назначений, «Отозвать»','Карточка → «Где работает» по проектам; «Изменить» (область, факт, срок) и «Отозвать» внутри; «+ Добавить участие». Новое представление «По проектам»'],
+  ['С44–С46','Esc, блокировка, адаптив','Сохраняется; поля 16 px, кнопки 44 px']],
+ roles:[['Р1–Р4','Список ролей, «шаблон», «назначена: N»','Строка: название, «что может», «у N чел.»'],['Р5–Р9','Переименовать, копировать','Кнопки под названием роли; «+ Новая роль» = копия'],['Р10–Р13','Группы действий, сохранить / отменить','Группы со счётчиком, итог «Может: …» сверху'],['Р14–Р18','Удалить, диалог, пусто, адаптив','«Удалить» у роли; телефон — список → роль']]
+};
+
+
+// ===== Вариант В: единые настройки — «Для меня» и «Для компании», поиск, «Требует внимания» =====
+const GROUPS_C=[
+ ['Для меня',[['me-profile','Профиль и вход','почта, пароль, выход'],['me-look','Внешний вид','тема, размер, язык, меню'],['me-notif','Уведомления','push, новые задачи'],['me-device','Устройство и данные','офлайн, место, очистка'],['me-quality','Мой Осмотр','жесты, свёртывание, ИИ-помощник'],['me-help','Помощь','что нового, обратная связь, сброс']]],
+ ['Компания',[['members','Люди и доступ','24 сотрудника · 8 ролей'],['objects','Проекты и места','6 проектов'],['counterparties','Контрагенты','31'],['directories','Справочники','единицы измерения'],['reports','Отчёты и оформление','логотип, цвет, шаблоны PDF'],['modules','Модули','3 из 4 включены'],['audit','Журнал изменений','кто что менял']]],
+ ['Модули',[['q-admin','Качество','объекты и планы, подрядчики, чек-листы, заявки'],['pf-admin','План/Факт','шаблоны отчётов']]],
+ ['Платформа',[['patterns','Платформа','компании, образцы экранов']]]];
+function railC(active){
+  return GROUPS_C.map(([g,items])=>`<div class="g">${g}</div>`+items.map(([id,n])=>`<a class="${id===active?'on':''}">${n}</a>`).join('')).join('');
+}
+function shellC(active, body, opts={}){
+  const map={roles:'members',branding:'reports'}; const a=map[active]||active;
+  const all=GROUPS_C.flatMap(g=>g[1]); const it=all.find(x=>x[0]===a);
+  const title=opts.title||(TABS.find(t=>t[0]===active)||[0,it?it[1]:''])[1];
+  return `<div class="a-shell"><aside class="a-rail"><input class="inp" style="width:100%;margin-bottom:8px" placeholder="🔍 Найти настройку">${railC(a)}</aside>
+   <main class="a-main"><div class="ph-only mt" style="min-height:32px;display:flex;align-items:center">‹ ${opts.back||'Настройки'}</div>
+   <div class="a-head"><div style="flex:1;min-width:0"><div class="a-sub pc-only">Настройки · ${GROUPS_C.find(g=>g[1].some(x=>x[0]===a))?.[0]||''}</div><h1 class="a-title">${title}</h1></div>${opts.right||''}</div>${body}</main></div>`;
+}
+function homeC(admin){
+  const att = admin ? `<div class="card" style="border-color:#e0b34f80"><b>Требует внимания</b>
+    <div class="list" style="margin:8px 0 0">${[['2 сотрудника без ролей','Люди и доступ'],['Секция 3 (ЖК Альфа) — нет ответственного за факт','Проекты и места'],['3 заявки на доступ в Качество','Качество'],['1 сотрудник не сменил временный пароль','Люди и доступ']].map(([t,w])=>`<div class="it"><div style="flex:1"><div>${t}</div><div class="mt">${w}</div></div><span class="mt">›</span></div>`).join('')}</div></div>
+    <div class="bar">${['+ Назначить','+ Сотрудник','+ Проект','Заявки · 3'].map((t,i)=>`<button class="btn s ${i===0?'p':''}">${t}</button>`).join('')}</div>` : '';
+  const groups = admin ? GROUPS_C.slice(0,3) : GROUPS_C.slice(0,1);
+  return `<div class="a-main"><div class="a-head"><div style="flex:1"><h1 class="a-title">Настройки</h1><div class="a-sub">${admin?'Кондратьев И. Н. · администратор · RBI-стенд':'Петров П. П. · прораб · RBI-стенд'}</div></div></div>
+   <input class="inp" style="width:100%;margin-bottom:12px" placeholder="🔍 Найти: тема, пароль, роль, объект…">${att}
+   ${groups.map(([g,items])=>`<div class="mt" style="margin:14px 4px 6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px">${g}</div><div class="list">${items.map(([id,n,h])=>`<div class="it"><div style="flex:1;min-width:0"><b>${n}</b><div class="mt">${h}</div></div><span class="mt">›</span></div>`).join('')}</div>`).join('')}
+   ${admin?'':'<div class="mt">Разделов компании не видно — у прораба нет права администрировать. Видит только «Для меня».</div>'}</div>`;
+}
+function searchC(){
+  const r=[['Пароль','Для меня › Профиль и вход','сменить свой пароль'],['Сбросить пароль сотрудника','Компания › Люди и доступ › сотрудник › ⋯',''],['Временный пароль не сменён · 1','Компания › Люди и доступ','фильтр'],['Персональный API-ключ','Для меня › Мой Осмотр › ИИ-помощник','']];
+  return `<div class="a-main"><div class="ph-only mt" style="min-height:32px">‹ Настройки</div><input class="inp" style="width:100%;margin-bottom:12px" value="пароль">
+   <div class="mt" style="margin:0 4px 6px">Найдено: 4</div><div class="list">${r.map(([t,w,h])=>`<div class="it"><div style="flex:1;min-width:0"><b>${t}</b><div class="mt">${w}${h?' · '+h:''}</div></div><span class="mt">›</span></div>`).join('')}</div>
+   <div class="mt">Поиск ищет по названиям настроек, людям, ролям, проектам и объектам.</div></div>`;
+}
+function lookC(){
+  const opt=(arr,on)=>`<div class="radio">${arr.map((t,i)=>`<span class="${i===on?'on':''}">${t}</span>`).join('')}</div>`;
+  return `<div class="card"><b>Тема</b><div class="mt" style="margin-bottom:8px">Как выглядит приложение.</div>${opt(['Как в системе','Светлая','Тёмная'],0)}
+    <div class="acc" style="margin-top:10px"><div>Палитра: RBI <span class="mt">▸</span></div></div></div>
+   <div class="card"><b>Размер текста и кнопок</b><div class="mt" style="margin-bottom:8px">Крупнее — удобнее на объекте в перчатках.</div>${opt(['<span style="font-size:12px">Аа</span> Мелкий','<span style="font-size:15px">Аа</span> Средний','<span style="font-size:18px">Аа</span> Крупный','<span style="font-size:21px">Аа</span> Очень'],1)}</div>
+   <div class="card"><b>Меню разделов</b><div class="mt" style="margin-bottom:8px">Где кнопки разделов: на телефоне удобнее внизу.</div>${opt(['Само (ПК — сверху, телефон — снизу)','Всегда сверху','Всегда снизу'],0)}</div>
+   <div class="card"><div class="row"><div class="x"><b>Язык</b><div class="mt">Русский</div></div><span class="mt">›</span></div></div>
+   <div class="acc"><div>Тонкие настройки (фильтры при прокрутке, анимации, обновление свайпом) <span class="mt">▸</span></div></div>
+   <div class="mt">Сохраняется сразу, без кнопки «Сохранить». Действует на этом устройстве.</div>`;
+}
+function qAdminC(){
+  const it=[['Объекты и планы','планы этажей, заявки на объекты · 2'],['Подрядчики','справочник, заявки · 1'],['Команда Качества','доступ к объектам → перенесено в «Люди и доступ»'],['Чек-листы','официальные версии'],['Шаблоны отчётов (PDF)','конструктор'],['Облако','удалённые, битые ссылки'],['Миграция данных','только администратору платформы']];
+  return `<div class="list">${it.map(([n,h])=>`<div class="it"><div style="flex:1;min-width:0"><b>${n}</b><div class="mt">${h}</div></div><span class="mt">›</span></div>`).join('')}</div>
+   <div class="note">Доступ людей к объектам Качества (сейчас «Команда (доступы и объекты)» в Качестве) — одно место: «Люди и доступ» → карточка сотрудника → «Изменить» (объекты Качества). Экраны самого Качества не меняются.</div>`;
+}
+const NEW_C={
+ settings(){
+  if(st.w===1280) return [
+   ['<b>ПК: три уровня на одном экране</b> — слева все разделы (поиск сверху), посередине список, справа карточка', shellC('members', `<div class="bar" style="flex-wrap:nowrap;overflow:hidden">${P('Требует внимания: 2 без ролей','w')}${P('Секция 3 без ответственного','w')}${P('3 заявки в Качество','w')}</div><div class="split" style="grid-template-columns:400px 1fr">${'<div class="l">'+peopleList(1)+'</div>'}<div>${personCard()}</div></div>`, {right:'<button class="btn p">+ Назначить</button><button class="btn">+ Сотрудник</button>'})],
+   ['<b>ПК: «Для меня» — тот же каркас</b>', shellC('me-look', lookC(), {title:'Внешний вид'})]];
+  if(st.w===768) return [
+   ['<b>Планшет: две колонки</b> — разделы слева, содержимое справа', `<div class="a-shell"><aside class="a-rail" style="display:block;width:250px"><input class="inp" style="width:100%;margin-bottom:8px" placeholder="🔍 Найти настройку">${railC('me-look')}</aside><main class="a-main"><h1 class="a-title" style="margin-bottom:10px">Внешний вид</h1>${lookC()}</main></div>`],
+   ['<b>Планшет: администрирование</b>', `<div class="a-shell"><aside class="a-rail" style="display:block;width:250px">${railC('members')}</aside><main class="a-main"><h1 class="a-title" style="margin-bottom:10px">Люди и доступ</h1>${peopleList(-1)}</main></div>`]];
+  return [
+   ['<b>1. Главная настроек (администратор)</b> — поиск, «Требует внимания», быстрые действия, разделы', homeC(true)],
+   ['<b>2. Главная настроек (прораб)</b> — видит только «Для меня»', homeC(false)],
+   ['<b>3. Поиск «пароль»</b> — сразу ведёт в нужное место', searchC()],
+   ['<b>4. Внешний вид</b> — простые слова, выбор плитками, «тонкие настройки» спрятаны', shellC('me-look', lookC(), {title:'Внешний вид'})],
+   ['<b>5. Люди и доступ</b> — как в варианте Б', shellC('members', peopleList(-1)+`<div class="fab"><button class="btn p">+ Назначить</button></div>`, {title:'Люди и доступ', right:'<button class="btn ico">⋯</button>'})],
+   ['<b>6. Модули › Качество</b> — администрирование Качества собрано в одном месте', shellC('q-admin', qAdminC(), {title:'Качество'})]];
+ }
+};
+const INTRO_C={
+ settings:'<b>Вариант В — единые настройки для всего приложения.</b> Сейчас два ряда вкладок («Моё / Администрирование», затем подвкладки), и на телефоне оба обрезаны. Предлагаю один вход «Настройки»: поиск сверху, блок «Требует внимания» и быстрые действия для администратора, ниже группы «Для меня» · «Компания» · «Модули» · «Платформа». Каждый видит только своё (прораб — только «Для меня»). Телефон: главная → раздел. Планшет: разделы слева, содержимое справа. ПК: разделы · список · карточка. Слова — простые, редкие настройки спрятаны в «Тонкие настройки».',
+ other:'<b>Вариант В.</b> Экран раздела — как в варианте Б, но внутри единых настроек: слева (на ПК) все разделы «Для меня / Компания / Модули» с поиском, на телефоне — «‹ Настройки».'
+};
+const MAP_C={
+ settings:[['Моё · 6 подвкладок','Профиль и вход, Интерфейс, Устройство и данные, Уведомления, Качество, Помощь — вторым рядом вкладок, обрезан на телефоне','«Для меня»: Профиль и вход · Внешний вид · Уведомления · Устройство и данные · Мой Осмотр · Помощь (те же настройки, понятные подписи, редкие — в «Тонкие настройки»)'],
+  ['Администрирование › Компания','9 подвкладок (см. остальные вкладки этой страницы)','«Компания»: Люди и доступ (сотрудники + роли) · Проекты и места · Контрагенты · Справочники · Отчёты и оформление · Модули · Журнал'],
+  ['Администрирование › Качество','Панель руководителя, объекты и планы, заявки, подрядчики, команда, роли и права, облако, миграция, чек-листы, шаблоны PDF','«Модули › Качество» — те же пункты списком; доступ людей к объектам — в «Люди и доступ»; экраны Качества не меняются'],
+  ['Модули › План/Факт','Конструктор PDF-отчётов','«Модули › План/Факт» (или «Отчёты и оформление»)'],
+  ['Платформа','Администратор платформы','«Платформа» — видна только ему'],
+  ['Новое','—','Поиск по настройкам, людям, проектам; «Требует внимания»; быстрые действия']]
+};
+
+// что было → где теперь (по описи reports/P2-0048/settings-inventory.md)
+const MAP = {
+ members:[['Ш1–Ш14','Шапка: выбор компании, почта, «Выйти», полоса из 9 подвкладок (обрезана даже на ПК)','Телефон/планшет — сетка подвкладок 3 / 5 в ряд, все видны; ПК — список слева по группам. Выбор компании — 16 px'],
+  ['С2–С15','«Добавить сотрудника»: почта, ФИО, роль, проект; временный пароль, «Скопировать», «Готово»','Кнопка «+ Сотрудник» (на телефоне — внизу экрана) → лист «Новый сотрудник» с теми же полями; пароль — как сейчас'],
+  ['С16–С27','Форма «Назначить роль» всегда раскрыта над списком: сотрудник, роль, проект, фирма, срок, «Проекты Качества», «Назначить роль», подсказки и ошибки','Кнопка «+ Участие» → лист «Участие»: несколько сотрудников, роль, «Вся компания / Проект», дерево мест галочками, «Ответственный за факт», срок, фирма (для роли подрядчика), объекты Качества (для роли Качества). Все подсказки и ошибки сохраняются'],
+  ['С28–С30','Карточка сотрудника: ФИО, почта, «доступ отключён», «не сменил временный пароль»','Та же карточка; метки — цветными пометками'],
+  ['С31–С37','«⋯»: Изменить ФИО, Сбросить пароль, Отключить доступ, диалоги','Без изменений (меню «⋯» на карточке, 44 px)'],
+  ['С38–С43','Строки назначений: роль, проект, срок, фирма, «Проекты Качества», «Отозвать», «нет ролей»','Строки назначений + область («ЖК Альфа · Секции 1–2»), «отвечает за факт»; НОВОЕ «Изменить область» рядом с «Отозвать»'],
+  ['С44–С46','Esc / мимо — закрыть; блокировка кнопок; адаптива нет','Сохраняется; формы — в одну колонку на телефоне, поля 16 px, кнопки 44 px']],
+ roles:[['Р1–Р4','Список ролей кнопками, «шаблон», «назначена: N»','Тот же список — строками-карточками; на телефоне — отдельный экран'],
+  ['Р5–Р9','Заголовок, подсказка шаблона, «Название», «Переименовать», «Копировать в новую роль»','Без изменений, на телефоне — в одну колонку'],
+  ['Р10–Р13','Группы действий с галочками, «Сохранить действия», «Отменить изменения»','Группы — раскрывающиеся, со счётчиком «2 из 3»; кнопки закреплены внизу'],
+  ['Р14–Р18','«Удалить роль», диалог, ошибки, «Ролей нет», две колонки','Без изменений; на ПК — две колонки, на телефоне — список → роль']],
+ objects:[['П1–П24','Список проектов: поиск, стадии, фильтр, колонки, группировка, сортировка по заголовку','Как сейчас (P2-0046). Добавлено: на телефоне — выбор сортировки'],
+  ['П25–П57','Листы «Новый проект», «Подразделения», карточка, «Изменить проект»','Как сейчас; «В архив» подразделения — с подтверждением'],
+  ['П58–П88','«Объекты и места»: плитки, дерево, листы заполнения','Как сейчас; кнопки дерева ≥ 44 px']],
+ counterparties:[['К1–К9','Поиск, «Показать архив», «Добавить контрагента», список, пустые','Те же элементы; на телефоне «+ Контрагент» внизу, поиск 16 px'],
+  ['К10–К20','Карточка: название, ИНН, КПП, «Кто это», реквизиты, «В архив»','Тот же лист; реквизиты — раскрывающимся блоком; «В архив» — с подтверждением']],
+ directories:[['Сп1–Сп14','Выбор компании, форма единицы, свои и общие единицы, «Удалить» с подтверждением в строке','Те же элементы; подтверждение — диалогом, как везде']],
+ branding:[['О1–О10','Подсказка, цвет, логотип, «Сделать для всей команды», «Вернуть корпоративный стиль» (старый стиль)','Те же функции в общем стиле раздела']],
+ modules:[['М1–М4','Подсказка, список модулей, «включён / выключен», только просмотр','Без изменений, строками-карточками']],
+ audit:[['Ж1–Ж12','Даты, «Кто», «Действие», «Сбросить», таблица, «Показать ещё»','Фильтры — сеткой (2 в ряд на телефоне), записи — карточками; поля 16 px']],
+ patterns:[['Об1–Об9','Образцы дизайн-системы','Без изменений']]
+};
+
+const INTRO = {
+ members:'<b>Сотрудники.</b> Сейчас форма «Назначить роль» всегда раскрыта над списком и на телефоне уходит за край. Предлагаю: список людей сверху, назначение — кнопкой «+ Участие» в отдельном листе (на ПК — панель справа). У каждого назначения — «Изменить область»: так привязывают и перепривязывают инженера Качества.',
+ roles:'<b>Роли.</b> На телефоне список ролей занимает до 70 % экрана, галочки — под ним. Предлагаю: на телефоне «список → роль», группы прав сворачиваются, кнопки закреплены внизу.',
+ objects:'<b>Проекты</b> уже переделаны (P2-0046/0047). Только мелкие правки удобства.',
+ counterparties:'<b>Контрагенты.</b> Те же функции; на телефоне — одна колонка, «В архив» с подтверждением.',
+ directories:'<b>Справочники</b> (единицы измерения). Те же функции, подтверждение удаления — диалогом.',
+ branding:'<b>Оформление</b> — старый блок в другом стиле. Переносим в общий стиль раздела, функции те же.',
+ modules:'<b>Модули компании</b> — только просмотр, без изменений по смыслу.',
+ audit:'<b>Журнал.</b> Фильтры — сеткой, записи — карточками; поля крупнее.',
+ patterns:'<b>Образцы</b> — для администратора платформы, без изменений.'
+};
+
+function screens(){
+  if(st.variant==='C') return (NEW_C[st.tab]||NEW_B[st.tab]||(()=>[['', NEW[st.tab]()]]))();
+  if(st.tab==='settings') return [['', `<div class="a-main"><div class="note">Варианты А и Б меняют только раздел «Компания». «Моё» (профиль, интерфейс, устройство, уведомления, Качество, помощь) остаётся как сейчас. Единые настройки для всего — в варианте В.</div></div>`]];
+  if(st.variant==='A') return [['', NEW[st.tab]()]];
+  const r=(NEW_B[st.tab]||(()=>[['', NEW[st.tab]()]]))();
+  return r;
+}
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.id===st.tab));
+  const sz = st.w===375?'phone':st.w===768?'tablet':'pc';
+  document.getElementById('nowimg').src = `now/${st.tab}-${sz}.png`;
+  document.getElementById('nowlbl').textContent = `· ${st.w} px`;
+  document.getElementById('newlbl').textContent = `· ${st.w} px · вариант ${({A:'А',B:'Б',C:'В'})[st.variant]}`;
+  const cls=`app w${st.w} ${st.theme==='light'?'light':''}`;
+  const ns=document.getElementById('newstage');
+  ns.style.cssText = st.w<1280 ? `display:grid;gap:4px 16px;align-items:start;grid-template-columns:repeat(auto-fill,minmax(min(100%,${Math.min(st.w,420)}px),1fr))` : '';
+  ns.innerHTML = screens().map(([cap,html])=>
+    `<div class="scr">${cap?`<div class="scr-cap">${cap}</div>`:''}<div class="stage"><div class="scaler"><div class="${cls}" style="width:${st.w}px">${html}</div></div></div></div>`).join('');
+  document.getElementById('intro').innerHTML = st.variant==='C'?(INTRO_C[st.tab]||INTRO_C.other):(st.variant==='B'?INTRO_B[st.tab]||INTRO[st.tab]:INTRO[st.tab]);
+  const m=(st.variant==='C'&&MAP_C[st.tab])||(st.variant!=='A'&&MAP_B[st.tab])||MAP[st.tab]||MAP_C.settings;
+  document.getElementById('map').innerHTML = `<h3>Ничего не пропадает: что было → где теперь (вариант ${({A:'А',B:'Б',C:'В'})[st.variant]})</h3><table><tr><th>Пункты описи</th><th>Сейчас</th><th>Где будет</th></tr>${m.map(r=>`<tr><td class="n">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</table>
+    <p style="color:var(--uim)">Полная опись (235 пунктов, файл:строка) — <code>ai-dev/reports/P2-0048/settings-inventory.md</code>.</p>`;
+  document.getElementById('cnow').style.display = st.view==='new'?'none':'';
+  document.getElementById('cnew').style.display = st.view==='now'?'none':'';
+  document.getElementById('cols').classList.toggle('one', st.view!=='both');
+  requestAnimationFrame(fit);
+}
+function fit(){
+  document.querySelectorAll('#newstage .stage').forEach(stage=>{
+    const sc=stage.firstElementChild, app=sc.firstElementChild;
+    const k=Math.min(1, stage.clientWidth/st.w); sc.style.transform=`scale(${k})`; stage.style.height=(app.offsetHeight*k)+'px';
+  });
+  const ns=document.querySelector('#cnow .stage');
+  document.getElementById('nowimg').style.width=(st.w*Math.min(1, ns.clientWidth/st.w || 1))+'px';
+}
+document.getElementById('tabs').innerHTML = TABS.map(([id,l])=>`<button data-id="${id}">${l}</button>`).join('');
+document.getElementById('tabs').onclick=e=>{const b=e.target.closest('button'); if(b){st.tab=b.dataset.id; render();}};
+for(const [id,k] of [['sz','w'],['th','t'],['vw','v'],['vr','r']]){
+  document.getElementById(id).onclick=e=>{const b=e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b));
+    if(k==='w') st.w=+b.dataset.w; if(k==='t') st.theme=b.dataset.t; if(k==='v') st.view=b.dataset.v; if(k==='r') st.variant=b.dataset.r; render();};
+}
+addEventListener('resize',fit);
+document.getElementById('nowimg').onload=fit;
+render();
+</script>
+</body>
+</html>

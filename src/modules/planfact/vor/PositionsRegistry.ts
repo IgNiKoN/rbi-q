@@ -13,6 +13,7 @@ import type { RegistryColumn, RegistryFilter, RegistryState, Status } from '../.
 import type { SummaryApi } from '../summary/summary.service.ts';
 import type { FactApi, FactHistoryRow } from '../fact/fact.service.ts';
 import { historyItem } from '../fact/factStatus.ts';
+import { emptyText, useMyArea } from '../area.ts';
 import { forecastView, POSITION_STATE_LABEL, positionStatus } from '../summary/model.ts';
 import type { PositionState, PositionStatus } from '../summary/model.ts';
 import { fmtPct, fmtQty, todayMoscow } from '../fact/fact.ts';
@@ -24,6 +25,8 @@ export interface PositionRow {
   rejectedNote: string | null; st: PositionStatus;
   /** P2-0006b: снята в новой редакции ВОР; факт больше действующего объёма. */
   withdrawn?: boolean; over?: boolean;
+  /** P2-0048: место позиции (id) — для «За кого» при закрытии пачкой. */
+  locationId?: string;
   /** Прогноз с сервера (030) и пороги светофора объекта. */
   forecast: string | null; deltaDays: number | null; planPctToday: number | null; devPp: number | null; th: { yellow: number; red: number };
 }
@@ -47,7 +50,7 @@ export async function loadPositionRows(summary: SummaryApi, fact: FactApi, proje
     const pendingCount = f ? f.pending_count : 0;
     const rejectedNote = f ? f.last_rejected_note : null;
     return {
-      id: p.position_id, corp: corpOf(p.location_path), place: p.location_path, placeType: f ? f.location_type : '', work: p.work_name, unit: p.unit_code,
+      id: p.position_id, locationId: p.location_id || (f ? f.location_id : ''), corp: corpOf(p.location_path), place: p.location_path, placeType: f ? f.location_type : '', work: p.work_name, unit: p.unit_code,
       plan: p.plan_qty, fact: p.fact_qty, pct: p.pct, rest: p.rest_qty, fact14: p.fact14, pendingQty: p.pending_qty, pendingCount, rejectedNote,
       forecast: p.forecast_finish, deltaDays: p.delta_days, planPctToday: p.plan_pct_today, devPp: p.dev_pp, th,
       withdrawn: !!p.withdrawn, over: !p.withdrawn && p.plan_qty > 0 && p.fact_qty > p.plan_qty + 1e-9,
@@ -152,6 +155,7 @@ export interface PositionsRegistryProps {
 
 export function PositionsRegistry(props: PositionsRegistryProps): ReactElement {
   const { fact, summary, projectId, companyId, user } = props;
+  const area = useMyArea(projectId);
   const today = props.today || todayMoscow();
   const [rows, setRows] = useState<PositionRow[] | null>(null);
   const [finish, setFinish] = useState<string | null>(null);
@@ -190,7 +194,7 @@ export function PositionsRegistry(props: PositionsRegistryProps): ReactElement {
         h('span', { className: 'vr-c-q' }, h('b', null, `${fmtQty(r.fact)} / ${fmtQty(r.plan)} ${r.unit}`), statusCell(r.st))),
       actions: props.actions ? (sel) => props.actions!(sel, { reload, clear: () => setSelected(new Set()), notify: setNotice, columns: visibleCols }) : undefined,
       tools: props.tools ? props.tools({ rows: ordered, columns: visibleCols }) : undefined,
-      empty: 'Позиций пока нет — загрузите и подтвердите ВОР во вкладке «Загрузка».',
+      empty: emptyText(area, 'Позиций пока нет — загрузите и подтвердите ВОР во вкладке «Загрузка».'),
       views: { registry: 'vor-positions', company: companyId, user }, linkBase: POSITIONS_LINK,
     }),
     open ? h(PositionCard, { key: open.id, fact, row: open, index: idx, total: ordered.length,

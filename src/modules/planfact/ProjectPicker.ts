@@ -8,6 +8,7 @@
 import { createElement as h, useState } from 'react';
 import type { ReactElement } from 'react';
 import { InHead, rememberedProject, rememberProject } from './PageHead.ts';
+import { AreaBadge } from './area.ts';
 
 export interface PickProject { id: string; name: string; archived_at?: string | null }
 
@@ -65,5 +66,6 @@ export function ProjectPicker(props: { list: PickProject[]; value: string; onCha
       ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost pj-toggle', 'data-testid': 'pp-archive', onClick: toggle },
           showArchive ? 'Скрыть архив' : `Показать архив (${archivedN})`)
       : null,
-    isArchived(current) ? h('div', { className: 'pf-muted', 'data-testid': 'pp-archived' }, 'Проект в архиве — только просмотр.') : null);
+    isArchived(current) ? h('div', { className: 'pf-muted', 'data-testid': 'pp-archived' }, 'Проект в архиве — только просмотр.') : null,
+    value ? h(AreaBadge, { key: value, projectId: value }) : null);   // P2-0048: «Ваша область: …» при назначении на часть проекта
 }

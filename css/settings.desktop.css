@@ -1,6 +1,6 @@
 /**
- * Desktop Настройки (≥1280, .rbi-settings-desktop-wide).
- * Platform surface: sticky strip + left section rail + stage.
+ * «Настройки»: ширина раздела (.rbi-settings-desktop-wide, с 600 px окна) и каркас варианта В (P2-0048).
+ * Раскладка каркаса — по ширине контейнера .stv (см. ниже).
  */
 
 #app-root.rbi-settings-desktop-wide {
@@ -33,230 +33,158 @@ body.rbi-settings-desktop-wide #tab-settings {
   min-height: calc(100vh - 4.5rem);
 }
 
-/* Sticky strip — base from rbi-ui.css; desk-specific inner */
-body.rbi-settings-desktop-wide .settings-desk-topbar-strip-inner {
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 0.75rem !important;
-  padding: 0 1rem !important;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-topbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-topbar-label {
-  font-size: var(--rbi-subtab-fs, 13px);
-  font-weight: 700;
-  color: var(--primary);
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-topbar-sub {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-/* Hide mobile sticky chrome leftovers */
-body.rbi-settings-desktop-wide #tab-settings > .sticky-top-panel {
-  display: none !important;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-body {
-  display: grid;
-  grid-template-columns: minmax(11.5rem, 14rem) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
-  width: 100%;
-  margin-top: 0.75rem;
-  box-sizing: border-box;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-rail {
-  position: sticky;
-  top: calc(var(--desk-topbar-h, 52px) + var(--rbi-strip-h, 48px) + 0.5rem);
-  align-self: start;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--rbi-radius-md, 12px);
-  padding: 0.4rem;
-  box-shadow: var(--rbi-card-shadow, none);
-}
-
-body.rbi-settings-desktop-wide .settings-desk-rail #settings-subnav {
-  display: flex !important;
-  flex-direction: column !important;
-  flex-wrap: nowrap !important;
-  gap: 0.25rem !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  overflow: visible !important;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-rail .settings-subnav-btn {
-  flex: 0 0 auto !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  justify-content: flex-start !important;
-  text-align: left !important;
-  padding: 0.55rem 0.7rem !important;
-  border-radius: var(--rbi-radius-sm, 9px) !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.04em !important;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-rail .settings-subnav-scroll-hint {
-  display: none !important;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-stage {
-  min-width: 0;
-  max-width: var(--desk-read-max, 90rem);
-}
-
-body.rbi-settings-desktop-wide .settings-desk-stage .settings-panels {
-  display: block;
-}
-
-body.rbi-settings-desktop-wide .settings-desk-stage [data-settings-panel] {
-  max-width: none;
-}
-
-@media (min-width: 1920px) {
-  body.rbi-settings-desktop-wide .settings-desk-body {
-    grid-template-columns: minmax(13rem, 15rem) minmax(0, 1fr);
-    gap: calc(1rem * var(--desk-gap-bump, 1));
-  }
-}
-
 /* ============================================================
-   P2-0038: навигация «Настроек» — две зоны «Моё» / «Администрирование».
-   Общие правила (телефон и ПК): на телефоне — переключатель зон и полоса
-   подвкладок активной зоны; на ПК (≥1280, левая колонка) — обе группы
-   с заголовками, переключатель зон скрыт.
+   P2-0048 этап 3: каркас «Настроек» по варианту В (решение владельца 27.10.2026).
+   Раскладка — по ширине контейнера .stv (container queries), не по ширине окна:
+     < 600      телефон: главная — группы списком; в разделе «‹ Настройки» и заголовок, левой колонки нет;
+     600–1023   планшет: колонка разделов слева (250 px, поиск сверху) + содержимое;
+     ≥ 1024     ПК: колонка 270 px;
+     ≥ 1600     всё по центру, не шире 1440 px.
+   Цвета — токены приложения (светлая и тёмная темы), поля ≥ 16 px, кнопки ≥ 44 px.
    ============================================================ */
-#settings-subnav.settings-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
+.stv {
+  container-type: inline-size;
+  container-name: stv;
+  width: 100%;
+  min-width: 0;
+  color: var(--text-main);
 }
-
-.settings-zone-switch {
+.stv *, .stv *::before, .stv *::after { box-sizing: border-box; }
+.stv-inner {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border-radius: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.stv-nav { display: none; }
+.stv-main { min-width: 0; padding: 4px 0 24px; }
+.stv [hidden] { display: none !important; }
+
+/* поиск */
+.stv-search {
+  width: 100%;
+  min-height: 46px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  padding: 0 14px 0 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a96a3' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+  background-size: 18px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.stv-search:focus { outline: 2px solid color-mix(in srgb, var(--accent, var(--primary)) 60%, transparent); outline-offset: 1px; }
+
+/* шапка раздела */
+.stv-head { margin: 0 0 12px; }
+.stv[data-page="home"] .stv-head { display: none; }
+.stv-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 44px; padding: 0 8px 0 0;
+  background: none; border: 0; cursor: pointer;
+  color: var(--accent, var(--primary)); font-weight: 700; font-size: 15px;
+}
+.stv-crumb { color: var(--text-muted); font-size: 13px; }
+.stv-ttl { font-size: 22px; font-weight: 800; line-height: 1.25; margin: 2px 0 4px; color: var(--text-main); overflow-wrap: anywhere; }
+.stv-sub { color: var(--text-muted); font-size: 13px; overflow-wrap: anywhere; }
+.stv-empty { margin: 8px 4px; }
+
+/* главная настроек */
+.stv-home .stv-sub { margin-bottom: 10px; }
+.stv-h {
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-muted); margin: 18px 4px 6px;
+}
+.stv-list {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-}
-
-.settings-zone-switch[hidden],
-.settings-zone[hidden] {
-  display: none !important;
-}
-
-.settings-zone-btn {
-  min-height: 40px;
-  padding: 0 0.5rem;
-  border-radius: 0.5rem;
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  background: transparent;
-  white-space: nowrap;
+  border-radius: 14px;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
-
-.settings-zone-btn.is-active {
-  background: var(--primary);
-  color: #fff;
+.stv-att { border-color: color-mix(in srgb, var(--color-yellow, #e0b34f) 55%, var(--card-border)); }
+.stv-it {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 56px; padding: 9px 14px;
+  border: 0; border-bottom: 1px solid var(--card-border);
+  background: transparent; color: var(--text-main);
+  text-align: left; font: inherit; cursor: pointer;
 }
-
-.settings-zone-title {
-  display: none;
+.stv-list > .stv-it:last-child { border-bottom: 0; }
+.stv-it:hover, .stv-it:focus-visible { background: var(--hover-bg, color-mix(in srgb, var(--text-main) 6%, transparent)); }
+.stv-x { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.stv-x b { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+.stv-d { color: var(--text-muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stv-ic {
+  width: 34px; height: 34px; border-radius: 10px; flex: none;
+  display: grid; place-items: center;
+  color: var(--accent, var(--primary));
+  background: color-mix(in srgb, var(--accent, var(--primary)) 16%, transparent);
 }
-
-.settings-zone-tabs {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border-radius: 0.75rem;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  overflow-x: auto;
+.stv-ic--bad { color: var(--color-red, #e06b5f); background: color-mix(in srgb, var(--color-red, #e06b5f) 14%, transparent); }
+.stv-ic--warn { color: var(--color-yellow, #e0b34f); background: color-mix(in srgb, var(--color-yellow, #e0b34f) 14%, transparent); }
+.stv-ic--muted { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 14%, transparent); }
+.stv-chev { color: var(--text-muted); display: inline-flex; flex: none; }
+.stv-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.stv-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 16px; border-radius: 12px;
+  border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-main);
+  font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; white-space: nowrap;
 }
+.stv-btn--p { background: var(--accent, var(--primary)); border-color: var(--accent, var(--primary)); color: #fff; }
+html[data-theme^="rbi-"] .stv-btn--p { color: #111; }
 
-.settings-zone-tabs .settings-subnav-btn {
-  flex: 0 0 auto;
-  min-height: 40px;
+/* левая колонка разделов */
+.stv-nav-search { padding: 4px 6px 8px; }
+.stv-g {
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-muted); margin: 16px 10px 6px;
 }
-
-.settings-zone-tabs .settings-subnav-btn[hidden] {
-  display: none;
+.stv-nav-a {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; padding: 8px 10px;
+  border: 0; border-radius: 10px; background: transparent;
+  color: var(--text-main); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
 }
+.stv-nav-a:hover { background: var(--hover-bg, color-mix(in srgb, var(--text-main) 6%, transparent)); }
+.stv-nav-a.is-on { background: var(--accent, var(--primary)); color: #fff; font-weight: 700; }
+html[data-theme^="rbi-"] .stv-nav-a.is-on { color: #111; }
+.stv-nic { display: inline-flex; flex: none; opacity: .85; }
+.stv-nav-l { min-width: 0; overflow-wrap: anywhere; }
 
-/* телефон: видна только активная зона (data-active-zone ставит settings.render.js) */
-.settings-nav[data-active-zone="my"] .settings-zone[data-settings-zone-group="admin"],
-.settings-nav[data-active-zone="admin"] .settings-zone[data-settings-zone-group="my"] {
-  display: none;
+/* Планшет: 600–1023 — колонка разделов слева, содержимое справа */
+@container stv (min-width: 600px) {
+  .stv-inner { grid-template-columns: 250px minmax(0, 1fr); }
+  .stv-nav {
+    display: block;
+    border-right: 1px solid var(--card-border);
+    padding: 8px 8px 16px 0;
+    position: sticky;
+    top: 8px;
+    align-self: start;
+    max-height: calc(100vh - 16px);
+    overflow: auto;
+  }
+  .stv-main { padding: 8px 0 32px 20px; }
+  .stv-back { display: none; }
+  .stv-home-search { display: none; }
+  .stv[data-page="home"] .stv-head { display: none; }
 }
-
-/* ПК: обе группы с заголовками, без переключателя */
-body.rbi-settings-desktop-wide .settings-desk-rail .settings-zone-switch {
-  display: none !important;
+/* ПК: от 1024 */
+@container stv (min-width: 1024px) {
+  .stv-inner { grid-template-columns: 270px minmax(0, 1fr); }
+  .stv-main { padding: 12px 0 32px 28px; }
 }
-
-body.rbi-settings-desktop-wide .settings-desk-rail .settings-zone:not([hidden]) {
-  display: block !important;
+/* Очень широкий: от 1600 — по центру, не шире 1440 */
+@container stv (min-width: 1600px) {
+  .stv-inner { max-width: 1440px; margin: 0 auto; }
 }
-
-body.rbi-settings-desktop-wide .settings-desk-rail .settings-zone + .settings-zone {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--card-border);
-}
-
-body.rbi-settings-desktop-wide .settings-desk-rail .settings-zone-title {
-  display: block;
-  padding: 0.35rem 0.7rem 0.25rem;
-  font-size: 10px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
-
-body.rbi-settings-desktop-wide .settings-desk-rail .settings-zone-tabs {
-  flex-direction: column;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  overflow: visible;
+body.has-desk-topbar .stv-nav {
+  top: calc(var(--desk-topbar-h, 52px) + 8px);
+  max-height: calc(100vh - var(--desk-topbar-h, 52px) - 16px);
 }
 
 /* P2-0038: вкладки уровня «Модули» (Качество · План/Факт) — внутри панели, телефон и ПК */
