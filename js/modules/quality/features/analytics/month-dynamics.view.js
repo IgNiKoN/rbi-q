@@ -38,10 +38,22 @@ const HINTS = {
   per100: '<b>Невыполненных пунктов на 100 проверенных</b> — делим на пункты, а не на проверки: чек-листы разной длины.',
   red: '<b>Красная зона</b> — проверки с критичным дефектом (B3) или итоговым УрК ниже 70.',
   trend: '<b>Тренд за 12 месяцев.</b> Сплошная линия — базовый УрК, полоса вокруг — разброс ±, пунктир — итоговый УрК. Пустой кружок — меньше 7 проверок. Внизу — число проверок по месяцам.',
-  zones: '<b>Зоны качества</b> — доли проверок месяца: зелёная (итоговый УрК от 85), жёлтая (70–84), красная (B3 или ниже 70).'
+  zones: '<b>Зоны качества</b> — доли проверок месяца: зелёная (итоговый УрК от 85), жёлтая (70–84), красная (B3 или ниже 70).',
+  cons: '<b>УрК подрядчика за месяц</b> — по всем проверкам календарного месяца (не «последние 15»), те же штрафы за системный брак и B3, что в рейтинге. Сортировка — по нижней границе разброса: подрядчик с двумя случайно хорошими проверками не окажется первым. Меньше 7 проверок — бледная строка, ниже всех.',
+  stab: '<b>Стабильность</b> — насколько ровно работает подрядчик от проверки к проверке (100 — одинаково, ниже 40 — качество скачет).',
+  zoneC: '<b>Зона подрядчика</b> — красная: УрК ниже 70, или B3 в 20 % проверок и больше, или системный брак B2 от 40 %; «Образцовое» — УрК от 85 без B3 и без системного брака.',
+  bcl: '<b>B1 / B2 / B3 на 100 проверенных пунктов</b> — малозначительные, значительные и критичные невыполненные пункты, делённые на число осмотренных пунктов.',
+  crit: '<b>Доля критичных</b> — какая часть всех невыполненных пунктов месяца приходится на B3.',
+  top: '<b>Топ-10 типовых дефектов</b> — пункты, которые чаще всего не выполнены. «k из N» — сколько раз пункт не выполнен из того, сколько раз его проверяли в месяце. Стрелка — к прошлому месяцу (если тогда пункт проверяли хотя бы 3 раза).',
+  heat: '<b>Подрядчик × вид работ</b> — невыполненных пунктов на 100 проверенных по каждой связке. Бледные клетки — меньше 7 проверок.',
+  rep: '<b>Повторяемость</b> — тот же пункт у того же подрядчика не выполнен 2 месяца подряд и дольше (до выбранного месяца). Это сигнал, что дефект не случайный.',
+  sys: '<b>Системность брака B2</b> — у каждого подрядчика пункт веса B2 с наибольшей долей невыполнения за месяц. От 20 % — штраф к УрК, от 40 % — красная зона.',
+  pareto: '<b>Причины дефектов (Парето)</b> — какие причины дают 80 % дефектов. Причину инженер указывает по желанию; дефекты без причины показаны отдельно.',
+  iko: '<b>ИКО — индекс критичности объекта</b> (как в «Сводке»): 0 — нет риска, 1 — максимальный; до 0,3 — низкий риск, 0,3–0,6 — повышенный, от 0,6 — высокий. Считается за 3 месяца по связкам «подрядчик × вид работ» от 7 проверок.',
+  concl: '<b>Выводы месяца</b> собираются автоматически. «Заметно изменилось» — только то, что больше разброса; остальное — «в пределах разброса».'
 };
 
-const state = { month: null, timer: null, ro: null, lastFp: null, result: null };
+const state = { month: null, timer: null, ro: null, lastFp: null, result: null, heat: 1, topAll: false, repAll: false, data: null };
 
 function _t(key, fallback) {
   try {
@@ -198,17 +210,148 @@ function ensureStyle() {
 .md-svg .few{opacity:.38}
 .md-svg .ln-spark{fill:none;stroke:var(--md-gold);stroke-width:1.6;opacity:.85}
 .md-empty{padding:18px;text-align:center;color:var(--md-muted)}
+.md-chipz{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.md-chipz.green{background:color-mix(in srgb,var(--md-ok) 20%,transparent);color:var(--md-ok-t)}
+.md-chipz.yellow{background:color-mix(in srgb,var(--md-warn) 20%,transparent);color:var(--md-warn-t)}
+.md-chipz.red{background:color-mix(in srgb,var(--md-bad) 20%,transparent);color:var(--md-bad-t)}
+.md-chipz.grey{background:var(--md-hover);color:var(--md-muted)}
+.md-conf{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap}
+.md-conf i{display:inline-flex;gap:1.5px}
+.md-conf i b{width:4px;height:10px;border-radius:1px;background:var(--md-line2)}
+.md-conf i b.on{background:var(--md-gold)}
+.md-conf.few{color:var(--md-muted)}
+.md-tblw{overflow-x:auto;max-width:100%}
+.md-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.md-tbl th{font-size:10px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--md-muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--md-line2);white-space:nowrap}
+.md-tbl td{padding:8px;border-bottom:1px solid var(--md-line);vertical-align:middle;font-variant-numeric:tabular-nums}
+.md-tbl tr:last-child td{border-bottom:0}
+.md-tbl td.r,.md-tbl th.r{text-align:right}
+.md-tbl .name{font-weight:750}
+.md-tbl .name small{display:block;font-weight:500;color:var(--md-muted);font-size:11px}
+.md-tbl tr.faint td{opacity:.62}
+.md-rk-inline{display:none;color:var(--md-muted);margin-right:4px}
+.md-rng{position:relative;height:14px;min-width:110px;background:linear-gradient(90deg,color-mix(in srgb,var(--md-bad) 14%,transparent) 0 70%,color-mix(in srgb,var(--md-warn) 14%,transparent) 70% 85%,color-mix(in srgb,var(--md-ok) 14%,transparent) 85% 100%);border-radius:3px}
+.md-rng b{position:absolute;top:5px;height:4px;background:var(--md-gold);opacity:.6;border-radius:2px}
+.md-rng i{position:absolute;top:2px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--md-gold);border:2px solid var(--md-card)}
+.md-rng i.hollow{background:var(--md-card);border-color:var(--md-gold)}
+.md-dlt{font-weight:800;white-space:nowrap}
+.md-dlt small{display:block;font-weight:650;font-size:10px;color:var(--md-muted)}
+.md-dlt.good{color:var(--md-ok-t)} .md-dlt.bad{color:var(--md-bad-t)} .md-dlt.same{color:var(--md-muted)}
+.md-mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.md-mini>div{background:var(--md-card2);border:1px solid var(--md-line);border-radius:8px;padding:6px 8px}
+.md-mini .k{font-size:10px;color:var(--md-muted);font-weight:700}
+.md-mini .v{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.md-top,.md-rep{list-style:none;margin:0;padding:0}
+.md-top li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--md-line)}
+.md-top li:last-child,.md-rep li:last-child{border-bottom:0}
+.md-top .rk{font-size:11px;font-weight:800;color:var(--md-muted);text-align:center}
+.md-top .nm,.md-rep .nm{font-weight:700;font-size:12.5px;line-height:1.3;min-width:0}
+.md-top .nm small,.md-rep .nm small{display:block;color:var(--md-muted);font-weight:500;font-size:11px}
+.md-bcl{display:inline-block;font-size:9.5px;font-weight:850;border-radius:4px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.md-bcl.b1{background:color-mix(in srgb,var(--md-blue) 24%,transparent);color:var(--md-blue)}
+.md-bcl.b2{background:color-mix(in srgb,var(--md-warn) 24%,transparent);color:var(--md-warn-t)}
+.md-bcl.b3{background:color-mix(in srgb,var(--md-bad) 24%,transparent);color:var(--md-bad-t)}
+.md-top .rt{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.md-top .of{font-size:12px;font-weight:800;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.md-top .of small{display:block;font-size:10.5px;font-weight:600;color:var(--md-muted)}
+.md-top .meter{grid-column:2/3;height:4px;background:var(--md-hover);border-radius:2px;position:relative}
+.md-top .meter b{position:absolute;left:0;top:0;bottom:0;background:var(--md-bad);border-radius:2px;opacity:.75}
+.md-top .meter i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--md-text);opacity:.5}
+.md-arrow{font-size:11px;font-weight:800;white-space:nowrap}
+.md-arrow.up{color:var(--md-bad-t)} .md-arrow.down{color:var(--md-ok-t)} .md-arrow.eq,.md-arrow.na{color:var(--md-muted);font-weight:650}
+.md-photo{width:34px;height:34px;border-radius:6px;flex:none;position:relative;overflow:hidden;background:var(--md-card2);border:1px solid var(--md-line2);display:grid;place-items:center;color:var(--md-muted);font-size:9px;font-weight:800}
+.md-photo img{width:100%;height:100%;object-fit:cover}
+.md-photo em{position:absolute;right:1px;bottom:0;font-style:normal;font-size:9px;font-weight:800;color:var(--md-text);background:var(--md-card);border-radius:3px;padding:0 2px}
+.md-photo.none{opacity:.35}
+.md-more{margin-top:8px;background:transparent;border:1px dashed var(--md-line2);border-radius:8px;padding:6px 10px;width:100%;font-size:12px;font-weight:700;color:var(--md-acc);cursor:pointer}
+.md-heat{width:100%;border-collapse:separate;border-spacing:3px;font-size:11.5px}
+.md-heat th{font-size:10px;font-weight:700;color:var(--md-muted);text-align:center;padding:2px;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.md-heat th.rowh{text-align:left;font-size:11.5px;color:var(--md-text);font-weight:750}
+.md-heat td{text-align:center;border-radius:6px;padding:7px 2px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;color:var(--md-text)}
+.md-heat td small{display:block;font-size:9px;font-weight:650;opacity:.8}
+.md-heat td.empty{background:transparent;color:var(--md-line2);font-weight:500}
+.md-heat td.pale{opacity:.5;background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgba(127,127,127,.18) 4px 6px)}
+.md-hscale{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--md-muted);margin-top:8px;flex-wrap:wrap}
+.md-hscale span{width:22px;height:10px;border-radius:2px;display:inline-block}
+.md-seg2{display:inline-flex;border:1px solid var(--md-line2);border-radius:7px;overflow:hidden;margin-left:auto}
+.md-seg2 button{background:transparent;border:0;padding:3px 8px;font-size:11px;font-weight:700;color:var(--md-muted);cursor:pointer}
+.md-seg2 button.on{background:var(--md-chip);color:var(--md-acc)}
+.md-rep li{padding:8px 0;border-bottom:1px solid var(--md-line);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
+.md-rep .streak{font-size:11px;font-weight:800;color:var(--md-bad-t);white-space:nowrap;text-align:right}
+.md-rep .hist{grid-column:1/-1;display:flex;gap:4px;flex-wrap:wrap}
+.md-rep .hist span{font-size:10.5px;background:var(--md-hover);border-radius:4px;padding:1px 6px;color:var(--md-muted);font-variant-numeric:tabular-nums}
+.md-rep .hist span b{color:var(--md-text)}
+.md-sys{margin-top:12px;padding-top:10px;border-top:1px solid var(--md-line)}
+.md-sys h4{margin:0 0 6px;font-size:12px;font-weight:800;display:flex;gap:6px;align-items:center}
+.md-sys .row{display:grid;grid-template-columns:minmax(0,110px) minmax(0,1fr) 46px;gap:8px;align-items:center;font-size:11.5px;padding:3px 0}
+.md-sys .row>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.md-sys .bar{height:8px;background:var(--md-hover);border-radius:3px;position:relative}
+.md-sys .bar b{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.md-par{display:grid;gap:5px}
+.md-par .row{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) 74px;gap:8px;align-items:center;font-size:11.5px}
+.md-par .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.md-par .row.in80 .lbl{font-weight:750}
+.md-par .bar{position:relative;height:14px;background:var(--md-hover);border-radius:3px}
+.md-par .bar b{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--md-gold);opacity:.4}
+.md-par .row.in80 .bar b{opacity:.9}
+.md-par .bar i{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--md-bad)}
+.md-par .row>span:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--md-muted)}
+.md-par .row>span:last-child b{color:var(--md-text)}
+.md-zbar{display:flex;height:10px;border-radius:3px;overflow:hidden;min-width:90px;background:var(--md-hover)}
+.md-zbar b{display:block;height:100%}
+.md-zbar .g{background:var(--md-ok)} .md-zbar .y{background:var(--md-warn)} .md-zbar .r{background:var(--md-bad)}
+.md-banner{font-size:11.5px;border-radius:8px;padding:7px 10px;background:color-mix(in srgb,var(--md-warn) 14%,transparent);color:var(--md-text);margin-bottom:10px;border:1px solid color-mix(in srgb,var(--md-warn) 35%,transparent)}
+.md-banner.grey{background:var(--md-hover);border-color:var(--md-line)}
+.md-concl{display:grid;gap:14px}
+.md-concl h4{margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--md-muted)}
+.md-concl ul{margin:0;padding-left:18px;display:grid;gap:5px}
+.md-concl li{font-size:12.5px}
+.md-concl .within li{color:var(--md-muted)}
+.md-split{display:grid;gap:12px}
+.md-svg .b-1{fill:var(--md-blue)} .md-svg .b-2{fill:var(--md-warn)} .md-svg .b-3{fill:var(--md-bad)}
+.md-svg .zone-bg-ok{fill:var(--md-ok);opacity:.08} .md-svg .zone-bg-warn{fill:var(--md-warn);opacity:.08} .md-svg .zone-bg-bad{fill:var(--md-bad);opacity:.09}
+.md-svg .ln.s-0{stroke:var(--md-gold)} .md-svg .ln.s-1{stroke:var(--md-blue)} .md-svg .ln.s-2{stroke:var(--color-violet,var(--md-blue))} .md-svg .ln.s-3{stroke:var(--md-ok)} .md-svg .ln.s-4{stroke:var(--md-warn)}
+.md-svg circle.s-0{fill:var(--md-gold)} .md-svg circle.s-1{fill:var(--md-blue)} .md-svg circle.s-2{fill:var(--color-violet,var(--md-blue))} .md-svg circle.s-3{fill:var(--md-ok)} .md-svg circle.s-4{fill:var(--md-warn)}
+@container md (max-width:899px){
+ .md-tbl.cards thead{display:none}
+ .md-tbl.cards,.md-tbl.cards tbody,.md-tbl.cards tr,.md-tbl.cards td{display:block;width:100%}
+ .md-tbl.cards tr{border:1px solid var(--md-line);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--md-card2);display:grid;grid-template-columns:1fr 1fr;gap:2px 10px}
+ .md-tbl.cards td{border:0;padding:2px 0;display:block;min-width:0}
+ .md-tbl.cards td::before{content:attr(data-label);display:block;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--md-muted)}
+ .md-tbl.cards td.rk{display:none}
+ .md-tbl.cards .md-rk-inline{display:inline}
+ .md-tbl.cards td.full{grid-column:1/-1}
+ .md-tbl.cards td.nolbl::before{display:none}
+ .md-tbl.cards td.r{text-align:left}
+ .md-tbl.cards .md-rng{min-width:0}
+}
+@container md (min-width:600px) and (max-width:899px){
+ .md-tbl.cards tbody{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .md-tbl.cards tr{margin-bottom:0}
+}
+@container md (max-width:599px){
+ .md-heat thead{display:none}
+ .md-heat,.md-heat tbody{display:block}
+ .md-heat tr{display:flex;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:1px solid var(--md-line)}
+ .md-heat th.rowh{flex-basis:100%;padding:0 0 2px;max-width:none}
+ .md-heat td{flex:0 0 calc(33% - 3px);padding:5px 2px}
+ .md-heat td::before{content:attr(data-label);display:block;font-size:9px;font-weight:650;opacity:.85;margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .md-heat td.empty{display:none}
+ .md-par .row{grid-template-columns:minmax(0,112px) minmax(0,1fr) 64px}
+}
 @container md (min-width:600px){
  .md-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
- .md-d6,.md-d4,.md-d2,.md-sec{grid-column:1/-1}
+ .md-d6,.md-d4,.md-d3,.md-d2,.md-sec{grid-column:1/-1}
  .md-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
  .md-tile:last-child{grid-column:span 2}
  .md-vol{grid-template-columns:repeat(5,minmax(0,1fr))}
  .md-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .md-split{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .md-concl{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
 }
 @container md (min-width:1024px){
  .md-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
- .md-d6{grid-column:span 6} .md-d4{grid-column:span 4} .md-d2{grid-column:span 2}
+ .md-d6{grid-column:span 6} .md-d4{grid-column:span 4} .md-d3{grid-column:span 3} .md-d2{grid-column:span 2}
  .md-tiles{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
  .md-tile:last-child{grid-column:auto}
  .md-tile .t-val{font-size:27px}
@@ -342,7 +485,58 @@ function chartSpark(w, h, vals, few) {
   return '<svg class="md-svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true"><path d="' + d + '" class="ln-spark"/>' + dots + '</svg>';
 }
 
-const CHARTS = { trend: chartTrend, zones: chartZones };
+function chartBclass(w, r) {
+  const ms = r.trend, sel = ms.length - 1, narrow = w < 520;
+  const pl = 30, pr = 8, pt = 18, h1 = narrow ? 160 : 180, h = pt + h1 + 22;
+  let mx = 0;
+  ms.forEach((m) => { mx = Math.max(mx, m.b1p + m.b2p + m.b3p); });
+  mx = Math.ceil(mx / 5) * 5 || 5;
+  const { bw, x } = band(ms.length, w, pl, pr);
+  const y = lin(0, mx, pt + h1, pt);
+  const step = mx > 30 ? 10 : 5;
+  let s = svgOpen(w, h, 'Дефекты B1, B2, B3 на 100 проверенных пунктов');
+  for (let g = 0; g <= mx; g += step) s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(g).toFixed(1) + '" y2="' + y(g).toFixed(1) + '" class="grid"/>' + txt(pl - 6, y(g) + 3.5, g, 'ax', 'end');
+  ms.forEach((m, i) => {
+    if (!m.N) return;
+    const bwid = Math.min(bw * 0.62, 28), bx = x(i) - bwid / 2;
+    let acc = 0;
+    [['B1', m.b1p, 'b-1'], ['B2', m.b2p, 'b-2'], ['B3', m.b3p, 'b-3']].forEach((z) => {
+      if (z[1] <= 0) return;
+      const y1 = y(acc + z[1]), y2 = y(acc);
+      s += '<rect x="' + bx.toFixed(1) + '" y="' + y1.toFixed(1) + '" width="' + bwid.toFixed(1) + '" height="' + Math.max(0, y2 - y1 - 1).toFixed(1) + '" class="' + z[2] + (m.few ? ' few' : '') + '"><title>' + esc(monthFull(m.key) + ': ' + z[0] + ' — ' + fmt(z[1], 1) + ' на 100 пунктов') + '</title></rect>';
+      acc += z[1];
+    });
+    if (i === sel || (!narrow && i === sel - 1)) s += txt(x(i), y(acc) - 5, fmt(acc, 1), i === sel ? 'val' : 'ax');
+  });
+  s += xAxis(ms, sel, x, bw, h - 4);
+  return s + '</svg>';
+}
+
+function chartIko(w, r) {
+  const ms = r.trend, sel = ms.length - 1, narrow = w < 520;
+  const pl = 34, pr = 8, pt = 12, h1 = narrow ? 160 : 180, h = pt + h1 + 22;
+  const { bw, x } = band(ms.length, w, pl, pr);
+  const y = lin(0, 1, pt + h1, pt);
+  let s = svgOpen(w, h, 'Индекс критичности объектов по месяцам');
+  s += '<rect x="' + pl + '" y="' + y(1) + '" width="' + (w - pl - pr) + '" height="' + (y(0.6) - y(1)) + '" class="zone-bg-bad"/>';
+  s += '<rect x="' + pl + '" y="' + y(0.6) + '" width="' + (w - pl - pr) + '" height="' + (y(0.3) - y(0.6)) + '" class="zone-bg-warn"/>';
+  s += '<rect x="' + pl + '" y="' + y(0.3) + '" width="' + (w - pl - pr) + '" height="' + (y(0) - y(0.3)) + '" class="zone-bg-ok"/>';
+  [0, 0.3, 0.6, 1].forEach((g) => { s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(g) + '" y2="' + y(g) + '" class="grid"/>' + txt(pl - 6, y(g) + 3.5, fmt(g, 1), 'ax', 'end'); });
+  s += '<rect x="' + (x(sel) - bw / 2).toFixed(1) + '" y="' + pt + '" width="' + bw.toFixed(1) + '" height="' + h1 + '" class="sel-band"/>';
+  r.objs.slice(0, 5).forEach((o, k) => {
+    let d = '', st = false;
+    o.series.forEach((v, i) => { if (!v) { st = false; return; } d += (st ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v.iko).toFixed(1); st = true; });
+    s += '<path d="' + d + '" class="ln s-' + k + '"/>';
+    o.series.forEach((v, i) => {
+      if (!v) return;
+      s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(v.iko).toFixed(1) + '" r="' + (i === sel ? 4.5 : 3) + '" class="s-' + k + '"><title>' + esc(o.name + ', ' + monthFull(ms[i].key) + ': ИКО ' + fmt(v.iko, 2) + ' — ' + v.status) + '</title></circle>';
+    });
+  });
+  s += xAxis(ms, sel, x, bw, h - 4);
+  return s + '</svg>';
+}
+
+const CHARTS = { trend: chartTrend, zones: chartZones, bclass: chartBclass, iko: chartIko };
 
 /* ---------- Блоки ---------- */
 
@@ -424,6 +618,149 @@ function blockTrend(r) {
     + '<div class="md-chart" data-md-chart="zones"></div></div>';
 }
 
+function confHtml(c, N) {
+  const idx = c.few ? 0 : N >= 51 ? 5 : N >= 32 ? 4 : N >= 24 ? 3 : N >= 16 ? 2 : 1;
+  let bars = '';
+  for (let i = 1; i <= 5; i++) bars += '<b class="' + (idx >= i ? 'on' : '') + '"></b>';
+  return '<span class="md-conf ' + (c.few ? 'few' : '') + '"><i>' + bars + '</i>' + esc(c.name) + '</span>';
+}
+function zoneChip(z, t) { return '<span class="md-chipz ' + (z || 'grey') + '">' + esc(t || '—') + '</span>'; }
+function rngBar(m) {
+  const lo = m.E != null ? Math.max(0, m.U - m.E) : null, hi = m.E != null ? Math.min(100, m.U + m.E) : null;
+  return '<div class="md-rng" title="' + (lo != null ? 'скорее всего от ' + fmt(lo) + ' до ' + fmt(hi) : 'разброс не посчитать') + '">'
+    + (lo != null ? '<b style="left:' + lo + '%;width:' + (hi - lo) + '%"></b>' : '') + '<i class="' + (m.conf.few ? 'hollow' : '') + '" style="left:' + Math.max(0, Math.min(100, m.U)) + '%"></i></div>';
+}
+
+function blockCons(r) {
+  const ps = monthShort(r.prevMonth);
+  const rows = r.cons.map((x, i) => {
+    const m = x.m, mp = x.mp, d = x.d;
+    const dcls = x.kind === 'notable' ? (d > 0 ? 'good' : 'bad') : 'same';
+    const dtxt = d == null ? '—' : (d > 0 ? '▲ ' : d < 0 ? '▼ ' : '') + fmtS(d);
+    const dsub = d == null ? 'нет прошлого' : x.kind === 'notable' ? 'заметно' : x.kind === 'within' ? 'в пределах разброса' : 'мало данных';
+    return '<tr class="' + (m.conf.few ? 'faint' : '') + '">'
+      + '<td data-label="Место" class="r rk">' + (i + 1) + '</td>'
+      + '<td data-label="Подрядчик" class="name full nolbl"><span class="md-rk-inline">' + (i + 1) + '.</span>' + esc(x.name) + '<small>' + esc(x.types.join(', ')) + '</small></td>'
+      + '<td data-label="УрК за ' + monthShort(r.month) + '" class="r"><b class="md-' + zoneOfUrk(m.U) + '" style="font-size:15px">' + m.U + '</b>' + (m.E != null ? ' <span class="md-muted">± ' + fmt(m.E) + '</span>' : '') + '</td>'
+      + '<td data-label="Разброс (0–100)" class="full">' + rngBar(m) + '</td>'
+      + '<td data-label="' + ps + '" class="r">' + (mp ? mp.U + ' <span class="md-muted">(' + mp.N + ' пр.)</span>' : '—') + '</td>'
+      + '<td data-label="Изменение"><span class="md-dlt ' + dcls + '">' + dtxt + '<small>' + dsub + '</small></span></td>'
+      + '<td data-label="Проверок" class="r">' + m.N + '</td>'
+      + '<td data-label="Надёжность">' + confHtml(m.conf, m.N) + '</td>'
+      + '<td data-label="Зона">' + zoneChip(m.zone, m.zoneText) + (m.NB3 ? '<small class="md-muted" style="display:block;font-size:10.5px">B3 в ' + m.NB3 + ' из ' + m.N + '</small>' : '') + '</td>'
+      + '<td data-label="Стабильность">' + esc(m.stabText) + ' <span class="md-muted">' + m.stab + '</span></td></tr>';
+  }).join('');
+  return '<h2 class="md-sec"><span class="n">5</span>Подрядчики за ' + esc(monthFull(r.month).toLowerCase()) + hint('cons') + '<span class="note">сортировка по нижней границе разброса</span></h2>'
+    + '<div class="md-card md-d6">' + (rows ? '<div class="md-tblw"><table class="md-tbl cards"><thead><tr><th class="r">#</th><th>Подрядчик</th><th class="r">УрК</th><th>Разброс</th><th class="r">' + ps + '</th><th>Изменение ' + hint('delta') + '</th><th class="r">Проверок</th><th>Надёжность ' + hint('conf') + '</th><th>Зона ' + hint('zoneC') + '</th><th>Стабильность ' + hint('stab') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="md-muted">Нет проверок</p>')
+    + '<p class="sub" style="margin:8px 0 0">Бледные строки — меньше 7 проверок (сбор данных). Пустой кружок на шкале — то же.</p></div>';
+}
+
+function heatColor(v) {
+  const p = Math.min(1, v / 30);
+  const col = p < 0.33 ? 'var(--md-ok)' : p < 0.66 ? 'var(--md-warn)' : 'var(--md-bad)';
+  return 'background:color-mix(in srgb,' + col + ' ' + (22 + Math.round(p * 50)) + '%,var(--md-card));';
+}
+
+function blockDefects(r) {
+  const c = r.cur, p = r.prev, ps = monthShort(r.prevMonth);
+  let html = '<h2 class="md-sec"><span class="n">6</span>Дефекты<span class="note">всё на 100 проверенных пунктов, с учётом выборки</span></h2>';
+  html += '<div class="md-card md-d4"><h3>Невыполненные пункты B1 / B2 / B3 на 100 проверенных' + hint('bcl') + '</h3>'
+    + '<div class="md-lg"><span><i style="background:var(--md-blue)"></i>B1 малозначительные</span><span><i style="background:var(--md-warn)"></i>B2 значительные</span><span><i style="background:var(--md-bad)"></i>B3 критичные</span></div>'
+    + '<div class="md-chart" data-md-chart="bclass"></div></div>';
+  html += '<div class="md-card md-d2"><h3>Доля критичных среди всех дефектов' + hint('crit') + '</h3><p class="sub">' + esc(monthFull(r.month)) + '</p>'
+    + '<div class="md-big"><span class="v ' + (c.critShare > 15 ? 'md-bad' : '') + '">' + fmt(c.critShare) + ' %</span><span class="md-muted">' + c.b3 + ' из ' + c.fails + ' дефектов' + (p && p.critShare != null ? ' · ' + ps + ': ' + fmt(p.critShare) + ' %' : '') + '</span></div>'
+    + '<div class="md-mini"><div><div class="k">B1 на 100</div><div class="v">' + fmt(c.b1p, 1) + '</div><div class="k">' + c.b1 + ' шт.</div></div>'
+    + '<div><div class="k">B2 на 100</div><div class="v md-warn">' + fmt(c.b2p, 1) + '</div><div class="k">' + c.b2 + ' шт.</div></div>'
+    + '<div><div class="k">B3 на 100</div><div class="v md-bad">' + fmt(c.b3p, 1) + '</div><div class="k">' + c.b3 + ' шт.</div></div></div>'
+    + '<div class="md-note">Всего проверено ' + fmt(c.items) + ' ' + plural(c.items, 'пункт', 'пункта', 'пунктов') + ', не выполнено ' + fmt(c.fails) + '.</div></div>';
+  // Топ-10
+  const topRows = r.top.map((t, i) => {
+    let arrow;
+    if (t.d == null) arrow = '<span class="md-arrow na" title="в прошлом месяце проверяли меньше 3 раз">— нет сравнения</span>';
+    else if (t.d >= 5) arrow = '<span class="md-arrow up">▲ ' + fmtS(t.d) + ' п.п.</span>';
+    else if (t.d <= -5) arrow = '<span class="md-arrow down">▼ ' + fmtS(t.d) + ' п.п.</span>';
+    else arrow = '<span class="md-arrow eq">≈ как в ' + ps + '</span>';
+    const fewChk = t.chk < FEW_DATA_N ? ' <span class="md-chipz grey" title="пункт проверяли меньше 7 раз">мало проверок</span>' : '';
+    const ph = t.photoSrc
+      ? '<span class="md-photo" title="фото: ' + t.photos + '"><img src="' + esc(t.photoSrc) + '" alt="" loading="lazy"><em>' + t.photos + '</em></span>'
+      : '<span class="md-photo ' + (t.photos ? '' : 'none') + '" title="' + (t.photos ? 'фото: ' + t.photos : 'нет фото') + '">фото' + (t.photos ? '<em>' + t.photos + '</em>' : '') + '</span>';
+    return '<li><span class="rk">' + (i + 1) + '</span><div class="nm"><span class="md-bcl b' + t.item.w + '">B' + t.item.w + '</span>' + esc(t.item.name) + fewChk
+      + '<small>' + esc(t.item.typeTitle) + ' · чаще у ' + esc(t.mainCon) + ' (' + t.mainConN + ') · ' + arrow + '</small></div>'
+      + '<div class="rt"><div class="of">' + t.fail + ' из ' + t.chk + '<small>' + fmt(t.rate) + ' %</small></div>' + ph + '</div>'
+      + '<div class="meter"><b style="width:' + t.rate.toFixed(1) + '%"></b>' + (t.prate != null ? '<i style="left:' + t.prate.toFixed(1) + '%" title="' + ps + ': ' + fmt(t.prate) + ' %"></i>' : '') + '</div></li>';
+  });
+  const showTop = state.topAll ? topRows : topRows.slice(0, 6);
+  html += '<div class="md-card md-d3"><h3>Топ-10 типовых дефектов' + hint('top') + '</h3><p class="sub">«из N» — сколько раз пункт проверяли в этом месяце</p>'
+    + (topRows.length ? '<ol class="md-top">' + showTop.join('') + '</ol>' + (topRows.length > 6 ? '<button type="button" class="md-more" data-md-act="topAll">' + (state.topAll ? 'Свернуть' : 'Ещё ' + (topRows.length - 6)) + '</button>' : '') : '<p class="md-muted">Дефектов нет</p>') + '</div>';
+  // Тепловая карта
+  const H = state.heat === 3 ? r.heat3 : r.heat1;
+  const hk = Object.keys(H);
+  const tps = [], tpsT = {}, cns = [];
+  hk.forEach((k) => { const e = H[k]; if (tps.indexOf(e.type) < 0) { tps.push(e.type); tpsT[e.type] = e.typeTitle; } if (cns.indexOf(e.con) < 0) cns.push(e.con); });
+  cns.sort();
+  const heat = '<table class="md-heat"><thead><tr><th></th>' + tps.map((t) => '<th title="' + esc(tpsT[t]) + '">' + esc(tpsT[t]) + '</th>').join('') + '</tr></thead><tbody>'
+    + cns.map((cn) => '<tr><th class="rowh">' + esc(cn) + '</th>' + tps.map((t) => {
+      const e = H[cn + '|' + t];
+      if (!e) return '<td class="empty" data-label="' + esc(tpsT[t]) + '">·</td>';
+      return '<td data-label="' + esc(tpsT[t]) + '" class="' + (e.n < FEW_DATA_N ? 'pale' : '') + '" style="' + heatColor(e.v) + '" title="' + esc(cn + ' · ' + tpsT[t] + ': ' + fmt(e.v, 1) + ' на 100 пунктов, проверок ' + e.n + (e.n < FEW_DATA_N ? ' (мало)' : '')) + '">' + fmt(e.v, 1) + '<small>' + e.n + ' пр.</small></td>';
+    }).join('') + '</tr>').join('') + '</tbody></table>';
+  html += '<div class="md-card md-d3"><h3>Подрядчик × вид работ' + hint('heat') + '<span class="md-seg2"><button type="button" data-md-heat="1" class="' + (state.heat === 1 ? 'on' : '') + '">Месяц</button><button type="button" data-md-heat="3" class="' + (state.heat === 3 ? 'on' : '') + '">3 месяца</button></span></h3>'
+    + '<p class="sub">Невыполненных пунктов на 100 проверенных · под числом — проверок</p><div class="md-tblw">' + (cns.length ? heat : '<p class="md-muted">Нет данных</p>') + '</div>'
+    + '<div class="md-hscale">меньше <span style="' + heatColor(2) + '"></span><span style="' + heatColor(12) + '"></span><span style="' + heatColor(28) + '"></span> больше · <span style="background:var(--md-hover);background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgba(127,127,127,.3) 4px 6px)"></span> меньше 7 проверок</div></div>';
+  // Повторяемость и системность B2
+  const reps = r.repeats.map((x) => '<li><div class="nm"><span class="md-bcl b' + x.item.w + '">B' + x.item.w + '</span>' + esc(x.item.name) + '<small>' + esc(x.name) + ' · ' + esc(x.item.typeTitle) + '</small></div>'
+    + '<div class="streak">держится ' + x.streak + ' ' + plural(x.streak, 'месяц', 'месяца', 'месяцев') + '</div>'
+    + '<div class="hist">' + x.hist.map((h) => '<span>' + monthShort(h.key) + ': <b>' + h.fail + '</b> из ' + h.chk + '</span>').join('') + '</div></li>');
+  const showRep = state.repAll ? reps : reps.slice(0, 4);
+  const sys = r.sysB2.slice(0, 6).map((x) => {
+    const col = x.rate >= 40 ? 'var(--md-bad)' : x.rate >= 20 ? 'var(--md-warn)' : 'var(--md-ok)';
+    return '<div class="row"><span title="' + esc(x.name) + '">' + esc(x.name) + '</span><div class="bar" title="' + esc(x.item ? x.item.name : '') + '"><b style="width:' + Math.min(100, x.rate).toFixed(0) + '%;background:' + col + '"></b></div><span style="text-align:right;font-weight:800;font-variant-numeric:tabular-nums">' + fmt(x.rate) + ' %</span></div>';
+  }).join('');
+  html += '<div class="md-card md-d3"><h3>Повторяемость: держится 2+ месяца' + hint('rep') + '</h3><p class="sub">Тот же пункт у того же подрядчика, месяц за месяцем</p>'
+    + (reps.length ? '<ul class="md-rep">' + showRep.join('') + '</ul>' + (reps.length > 4 ? '<button type="button" class="md-more" data-md-act="repAll">' + (state.repAll ? 'Свернуть' : 'Ещё ' + (reps.length - 4)) + '</button>' : '') : '<p class="md-muted">Повторов нет</p>')
+    + '<div class="md-sys"><h4>Системность брака B2 за месяц' + hint('sys') + '</h4>' + (sys || '<span class="md-muted">нет невыполненных B2</span>') + '</div></div>';
+  // Парето
+  const mx = r.pareto.length ? r.pareto[0].n : 1;
+  const par = r.pareto.map((x) => '<div class="row ' + (x.in80 ? 'in80' : '') + '"><span class="lbl" title="' + esc(x.name) + '">' + esc(x.name) + '</span><div class="bar"><b style="width:' + (x.n / mx * 100).toFixed(1) + '%"></b><i style="left:' + Math.min(99, x.cum).toFixed(1) + '%" title="накоплено ' + fmt(x.cum) + ' %"></i></div><span><b>' + x.n + '</b> · ' + fmt(x.cum) + ' %</span></div>').join('');
+  const p80 = r.pareto.filter((x) => x.in80).length;
+  const noPct = r.failsAll ? r.noCause / r.failsAll * 100 : 0;
+  html += '<div class="md-card md-d3"><h3>Причины дефектов (Парето)' + hint('pareto') + '</h3><p class="sub">' + (r.pareto.length ? '<b style="color:var(--md-text)">' + p80 + ' ' + plural(p80, 'причина', 'причины', 'причин') + '</b> из ' + r.pareto.length + ' дают 80 % дефектов с указанной причиной · число · накоплено' : 'причины не указаны') + '</p>'
+    + '<div class="md-par">' + par + '</div>'
+    + (r.noCause ? '<div class="md-banner grey" style="margin:10px 0 0">Причина не указана — ' + fmt(noPct) + ' % (' + r.noCause + ' ' + plural(r.noCause, 'дефект', 'дефекта', 'дефектов') + ' из ' + r.failsAll + '). Эти дефекты в Парето не входят.</div>' : '') + '</div>';
+  return html;
+}
+
+const OBJ_COLORS = ['var(--md-gold)', 'var(--md-blue)', 'var(--color-violet,var(--md-blue))', 'var(--md-ok)', 'var(--md-warn)'];
+
+function blockObjects(r) {
+  const ps = monthShort(r.prevMonth);
+  const rows = r.objs.map((o, k) => {
+    const c = o.cur, p = o.prev, m = o.mon;
+    const d = c && p ? c.iko - p.iko : null;
+    const mark = k < 5 ? '<span style="display:inline-block;width:10px;height:3px;border-radius:2px;vertical-align:3px;margin-right:6px;background:' + OBJ_COLORS[k] + '"></span>' : '';
+    return '<tr><td data-label="Объект" class="name full nolbl">' + mark + esc(o.name) + '<small>' + m.N + ' ' + plural(m.N, 'проверка', 'проверки', 'проверок') + ' в месяце · базовый УрК ' + (m.base ? fmt(m.base.mean, 1) + ' %' : '—') + '</small></td>'
+      + '<td data-label="ИКО" class="r"><b class="' + (c ? 'md-' + (c.zone === 'green' ? 'ok' : c.zone === 'yellow' ? 'warn' : 'bad') : 'md-muted') + '" style="font-size:15px">' + (c ? fmt(c.iko, 2) : '—') + '</b></td>'
+      + '<td data-label="' + ps + '" class="r">' + (p ? fmt(p.iko, 2) : '—') + (d != null ? ' <span class="md-dlt ' + (d > 0.005 ? 'bad' : d < -0.005 ? 'good' : 'same') + '">' + (d > 0 ? '▲' : d < 0 ? '▼' : '') + fmtS(d, 2) + '</span>' : '') + '</td>'
+      + '<td data-label="Риск">' + (c ? zoneChip(c.zone, c.status) : '<span class="md-muted">мало данных</span>') + '</td>'
+      + '<td data-label="Зоны (доля проверок)" class="full">' + (c ? '<div class="md-zbar" title="зелёная ' + c.green + ' %, жёлтая ' + c.yellow + ' %, красная ' + c.red + ' %"><b class="g" style="width:' + c.green + '%"></b><b class="y" style="width:' + c.yellow + '%"></b><b class="r" style="width:' + c.red + '%"></b></div><small class="md-muted">' + c.green + ' / ' + c.yellow + ' / ' + c.red + ' % · в расчёте ' + c.valid + ' пр.</small>' : '—') + '</td></tr>';
+  }).join('');
+  return '<h2 class="md-sec"><span class="n">7</span>Объекты<span class="note">индекс критичности (ИКО), окно 3 месяца</span></h2>'
+    + '<div class="md-card md-d3"><h3>ИКО по месяцам' + hint('iko') + '</h3><div class="md-lg">' + r.objs.slice(0, 5).map((o, k) => '<span><i class="line" style="background:' + OBJ_COLORS[k] + '"></i>' + esc(o.name) + '</span>').join('') + '<span>фон: зелёный — низкий риск, жёлтый — повышенный, красный — высокий</span></div><div class="md-chart" data-md-chart="iko"></div></div>'
+    + '<div class="md-card md-d3"><h3>Объекты за ' + esc(monthFull(r.month).toLowerCase()) + hint('iko') + '</h3><p class="sub">ИКО: 0 — нет риска, 1 — максимальный; «мало данных» — нет связок от 7 проверок за 3 месяца</p><div class="md-tblw"><table class="md-tbl cards"><thead><tr><th>Объект</th><th class="r">ИКО</th><th class="r">' + ps + '</th><th>Риск</th><th>Зоны</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+}
+
+function blockConcl(r) {
+  const F = r.findings;
+  const li = (a) => a.map((t) => '<li>' + esc(t) + '</li>').join('');
+  return '<h2 class="md-sec"><span class="n">9</span>Выводы месяца' + hint('concl') + '<span class="note">собираются автоматически</span></h2>'
+    + '<div class="md-card md-d6"><div class="md-concl"><div>'
+    + (F.warn.length ? '<div class="md-banner">' + F.warn.map(esc).join('<br>') + '</div>' : '')
+    + '<h4>Главное</h4><ul>' + li(F.main) + '</ul>'
+    + '<h4 style="margin-top:14px">Что сделать</h4><ul>' + (F.recs.length ? li(F.recs) : '<li>—</li>') + '</ul></div><div>'
+    + '<h4>Заметно изменилось</h4>' + (F.notable.length ? '<ul>' + F.notable.map((n) => '<li><b class="' + (n.good ? 'md-ok' : 'md-bad') + '">' + esc(n.text) + '</b></li>').join('') + '</ul>' : '<p class="md-muted" style="margin:0">Ничего: все изменения в пределах разброса или мало данных.</p>')
+    + '<h4 style="margin-top:14px">В пределах разброса (не считаем изменением)</h4><ul class="within">' + (F.within.length ? li(F.within) : '<li>—</li>') + '</ul></div></div></div>';
+}
+
 /* ---------- Отрисовка ---------- */
 
 function drawCharts(root) {
@@ -456,12 +793,36 @@ function monthOptions(months, sel) {
   return list.map((k) => '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + esc(monthFull(k)) + '</option>').join('');
 }
 
+/** Чек-листы, причины и шаблоны — из сервисов Качества (как отчёты для совещаний). */
+function calcOptions() {
+  const svc = (window.RBI && window.RBI.services) || {};
+  const tpl = svc.templates;
+  let user = {}, sys = {};
+  try { user = (tpl && tpl.getUserTemplates && tpl.getUserTemplates()) || window.userTemplates || {}; } catch (_) { user = {}; }
+  try { sys = (tpl && tpl.getSystemTemplates && tpl.getSystemTemplates()) || window.SYSTEM_TEMPLATES || {}; } catch (_) { sys = {}; }
+  let causes = [];
+  try { causes = (svc.inspections && svc.inspections.getDefectCausesSync && svc.inspections.getDefectCausesSync()) || window.DEFECT_CAUSES || []; } catch (_) { causes = []; }
+  const flat = typeof window.getFlatList === 'function' ? window.getFlatList : (g) => (g || []).flatMap((x) => x.items || []);
+  return {
+    templates: user,
+    itemsOf(c) {
+      const key = String(c.templateKey || '');
+      const groups = (user[key.replace('user_', '')] || {}).groups || (sys[key.replace('sys_', '')] || {}).groups || [];
+      return flat(groups);
+    },
+    causeName(code) {
+      const f = causes.find((x) => x.code === code);
+      return f ? f.name : code;
+    }
+  };
+}
+
 export function renderMonthDynamics(root, checks) {
   ensureStyle();
   const months = availableMonths(checks);
   const month = pickMonth(months);
   state.month = month;
-  const r = computeMonthDynamics(checks, { month });
+  const r = computeMonthDynamics(checks, Object.assign({ month }, calcOptions()));
   state.result = r;
   const c = r.cur;
   const bar = '<div class="md-bar"><label class="md-f"><span>Месяц</span><select data-md-month>' + monthOptions(months, month) + '</select></label></div>'
@@ -473,7 +834,7 @@ export function renderMonthDynamics(root, checks) {
   if (!c.N) {
     body = blockVolume(r, checks) + '<div class="md-card md-d6"><p class="md-empty">За этот месяц нет проверок по выбранным фильтрам.</p></div>';
   } else {
-    body = blockVolume(r, checks) + blockTiles(r) + blockTrend(r);
+    body = blockVolume(r, checks) + blockTiles(r) + blockTrend(r) + blockCons(r) + blockDefects(r) + blockObjects(r) + blockConcl(r);
   }
   root.innerHTML = bar + '<div class="md-grid">' + body + '</div>';
   drawCharts(root);
@@ -562,8 +923,16 @@ function ensureRoot(section) {
       applyView(true);
     });
     root.addEventListener('click', (e) => {
-      const h = e.target.closest && e.target.closest('.md-hint');
-      if (h) { e.preventDefault(); showPop(h); }
+      if (!e.target.closest) return;
+      const h = e.target.closest('.md-hint');
+      if (h) { e.preventDefault(); showPop(h); return; }
+      const act = e.target.closest('[data-md-act]');
+      const hb = e.target.closest('[data-md-heat]');
+      if (!act && !hb) return;
+      e.preventDefault();
+      if (act) state[act.getAttribute('data-md-act')] = !state[act.getAttribute('data-md-act')];
+      if (hb) state.heat = Number(hb.getAttribute('data-md-heat')) === 3 ? 3 : 1;
+      if (state.data) renderMonthDynamics(root, state.data);
     });
     if (typeof ResizeObserver === 'function') {
       let rw = 0;
@@ -606,6 +975,7 @@ function applyView(force) {
   const fp = fingerprint(data);
   if (!force && fp === state.lastFp && root.childElementCount) return;
   state.lastFp = fp;
+  state.data = data;
   try {
     renderMonthDynamics(root, data);
   } catch (e) {

@@ -17,13 +17,16 @@ import {
 
 before(async () => {
   globalThis.window = globalThis;
+  globalThis.SYSTEM_TEMPLATES = {};
   await import('../../../../../shared/math.utils.js');
 });
 
-/** Проверка с готовыми метриками (как сохраняет getProductMetrics). */
+let seq = 0;
+/** Проверка с готовыми метриками (как сохраняет getProductMetrics); id — для кэша метрик math.utils. */
 function chk(date, o) {
   o = o || {};
   return {
+    id: 'c' + (++seq),
     date: date,
     contractorName: o.c || 'Подрядчик А',
     projectName: o.obj || 'ЖК 1',
@@ -216,5 +219,71 @@ describe('стройконтроль: одно правило «открыто /
     assert.equal(r.closed, 0);
     assert.equal(r.open, 1);
     assert.equal(r.overdueNow, 1);
+  });
+});
+
+describe('этап 3: подрядчики, дефекты, повторы, причины', () => {
+  const items = [{ id: 'a', n: 'Защитный слой', w: 2 }, { id: 'b', n: 'Отметки', w: 1 }, { id: 'c', n: 'Анкеровка', w: 3 }];
+  const itemsOf = () => items;
+  const causeName = (code) => ({ C01: 'Нарушение технологии', C03: 'Материал' }[code] || code);
+  /** Проверка с state и причинами; метрики — getProductMetrics по тому же чек-листу. */
+  function st(date, con, state, details) {
+    const m = window.getProductMetrics(state, [{ items }]);
+    return { id: 's' + (++seq), date, contractorName: con, projectName: 'ЖК 1', inspectorName: 'Орлов', templateKey: 'sys_mono', templateTitle: 'Монолит', state, details: details || {}, metrics: m };
+  }
+  const data = [];
+  let r;
+  before(() => {
+  // Август и сентябрь: у «А» пункт «a» не выполнен 2 раза → повтор 2 месяца подряд к сентябрю.
+  ['2026-08-05', '2026-08-06'].forEach((d) => data.push(st(d + 'T10:00:00', 'А', { a: 'fail', b: 'ok', c: 'ok' })));
+  ['2026-09-03', '2026-09-04'].forEach((d) => data.push(st(d + 'T10:00:00', 'А', { a: 'fail', b: 'ok', c: 'ok' }, { a: { causeCode: 'C01' } })));
+  data.push(st('2026-09-05T10:00:00', 'А', { a: 'ok', b: 'fail', c: 'ok' }));
+  for (let i = 1; i <= 8; i++) data.push(st(`2026-09-1${i % 10}T10:00:00`, 'Б', { a: 'ok', b: 'ok', c: i === 1 ? 'fail' : 'ok' }, i === 1 ? { c: { causeCode: 'C03' } } : {}));
+
+  r = computeMonthDynamics(data, { month: '2026-09', itemsOf, causeName });
+  });
+
+  it('топ дефектов: «не выполнен k из N», имя пункта из чек-листа', () => {
+    assert.equal(r.top[0].item.name, 'Защитный слой');
+    assert.equal(r.top[0].fail, 2);
+    assert.equal(r.top[0].chk, 11);
+    assert.equal(r.top[0].mainCon, 'А');
+    assert.equal(r.top[0].prate, null); // в августе пункт проверяли 2 раза (< 3) — без сравнения
+  });
+  it('повторяемость: тот же пункт у того же подрядчика 2 месяца подряд', () => {
+    const rep = r.repeats.find((x) => x.name === 'А' && x.item.id === 'a');
+    assert.ok(rep);
+    assert.equal(rep.streak, 2);
+    assert.deepEqual(rep.hist.map((h) => h.key), ['2026-08', '2026-09']);
+  });
+  it('Парето: причины по названию, «не указана» — отдельно (решение 7)', () => {
+    assert.deepEqual(r.pareto.map((p) => [p.name, p.n]), [['Нарушение технологии', 2], ['Материал', 1]]);
+    assert.equal(r.noCause, 1);
+    assert.equal(r.failsAll, 4);
+  });
+  it('подрядчики: меньше 7 проверок — ниже всех; УрК — getContractorMetrics без окна', () => {
+    assert.deepEqual(r.cons.map((c) => c.name), ['Б', 'А']);
+    assert.equal(r.cons[0].m.N, 8);
+    assert.equal(r.cons[1].m.conf.few, true);
+    window.clearMetricsCache();
+    const m = window.getContractorMetrics(data.filter((c) => c.contractorName === 'Б'), {}, false);
+    assert.equal(r.cons[0].m.U, m.finalC);
+  });
+  it('системность B2: доля невыполнения пункта веса 2', () => {
+    const a = r.sysB2.find((x) => x.name === 'А');
+    assert.equal(a.item.name, 'Защитный слой');
+    assert.ok(Math.abs(a.rate - 200 / 3) < 1e-9);
+  });
+  it('тепловая карта: на 100 проверенных по связке подрядчик × вид работ', () => {
+    const h = r.heat1['А|sys_mono'];
+    assert.equal(h.n, 3);
+    assert.equal(h.items, 9);
+    assert.ok(Math.abs(h.v - 300 / 9) < 1e-9);
+    assert.equal(r.heat3['А|sys_mono'].n, 5);
+  });
+  it('выводы: «мало данных» не выдаются за изменение; есть самый частый дефект и повторы', () => {
+    assert.ok(r.findings.main.some((t) => t.includes('Самый частый дефект — «Защитный слой»')));
+    assert.ok(r.findings.main.some((t) => t.startsWith('Повторяются 1 дефект')));
+    assert.ok(r.findings.recs.some((t) => t.includes('не указана причина')));
   });
 });
