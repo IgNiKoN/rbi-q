@@ -78,7 +78,7 @@ begin
   select id into pos6 from planfact.vor_positions where project_id = pa and location_id = f6;
   -- архивный проект с позицией
   reset role; perform pg_temp.as_user(uadm);
-  wt2 := wt2; secb := public.pf_add_location(pa2, null, 'section', 'Секция А');
+  wt2 := wt2; secb := public.pf_add_location(pa2, public.pf_add_location(pa2, null, 'building', 'Корпус А'), 'section', 'Секция А');
   reset role; perform pg_temp.as_user(upto);
   imp2 := public.pf_vor_create_import(pa2, 'арх.xlsx', repeat('d', 64), 'Лист');
   perform public.pf_vor_add_rows(imp2, '[{"row_no": 12, "kind": "work", "name": "Штукатурка стен", "unit_text": "м2", "qty": 10}]');
@@ -87,7 +87,7 @@ begin
   select id into pos2 from planfact.vor_positions where project_id = pa2;
   reset role; perform pg_temp.as_user(ubadm);
   pb := public.pf_create_project(cb, 'ЖК Беты');
-  secb := public.pf_add_location(pb, null, 'section', 'Секция Б');
+  secb := public.pf_add_location(pb, public.pf_add_location(pb, null, 'building', 'Корпус Б'), 'section', 'Секция Б');
   wtb := public.pf_vor_add_work_type(pb, 'Работа Беты', m2);
   impb := public.pf_vor_create_import(pb, 'бета.xlsx', repeat('b', 64), 'Лист');
   perform public.pf_vor_add_rows(impb, '[{"row_no": 12, "kind": "work", "name": "Работа Беты", "unit_text": "м2", "qty": 30}]');
