@@ -210,7 +210,7 @@ test('права на вкладки: управление ролями / объ
     ['members', 'roles', 'objects', 'counterparties', 'directories', 'branding', 'modules', 'audit']);
 });
 
-test('без права управлять ролями, но с правом на объекты — раздел открыт только с «Объектами»', async () => {
+test('без права управлять ролями, но с правом на объекты — раздел открыт только с «Проектами» (P2-0047)', async () => {
   win.history.replaceState(null, '', '/#/settings/company/members');
   const { api } = fakeApi();
   const projects = { async myAccess() { return [{ company_id: 'c1', company_name: 'Альфа', can_manage_projects: true, can_manage_units: false, can_manage_roles: false, can_manage_counterparties: false }]; },
@@ -219,7 +219,7 @@ test('без права управлять ролями, но с правом н
   const root = createRoot(el as N);
   flushSync(() => root.render(createElement(CompanyApp, { auth: fakeAuth(true), api: { ...api, async myAdminCompanies() { return []; } }, projects })));
   await tick(); await tick(); await tick();
-  assert.deepEqual([...(el as N).querySelectorAll('[data-testid=co-tabs] [role=tab]')].map((t: N) => t.textContent), ['Объекты']);
+  assert.deepEqual([...(el as N).querySelectorAll('[data-testid=co-tabs] [role=tab]')].map((t: N) => t.textContent), ['Проекты']);
   assert.equal((el as N).querySelector('[data-testid=co-members]'), null, 'сотрудников не видно');
   assert.equal(win.location.hash, '#/settings/company/objects', 'прямой адрес закрытой вкладки → доступная');
   flushSync(() => root.unmount());

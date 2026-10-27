@@ -50,7 +50,7 @@ test('ProjectPicker: архив скрыт → «Показать архив (1)
   Object.getOwnPropertyDescriptor(win.HTMLSelectElement.prototype, 'value')!.set!.call(sel, 'old');
   sel.dispatchEvent(new win.Event('change', { bubbles: true })); await tick();
   assert.equal(value, 'old');
-  assert.equal(el.querySelector('[data-testid="pp-archived"]').textContent, 'Объект в архиве — только просмотр.');
+  assert.equal(el.querySelector('[data-testid="pp-archived"]').textContent, 'Проект в архиве — только просмотр.');
   el.querySelector('[data-testid="pp-archive"]').click(); await tick();
   assert.equal(value, 'a', 'скрыли архив — выбран первый действующий');
   assert.deepEqual(opts(el), ['ЖК Альфа', 'ЖК Бета']);
@@ -80,7 +80,7 @@ test('ProjectPicker: без архива кнопки нет; один объе�
   flushSync(() => createRoot(el as unknown as HTMLElement).render(createElement(ProjectPicker, { list: [LIST[1]], value: 'a', onChange: () => {} })));
   assert.equal(el.querySelector('[data-testid="pp-archive"]'), null);
   assert.equal(el.querySelector('select'), null);
-  assert.match(el.textContent, /Объект: ЖК Альфа/);
+  assert.match(el.textContent, /Проект: ЖК Альфа/);
 });
 
 const POS: FakePos[] = [{ id: 'p5', ancestors: ['f5'], location_id: 'f5', location_path: '5 этаж', location_type: 'floor', work: 'Штукатурка стен', unit: 'м²', plan: 100 }];
@@ -101,7 +101,7 @@ async function factFor(list: N[]): Promise<N> {
 
 test('Факт: по умолчанию действующий объект с «Внести факт»; архивный — «только просмотр», кнопки ввода нет', async () => {
   const a = await factFor([{ id: 'old', name: 'ЖК Старый', company_id: 'c1', archived_at: '2026-01-01T00:00:00Z' }, { id: 'pr1', name: 'ЖК Тест', company_id: 'c1', archived_at: null }]);
-  assert.match(a.textContent, /Объект: ЖК Тест/);
+  assert.match(a.textContent, /Проект: ЖК Тест/);
   assert.ok(a.querySelector('[data-testid="ft-enter"]'), 'действующий: кнопка ввода есть');
   const b = await factFor([{ id: 'old', name: 'ЖК Старый', company_id: 'c1', archived_at: '2026-01-01T00:00:00Z' }]);
   assert.ok(b.querySelector('[data-testid="pp-archived"]'));

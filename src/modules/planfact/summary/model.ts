@@ -73,11 +73,11 @@ export function positionStatus(p: PositionNumbers, ctx: { today: string; planned
   const state: PositionState = pending ? 'pending' : done ? 'done' : p.last_rejected_note ? 'rejected' : step;
   let pace: PositionPace; let overdue = false; let paceText: string;
   if (done) { pace = 'done'; paceText = 'Выполнено'; }
-  else if (!ctx.plannedFinish) { pace = 'no_finish'; paceText = 'Нет срока объекта — «просрочено» не считается'; }
+  else if (!ctx.plannedFinish) { pace = 'no_finish'; paceText = 'Нет срока проекта — «просрочено» не считается'; }
   else {
     const left = daysBetween(ctx.today, ctx.plannedFinish);
     const rate = p.fact14 / PACE_WINDOW_DAYS;
-    if (left < 0) { pace = 'past'; overdue = true; paceText = `Срок объекта прошёл (${ruDate(ctx.plannedFinish)}), позиция не выполнена`; }
+    if (left < 0) { pace = 'past'; overdue = true; paceText = `Срок проекта прошёл (${ruDate(ctx.plannedFinish)}), позиция не выполнена`; }
     else if (rate > 0) {
       const need = Math.ceil(rest / rate - 1e-9);
       overdue = need > left;

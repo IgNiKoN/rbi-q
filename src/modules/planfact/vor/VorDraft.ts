@@ -7,6 +7,7 @@ import { createElement as h, useEffect, useState } from 'react';
 import type { ChangeEvent, FocusEvent, KeyboardEvent, ReactElement } from 'react';
 import type { ProjectsApi } from '../../../platform/core/projects.service.ts';
 import type { PlanNodeType } from '../../../services/locations/types.ts';
+import { isTopPlace } from '../../../services/locations/types.ts';
 import { placeOf, placeNote, bindPlaces, missingList, createMissing, nodeNumber, sheetBuilding, WHOLE_OBJECT as WHOLE } from './places.ts';
 import type { Binding, BlockChoice, Place, TreeNode } from './places.ts';
 import type { Resolution, VorApi, VorImport, VorRow } from './vor.service.ts';
@@ -74,7 +75,7 @@ export function VorDraft(props: DraftProps): ReactElement {
     }
     setRows(list);
     setPlaces(infos);
-    setRoots((await loadChildren(null)).filter((n) => n.node_type === 'building'));
+    setRoots((await loadChildren(null)).filter((n) => isTopPlace(n.node_type)));
   }
 
   function chooseSheet(name: string): void {
@@ -109,7 +110,7 @@ export function VorDraft(props: DraftProps): ReactElement {
     const saved = list.find((r) => r.kind === 'work' && empty(r) && r.location_id);
     let sh = sheetBuilding(imp.sheet_name);
     if (saved) {
-      const b = (await loadChildren(null)).find((n) => n.id === saved.location_id && n.node_type === 'building');
+      const b = (await loadChildren(null)).find((n) => n.id === saved.location_id && isTopPlace(n.node_type));
       sh = b ? { value: nodeNumber(b.name) || b.name, name: b.name } : null;
     }
     setSheet(sh);
@@ -215,7 +216,7 @@ export function VorDraft(props: DraftProps): ReactElement {
           ? h('span', { className: 'vor-stat--ok' }, '→ ' + p.binding.path)
           : p.place.pendingBlock
             ? h('span', { className: 'vor-stat--bad' }, 'выберите корпус блока')
-            : h('span', { className: 'vor-stat--bad' }, 'нет в дереве объекта')))),
+            : h('span', { className: 'vor-stat--bad' }, 'нет в дереве проекта')))),
     pendingBlocks.length
       ? h('div', { className: 'pf-card vor-missing', 'data-testid': 'vor-blocks' },
           h('b', null, 'Корпус в файле не указан, а номера секций начинаются заново — это разные корпуса. Выберите корпус для каждого блока (если в дереве корпуса нет — впишите номер, затем «Создать недостающие»):'),
@@ -224,7 +225,7 @@ export function VorDraft(props: DraftProps): ReactElement {
               ? h('span', { className: 'vor-block-pick' },
                   h('select', { className: 'pj-input', 'data-testid': 'vor-block-select', 'data-block': b.block, value: roots.find((n) => blocks[b.block] && n.name === blocks[b.block].name)?.id || '',
                     onChange: (e: ChangeEvent<HTMLSelectElement>) => chooseBlock(b.block, e.currentTarget.value) },
-                    h('option', { value: '' }, '— корпус из дерева объекта —'),
+                    h('option', { value: '' }, '— корпус из дерева проекта —'),
                     roots.map((n) => h('option', { key: n.id, value: n.id }, n.name))),
                   h('input', { type: 'text', className: 'pj-input', placeholder: 'или № нового корпуса', maxLength: 20, 'data-testid': 'vor-block-new',
                     onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') chooseBlock(b.block, e.currentTarget.value); },
@@ -233,13 +234,13 @@ export function VorDraft(props: DraftProps): ReactElement {
       : null,
     missing.length
       ? h('div', { className: 'pf-card vor-missing', 'data-testid': 'vor-missing' },
-          h('div', null, h('b', null, `Не хватает узлов в дереве объекта (${missing.length}):`)),
+          h('div', null, h('b', null, `Не хватает узлов в дереве проекта (${missing.length}):`)),
           h('ul', null, missing.map((m) => h('li', { key: m }, m))),
           editable && canProjects && projects
             ? h('button', { type: 'button', className: 'pf-btn', disabled: !!busy, 'data-testid': 'vor-create-missing', onClick: () => { void createAll(); } },
                 busy || 'Создать недостающие')
             : h('div', { className: 'pf-muted', 'data-testid': 'vor-no-create' },
-                editable ? 'Создавать узлы может РП или администратор (право «Проекты и дерево локаций») — «Справочники → Объекты».' : 'Просмотр.'))
+                editable ? 'Создавать узлы может РП или администратор (право «Проекты и дерево локаций») — «Компания → Проекты → Объекты и места».' : 'Просмотр.'))
       : null,
     h('div', { className: 'pf-muted vor-rule' },
       'Правила: «Этажи 4–12» — позиция на секции с пометкой «эт. 4–12»; «кв. 3, 16…» — позиция на ближайшем узле с пометкой квартир; строки без корпуса — на корпус листа, а без него — на узел «Весь объект».'),

@@ -140,7 +140,7 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
       const idx = indexPlaces(nodes);
       setData({ idx, positions: r.value, pl: placePositions(r.value, idx) });
     } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : 'Не удалось загрузить места объекта');
+      setError(e instanceof Error && e.message ? e.message : 'Не удалось загрузить места проекта');
       setData(none);
     }
   }
@@ -179,8 +179,8 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
   if (!grid || !grid.rows.length || !data.pl.placed.length) {
     const n = data.positions.length;
     return h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'cb-empty' },
-      !n ? 'Для этого объекта нет работ: позиции появляются после подтверждения ВОР.'
-        : `Объёмы этого объекта не разнесены по этажам — шахматку построить не из чего (позиций на корпусах и секциях: ${n}). Факт по ним вносится во вкладке «Ввод».`);
+      !n ? 'Для этого проекта нет работ: позиции появляются после подтверждения ВОР.'
+        : `Объёмы этого проекта не разнесены по этажам — шахматку построить не из чего (позиций на корпусах и секциях: ${n}). Факт по ним вносится во вкладке «Ввод».`);
   }
   const rowLabel = (key: string): string => grid.rows.find((r) => r.key === key)?.label || '';
   const colLabel = (id: string): string => grid.cols.find((c) => c.id === id)?.name || '';

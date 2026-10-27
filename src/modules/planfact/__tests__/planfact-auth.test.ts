@@ -76,7 +76,7 @@ test('вошёл → «почта · компания · роль» есть (д
   await tick();
   const bar = el.querySelector('[data-testid="pf-user"]');
   assert.ok(bar && /pto@test\.invalid/.test(bar.textContent || '') && /Альфа · Инженер ПТО/.test(bar.textContent || ''));
-  assert.match(el.querySelector('[data-testid="pf-hint"]')?.textContent || '', /Нет доступных объектов/);
+  assert.match(el.querySelector('[data-testid="pf-hint"]')?.textContent || '', /Нет доступных проектов/);
   assert.ok(!Array.from(el.querySelectorAll('button')).some((b) => (b as N).textContent === 'Выйти'));
   await auth.signOut(); auth.changed();   // вышел в «Настройки → Моё» — раздел перечитывает, кто вошёл
   await tick();

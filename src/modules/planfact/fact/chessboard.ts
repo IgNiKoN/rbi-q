@@ -9,6 +9,7 @@
 import type { FactPosition } from './fact.service.ts';
 import type { LocationNode } from '../../../platform/core/projects.service.ts';
 import { percent, round3 } from './fact.ts';
+import { isTopPlace } from '../../../services/locations/types.ts';
 
 export type CellState = 'none' | 'todo' | 'progress' | 'done';
 export interface CellValue {
@@ -73,14 +74,14 @@ export function indexPlaces(nodes: LocationNode[]): PlaceIndex {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const up = (n: LocationNode, type: string): Ref | null => {
     for (let cur = n.parent_id ? byId.get(n.parent_id) : undefined; cur; cur = cur.parent_id ? byId.get(cur.parent_id) : undefined) {
-      if (cur.node_type === type) return { id: cur.id, name: cur.name };
+      if (cur.node_type === type || (type === 'building' && isTopPlace(cur.node_type))) return { id: cur.id, name: cur.name };
     }
     return null;
   };
   const floors: FloorRef[] = nodes.filter((n) => n.node_type === 'floor').map((n) => ({
     id: n.id, name: n.name, path: n.path, key: floorKey(n.name), order: floorOrder(n), building: up(n, 'building'), section: up(n, 'section') }));
   return {
-    buildings: nodes.filter((n) => n.node_type === 'building').map((n) => ({ id: n.id, name: n.name, path: n.path })),
+    buildings: nodes.filter((n) => isTopPlace(n.node_type)).map((n) => ({ id: n.id, name: n.name, path: n.path })),
     floors, floorByPath: new Map(floors.map((f) => [f.path, f]))
   };
 }

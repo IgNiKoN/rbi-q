@@ -19,9 +19,10 @@ import { FloorClose } from './FloorClose.ts';
 import { ChessboardTab } from './ChessboardTab.ts';
 import { FactWindow, FACT_WINDOW_CSS } from './FactWindow.ts';
 import { initialProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
+import { isTopPlace } from '../../../services/locations/types.ts';
 
 const PAGE = 100;
-const NODE_LABEL: Record<string, string> = { building: 'Корпус', section: 'Секция', floor: 'Этаж', apartment: 'Квартира', other: 'Место' };
+const NODE_LABEL: Record<string, string> = { object: 'Объект', building: 'Корпус', section: 'Секция', floor: 'Этаж', apartment: 'Квартира', other: 'Место' };
 const lastKey = (company: string): string => `pf-last-brigade:${company}`;
 /** Последняя бригада на устройстве (общая для «Факта» и закрытия из реестра позиций). */
 export function readLast(company: string): string { try { return window.localStorage.getItem(lastKey(company)) || ''; } catch { return ''; } }
@@ -131,7 +132,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
       h(ProjectPicker, { list, value: projectId, onChange: setProjectId }),
       !projectId || !project ? null
         : canApprove ? h(PendingRegistry, { key: projectId, api, projectId, companyId: project.company_id, user: me, onChanged: () => { void loadPending(projectId, true); } })
-        : h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'ft-noapprove' }, 'Подтверждать факт в этом объекте может руководитель проекта (право «Факт: подтверждение»).'));
+        : h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'ft-noapprove' }, 'Подтверждать факт в этом проекте может руководитель проекта (право «Факт: подтверждение»).'));
   }
 
   if (mode === 'journal') {
@@ -159,7 +160,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   }
 
   const nav = h('div', { className: 'ft-crumbs', 'data-testid': 'ft-crumbs' },
-    h('button', { type: 'button', className: 'ft-crumb' + (path.length ? '' : ' ft-crumb--cur'), 'data-testid': 'ft-root', onClick: () => { void enterPlace(projectId, []); } }, 'Объект'),
+    h('button', { type: 'button', className: 'ft-crumb' + (path.length ? '' : ' ft-crumb--cur'), 'data-testid': 'ft-root', onClick: () => { void enterPlace(projectId, []); } }, 'Проект'),
     path.map((n, i) => h('span', { key: n.id, className: 'ft-crumb-wrap' }, h('span', { className: 'pf-muted' }, '›'),
       h('button', { type: 'button', className: 'ft-crumb' + (i === path.length - 1 ? ' ft-crumb--cur' : ''), onClick: () => { void enterPlace(projectId, path.slice(0, i + 1)); } }, n.name))));
 
@@ -171,7 +172,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   const avg = rows.length ? rows.reduce((a, p) => a + Math.min(100, percent(p.fact_qty, p.plan_qty)), 0) / rows.length : 0;
   const pendingN = rows.reduce((a, p) => a + (p.pending_count ? 1 : 0), 0);
   const tree = roots.length
-    ? h('nav', { className: 'pf-card ft-tree', 'aria-label': 'Места объекта', 'data-testid': 'ft-tree' }, treeNodes(roots, []))
+    ? h('nav', { className: 'pf-card ft-tree', 'aria-label': 'Места проекта', 'data-testid': 'ft-tree' }, treeNodes(roots, []))
     : null;
   function treeNodes(nodes: LocationNode[], above: LocationNode[]): ReactElement[] {
     return nodes.map((n) => {
@@ -182,7 +183,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
         h('button', { type: 'button', className: 'ft-titem' + (cur ? ' ft-titem--cur' : '') + (on ? ' ft-titem--on' : ''), style: { paddingLeft: `${10 + above.length * 16}px` },
           'aria-current': cur ? 'true' : undefined, 'data-location-id': n.id, onClick: () => { void enterPlace(projectId, [...above, n]); } },
           // стрелка — у узлов, где ещё есть уровни (корпус, секция) или уже открытые дети; этаж — без стрелки
-          n.node_type === 'building' || n.node_type === 'section' || open ? h('span', { className: 'ft-tchev' + (open ? ' ft-tchev--open' : ''), 'aria-hidden': 'true' }) : h('span', { className: 'ft-tdot', 'aria-hidden': 'true' }), n.name),
+          isTopPlace(n.node_type) || n.node_type === 'section' || open ? h('span', { className: 'ft-tchev' + (open ? ' ft-tchev--open' : ''), 'aria-hidden': 'true' }) : h('span', { className: 'ft-tdot', 'aria-hidden': 'true' }), n.name),
         open ? h('div', { className: 'ft-tkids' }, treeNodes(kids[n.id], [...above, n])) : null);
     });
   }
@@ -205,7 +206,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
           ? h('div', { className: 'ft-tiles' + (tree ? ' ft-tiles--tree' : ''), 'data-testid': 'ft-children' }, children.map((c) => h('button', { key: c.id, type: 'button', className: 'ft-tile', 'data-location-id': c.id,
               onClick: () => { void enterPlace(projectId, [...path, c]); } }, h('span', { className: 'ft-tile-type' }, NODE_LABEL[c.node_type] || ''), h('b', null, c.name))))
           : null,
-        !place ? h('div', { className: 'pf-muted', 'data-testid': 'ft-pick' }, children.length ? 'Выберите корпус, секцию или этаж.' : 'В проекте пока нет мест — их создаёт ПТО в «Справочники → Объекты».') : null,
+        !place ? h('div', { className: 'pf-muted', 'data-testid': 'ft-pick' }, children.length ? 'Выберите корпус, секцию или этаж.' : 'В проекте пока нет мест — их создаёт ПТО в «Компания → Проекты → Объекты и места».') : null,
         notice ? h('div', { className: 'pj-notice', role: 'status', 'data-testid': 'ft-notice' }, notice) : null,
         error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
         closing && place

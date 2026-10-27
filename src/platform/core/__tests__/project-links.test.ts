@@ -6,7 +6,7 @@ import { Window } from 'happy-dom';
 import { createElement } from 'react';
 import type { CompanyAccess, CoreApi } from '../core.service.ts';
 import type { Counterparty, CounterpartyCard } from '../counterparties.ts';
-import type { ProjectItem, ProjectsApi } from '../projects.service.ts';
+import type { ProjectCard, ProjectCardInput, ProjectsApi } from '../projects.service.ts';
 import type { Result } from '../../company/company.service.ts';
 import type { Ks2ActData } from '../../../modules/planfact/ks2/ks2.service.ts';
 import { actHeader } from '../../../modules/planfact/ks2/model.ts';
@@ -59,25 +59,23 @@ const ACCESS: CompanyAccess = { company_id: 'c1', company_name: 'Альфа', ca
 const cp = (id: string, name: string, kinds: Counterparty['kinds'], archived_at: string | null = null): Counterparty =>
   ({ id, name, inn: '7700000000', kpp: null, kinds, requisites: {}, archived_at, updated_at: '' });
 
-function fakes(project: Partial<ProjectItem> = {}) {
+function fakes(project: Partial<ProjectCard> = {}) {
   const calls: string[] = [];
-  let projects: ProjectItem[] = [{ id: 'p1', name: 'Спутник', code: null, archived_at: null, created_at: '', can_manage: true, ...project }];
-  const ok = (): Result => ({ ok: true, value: null });
-  const api = {
-    myAccess: async () => [ACCESS], listProjects: async () => projects,
-    updateProject: async (id: string, name: string) => { calls.push(`update:${id}:${name}`); return ok(); }
-  } as unknown as ProjectsApi;
+  let projects: ProjectCard[] = [{ id: 'p1', name: 'Спутник', code: null, archived_at: null, created_at: '', can_manage: true, division_id: null, division_name: null,
+    address: null, planned_start: null, planned_finish: null, manager_user_id: null, manager_name: null, stage: 'construction', our_role: null,
+    timezone: 'Europe/Moscow', country: 'RU', object_count: 0, place_count: 0, places_led_by_quality: false, ...project }];
   const parties = [cp('k1', 'ООО Заказчик', ['customer']), cp('k2', 'АО Генподряд', ['general_contractor', 'customer']),
     cp('k3', 'ООО Поставщик', ['supplier']), cp('k4', 'ООО Старый', ['customer'], '2026-10-01')];
-  const core = {
-    listCounterparties: async () => parties,
-    setProjectCounterparties: async (id: string, c: string | null, gc: string | null) => {
-      calls.push(`parties:${id}:${c}:${gc}`);
-      projects = projects.map((p) => (p.id !== id ? p : { ...p, customer_id: c, customer_name: parties.find((x) => x.id === c)?.name || null,
-        general_contractor_id: gc, general_contractor_name: parties.find((x) => x.id === gc)?.name || null }));
-      return ok();
+  const api = {
+    myAccess: async () => [ACCESS], projectCatalog: async () => projects, listDivisions: async () => [],
+    saveProject: async (_c: string, id: string, card: ProjectCardInput): Promise<Result<string>> => {
+      calls.push(`save:${id}:${card.customer_id}:${card.general_contractor_id}`);
+      projects = projects.map((p) => (p.id !== id ? p : { ...p, customer_id: card.customer_id, customer_name: parties.find((x) => x.id === card.customer_id)?.name || null,
+        general_contractor_id: card.general_contractor_id, general_contractor_name: parties.find((x) => x.id === card.general_contractor_id)?.name || null }));
+      return { ok: true, value: id };
     }
-  } as unknown as CoreApi;
+  } as unknown as ProjectsApi;
+  const core = { listCounterparties: async () => parties } as unknown as CoreApi;
   return { api, core, calls };
 }
 
@@ -86,32 +84,35 @@ async function mount(f: ReturnType<typeof fakes>) {
   const root = createRoot(el as unknown as HTMLElement);
   flushSync(() => root.render(createElement(ProjectsTab, { api: f.api, company: ACCESS, core: f.core })));
   await settle();
+  click(el.querySelector('[data-testid="p2-reg-open"]')); await settle();
   return { el: el as N, root };
 }
+const fieldText = (el: N, id: string): string => el.querySelector(`[data-testid="pj-fields"] [data-field="${id}"] b`).textContent;
 
-test('«Объекты»: выбор заказчика и генподрядчика — только подходящие и действующие, сохранение и строка у объекта', async () => {
+test('«Проекты»: выбор заказчика и генподрядчика — только подходящие и действующие, сохраняются в карточке', async () => {
   const f = fakes();
   const { el, root } = await mount(f);
-  click(el.querySelector('[data-testid="pj-rename"]')); await settle();
+  click(el.querySelector('[data-testid="pj-edit"]')); await settle();
   const cust = el.querySelector('[data-testid="pj-customer"]'), gc = el.querySelector('[data-testid="pj-general_contractor"]');
   assert.deepEqual([...cust.options].map((o: N) => o.textContent), ['— не указан —', 'ООО Заказчик', 'АО Генподряд'], 'заказчики без поставщика и архивного');
   assert.deepEqual([...gc.options].map((o: N) => o.textContent), ['— не указан —', 'АО Генподряд']);
   cust.value = 'k1'; gc.value = 'k2';
-  submit(el.querySelector('[data-project-id="p1"]')); await settle();
-  assert.deepEqual(f.calls, ['update:p1:Спутник', 'parties:p1:k1:k2']);
-  assert.equal(el.querySelector('[data-testid="pj-party-line"]').textContent, 'Заказчик: ООО Заказчик · Генподрядчик: АО Генподряд');
+  submit(el.querySelector('[data-testid="pj-edit-form"]')); await settle();
+  assert.deepEqual(f.calls, ['save:p1:k1:k2']);
+  assert.equal(fieldText(el, 'customer'), 'ООО Заказчик');
+  assert.equal(fieldText(el, 'gc'), 'АО Генподряд');
   root.unmount();
 });
 
-test('«Объекты»: архивный заказчик объекта остаётся в выборе; без изменений контрагентов — только сохранение объекта', async () => {
+test('«Проекты»: архивный заказчик проекта остаётся в выборе и не теряется при сохранении', async () => {
   const f = fakes({ customer_id: 'k4', customer_name: 'ООО Старый' });
   const { el, root } = await mount(f);
-  assert.match(el.querySelector('[data-testid="pj-party-line"]').textContent, /Заказчик: ООО Старый/);
-  click(el.querySelector('[data-testid="pj-rename"]')); await settle();
+  assert.equal(fieldText(el, 'customer'), 'ООО Старый');
+  click(el.querySelector('[data-testid="pj-edit"]')); await settle();
   const cust = el.querySelector('[data-testid="pj-customer"]');
   assert.equal(cust.value, 'k4');
   assert.ok([...cust.options].some((o: N) => o.textContent === 'ООО Старый (архив)'));
-  submit(el.querySelector('[data-project-id="p1"]')); await settle();
-  assert.deepEqual(f.calls, ['update:p1:Спутник']);
+  submit(el.querySelector('[data-testid="pj-edit-form"]')); await settle();
+  assert.deepEqual(f.calls, ['save:p1:k4:null']);
   root.unmount();
 });

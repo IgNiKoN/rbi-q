@@ -906,5 +906,47 @@ else {
     check('032: админ себе пароль не сбрасывает', !(await rpc('pf_company_reset_password', { p_company: cA, p_user: meAdm?.user_id }, tok.alfaAdmin)).ok);
   }
 }
+// --- P2-0047 (045): «Компания → Проекты» на правах ядра без модулей; изоляция компаний (§1а п. 1): чужая компания — пусто / отказ.
+//     Данные помечены «REST-045 …» в объекте автопроверок Альфы; объект удаляется в конце, подразделение — в архив. ---
+{
+  const dictsProbe = await rpc('pf_project_dicts', {}, tok.alfaAdmin);
+  if (dictsProbe.status === 404) { console.log('NOT RUN: 045 на сервере не применена — проверки P2-0047 пропущены'); fails++; }
+  else {
+    const uuid = () => crypto.randomUUID();
+    const cA7 = (await j(await rpc('pf_my_company_access', {}, tok.alfaAdmin))).find((c) => c.company_name === 'Альфа')?.company_id;
+    const d7 = await j(dictsProbe);
+    check('0047: справочники — 6 стадий, 5 видов объектов', d7?.stages?.length === 6 && d7?.object_kinds?.length === 5);
+    check('0047: без входа справочники не отдаются', !(await rpc('pf_project_dicts', {})).ok);
+    const cat = await j(await rpc('pf_project_catalog', { p_company: cA7 }, tok.alfaAdmin));
+    const p7 = Array.isArray(cat) ? cat.find((x) => x.name === REST_PROJECT && !x.archived_at) : null;
+    check('0047: каталог Альфы — есть объект автопроверок с карточкой', !!p7 && typeof p7.stage === 'string' && 'object_count' in p7);
+    check('0047: Бета не читает каталог Альфы', !(await rpc('pf_project_catalog', { p_company: cA7 }, tok.betaPto)).ok);
+    check('0047: Бета не читает подразделения Альфы', !(await rpc('pf_company_divisions', { p_company: cA7 }, tok.betaPto)).ok);
+    check('0047: Бета не создаёт подразделение в Альфе', !(await rpc('pf_save_division', { p_company: cA7, p_id: uuid(), p_name: 'ВЗЛОМ-045', p_head_user: null, p_archived: null }, tok.betaPto)).ok);
+    check('0047: Бета не меняет карточку проекта Альфы', !(await rpc('pf_save_project', { p_company: cA7, p_id: p7?.id, p_card: { address: 'ВЗЛОМ' } }, tok.betaPto)).ok);
+    check('0047: Бета не читает места проекта Альфы', !(await rpc('pf_project_places', { p_project: p7?.id, p_parent: null }, tok.betaPto)).ok);
+    check('0047: Бета не создаёт объект в проекте Альфы', !(await rpc('pf_save_place', { p_project: p7?.id, p_id: uuid(), p_parent: null, p_type: 'object', p_name: 'ВЗЛОМ-045', p_object_kind: 'building' }, tok.betaPto)).ok);
+    check('0047: прораб не создаёт объект', !(await rpc('pf_save_place', { p_project: p7?.id, p_id: uuid(), p_parent: null, p_type: 'object', p_name: 'ВЗЛОМ-045', p_object_kind: 'building' }, tok.alfaForeman)).ok);
+    const dirCore = await fetch(`${URL_}/rest/v1/divisions?select=id`, { headers: { apikey: ANON, Authorization: `Bearer ${tok.betaPto}`, 'Accept-Profile': 'core' } });
+    check('0047: схема core не открыта через REST напрямую', !dirCore.ok, `статус ${dirCore.status}`);
+    const div7 = uuid();
+    check('0047: админ создаёт подразделение (id приложения)', (await rpc('pf_save_division', { p_company: cA7, p_id: div7, p_name: 'REST-045 ' + div7.slice(0, 8), p_head_user: null, p_archived: null }, tok.alfaAdmin)).ok);
+    check('0047: повтор с тем же id — не дубль', (await j(await rpc('pf_company_divisions', { p_company: cA7 }, tok.alfaAdmin))).filter((d) => d.id === div7).length === 1);
+    check('0047: подразделение в архив', (await rpc('pf_save_division', { p_company: cA7, p_id: div7, p_name: 'REST-045 ' + div7.slice(0, 8), p_head_user: null, p_archived: true }, tok.alfaAdmin)).ok);
+    const top = await rpc('pf_save_place', { p_project: p7?.id, p_id: uuid(), p_parent: null, p_type: 'section', p_name: 'REST-045 секция наверху' }, tok.alfaAdmin);
+    check('0047: место верхнего уровня не «объект» — отказ', !top.ok, `статус ${top.status}`);
+    const o7 = uuid();
+    try {
+      check('0047: админ создаёт объект «корпус»', (await rpc('pf_save_place', { p_project: p7?.id, p_id: o7, p_parent: null, p_type: 'object', p_name: 'REST-045 ' + o7.slice(0, 8), p_object_kind: 'building' }, tok.alfaAdmin)).ok);
+      const f7 = await rpc('pf_fill_object', { p_object: o7, p_sections: 1, p_floors: 2, p_apartments_per_floor: 2, p_first_floor: 1, p_numbering: 'through', p_start_no: 1, p_basement: false, p_roof: false }, tok.alfaAdmin);
+      check('0047: мастер объекта — 1 секция, 2 этажа, 4 квартиры (7 мест)', f7.ok && (await j(f7)) === 7, `статус ${f7.status}`);
+      const secs = await j(await rpc('pf_project_places', { p_project: p7?.id, p_parent: o7 }, tok.alfaAdmin));
+      check('0047: в объекте — секция с 4 квартирами', Array.isArray(secs) && secs.length === 1 && secs[0].apartment_count === 4);
+    } finally {
+      const rm = await rpc('pf_remove_place', { p_location: o7 }, tok.alfaAdmin);
+      check('0047: объект удалён вместе с местами', rm.ok);
+    }
+  }
+}
 console.log(fails ? `ИТОГ: FAIL (${fails})` : 'ИТОГ: PASS');
 process.exit(fails ? 1 : 0);

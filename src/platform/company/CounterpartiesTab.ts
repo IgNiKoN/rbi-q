@@ -119,7 +119,7 @@ export function CounterpartiesTab(props: { core: CoreApi; companyId: string }): 
             h('span', { className: 'cp-inn' }, c.inn ? 'ИНН ' + c.inn + (c.kpp ? ' · КПП ' + c.kpp : '') : 'ИНН не указан'),
             h('span', { className: 'cp-kind' }, kindLabels(c.kinds))))
         : h('div', { className: 'pj-empty pf-muted cp-empty', 'data-testid': 'cp-empty' },
-            rows.length ? 'Ничего не найдено.' : 'Контрагентов пока нет. Добавьте заказчика — потом его можно выбрать в карточке объекта.')));
+            rows.length ? 'Ничего не найдено.' : 'Контрагентов пока нет. Добавьте заказчика — потом его можно выбрать в карточке проекта.')));
 }
 
 export const COUNTERPARTIES_CSS = `

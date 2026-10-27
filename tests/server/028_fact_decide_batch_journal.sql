@@ -72,7 +72,7 @@ begin
   b1 := public.pf_brigade_save(ca, null, 'Иванов');
   reset role; perform pg_temp.as_user(ubadm);
   pb := public.pf_create_project(cb, 'ЖК Беты');
-  secb := public.pf_add_location(pb, null, 'section', 'Секция Б');
+  secb := public.pf_add_location(pb, public.pf_add_location(pb, null, 'building', 'Корпус Б'), 'section', 'Секция Б');
   wtb := public.pf_vor_add_work_type(pb, 'Работа Беты', m2);
   impb := public.pf_vor_create_import(pb, 'бета.xlsx', repeat('b', 64), 'Лист');
   perform public.pf_vor_add_rows(impb, '[{"row_no": 12, "kind": "work", "name": "Работа Беты", "unit_text": "м2", "qty": 30}]');

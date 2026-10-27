@@ -7,6 +7,7 @@
  */
 import { createElement as h, useEffect, useState } from 'react';
 import { HeadSlotsContext } from './PageHead.ts';
+import { PageTabs } from '../../platform/ui/page.ts';
 import type { ReactElement, ReactNode } from 'react';
 import type { AccessEntry, AuthApi } from '../../platform/auth/auth.service.ts';
 import { PLATFORM_AUTH_CSS } from '../../platform/auth/LoginForm.ts';
@@ -101,12 +102,7 @@ function segLabel(label: string, short: string | undefined, count: number | null
     : [label, n];
 }
 
-/** P2-0046: вкладки раздела — подчёркиванием, обычными буквами (образец «Вкладки» дизайн-системы). */
-function PageTabs(props: { testId: string; items: { id: string; label: ReactNode[] }[]; active: string; onPick: (id: string) => void }): ReactElement {
-  return h('div', { className: 'pf-tabs', role: 'tablist', 'data-testid': props.testId },
-    props.items.map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': props.active === t.id, 'data-sub': t.id,
-      className: 'pf-tab' + (props.active === t.id ? ' pf-tab--active' : ''), onClick: () => props.onPick(t.id) }, ...t.label)));
-}
+// P2-0046 → P2-0047: вкладки раздела (PageTabs) — общая деталь дизайн-системы, src/platform/ui/page.ts.
 
 function accessLabel(entries: AccessEntry[]): string {
   if (!entries.length) return 'нет назначенных ролей';
@@ -242,7 +238,7 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
   const sm = mode === 'authed' && companies.length > 0 && summaryApi && !(k2 || fct || est || vor || dirs || inb);
   // Без входа и без доступа к компании — подсказка вместо данных (старая демо-таблица «Работы» больше не показывается).
   const hint = mode === 'authed'
-    ? 'Нет доступных объектов. Обратитесь к администратору компании.'
+    ? 'Нет доступных проектов. Обратитесь к администратору компании.'
     : auth
       ? 'Войдите, чтобы увидеть сводку, ВОР, факт и акты КС-2. Без входа доступен только разбор файла ВОР.'
       : 'Сервер не настроен — вход недоступен. Без входа доступен только разбор файла ВОР.';
@@ -305,15 +301,7 @@ export const PLANFACT_TABS_CSS = `
 .pf-seg-short{display:none}
 @media (max-width:760px){.pf-seg-full{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.pf-seg-short{display:inline}}
 .pf-seg-btn--active{background:var(--primary);color:var(--card-bg)}
-/* P2-0046: вкладки раздела — подчёркиванием, без «таблетки»; на телефоне прокручиваются вбок внутри строки */
-.pf-tabs{display:flex;flex-wrap:nowrap;gap:20px;border-bottom:1px solid var(--card-border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;min-width:0}
-.pf-tabs::-webkit-scrollbar{display:none}
-.pf-tab{font:inherit;font-size:14px;font-weight:500;color:var(--text-muted);background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 0 9px;min-height:44px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
-.pf-tab:hover{color:var(--text-main)}
-.pf-tab--active{color:var(--text-main);font-weight:600;border-bottom-color:var(--accent,var(--primary))}
-.pf-tab:focus-visible{outline:2px solid var(--accent,var(--primary));outline-offset:2px}
-.pf-tab-n{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--hover-bg,var(--card-border));color:var(--text-main);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
-@media (max-width:767.98px){.pf-tabs{gap:16px}}
+/* P2-0046: вкладки раздела — P2_PAGE_CSS (src/platform/ui/page.ts) */
 `;
 
 /** Стили входа перенесены в платформенный слой (LoginForm); имя сохранено для index.ts. */

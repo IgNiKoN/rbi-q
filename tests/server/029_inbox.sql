@@ -75,7 +75,7 @@ begin
   -- Архивный объект Альфы с записью, ждущей РП; объект Беты с записью, ждущей РП
   reset role; perform pg_temp.as_user(uadm);
   parch := public.pf_create_project(ca, 'ЖК Архив');
-  locar := public.pf_add_location(parch, null, 'section', 'Секция А');
+  locar := public.pf_add_location(parch, public.pf_add_location(parch, null, 'building', 'Корпус А'), 'section', 'Секция А');
   reset role; perform pg_temp.as_user(upto);
   wtar := public.pf_vor_add_work_type(parch, 'Работа архива', m2);
   impar := public.pf_vor_create_import(parch, 'архив.xlsx', repeat('c', 64), 'Лист');
@@ -89,7 +89,7 @@ begin
   perform public.pf_update_project(parch, 'ЖК Архив', null, true);
   reset role; perform pg_temp.as_user(ubpm);
   pb := public.pf_create_project(cb, 'ЖК Беты');
-  secb := public.pf_add_location(pb, null, 'section', 'Секция Б');
+  secb := public.pf_add_location(pb, public.pf_add_location(pb, null, 'building', 'Корпус Б'), 'section', 'Секция Б');
   brb := public.pf_brigade_save(cb, null, 'Бригада Беты');
   reset role;
   insert into core.role_assignments(company_id,user_id,role_id,project_id)

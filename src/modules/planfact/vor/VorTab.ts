@@ -224,7 +224,7 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
   }
 
   if (api && projects === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
-  if (api && projects && !projects.length) return h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'vor-no-projects' }, 'Нет доступных проектов. Проект создаётся в «Справочники → Объекты».');
+  if (api && projects && !projects.length) return h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'vor-no-projects' }, 'Нет доступных проектов. Проект создаётся в «Компания → Проекты».');
 
   if (api && opened) {
     const company = (projects || []).find((p) => p.id === projectId)?.company_id || '';
@@ -251,7 +251,7 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
 
   return h('div', { className: 'pj-tab vor-tab', 'data-testid': 'vor-tab' },
     picker,
-    api ? h('h3', { className: 'vor-sec' }, 'Загрузки объекта') : null,
+    api ? h('h3', { className: 'vor-sec' }, 'Загрузки проекта') : null,
     api ? h(ImportsList, { items: imports, canManage, busy: !!saving, onDelete: (i) => { void removeImport(i); }, onOpen: (i) => setOpenId(i.id) }) : null,
     api && imports && imports.some((i) => i.status === 'confirmed')
       ? registry

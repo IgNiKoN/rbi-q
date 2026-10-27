@@ -40,7 +40,7 @@ export function Attention(props: { api: SummaryApi; p: SummaryProject; links?: S
       detail: 'Не входят в готовность по деньгам', action: link('estimate', 'Открыть смету'),
       total: c.unpriced_rows, rows: a.unpriced.map((u) => `${u.number ? `${u.number} ` : ''}${u.name} — ${fmtQty(u.qty)} ${u.unit || ''}`) });
     if (c.stale_positions) items.push({ id: 'stale', status: 'yellow', title: `Позиций без факта больше ${a.stale_days} дней: ${c.stale_positions}`,
-      detail: 'Объект начат, а по этим работам выполнения нет', action: link('fact', 'Открыть факт'),
+      detail: 'Проект начат, а по этим работам выполнения нет', action: link('fact', 'Открыть факт'),
       total: c.stale_positions, rows: a.stale.map((s) => `${s.work_name} · ${s.location_path} — ${fmtQty(s.fact_qty)} из ${fmtQty(s.plan_qty)} ${s.unit}, ${s.idle_days} дн. без факта`) });
     if (c.pending_entries) items.push({ id: 'pending', status: 'yellow', title: `Факт ждёт подтверждения — записей: ${c.pending_entries}`,
       detail: 'Пока не подтверждён, в «сделано» не входит', action: link('fact', 'Подтвердить') });
@@ -66,7 +66,7 @@ export function Attention(props: { api: SummaryApi; p: SummaryProject; links?: S
       h('h2', { className: 'p2-chart__title' }, 'Полнота данных'),
       !done ? h('div', { className: 'pf-muted' }, error ? '—' : 'Загрузка…') : h('div', { className: 'at-full' },
         full('Строки ВОР с ценой в договорной КП', done.priced_pct, done.rows_total ? `${done.rows_priced} из ${done.rows_total}` : 'нет договорной КП', 'priced'),
-        full('Плановые даты объекта', done.dates_pct, done.dates_pct === 100 ? 'заданы' : 'не заданы', 'dates'),
+        full('Плановые даты проекта', done.dates_pct, done.dates_pct === 100 ? 'заданы' : 'не заданы', 'dates'),
         full('Позиции с местом ниже корпуса (секция, этаж, квартира)', done.placed_pct, `${done.positions_placed} из ${done.positions_total}`, 'placed'))));
 }
 

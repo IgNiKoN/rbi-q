@@ -10,7 +10,7 @@ import { CompanyScope } from '../CompanyScope.ts';
 import { ProjectsTab } from '../ProjectsTab.ts';
 import { PlanfactApp, routeFromHash, ROUTE_EVENT } from '../../../modules/planfact/PlanfactApp.ts';
 import { UnitsTab } from '../UnitsTab.ts';
-import type { CompanyAccess, ProjectItem, ProjectsApi, UnitItem } from '../../core/projects.service.ts';
+import type { CompanyAccess, ProjectCard, ProjectItem, ProjectsApi, UnitItem } from '../../core/projects.service.ts';
 import type { Result } from '../company.service.ts';
 import type { AuthApi } from '../../auth/auth.service.ts';
 import type { PlanfactDemo } from '../../../modules/planfact/model.ts';
@@ -60,68 +60,108 @@ export function fakeApi(opts: { fail?: string; access?: CompanyAccess[]; project
   return { api, calls };
 }
 
+/** P2-0047: «Компания → Проекты» — каталог с карточкой (pf_project_catalog / pf_save_project), права ядра без модулей. */
+const CARD = (p: ProjectItem): ProjectCard => ({ division_id: null, division_name: null, address: null, planned_start: null, planned_finish: null,
+  manager_user_id: null, manager_name: null, stage: 'construction', our_role: null, timezone: 'Europe/Moscow', country: 'RU',
+  object_count: 0, place_count: 0, places_led_by_quality: false, ...p });
+function catalogApi(opts: { fail?: string; projects?: ProjectItem[] } = {}) {
+  const calls: string[] = [];
+  let cards = (opts.projects || [P('p1', 'ЖК Тест', { code: 'T-1' })]).map(CARD);
+  const base = fakeApi(opts).api;
+  const api: ProjectsApi = { ...base,
+    async projectCatalog() { return cards; },
+    async listDivisions() { return []; },
+    async dicts() { return { stages: [{ code: 'design', name: 'Проектирование', sort_order: 1 }, { code: 'construction', name: 'Строительство', sort_order: 3 }], objectKinds: [], roles: [] }; },
+    async saveProject(_c, id, card) {
+      calls.push(`save:${cards.some((x) => x.id === id) ? id : 'new'}:${JSON.stringify(card)}`);
+      if (opts.fail) return { ok: false, message: opts.fail };
+      const archived = card.archived === undefined ? undefined : card.archived ? '2026-10-27T00:00:00Z' : null;
+      const { archived: _a, ...rest } = card;
+      cards = cards.some((x) => x.id === id)
+        ? cards.map((x) => (x.id !== id ? x : { ...x, ...rest, archived_at: archived === undefined ? x.archived_at : archived } as ProjectCard))
+        : [...cards, CARD({ ...P(id, card.name || ''), ...rest } as ProjectItem)];
+      return { ok: true, value: id };
+    } };
+  return { api, calls };
+}
+
 function mountTab(api: ProjectsApi, company: CompanyAccess) {
   const el = win.document.createElement('div'); win.document.body.appendChild(el);
   const root = createRoot(el as unknown as HTMLElement);
   flushSync(() => root.render(createElement(ProjectsTab, { api, company })));
   return el;
 }
+const openFirst = async (el: N) => { click(el.querySelector('[data-testid="p2-reg-open"]')); await tick(); };
 
-test('список проектов компании; код виден', async () => {
-  const el: N = mountTab(fakeApi().api, ACCESS_ADMIN); await tick();
-  assert.equal(el.querySelectorAll('[data-project-id]').length, 1);
-  assert.ok(el.textContent.includes('ЖК Тест') && el.textContent.includes('T-1'));
+test('список проектов компании; код и стадия видны', async () => {
+  const el: N = mountTab(catalogApi().api, ACCESS_ADMIN); await tick();
+  assert.equal(el.querySelectorAll('[data-testid="pj-registry"] [data-row]').length, 1);
+  assert.ok(el.textContent.includes('ЖК Тест') && el.textContent.includes('T-1') && el.textContent.includes('Строительство'));
 });
 
-test('создать проект: название и код уходят на сервер, проект появляется в списке', async () => {
-  const { api, calls } = fakeApi(); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
+test('создать проект: «+ Проект» → лист, название и код уходят на сервер с id приложения, открывается карточка', async () => {
+  const { api, calls } = catalogApi(); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
+  click(el.querySelector('[data-testid="pj-add"]')); await tick();
   const form: N = el.querySelector('[data-testid="pj-create"]');
   form.elements.namedItem('name').value = '  ЖК Новый '; form.elements.namedItem('code').value = 'N-2';
   submit(form); await tick();
-  assert.deepEqual(calls, ['create:ЖК Новый:N-2']);
-  assert.equal(el.querySelectorAll('[data-project-id]').length, 2);
-  assert.ok(el.querySelector('[role="status"]'));
+  assert.deepEqual(calls, ['save:new:{"name":"ЖК Новый","code":"N-2","division_id":null,"stage":"construction"}']);
+  assert.ok(el.querySelector('[data-testid="pj-card"]'), 'открыта карточка нового проекта');
+  assert.ok(el.textContent.includes('ЖК Новый') && el.querySelector('[role="status"]'));
 });
 
 test('пустое название — ошибка, на сервер не уходит', async () => {
-  const { api, calls } = fakeApi(); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
+  const { api, calls } = catalogApi(); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
+  click(el.querySelector('[data-testid="pj-add"]')); await tick();
   submit(el.querySelector('[data-testid="pj-create"]')); await tick();
   assert.deepEqual(calls, []);
   assert.ok(el.querySelector('[role="alert"]').textContent.includes('название'));
 });
 
-test('переименование проекта', async () => {
-  const { api, calls } = fakeApi(); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
-  click(el.querySelector('[data-testid="pj-rename"]')); await tick();
-  const form: N = el.querySelector('.pj-row--edit');
-  form.elements.namedItem('name').value = 'ЖК Тест 2'; form.elements.namedItem('code').value = 'T-1';
+test('правка карточки: «Изменить» → лист со всеми полями, сохраняется вся карточка', async () => {
+  const { api, calls } = catalogApi(); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
+  await openFirst(el);
+  click(el.querySelector('[data-testid="pj-edit"]')); await tick();
+  const form: N = el.querySelector('[data-testid="pj-edit-form"]');
+  form.elements.namedItem('name').value = 'ЖК Тест 2'; form.elements.namedItem('address').value = 'Москва'; form.elements.namedItem('country').value = 'ru';
   submit(form); await tick();
-  assert.deepEqual(calls, ['update:p1:ЖК Тест 2:T-1:null']);
-  assert.ok(el.textContent.includes('ЖК Тест 2'));
+  assert.equal(calls.length, 1);
+  const sent = JSON.parse(calls[0].replace('save:p1:', ''));
+  assert.equal(sent.name, 'ЖК Тест 2'); assert.equal(sent.address, 'Москва'); assert.equal(sent.country, 'RU'); assert.equal(sent.timezone, 'Europe/Moscow');
+  assert.ok(!el.querySelector('[data-testid="pj-edit-sheet"]'), 'лист закрыт');
+  assert.equal(el.querySelector('[data-testid="pj-fields"] [data-field="address"] b').textContent, 'Москва');
 });
 
-test('архив: проект уходит из списка, «Показать архив» возвращает его; из архива можно вернуть', async () => {
-  const { api, calls } = fakeApi(); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
-  click(el.querySelector('[data-testid="pj-archive"]')); await tick();
-  assert.deepEqual(calls, ['update:p1:ЖК Тест:T-1:true']);
-  assert.equal(el.querySelectorAll('[data-project-id]').length, 0);
-  assert.ok(el.querySelector('[data-testid="pj-empty"]'));
-  click(el.querySelector('.pj-toggle')); await tick();
-  assert.ok(el.textContent.includes('в архиве'));
-  click(el.querySelector('[data-testid="pj-archive"]')); await tick();
-  assert.equal(calls[1], 'update:p1:ЖК Тест:T-1:false');
+test('архив: из «⋯» карточки; в списке проекта нет, «Показать архив» в «⋯» возвращает его', async () => {
+  const { api, calls } = catalogApi(); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
+  await openFirst(el);
+  click(el.querySelector('[data-testid="pj-card-more"]')); await tick();
+  click(el.querySelector('[data-testid="pj-card-more-menu"] [data-item="archive"]')); await tick();
+  assert.deepEqual(calls, ['save:p1:{"archived":true}']);
+  click(el.querySelector('[data-testid="pj-back"]')); await tick();
+  assert.equal(el.querySelectorAll('[data-testid="pj-registry"] [data-row]').length, 0);
+  click(el.querySelector('[data-testid="pj-more"]')); await tick();
+  click(el.querySelector('[data-testid="pj-more-menu"] [data-item="archive"]')); await tick();
+  assert.ok(el.textContent.includes('Проекты в архиве'));
+  await openFirst(el);
+  click(el.querySelector('[data-testid="pj-card-more"]')); await tick();
+  click(el.querySelector('[data-testid="pj-card-more-menu"] [data-item="archive"]')); await tick();
+  assert.equal(calls[1], 'save:p1:{"archived":false}');
 });
 
-test('без права — только чтение: нет формы создания и кнопок правки', async () => {
-  const { api } = fakeApi({ projects: [P('p1', 'ЖК Тест', { can_manage: false })] });
+test('без права — только чтение: нет «+ Проект», «Изменить» и «⋯» карточки', async () => {
+  const { api } = catalogApi({ projects: [P('p1', 'ЖК Тест', { can_manage: false })] });
   const el: N = mountTab(api, ACCESS_READ); await tick();
-  assert.ok(el.querySelector('[data-project-id]'));
-  assert.ok(!el.querySelector('[data-testid="pj-create"]'));
-  assert.ok(!el.querySelector('[data-testid="pj-rename"]') && !el.querySelector('[data-testid="pj-archive"]'));
+  assert.ok(el.querySelector('[data-testid="pj-registry"] [data-row]'));
+  assert.ok(!el.querySelector('[data-testid="pj-add"]'));
+  await openFirst(el);
+  assert.ok(el.querySelector('[data-testid="pj-card"]'));
+  assert.ok(!el.querySelector('[data-testid="pj-edit"]') && !el.querySelector('[data-testid="pj-card-more"]'));
 });
 
 test('отказ сервера показан текстом сервера', async () => {
-  const { api } = fakeApi({ fail: 'Нет права управлять проектами' }); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
+  const { api } = catalogApi({ fail: 'Нет права управлять проектами' }); const el: N = mountTab(api, ACCESS_ADMIN); await tick();
+  click(el.querySelector('[data-testid="pj-add"]')); await tick();
   const form: N = el.querySelector('[data-testid="pj-create"]');
   form.elements.namedItem('name').value = 'X'; submit(form); await tick();
   assert.equal(el.querySelector('[role="alert"]').textContent, 'Нет права управлять проектами');

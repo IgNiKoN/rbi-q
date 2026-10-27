@@ -1,0 +1,872 @@
+<meta charset="utf-8">
+<title>Проекты: сейчас и предлагаю</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Раскладка: шапка с переключателями → пара «сейчас / предлагаю» (телефон — две колонки, планшет и ПК — друг под другом) → что меняется. */
+:root {
+  --bg: #eef0f2;
+  --surface: #ffffff;
+  --ink: #17212b;
+  --muted: #5f6b76;
+  --line: rgba(28, 43, 57, 0.14);
+  --accent: #1c2b39;
+  --accent-ink: #ffffff;
+  --gold: #a87c3e;
+  --now: #8a5a2b;
+  --new: #23704a;
+  --font: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Arial Narrow', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11181f; --surface: #1a242e; --ink: #e8edf1; --muted: #9aa7b2; --line: rgba(232, 237, 241, 0.14);
+    --accent: #d8bd91; --accent-ink: #11181f; --gold: #d8bd91; --now: #e0a46a; --new: #6fcf97; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11181f; --surface: #1a242e; --ink: #e8edf1; --muted: #9aa7b2; --line: rgba(232, 237, 241, 0.14);
+  --accent: #d8bd91; --accent-ink: #11181f; --gold: #d8bd91; --now: #e0a46a; --new: #6fcf97; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 4vw, 32px); line-height: 1.15; margin: 0; text-wrap: balance; }
+.lead { margin: 6px 0 0; color: var(--muted); max-width: 65ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button {
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--muted); background: none; border: 0; border-radius: 7px;
+  padding: 8px 14px; min-height: 40px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.seg-label { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin-right: 6px; }
+.ctl { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+.pair { display: grid; gap: 20px; }
+.pair.phone { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.pair.wide { grid-template-columns: 1fr; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.col-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tag { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.tag.now { color: var(--now); }
+.tag.new { color: var(--new); }
+.col-head b { font-weight: 600; }
+.frames { display: flex; flex-direction: column; gap: 14px; }
+.pair.phone .frames { max-width: 400px; }
+.frame-cap { font-size: 13px; color: var(--muted); margin-top: -4px; }
+.shot { position: relative; width: 100%; max-width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #f4f4f4; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); }
+.shot img { display: block; width: 100%; height: auto; }
+.device { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+.notes { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; }
+.notes h2 { font-size: 17px; font-weight: 600; margin: 0 0 8px; }
+.notes ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 75ch; }
+.foot { color: var(--muted); font-size: 13px; max-width: 75ch; }
+
+/* ===== Макет приложения (светлая тема RBI v3, одна картинка — без переключения темы) ===== */
+.m {
+  --g: #1c2b39; --g2: #273949; --gold: #c49a5f; --paper: #f4f4f4; --card: #ffffff; --ink: #161616; --mut: #6f6f6f;
+  --ln: rgba(28, 43, 57, 0.12); --ok: #24a148; --okbg: #e3f4e8; --warn: #9a6b1f; --warnbg: #f7ecd9; --bad: #b5452b; --badbg: #f8e1da;
+  --info: #2a6f9e; --infobg: #e1edf6; --fact: #2a6f9e;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: var(--ink); background: var(--paper);
+  font-size: 14px; line-height: 1.35; position: relative; overflow: hidden; display: flex;
+}
+.m * { box-sizing: border-box; }
+.m .tnum, .m td.n, .m .num { font-variant-numeric: tabular-nums; }
+.m .main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.m .content { flex: 1 1 auto; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.m .content > * { flex-shrink: 0; }
+.m .top { height: 56px; flex: 0 0 auto; background: var(--card); border-bottom: 1px solid var(--ln); display: flex; align-items: center; gap: 10px; padding: 0 16px; }
+.m .burger { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--ln); display: grid; place-items: center; }
+.m .burger i { width: 16px; height: 2px; background: var(--g); box-shadow: 0 -5px 0 var(--g), 0 5px 0 var(--g); display: block; }
+.m .proj { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--ln); font-weight: 600; font-size: 14px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.m .proj small { color: var(--mut); font-weight: 500; }
+.m .proj::after { content: ''; width: 7px; height: 7px; border-right: 2px solid var(--mut); border-bottom: 2px solid var(--mut); transform: rotate(45deg) translateY(-2px); margin-left: 2px; }
+.m .crumbs { color: var(--mut); font-size: 13px; }
+.m .crumbs b { color: var(--ink); font-weight: 600; }
+.m .grow { flex: 1 1 auto; }
+.m .ava { width: 32px; height: 32px; border-radius: 50%; background: var(--g); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.m .ph { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.m .ph h3 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.m .ph p { margin: 2px 0 0; color: var(--mut); font-size: 13px; }
+.m .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 1px solid var(--ln); background: var(--card); color: var(--g); white-space: nowrap; }
+.m .btn.pri { background: var(--g); color: #fff; border-color: var(--g); }
+.m .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.m .btn.ghost { background: none; border-color: transparent; color: var(--info); padding: 0 6px; }
+.m .tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--ln); padding: 0 16px; background: var(--card); flex: 0 0 auto; }
+.m .tabs.in { background: none; padding: 0; }
+.m .tabs span { padding: 12px 0 10px; font-size: 14px; font-weight: 500; color: var(--mut); border-bottom: 2px solid transparent; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.m .tabs span.on { color: var(--g); font-weight: 600; border-bottom-color: var(--gold); }
+.m .cnt { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+.m .cnt.mut { background: var(--ln); color: var(--g); }
+.m .card { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; }
+.m .sec { font-size: 13px; font-weight: 600; color: var(--mut); margin: 0; }
+.m .pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.m .pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.m .pill.bad { color: var(--bad); background: var(--badbg); }
+.m .pill.warn { color: var(--warn); background: var(--warnbg); }
+.m .pill.ok { color: #1c7c3a; background: var(--okbg); }
+.m .pill.grey { color: #5c6670; background: #eceef0; }
+.m .pill.info { color: var(--info); background: var(--infobg); }
+.m .bar { position: relative; height: 8px; border-radius: 4px; background: #e7e9ec; overflow: visible; }
+.m .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--fact); }
+.m .bar i.ok { background: var(--ok); }
+.m .bar b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--g); border-radius: 1px; }
+.m .legend { display: flex; gap: 14px; font-size: 12px; color: var(--mut); }
+.m .legend span { display: inline-flex; align-items: center; gap: 5px; }
+.m .legend .lf { width: 12px; height: 6px; border-radius: 3px; background: var(--fact); }
+.m .legend .lp { width: 2px; height: 12px; background: var(--g); }
+
+/* внимание */
+.m .att { display: flex; flex-direction: column; }
+.m .att .it { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .att .it:first-child { border-top: 0; }
+.m .att .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.m .att .dot.bad { background: var(--bad); }
+.m .att .dot.warn { background: var(--gold); }
+.m .att .tx { flex: 1 1 auto; min-width: 0; }
+.m .att .tx b { display: block; font-weight: 600; font-size: 14px; }
+.m .att .tx span { color: var(--mut); font-size: 12.5px; }
+.m .att .go { color: var(--info); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.m .chev { width: 8px; height: 8px; border-right: 2px solid #9aa3ab; border-bottom: 2px solid #9aa3ab; transform: rotate(-45deg); flex: 0 0 auto; }
+.m .attg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.m .attg .it { border: 1px solid var(--ln); border-radius: 14px; background: var(--card); align-items: flex-start; }
+.m .attg .it .go { margin-top: 6px; display: inline-block; }
+
+/* плитки */
+.m .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.m .kpis.four { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.m .kpi { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; padding: 12px 14px; }
+.m .kpi span { color: var(--mut); font-size: 12.5px; display: block; }
+.m .kpi b { font-size: 20px; font-weight: 600; display: block; margin-top: 2px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.m .kpi small { color: var(--mut); font-size: 12px; }
+.m .kpi small.bad { color: var(--bad); font-weight: 600; }
+
+/* объект — карточка (телефон) */
+.m .obj { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.m .obj .hd { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.m .obj .hd b { font-weight: 600; font-size: 15px; }
+.m .obj .pct { display: flex; justify-content: space-between; font-size: 13px; color: var(--mut); }
+.m .obj .pct b { color: var(--ink); font-size: 15px; }
+.m .kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+.m .kv span { color: var(--mut); }
+.m .kv b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* таблица */
+.m table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.m th { text-align: left; font-size: 12px; font-weight: 600; color: var(--mut); padding: 10px 12px; border-bottom: 1px solid var(--ln); white-space: nowrap; }
+.m td { padding: 11px 12px; border-bottom: 1px solid var(--ln); vertical-align: middle; }
+.m tr:last-child td { border-bottom: 0; }
+.m th.n, .m td.n { text-align: right; white-space: nowrap; }
+.m td .sub { display: block; font-size: 12px; color: var(--mut); }
+.m td b { font-weight: 600; }
+.m tr.sel td { background: #eef4f9; }
+.m .barc { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.m .barc .bar { flex: 1 1 auto; }
+.m .barc em { font-style: normal; font-weight: 600; width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* нижняя панель телефона */
+.m .bnav { height: 65px; flex: 0 0 auto; background: var(--card); border-top: 1px solid var(--ln); display: flex; }
+.m .bnav span { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--mut); position: relative; }
+.m .bnav span i { width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 6px; display: block; opacity: 0.85; }
+.m .bnav span.on { color: var(--g); }
+.m .bnav span.on::after { content: ''; position: absolute; bottom: 6px; width: 18px; height: 2px; border-radius: 1px; background: var(--gold); }
+.m .bnav .cnt { position: absolute; top: 6px; left: calc(50% + 4px); }
+.m .bnav .dots { border: 0 !important; display: grid !important; place-items: center; font-size: 18px; line-height: 1; letter-spacing: 1px; font-style: normal; }
+
+/* узкая панель модулей (планшет, ПК) */
+.m .rail { width: 88px; flex: 0 0 auto; background: var(--card); border-right: 1px solid var(--ln); display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 12px 6px; }
+.m .rail span { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px; border-radius: 12px; font-size: 10px; font-weight: 600; color: var(--mut); text-align: center; line-height: 1.15; }
+.m .rail span i { width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 6px; display: block; opacity: 0.8; }
+.m .rail span.on { background: rgba(28, 43, 57, 0.06); color: var(--g); }
+.m .rail .sp { flex: 1 1 auto; }
+.m .nav2 { width: 220px; flex: 0 0 auto; background: var(--card); border-right: 1px solid var(--ln); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; }
+.m .nav2 .lb { font-size: 12px; font-weight: 600; color: var(--mut); padding: 0 10px 8px; }
+.m .nav2 span { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #3c4650; }
+.m .nav2 span i { width: 18px; height: 18px; border: 1.8px solid currentColor; border-radius: 5px; opacity: 0.7; }
+.m .nav2 span.on { background: rgba(28, 43, 57, 0.07); color: var(--g); font-weight: 600; }
+.m .nav2 span .cnt { margin-left: auto; }
+
+/* факт */
+.m .loc { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.m .loc .r1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.m .loc .r1 b { font-size: 16px; font-weight: 600; }
+.m .loc .r1 .lk { color: var(--info); font-weight: 600; font-size: 13px; }
+.m .loc .r2 { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--mut); }
+.m .loc .r2 .bar { flex: 1 1 auto; }
+.m .chips { display: flex; gap: 8px; flex-wrap: nowrap; overflow: hidden; }
+.m .chips span { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ln); background: var(--card); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; white-space: nowrap; color: #3c4650; }
+.m .chips span.on { background: var(--g); color: #fff; border-color: var(--g); }
+.m .chips span em { font-style: normal; color: inherit; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.m .rows .rw { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .rows .rw:first-child { border-top: 0; }
+.m .rows .rw .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.m .rows .rw .t b { font-weight: 600; font-size: 14.5px; }
+.m .rows .rw .t .ln { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--mut); }
+.m .rows .rw .t .ln .bar { flex: 1 1 auto; height: 6px; }
+.m .rows .rw .p { font-weight: 600; font-size: 15px; width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+.m .tree { width: 240px; flex: 0 0 auto; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--ln); background: var(--card); }
+.m .tree .b { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; font-weight: 600; font-size: 14px; }
+.m .tree .b em { margin-left: auto; font-style: normal; color: var(--mut); font-weight: 500; font-size: 12.5px; }
+.m .tree .f { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 26px; border-radius: 9px; font-size: 13.5px; color: #3c4650; }
+.m .tree .f.on { background: #eef4f9; color: var(--g); font-weight: 600; }
+.m .tree .f em { margin-left: auto; font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--mut); }
+.m .tree .f .d { width: 8px; height: 8px; border-radius: 50%; }
+.m .tree .tw { width: 8px; height: 8px; border-right: 2px solid #9aa3ab; border-bottom: 2px solid #9aa3ab; transform: rotate(45deg); margin: 0 2px; }
+.m .tree .tw.c { transform: rotate(-45deg); }
+
+/* лист снизу и панель справа */
+.m .dim { position: absolute; inset: 0; background: rgba(15, 22, 30, 0.42); }
+.m .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 18px 18px 0 0; padding: 10px 16px 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18); }
+.m .sheet .hdl { width: 40px; height: 4px; border-radius: 2px; background: #cfd4d9; align-self: center; }
+.m .sheet h4, .m .drawer h4 { margin: 0; font-size: 18px; font-weight: 600; }
+.m .sheet .sub, .m .drawer .sub { color: var(--mut); font-size: 13px; margin-top: 2px; }
+.m .fld { display: flex; flex-direction: column; gap: 6px; }
+.m .fld label { font-size: 13px; font-weight: 600; color: #3c4650; }
+.m .inp { height: 48px; border: 1.5px solid var(--ln); border-radius: 12px; padding: 0 14px; display: flex; align-items: center; font-size: 16px; background: #fff; }
+.m .inp.big { height: 56px; font-size: 22px; font-weight: 600; border-color: var(--g); }
+.m .inp.big small { margin-left: auto; font-size: 15px; font-weight: 500; color: var(--mut); }
+.m .inp.sel::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--mut); border-bottom: 2px solid var(--mut); transform: rotate(45deg) translateY(-3px); }
+.m .quick { display: flex; gap: 8px; }
+.m .quick span { height: 34px; padding: 0 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--ln); display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--g); }
+.m .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.m .btn.full { width: 100%; height: 50px; font-size: 16px; }
+.m .drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; background: var(--card); border-left: 1px solid var(--ln); box-shadow: -12px 0 30px rgba(0, 0, 0, 0.12); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.m .drawer .x { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--ln); display: grid; place-items: center; color: var(--mut); font-size: 18px; }
+.m .drawer .foot { margin-top: auto; display: flex; gap: 10px; }
+
+/* кс-2 */
+.m .ctx { display: flex; flex-direction: column; }
+.m .ctx .r { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--ln); font-size: 13.5px; }
+.m .ctx .r:first-child { border-top: 0; }
+.m .ctx .r > span:first-child { color: var(--mut); width: 64px; flex: 0 0 auto; }
+.m .ctx .r b { flex: 1 1 auto; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m .ctx.line { flex-direction: row; flex-wrap: wrap; gap: 6px 22px; padding: 12px 16px; font-size: 13.5px; }
+.m .ctx.line div span { color: var(--mut); }
+.m .ctx.line div b { font-weight: 600; }
+.m .ctx.line .lk { color: var(--info); font-weight: 600; }
+.m .acts .ac { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .acts .ac:first-child { border-top: 0; }
+.m .acts .ac .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .acts .ac .t b { font-weight: 600; font-size: 14.5px; }
+.m .acts .ac .t span { font-size: 12.5px; color: var(--mut); }
+.m .acts .ac .s { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.m .acts .ac .s b { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
+.m .toolbar { display: flex; align-items: center; gap: 10px; }
+.m .search { height: 40px; border: 1px solid var(--ln); border-radius: 10px; background: var(--card); display: flex; align-items: center; padding: 0 12px; color: var(--mut); font-size: 14px; width: 240px; }
+.m .pin { position: absolute; left: 16px; right: 16px; bottom: 77px; }
+.m .pin.two { display: flex; gap: 10px; }
+.m .pin.two .btn { flex: 1 1 0; }
+
+/* группа в списке */
+.m .grp { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f7f8f9; border-top: 1px solid var(--ln); font-size: 13px; }
+.m .grp:first-child { border-top: 0; border-radius: 14px 14px 0 0; }
+.m .grp b { font-weight: 600; }
+.m .grp em { font-style: normal; color: var(--mut); }
+.m tr.gr td { background: #f7f8f9; font-size: 13px; padding: 8px 12px; }
+.m .mini { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.m .mini span { font-size: 11.5px; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+.m .mini .bad { color: var(--bad); background: var(--badbg); }
+.m .mini .warn { color: var(--warn); background: var(--warnbg); }
+.m .mini .info { color: var(--info); background: var(--infobg); }
+.m .mini .ok { color: #1c7c3a; background: var(--okbg); }
+.m .mini .grey { color: #5c6670; background: #eceef0; }
+/* дела (входящие) */
+.m .todo .it { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .todo .it:first-child { border-top: 0; }
+.m .todo .num { min-width: 40px; height: 32px; padding: 0 8px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+.m .todo .num.bad { color: var(--bad); background: var(--badbg); }
+.m .todo .num.warn { color: var(--warn); background: var(--warnbg); }
+.m .todo .num.info { color: var(--info); background: var(--infobg); }
+.m .todo .num.grey { color: #5c6670; background: #eceef0; }
+.m .todo .tx { flex: 1 1 auto; min-width: 0; }
+.m .todo .tx b { display: block; font-weight: 600; font-size: 14.5px; }
+.m .todo .tx span { font-size: 12.5px; color: var(--mut); }
+.m .obh { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 14px 4px; }
+.m .obh b { font-size: 15px; font-weight: 600; }
+.m .obh span { font-size: 12.5px; color: var(--mut); }
+/* шаги-подсказка */
+.m .steps { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.m .steps.row { flex-direction: row; gap: 16px; }
+.m .steps .st { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: #3c4650; flex: 1 1 0; }
+.m .steps .st i { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--paper); border: 1px solid var(--ln); display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 12px; color: var(--g); }
+.m .steps .st.done i { background: var(--okbg); color: #1c7c3a; border-color: transparent; }
+.m .file { display: flex; align-items: center; gap: 12px; padding: 14px; }
+.m .file .ic { width: 40px; height: 48px; border-radius: 8px; background: #e3f0e8; color: #1c7c3a; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: 0 0 auto; }
+.m .file .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.m .file .t b { font-weight: 600; font-size: 15px; }
+.m .file .t span { font-size: 12.5px; color: var(--mut); }
+/* шахматка */
+.m .seg2 { display: inline-flex; border: 1px solid var(--ln); border-radius: 10px; padding: 3px; background: var(--card); }
+.m .seg2 span { padding: 6px 12px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--mut); white-space: nowrap; }
+.m .seg2 span.on { background: var(--g); color: #fff; }
+.m .mx { border-collapse: separate; border-spacing: 3px; font-size: 12px; }
+.m .mx th { padding: 4px 6px; font-size: 11.5px; font-weight: 600; color: var(--mut); border: 0; white-space: nowrap; text-align: center; }
+.m .mx th.fl, .m .mx td.fl { text-align: left; position: sticky; left: 0; background: var(--card); font-weight: 600; color: var(--ink); font-size: 12.5px; padding-right: 10px; }
+.m .mx td { padding: 0; border: 0; }
+.m .mx td.c { width: 62px; height: 34px; border-radius: 6px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.m .c.done { background: #cfead7; color: #1c6a33; }
+.m .c.prog { background: #f3e2c4; color: #7a5419; }
+.m .c.pend { background: #d6e6f3; color: #1f5a85; }
+.m .c.none { background: #eceef0; color: #8a939b; }
+.m .c.rej { background: #f4d3ca; color: #9a3a23; }
+.m .lg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: #3c4650; }
+.m .lg span { display: inline-flex; align-items: center; gap: 6px; }
+.m .lg i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.m .floors .fr { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--ln); }
+.m .floors .fr:first-child { border-top: 0; }
+.m .floors .fr b { width: 62px; font-weight: 600; font-size: 14px; flex: 0 0 auto; }
+.m .floors .fr .cells { display: flex; gap: 3px; flex: 1 1 auto; }
+.m .floors .fr .cells i { flex: 1 1 0; height: 22px; border-radius: 4px; }
+.m .floors .fr em { font-style: normal; font-size: 12.5px; font-weight: 600; width: 58px; text-align: right; font-variant-numeric: tabular-nums; }
+/* ждёт РП */
+.m .dec .it { padding: 12px 14px; border-top: 1px solid var(--ln); display: flex; flex-direction: column; gap: 8px; }
+.m .dec .it:first-child { border-top: 0; }
+.m .dec .r1 { display: flex; justify-content: space-between; gap: 10px; }
+.m .dec .r1 b { font-weight: 600; font-size: 14.5px; }
+.m .dec .r1 span { font-size: 12.5px; color: var(--mut); }
+.m .dec .q { font-weight: 600; font-size: 15px; white-space: nowrap; text-align: right; }
+.m .dec .q small { display: block; font-size: 12px; font-weight: 500; color: var(--mut); }
+.m .dec .q.over small { color: var(--bad); font-weight: 600; }
+.m .dec .acts2 { display: flex; gap: 8px; }
+.m .dec .acts2 .btn { flex: 1 1 0; height: 40px; }
+.m .btn.ok { background: #1c7c3a; border-color: #1c7c3a; color: #fff; }
+.m .btn.no { color: var(--bad); }
+.m .selbar { position: absolute; left: 0; right: 0; bottom: 0; background: var(--g); color: #fff; display: flex; align-items: center; gap: 12px; padding: 12px 24px; }
+.m .selbar b { font-weight: 600; }
+.m .selbar .btn { height: 36px; }
+.m .cb { width: 18px; height: 18px; border: 1.5px solid #9aa3ab; border-radius: 4px; display: inline-block; vertical-align: middle; }
+.m .cb.on { background: var(--g); border-color: var(--g); box-shadow: inset 0 0 0 3px #fff; }
+.m td.over { color: var(--bad); font-weight: 600; }
+/* журнал */
+.m .day { padding: 8px 14px; background: #f7f8f9; font-size: 12.5px; font-weight: 600; color: var(--mut); border-top: 1px solid var(--ln); }
+.m .day:first-child { border-top: 0; border-radius: 14px 14px 0 0; }
+.m .jr { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--ln); }
+.m .jr .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .jr .t b { font-weight: 600; font-size: 14px; }
+.m .jr .t span { font-size: 12.5px; color: var(--mut); }
+.m .jr .s { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.m .jr .s b { font-weight: 600; font-variant-numeric: tabular-nums; }
+/* цены */
+.m .pr { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .pr:first-child { border-top: 0; }
+.m .pr .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .pr .t b { font-weight: 600; font-size: 14.5px; }
+.m .pr .t span { font-size: 12.5px; color: var(--mut); }
+.m .pr .s { text-align: right; font-variant-numeric: tabular-nums; }
+.m .pr .s b { display: block; font-weight: 600; font-size: 15px; }
+.m .pr .s span { font-size: 12px; color: var(--mut); }
+.m .tog { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #3c4650; white-space: nowrap; }
+.m .tog i { width: 34px; height: 20px; border-radius: 10px; background: #cfd4d9; position: relative; }
+.m .tog i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.m .note { font-size: 12.5px; color: var(--mut); background: #f7f8f9; border: 1px dashed var(--ln); border-radius: 10px; padding: 8px 12px; }
+.m .pin .btn { width: 100%; height: 50px; font-size: 16px; box-shadow: 0 6px 18px rgba(28, 43, 57, 0.25); }
+</style>
+<style>
+/* Качество и СК 2.0 — дополнительные куски макета */
+.m .sev { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.m .sev.b1 { color: #2a6f9e; background: #e1edf6; }
+.m .sev.b2 { color: #9a6b1f; background: #f7ecd9; }
+.m .sev.b3 { color: #b5452b; background: #f8e1da; }
+.m .ck { display: flex; flex-direction: column; }
+.m .ck .q { display: flex; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--ln); align-items: flex-start; }
+.m .ck .q:first-child { border-top: 0; }
+.m .ck .q .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.m .ck .q .t b { font-weight: 600; font-size: 14px; line-height: 1.3; }
+.m .ck .q .t span { font-size: 12px; color: var(--mut); }
+.m .ans { display: flex; gap: 8px; flex: 0 0 auto; }
+.m .ans span { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--ln); display: grid; place-items: center; font-size: 18px; font-weight: 700; color: var(--g); background: #fff; }
+.m .ans .y { color: #1c7c3a; border-color: #b9dfc5; }
+.m .ans .n { color: var(--bad); border-color: #efc2b6; }
+.m .ans.wide span { width: auto; padding: 0 12px; font-size: 13px; gap: 6px; display: inline-flex; align-items: center; }
+.m .where { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; }
+.m .where div { padding: 10px 14px; border-left: 1px solid var(--ln); display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.m .where div:first-child { border-left: 0; }
+.m .where div span { color: var(--mut); font-size: 12px; }
+.m .where div b { font-weight: 600; }
+.m .where div b.empty { color: var(--bad); font-weight: 500; }
+.m .wlist div { display: flex; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--ln); font-size: 14px; }
+.m .wlist div:first-child { border-top: 0; }
+.m .wlist span { color: var(--mut); }
+.m .wlist b { font-weight: 600; }
+.m .wlist b.empty { color: var(--bad); font-weight: 500; }
+.m .acc { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #f7f8f9; border-top: 1px solid var(--ln); font-weight: 600; font-size: 14px; }
+.m .acc:first-child { border-top: 0; border-radius: 14px 14px 0 0; }
+.m .acc em { margin-left: auto; font-style: normal; font-size: 12.5px; font-weight: 600; color: var(--mut); }
+.m .plan { position: relative; overflow: hidden; border-radius: 0 0 14px 14px; background-repeat: no-repeat; }
+.m .pin2 { position: absolute; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.m .slots { display: flex; gap: 8px; overflow: hidden; }
+.m .slots span { flex: 0 0 auto; padding: 6px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 600; background: var(--okbg); color: #1c7c3a; }
+.m .slots span.busy { background: var(--warnbg); color: var(--warn); }
+.m .kb { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.m .kb .colh { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; padding: 4px 2px 8px; }
+.m .kc { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--ln); }
+.m .kc:first-child { border-top: 0; }
+.m .kc .r { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.m .kc b { font-weight: 600; font-size: 14px; }
+.m .kc span { font-size: 12.5px; color: var(--mut); }
+.m .grp2 { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .grp2:first-child { border-top: 0; }
+.m .grp2 b { font-weight: 600; font-size: 14px; flex: 1 1 auto; }
+.m .grp2 .n { font-weight: 600; font-variant-numeric: tabular-nums; }
+.m .grp2 .od { color: var(--bad); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.m .task { display: flex; gap: 10px; padding: 11px 14px; border-top: 1px solid var(--ln); align-items: flex-start; }
+.m .task:first-child { border-top: 0; }
+.m .task .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .task .t b { font-weight: 600; font-size: 14px; }
+.m .task .t span { font-size: 12.5px; color: var(--mut); }
+.m .task .d { font-size: 12.5px; font-weight: 600; white-space: nowrap; color: var(--bad); text-align: right; }
+.m .tp { display: inline-flex; height: 22px; align-items: center; padding: 0 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; background: #eceef0; color: #3c4650; white-space: nowrap; }
+.m .tp.et { background: #e1edf6; color: #2a6f9e; }
+.m .tp.au { background: #eceef0; color: #3c4650; }
+.m .tp.ws { background: #e3f4e8; color: #1c7c3a; }
+.m .tp.cr { background: #f8e1da; color: #b5452b; }
+.m .empty-st { padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.m .empty-st .ic { width: 52px; height: 52px; border-radius: 14px; background: var(--paper); display: grid; place-items: center; font-size: 24px; }
+.m .empty-st b { font-size: 16px; font-weight: 600; }
+.m .empty-st p { margin: 0; font-size: 13.5px; color: var(--mut); max-width: 420px; line-height: 1.45; }
+.m .bars .br { display: grid; grid-template-columns: 52px 1fr 36px; gap: 10px; align-items: center; font-size: 13px; padding: 4px 0; }
+.m .bars .br i { height: 10px; border-radius: 5px; background: #e7e9ec; position: relative; display: block; overflow: hidden; }
+.m .bars .br i b { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--bad); }
+.m .bars .br em { font-style: normal; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.m .floorrow { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--ln); font-size: 13.5px; }
+.m .floorrow:first-child { border-top: 0; }
+.m .floorrow b { width: 70px; font-weight: 600; }
+.m .floorrow span { color: var(--mut); }
+.m .lib { display: flex; flex-direction: column; }
+.m .lib div { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .lib div:first-child { border-top: 0; }
+.m .lib div.on { background: #eef4f9; }
+.m .lib b { font-weight: 600; font-size: 14px; flex: 1 1 auto; min-width: 0; }
+.m .lib span { font-size: 12.5px; color: var(--mut); white-space: nowrap; }
+.m .tag2 { display: inline-flex; height: 20px; align-items: center; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #f7ecd9; color: #9a6b1f; margin-left: 6px; vertical-align: middle; }
+.m .content > .tabs.in { overflow: hidden; flex-wrap: nowrap; }
+.m .content > .tabs.in span { white-space: nowrap; }
+.m .acc .chev { transform: rotate(45deg); margin: -3px 2px 0 auto; }
+.m .acc em + .chev { margin-left: 12px; }
+.m .avatar { width: 56px; height: 56px; border-radius: 14px; background: #c49a5f; color: #fff; display: grid; place-items: center; font-size: 24px; font-weight: 700; flex: 0 0 auto; }
+.m .ph2 { border-radius: 10px; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; color: #fff; }
+.m .ph2.ok { background: linear-gradient(135deg, #6f8f6f, #44624a); }
+.m .ph2.bad { background: linear-gradient(135deg, #a07a68, #6d4a3c); }
+.m .ph2.doc { background: #3a3f45; color: #c9ced3; }
+.m .mrow { display: flex; flex-direction: column; gap: 3px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .mrow:first-child { border-top: 0; }
+.m .mrow b { font-weight: 600; font-size: 14px; }
+.m .mrow span { font-size: 12.5px; color: var(--mut); }
+.m .twocol { display: grid; gap: 16px; align-items: start; }
+.shot.stack { background: #f4f4f4; }
+.shot .cut { padding: 10px 12px; text-align: center; font-size: 12.5px; color: var(--muted); background: repeating-linear-gradient(135deg, #eceef0 0 8px, #f6f7f8 8px 16px); border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); }
+.m .nb { display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #e8590c; color: #fff; font: 700 10.5px/1 'IBM Plex Sans', system-ui, sans-serif; margin-left: 5px; vertical-align: middle; font-style: normal; flex: 0 0 auto; letter-spacing: 0; text-transform: none; }
+.panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.pbox { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pbox .shot { max-width: 380px; }
+.notes .hint { color: var(--muted); font-size: 14px; margin: 4px 0 10px; }
+.notes .nlist { margin: 0 0 12px; }
+.nbp { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: #e8590c; color: #fff; font-weight: 700; font-size: 12px; font-style: normal; }
+.itag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; font-size: 11.5px; font-weight: 600; vertical-align: 1px; }
+.itag.new { background: #e7f0f8; color: #2a6f9e; }
+.itag.ask { background: #f7ecd9; color: #8a5d17; }
+table.items { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+table.items th { text-align: left; font-size: 12.5px; color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+table.items td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.items td.no { width: 36px; }
+.mk { display: flex; flex-direction: column; gap: 6px; min-width: 230px; }
+.mk-b { display: flex; gap: 4px; flex-wrap: wrap; }
+.mk-b button { font: inherit; font-size: 12.5px; padding: 5px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 32px; }
+.mk-b button[data-mark="like"][aria-pressed="true"] { background: #1c7c3a; border-color: #1c7c3a; color: #fff; }
+.mk-b button[data-mark="dislike"][aria-pressed="true"] { background: #b5452b; border-color: #b5452b; color: #fff; }
+.mk-b button[data-mark="keep"][aria-pressed="true"] { background: #5f6b76; border-color: #5f6b76; color: #fff; }
+.mk-b button:disabled { opacity: .55; cursor: default; }
+.mk input { font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-height: 32px; width: 100%; box-sizing: border-box; }
+.screenmark { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 4px; }
+.screenmark .mk { flex: 1; }
+@media (max-width: 760px) {
+  table.items, table.items tbody, table.items tr, table.items td { display: block; width: auto; }
+  table.items thead { display: none; }
+  table.items tr { border-bottom: 1px solid var(--line); padding: 8px 0; }
+  table.items td { border: 0; padding: 4px 12px; }
+  table.items td[data-h]::before { content: attr(data-h); display: block; font-size: 12px; color: var(--muted); }
+  .mk { min-width: 0; }
+}
+.m th { white-space: normal; }
+.m .ph { flex-wrap: wrap; }
+.m .pill.info { background: #e1edf6; color: #2a6f9e; }
+.m .pill.mut { background: #eceef0; color: #5f6b76; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>P2-0047 · Компания → Проекты: как сейчас и как предлагаю</h1>
+    <p class="lead">Этап 1 блока «Подразделение → Проект → Объекты → места». Слева — нынешние экраны «Компания → Объекты» и «Структура проекта» на стенде (подставные данные), справа — макеты. Это картинки, не рабочие экраны: код пишется после вашего «да».</p>
+    <p class="lead"><b>Правила:</b> ничего не исчезает — под каждым экраном таблица всех элементов нынешнего экрана: где каждый в макете и что произойдёт при нажатии; оранжевые номера на макете совпадают со строками. Новое помечено «новое — только с вашего да». На экране одна главная кнопка, остальное — в меню ⋯. Внизу — из каких деталей дизайна собран экран: какие уже есть, какие новые (каждая новая появится на странице «Образцы»). В строках можно ставить отметки. <span id="mk-total"></span></p>
+  </header>
+
+  <div class="controls">
+    <div class="ctl"><span class="seg-label">Экран</span>
+      <div class="seg" id="seg-screen">
+        <button type="button" id="s-list" data-v="list">Проекты</button>
+        <button type="button" id="s-card" data-v="card">Карточка проекта</button>
+        <button type="button" id="s-tree" data-v="tree">Объекты и места</button>
+      </div>
+    </div>
+    <div class="ctl" id="ctl-sub" hidden><div class="seg" id="seg-sub"></div><div class="seg" id="seg-screen2"></div></div>
+    <div class="ctl"><span class="seg-label">Размер</span>
+      <div class="seg" id="seg-size">
+        <button type="button" id="z-phone" data-v="phone">Телефон</button>
+        <button type="button" id="z-tablet" data-v="tablet">Планшет</button>
+        <button type="button" id="z-pc" data-v="pc">ПК</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="pair" id="pair" aria-live="polite"></section>
+  <section class="notes" id="notes"></section>
+  <section class="notes">
+    <h2>Что получится в конце блока</h2>
+    <ul>
+      <li>«Компания → Проекты»: проекты по подразделениям, у проекта карточка со стадией; внутри — объекты (корпус, паркинг, сети, благоустройство), под ними секции, этажи, квартиры со строительным номером и номером БТИ.</li>
+      <li>Во всей Платформе и План/Факте ЖК называется «Проект», здание — «Объект».</li>
+      <li>Места проектов, которые ведёт Качество (RBI), — только просмотр, как сейчас; правка из Платформы — отдельный блок позже.</li>
+      <li>Новые детали дизайна (справочник, карточка записи, дерево мест, метка стадии) — на странице «Образцы»; ими же потом пользуются другие экраны.</li>
+    </ul>
+  </section>
+  <p class="foot">Снимки «как сейчас» — стенд с подставными данными (основная ветка, 27.10.2026): телефон 375 × 667, планшет 1024 × 768, ПК 1280 × 739. Боевое приложение не открывалось. В трёх длинных снимках середина пропущена (отмечено полосой).</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var SIZES = { phone: [375, 667], tablet: [1024, 768], pc: [1280, 800] };
+  var SIZE_NAME = { phone: 'телефон 375 × 667', tablet: 'планшет 1024 × 768', pc: 'ПК 1280 × 800' };
+
+  /* ---------- оболочка макета ---------- */
+  var MOD = {
+    q: { name: 'Качество', nav: [['Осмотр'], ['Инженер'], ['Аналитика'], ['База знаний'], ['Настройки']], phoneNav: [['Осмотр'], ['Инженер'], ['Аналитика'], ['БЗ'], ['Настройки']] },
+    sk: { name: 'Стройконтроль 2.0', nav: [['Планы'], ['Замечания', 3], ['Приёмка'], ['Передача'], ['Сроки'], ['Кабинет']], phoneNav: [['Планы'], ['Замечания', 3], ['Приёмка'], ['Передача'], ['Ещё']] }
+  };
+  function bnav(mod, active) {
+    var items = MOD[mod].phoneNav;
+    var on = items.some(function (x) { return x[0] === active; }) ? active : 'Ещё';
+    return '<div class="bnav">' + items.map(function (x) {
+      var icon = x[0] === 'Ещё' ? '<i class="dots">···</i>' : '<i></i>';
+      return '<span' + (x[0] === on ? ' class="on"' : '') + '>' + icon + (x[1] ? '<em class="cnt">' + x[1] + '</em>' : '') + x[0] + '</span>';
+    }).join('') + '</div>';
+  }
+  function phoneTop(mod, ctx) {
+    return '<div class="top"><div class="burger"><i></i></div><b style="font-size:15px;font-weight:600">' + MOD[mod].name + '</b><div class="grow"></div>' + (ctx ? '<div class="proj" style="max-width:150px">' + ctx + '</div>' : '<div class="ava">ИК</div>') + '</div>';
+  }
+  function rail(mod) {
+    return '<div class="rail"><span' + (mod === 'q' ? ' class="on"' : '') + '><i></i>Качество</span><span><i></i>Стройконтроль</span><span' + (mod === 'sk' ? ' class="on"' : '') + '><i></i>СК 2.0</span><span><i></i>План/Факт</span><div class="sp"></div><span><i></i>Настройки</span></div>';
+  }
+  function deskTop(mod, crumb, ctx) {
+    return '<div class="top"><div class="crumbs">' + MOD[mod].name + ' › <b>' + crumb + '</b></div>' + (ctx ? '<div class="proj">' + ctx + '</div>' : '') + '<div class="grow"></div><div class="ava">ИК</div></div>';
+  }
+  function topTabs(mod, active) {
+    return '<div class="tabs">' + MOD[mod].nav.filter(function (t) { return t[0] !== 'Настройки'; }).map(function (t) {
+      return '<span' + (t[0] === active ? ' class="on"' : '') + '>' + t[0] + (t[1] ? '<em class="cnt">' + t[1] + '</em>' : '') + '</span>';
+    }).join('') + '</div>';
+  }
+  function nav2(mod, active) {
+    return '<div class="nav2"><div class="lb">' + MOD[mod].name + '</div>' + MOD[mod].nav.filter(function (t) { return t[0] !== 'Настройки'; }).map(function (t) {
+      return '<span' + (t[0] === active ? ' class="on"' : '') + '><i></i>' + t[0] + (t[1] ? '<em class="cnt">' + t[1] + '</em>' : '') + '</span>';
+    }).join('') + '</div>';
+  }
+  function bar(pct, plan, ok) {
+    return '<div class="bar"><i class="' + (ok ? 'ok' : '') + '" style="width:' + pct + '%"></i>' + (plan != null ? '<b style="left:calc(' + plan + '% - 1px)"></b>' : '') + '</div>';
+  }
+  function sub2(items, active) {
+    return '<div class="tabs in">' + items.map(function (t) { return '<span' + (t === active ? ' class="on"' : '') + '>' + t + '</span>'; }).join('') + '</div>';
+  }
+  function chipsOf(list) {
+    return '<div class="chips">' + list.map(function (c, i) { return '<span' + (i === 0 ? ' class="on"' : '') + '>' + c[0] + (c[1] != null ? ' <em>' + c[1] + '</em>' : '') + '</span>'; }).join('') + '</div>';
+  }
+  function P(mod, active, inner, ctx, extra) {
+    return '<div class="m" style="flex-direction:column;width:375px;height:667px">' + phoneTop(mod, ctx) + '<div class="content">' + inner + (extra ? '<div style="height:64px"></div>' : '') + '</div>' + bnav(mod, active) + (extra || '') + '</div>';
+  }
+  function T(mod, active, inner, ctx, extra) {
+    return '<div class="m" style="width:1024px;height:768px">' + rail(mod) + '<div class="main">' + deskTop(mod, active, ctx) + topTabs(mod, active) + '<div class="content" style="padding:20px 24px">' + inner + '</div></div>' + (extra || '') + '</div>';
+  }
+  function D(mod, active, inner, ctx, extra, noPad) {
+    return '<div class="m" style="width:1440px;height:785px">' + rail(mod) + nav2(mod, active) + '<div class="main">' + deskTop(mod, active, ctx) + (noPad ? inner : '<div class="content" style="padding:24px 28px;gap:16px">' + inner + '</div>') + '</div>' + (extra || '') + '</div>';
+  }
+  var pin = function (t) { return '<div class="pin"><span class="btn pri">' + t + '</span></div>'; };
+  var head = function (t, p, btn) { return '<div class="ph"><div><h3>' + t + '</h3>' + (p ? '<p>' + p + '</p>' : '') + '</div>' + (btn || '') + '</div>'; };
+
+  /* ---------- номера элементов и раскрытые панели ---------- */
+  var nb = function (n) { return n ? '<i class="nb">' + n + '</i>' : ''; };
+  function B(t, n, cls) { return '<span class="btn' + (cls ? ' ' + cls : '') + '">' + t + nb(n) + '</span>'; }
+  /* кнопки-фильтры: [подпись, счётчик, номер, включена] */
+  function C(list) {
+    return '<div class="chips" style="flex-wrap:wrap">' + list.map(function (c, i) { var on = c[3] != null ? c[3] : i === 0; return '<span' + (on ? ' class="on"' : '') + '>' + c[0] + (c[1] != null ? ' <em>' + c[1] + '</em>' : '') + nb(c[2]) + '</span>'; }).join('') + '</div>';
+  }
+  function tabsN(items, active, n) {
+    return '<div class="tabs in">' + items.map(function (t) { return '<span' + (t === active ? ' class="on"' : '') + '>' + t + (t === active ? nb(n) : '') + '</span>'; }).join('') + '</div>';
+  }
+  function segN(items, n) { return '<span class="seg2">' + items.map(function (t, i) { return '<span' + (i === 0 ? ' class="on"' : '') + '>' + t + '</span>'; }).join('') + '</span>' + nb(n); }
+  function sel(label, n) { return '<span class="btn">' + label + ' ▾' + nb(n) + '</span>'; }
+  function acc(t, em, n) { return '<div class="acc" style="background:#fff">' + t + nb(n) + (em != null ? '<em>' + em + '</em>' : '') + '<span class="chev"></span></div>'; }
+  function burgerN(html, n) { return html.replace('<div class="burger"><i></i></div>', '<div class="burger"><i></i></div>' + nb(n)); }
+  function wide(size) { return size === 'pc' ? D : T; }
+  function lw(size, pc, tab) { return size === 'pc' ? pc : tab; }
+  /* строки панели: [подпись, номер, пояснение] */
+  function prow(rows) { return '<div class="card">' + rows.map(function (r) { return '<div class="grp2"><b>' + r[0] + nb(r[1]) + '</b>' + (r[2] ? '<span style="font-size:12.5px;color:#6f6f6f;text-align:right">' + r[2] + '</span>' : '') + '</div>'; }).join('') + '</div>'; }
+  function pfld(rows) { return '<div class="card">' + rows.map(function (r) { return '<div class="grp2"><span style="font-size:12.5px;color:#6f6f6f;width:96px;flex:0 0 auto">' + r[0] + '</span><b>' + r[1] + ' ▾' + nb(r[2]) + '</b></div>'; }).join('') + '</div>'; }
+  var FILTER = function (n) { return B('Фильтр' + (n ? ' · ' + n : '')); };
+  var MORE = B('⋯');
+
+  /* =================== P2-0047: Компания → Проекты =================== */
+  var CO_TABS = ['Сотрудники', 'Роли', 'Проекты', 'Контрагенты', 'Справочники', 'Оформление', 'Модули', 'Журнал'];
+  var SET_NAV = [['Моё', null], ['Профиль и вход'], ['Интерфейс'], ['Устройство и данные'], ['Уведомления'], ['Качество'], ['Помощь'], ['Администрирование', null], ['Компания', 'on'], ['Модули']];
+  function setNav() { return '<div class="nav2"><div class="lb">Настройки</div>' + SET_NAV.map(function (x) { return x[1] === null ? '<div class="lb" style="margin-top:10px">' + x[0] + '</div>' : '<span' + (x[1] ? ' class="on"' : '') + '><i></i>' + x[0] + '</span>'; }).join('') + '</div>'; }
+  function coTabs(active, n) { return '<div class="tabs in">' + CO_TABS.map(function (t) { return '<span' + (t === active ? ' class="on"' : '') + '>' + t + (t === active ? nb(n) : '') + '</span>'; }).join('') + '</div>'; }
+  /* оболочка «Настройки → Компания»: телефон — верх «Компания» и нижняя панель, ПК/планшет — меню настроек слева */
+  function CP(inner, extra) {
+    return '<div class="m" style="flex-direction:column;width:375px;height:667px"><div class="top"><span style="font-size:20px;color:#6f6f6f">‹</span><b style="font-size:15px;font-weight:600">Компания</b><div class="grow"></div><div class="ava">ИК</div></div><div class="content">' + inner + (extra ? '<div style="height:64px"></div>' : '') + '</div>' + bnav('q', 'Настройки') + (extra || '') + '</div>';
+  }
+  function CW(size, inner) {
+    var w = size === 'pc' ? 1280 : 1024, h = size === 'pc' ? 800 : 768;
+    return '<div class="m" style="width:' + w + 'px;height:' + h + 'px">' + rail('q') + (size === 'pc' ? setNav() : '') + '<div class="main"><div class="top"><div class="crumbs">Настройки › Администрирование › <b>Компания</b></div><div class="grow"></div><div class="ava">ИК</div></div><div class="content" style="padding:' + (size === 'pc' ? '22px 26px' : '18px 22px') + ';gap:14px">' + inner + '</div></div></div>';
+  }
+  var STAGES = { design: ['Проектирование', 'mut'], tender: ['Тендер', 'mut'], build: ['Строительство', 'info'], commission: ['Ввод', 'warn'], warranty: ['Гарантия', 'ok'], operation: ['Эксплуатация', 'mut'] };
+  var stage = function (k, n) { return '<span class="pill ' + STAGES[k][1] + '">' + STAGES[k][0] + '</span>' + nb(n); };
+  var PROJ = [
+    ['Большевиков, 22 (Гений)', 'BLV22', 'Дирекция «Север»', 'build', 'Капустин М. А.', '03.2025 — 12.2027', 3],
+    ['Ленина, 38 (Зеленогорск)', 'LEN38', 'Дирекция «Север»', 'build', 'Тарасов С. Ю.', '06.2024 — 09.2026', 2],
+    ['Шостаковича уч.1 (Струны)', 'SHOS1', 'Дирекция «Север»', 'build', 'Капустин М. А.', '01.2025 — 06.2027', 4],
+    ['Парашютная 47 (Ultra city 3.0)', 'PAR47', 'Дирекция «Юг»', 'build', 'Иванов А. И.', '09.2024 — 12.2026', 4],
+    ['Репин (Приморское ш. 441)', 'REP441', 'Дирекция «Юг»', 'commission', 'Иванов А. И.', '04.2023 — 11.2025', 2],
+    ['Школа 400 (Крыленко)', 'SH400', 'Дирекция «Юг»', 'warranty', 'Тарасов С. Ю.', '02.2022 — 08.2024', 1],
+    ['ГБДОУ Детский сад №3', 'DS3', null, 'build', '—', '05.2025 — 05.2026', 1],
+    ['ГБОУ Лицей № 329', 'LIC329', null, 'design', '—', '—', 1]];
+  var DIVS = ['Дирекция «Север»', 'Дирекция «Юг»', null];
+  var stChips = C([['Все', 8, 6], ['Строительство', 5], ['Ввод', 1], ['Гарантия', 1], ['Проектирование', 1]]);
+
+  /* ---------- 1. Проекты ---------- */
+  function projList(size) { return projList0(size).replace('<div class="ava">ИК</div>', '<div class="ava">ИК</div>' + nb(13)); }
+  function projList0(size) {
+    if (size === 'phone') {
+      var rows = DIVS.map(function (dv) { var ps = PROJ.filter(function (p) { return p[2] === dv; });
+        return '<p class="sec" style="margin-top:2px">' + (dv || 'Без подразделения') + (dv === DIVS[0] ? nb(8) : '') + ' · ' + ps.length + '</p><div class="card">' + ps.map(function (p, i) {
+          return '<div class="grp2" style="align-items:flex-start"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b>' + p[0] + (dv === DIVS[0] && i === 0 ? nb(7) + nb(12) : '') + '</b><span style="font-size:12.5px;color:#6f6f6f">' + p[1] + ' · объектов ' + p[6] + '</span></div>' + stage(p[3]) + '<span class="chev" style="margin-top:6px"></span></div>'; }).join('') + '</div>'; }).join('');
+      return CP(coTabs('Проекты', 1) + '<div style="display:flex;gap:8px"><div class="search" style="flex:1">Найти проект' + nb(5) + '</div>' + B('⋯', 9) + '</div>' + stChips + rows, pin('+ Проект' + nb(2)));
+    }
+    var table = '<div class="card"><table><thead><tr><th>Проект' + nb(7) + '</th><th>Код</th><th>Стадия</th><th>Руководитель</th><th>Сроки</th><th class="n">Объектов</th></tr></thead><tbody>' +
+      DIVS.map(function (dv) { var ps = PROJ.filter(function (p) { return p[2] === dv; });
+        return '<tr><td colspan="6" style="background:#f7f8f9;font-weight:600;font-size:13px;color:#5f6b76">' + (dv || 'Без подразделения') + (dv === DIVS[0] ? nb(8) : '') + ' · ' + ps.length + '</td></tr>' + ps.map(function (p) {
+          return '<tr><td><b>' + p[0] + (p === PROJ[0] ? nb(12) : '') + '</b></td><td>' + p[1] + '</td><td>' + stage(p[3]) + '</td><td>' + p[4] + '</td><td>' + p[5] + '</td><td class="n">' + p[6] + '</td></tr>'; }).join(''); }).join('') + '</tbody></table></div>';
+    return CW(size, coTabs('Проекты', 1) + head('Проекты', '8 проектов · 2 подразделения', '<div style="display:flex;gap:10px">' + B('⋯', 9) + B('+ Проект', 2, 'pri') + '</div>') +
+      '<div class="toolbar" style="flex-wrap:wrap"><div class="search">Найти проект' + nb(5) + '</div>' + stChips + '</div>' + table);
+  }
+  var newProjForm = pfld([['Название', 'ЖК …', 3], ['Код', 'необязательно', 4], ['Подразделение', 'не выбрано', null], ['Стадия', 'Строительство', null]]) + '<div style="display:flex;gap:8px;justify-content:flex-end">' + B('Отмена') + B('Создать проект', null, 'pri') + '</div>';
+  var listPanels = [['Кнопка «+ Проект» — лист снизу (телефон) / панель справа (ПК)', newProjForm],
+    ['Меню ⋯', prow([['Показать архив · 1', 10, 'архивные проекты и «Вернуть»'], ['Подразделения', 11, 'справочник: добавить, переименовать, в архив']])],
+    ['⋯ → Подразделения', '<div class="card">' + ['Дирекция «Север» · 3 проекта · Капустин М. А.', 'Дирекция «Юг» · 3 проекта · Иванов А. И.'].map(function (t) { return '<div class="grp2"><b style="font-weight:500">' + t + '</b><span style="font-weight:700">⋯</span></div>'; }).join('') + '</div><div style="display:flex;justify-content:flex-end">' + B('+ Подразделение', null, 'pri') + '</div>']];
+
+  /* ---------- 2. Карточка проекта ---------- */
+  var P0 = PROJ[0];
+  function projHead(size, tab, nBack, nTabs) {
+    var hd = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="color:#2a6f9e;font-weight:600;font-size:13.5px">‹ Проекты' + nb(nBack) + '</span></div>' +
+      '<div class="ph"><div><h3>' + P0[0] + '</h3><p>' + P0[1] + ' · ' + P0[2] + '</p></div><div style="display:flex;gap:10px;align-items:center">' + stage(P0[3]) + (size === 'phone' ? '' : B('⋯', tab === 'card' ? 9 : null) + B('Изменить', tab === 'card' ? 8 : null, tab === 'card' ? 'pri' : '')) + '</div></div>';
+    return hd + '<div class="tabs in"><span' + (tab === 'card' ? ' class="on"' : '') + '>Карточка' + (tab === 'card' ? nb(nTabs) : '') + '</span><span' + (tab === 'tree' ? ' class="on"' : '') + '>Объекты и места' + (tab === 'tree' ? nb(nTabs) : '') + '</span></div>';
+  }
+  var stageStrip = '<div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px"><b style="font-size:14px">Стадия' + nb(7) + '</b><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px">' +
+    ['design', 'tender', 'build', 'commission', 'warranty', 'operation'].map(function (k, i) { var cur = i === 2, done = i < 2; return '<div style="display:flex;flex-direction:column;gap:4px"><i style="display:block;height:6px;border-radius:3px;background:' + (cur ? '#2a6f9e' : done ? '#9cc0dc' : '#e7e9ec') + '"></i><span style="font-size:11px;color:' + (cur ? '#17212b' : '#6f6f6f') + ';font-weight:' + (cur ? 700 : 500) + '">' + STAGES[k][0] + '</span></div>'; }).join('') + '</div></div>';
+  function cardFields(cols) {
+    var f = [['Код', P0[1], 2], ['Подразделение', P0[2], null], ['Адрес', 'Санкт-Петербург, пр. Большевиков, 22', null], ['Сроки (план)', '03.2025 — 12.2027', null], ['Руководитель проекта', P0[4], null],
+      ['Заказчик', 'ООО «Заказчик-Девелопмент»', 3], ['Генподрядчик', 'АО «Генподряд Северо-Запад»', 4], ['Объектов · мест', '3 объекта · 218 мест', null]];
+    return '<div class="card" style="padding:14px 16px;display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:12px 22px">' + f.map(function (x) { return '<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:12px;color:#6f6f6f">' + x[0] + nb(x[2]) + '</span><b style="font-size:14px;font-weight:600;overflow-wrap:anywhere">' + x[1] + '</b></div>'; }).join('') + '</div>';
+  }
+  function projCard(size) {
+    if (size === 'phone') return CP(projHead(size, 'card', 10, 11) + '<div style="display:flex;justify-content:flex-end">' + B('⋯', 9) + '</div>' + stageStrip.replace('repeat(6,1fr)', 'repeat(3,1fr)') + cardFields(1), pin('Изменить' + nb(8)));
+    return CW(size, coTabs('Проекты') + projHead(size, 'card', 10, 11) + stageStrip + cardFields(size === 'pc' ? 4 : 2));
+  }
+  var editForm = pfld([['Название', P0[0], 1], ['Код', P0[1], 2], ['Подразделение', P0[2], null], ['Стадия', 'Строительство', null], ['Адрес', '…', null], ['Сроки', '03.2025 — 12.2027', null], ['Руководитель', P0[4], null], ['Заказчик', 'ООО «Заказчик-Девелопмент»', 3], ['Генподрядчик', 'АО «Генподряд…»', 4]]) +
+    '<div style="display:flex;gap:8px;justify-content:flex-end">' + B('Отмена', 6) + B('Сохранить', 5, 'pri') + '</div>';
+  var cardPanels = [['Кнопка «Изменить» — лист снизу (телефон) / панель справа (ПК)', editForm], ['Меню ⋯', prow([['В архив', 9, 'спросит подтверждение; вернуть — из архива']])]];
+
+  /* ---------- 3. Объекты и места ---------- */
+  var OBJS = [['Корпус 1', 'корпус', '2 секции · 9 этажей · 108 кв.'], ['Корпус 2', 'корпус', '1 секция · 12 этажей · 96 кв.'], ['Паркинг', 'паркинг', '1 уровень · 14 мест']];
+  function objCards(sel, n) { return '<div class="card lib">' + OBJS.map(function (o, i) { return '<div' + (sel && i === 0 ? ' class="on"' : '') + ' style="flex-direction:column;align-items:flex-start;gap:2px"><b>' + o[0] + (i === 0 ? nb(n) : '') + ' <span class="pill mut" style="margin-left:4px">' + o[1] + '</span></b><span style="white-space:normal">' + o[2] + '</span></div>'; }).join('') + '</div>'; }
+  function treeRows(first) {
+    var row = function (pad, name, kind, meta, open, n, dots) { return '<div class="grp2" style="padding-left:' + (14 + pad) + 'px">' + (open == null ? '<span style="width:12px"></span>' : '<span style="width:12px;color:#5f6b76">' + (open ? '▾' : '▸') + (n && n.t ? nb(n.t) : '') + '</span>') + '<b style="font-weight:' + (pad ? 500 : 600) + '">' + name + '</b><span style="font-size:12px;color:#6f6f6f">' + kind + (meta ? ' · ' + meta : '') + '</span><span style="margin-left:auto;font-weight:700;color:#5f6b76">⋯' + (dots ? nb(dots) : '') + '</span></div>'; };
+    return '<div class="card">' + row(0, 'Секция 1', 'секция', '9 этажей', true, { t: 4 }, 5) + row(18, '1 этаж', 'этаж', '6 кв.', true) +
+      ['1', '2', '3'].map(function (k, i) { return row(36, 'Кв. ' + k, 'квартира', 'стр. ' + k + ' · БТИ ' + (100 + +k) + (i === 0 ? '' : ''), null, null, null).replace('</b>', (i === 0 ? nb(8) : '') + '</b>'); }).join('') +
+      '<div class="grp2" style="padding-left:50px;color:#2a6f9e;font-size:13px;font-weight:600">ещё 3 квартиры</div>' + row(18, '2 этаж', 'этаж', '6 кв.', false) + row(18, '3 этаж', 'этаж', '6 кв.', false) + row(0, 'Секция 2', 'секция', '9 этажей', false) + '</div>';
+  }
+  var placeCard = '<div class="card" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:15px">Кв. 1</b>' + B('Изменить', 6, 'sm') + '</div><div class="kv"><span>Где</span><b>Корпус 1 › Секция 1 › 1 этаж</b><span>Тип</span><b>квартира</b><span>Строительный номер' + nb(13) + '</span><b>1</b><span>Номер БТИ</span><b>101</b></div></div>';
+  function projTree(size) {
+    var objHead = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:15px">Корпус 1 · корпус</b>' + B('Сгенерировать секции и этажи', 2, 'sm') + '</div>';
+    if (size === 'phone') return CP(projHead(size, 'tree', 1, 11) + '<p class="sec">Объекты · 3' + nb(10) + '</p>' + objCards(false, 9) + opened('Корпус 1', objHead + treeRows() + placeCard.replace('<b style="font-size:15px">Кв. 1</b>', '<b style="font-size:15px">Нажали «Кв. 1»</b>')), pin('+ Объект' + nb(3)));
+    var inner = coTabs('Проекты') + projHead(size, 'tree', 1, 11) + '<div style="display:flex;justify-content:flex-end;gap:10px">' + B('+ Объект', 3, 'pri') + '</div>' +
+      '<div class="twocol" style="grid-template-columns:' + (size === 'pc' ? '260px minmax(0,1fr) 300px' : '220px minmax(0,1fr)') + '"><div style="display:flex;flex-direction:column;gap:8px"><p class="sec">Объекты · 3' + nb(10) + '</p>' + objCards(true, 9) + '</div><div style="display:flex;flex-direction:column;gap:8px">' + objHead + treeRows() + '</div>' + (size === 'pc' ? placeCard : '') + '</div>' + (size === 'pc' ? '' : placeCard);
+    return CW(size, inner);
+  }
+  var treePanels = [['Кнопка «+ Объект»', pfld([['Вид объекта', 'корпус · паркинг · сети · благоустройство · прочее', 3], ['Название', 'Корпус 3', null]]) + '<div style="display:flex;gap:8px;justify-content:flex-end">' + B('Отмена') + B('Добавить', null, 'pri') + '</div>'],
+    ['«Сгенерировать секции и этажи» (внутри объекта-корпуса)', pfld([['Секций', '2', 2], ['Этажей в секции', '9', null], ['Квартир на этаже', '6', null], ['Первый этаж', '1', null]]) + '<div style="display:flex;gap:8px;justify-content:flex-end">' + B('Отмена') + B('Создать', null, 'pri') + '</div>'],
+    ['Меню ⋯ у строки (секция, этаж, квартира, объект)', prow([['Добавить внутрь', 5, 'тип и название — как «+ Узел» сейчас'], ['Изменить', 6, 'название, у помещения — номера'], ['Удалить', 7, '«Удалить … вместе со всеми вложенными?» — как сейчас']])],
+    ['Проект, места которого ведёт Качество', '<div class="card" style="padding:10px 14px;font-size:13px;color:#1c7c3a;background:#e9f5ec;border-color:#b9dfc5">Места этого проекта ведутся в Качестве — здесь только просмотр.' + nb(12) + '</div><p style="font-size:12.5px;color:#6f6f6f;margin:0">Кнопок «+ Объект», «Сгенерировать…» и меню ⋯ нет — только просмотр дерева и карточки места.</p>']];
+
+  function opened(t, html) { return '<p class="sec" style="margin-top:4px">Нажали на «' + t + '» — откроется:</p>' + html; }
+  function split(left, right, w) { return '<div class="twocol" style="grid-template-columns:' + (w || 300) + 'px minmax(0,1fr)">' + left + right + '</div>'; }
+  function mk(fn) { return { phone: function () { return fn('phone'); }, tablet: function () { return fn('tablet'); }, pc: function () { return fn('pc'); } }; }
+  /* детали дизайна: [деталь, есть / новая, где на экране] */
+  var D_HEAD = ['Шапка раздела (заголовок · одна главная кнопка · ⋯)', 'есть — P2-0041, P2-0046', 'вверху каждого экрана'];
+  var D_TABS = ['Вкладки подчёркиванием', 'есть — P2-0046 (PageTabs)', 'вкладки «Компании», «Карточка · Объекты и места»'];
+  var D_QUICK = ['Фильтр-кнопки со счётчиками', 'есть — P2-0046 (RegistryTable.quick)', 'стадии над списком'];
+  var D_SHEET = ['Лист снизу (телефон) / панель справа (ПК)', 'есть — P2-0046', 'формы «+ Проект», «Изменить», «+ Объект»'];
+  var D_PIN = ['Закреплённая главная кнопка на телефоне', 'есть — P2-0046', '«+ Проект», «Изменить», «+ Объект»'];
+  var D_BADGE = ['Метка стадии (цвет + слово)', 'новая — на StatusBadge', 'стадия проекта'];
+  var D_DIR = ['Справочник: поиск, группы, архив; на телефоне — строки', 'новая — из RegistryTable', 'список проектов, подразделения'];
+  var D_CARD = ['Карточка записи: поля «подпись — значение», правка в листе / панели', 'новая', 'карточка проекта, карточка места'];
+  var D_TREE = ['Дерево мест: раскрытие, строка «название · вид · сколько внутри», действия в ⋯', 'новая — выносится из LocationsTree', '«Объекты и места»; потом — выбор места в План/Факте'];
+  var SCREENS = {
+    list: { name: 'Проекты', full: 'list', make: mk(projList), panels: listPanels, parts: [D_HEAD, D_TABS, D_QUICK, D_DIR, D_BADGE, D_SHEET, D_PIN],
+      items: [['Вкладка «Объекты»', 'вкладка «Проекты» (ЖК теперь называется «проект»)', 'список проектов компании'],
+        ['Кнопка «Создать объект»', 'главная кнопка «+ Проект» (на телефоне — внизу)', 'откроет форму нового проекта'], ['Поле «Название объекта»', 'поле «Название» в форме «+ Проект»', 'ввод'],
+        ['Поле «Код (необязательно)»', 'поле «Код» в форме «+ Проект»', 'ввод'], ['—', 'поиск над списком', 'найти проект по названию или коду', 'new'],
+        ['—', 'кнопки стадий со счётчиками: Все · Строительство · Ввод · Гарантия · Проектирование', 'показать проекты одной стадии', 'new'],
+        ['Строка проекта: название, код, заказчик, генподрядчик', 'строка: название, код, стадия, руководитель, сроки, число объектов; заказчик и генподрядчик — в карточке', 'нажатие откроет карточку проекта'],
+        ['—', 'группы по подразделениям; проекты без подразделения — отдельной группой', 'только показ', 'new'], ['—', 'меню ⋯ над списком', 'архив и подразделения', 'new'],
+        ['Кнопка «Показать архив (1)»', 'меню ⋯ → «Показать архив · 1»', 'архивные проекты, у каждого «Вернуть»'], ['—', 'меню ⋯ → «Подразделения»', 'справочник подразделений: добавить, переименовать, в архив', 'new'],
+        ['Кнопки в строке «Структура», «Изменить», «В архив»', 'нажатие на строку → карточка проекта: «Изменить», ⋯ → «В архив», вкладка «Объекты и места»', 'то же, что сейчас, но с карточки'],
+        ['Почта, компания и «Выйти» над вкладками', 'в шапке оболочки: значок пользователя (Настройки → Моё)', 'выход — как сейчас']],
+      notes: ['Кнопки «Структура / Изменить / В архив» уходят из каждой строки — строка открывает карточку проекта.', 'Форма создания не висит над списком постоянно — открывается кнопкой «+ Проект».', 'Подразделения необязательны: если их нет, список — без групп.'] },
+    card: { name: 'Карточка проекта', full: 'edit', make: mk(projCard), panels: cardPanels, parts: [D_HEAD, D_TABS, D_CARD, D_BADGE, D_SHEET, D_PIN],
+      items: [['Поле «Название» (форма «Изменить» внутри списка)', 'форма «Изменить» — лист снизу / панель справа', 'правка названия'], ['Поле «Код»', 'поле карточки и формы', 'показ / правка'],
+        ['Список «Заказчик»', 'поле карточки и формы', 'выбор из контрагентов, как сейчас'], ['Список «Генподрядчик»', 'поле карточки и формы', 'выбор из контрагентов, как сейчас'],
+        ['Кнопка «Сохранить»', 'в форме «Изменить»', 'сохранить'], ['Кнопка «Отмена»', 'в форме «Изменить»', 'закрыть без сохранения'], ['—', 'полоса стадий: проектирование → тендер → строительство → ввод → гарантия → эксплуатация', 'показ; меняется в «Изменить»', 'new'],
+        ['Кнопка «Изменить» в строке списка', 'кнопка «Изменить» в карточке (на телефоне — внизу)', 'откроет форму'], ['Кнопка «В архив» в строке списка', 'меню ⋯ карточки → «В архив»', 'спросит подтверждение'],
+        ['—', '«‹ Проекты» — назад к списку', 'вернуться к списку', 'new'], ['—', 'вкладки «Карточка · Объекты и места»', 'переключение внутри проекта', 'new'],
+        ['—', 'новые поля: подразделение, адрес, сроки (план), руководитель проекта, число объектов и мест', 'показ; правка в «Изменить»', 'new']],
+      notes: ['У проекта появляется карточка: стадия, сроки, руководитель, адрес, подразделение.', 'Правка — в одной форме «Изменить» (сейчас форма раскрывается прямо в списке).'] },
+    tree: { name: 'Объекты и места', full: 'tree', make: mk(projTree), panels: treePanels, parts: [D_HEAD, D_TABS, D_TREE, D_CARD, D_SHEET, D_PIN],
+      items: [['Кнопка «← К проектам»', '«‹ Проекты» над заголовком', 'назад к списку'], ['Кнопка «Сгенерировать корпус» (название, секций, этажей, квартир на этаже, первый этаж)', '«Сгенерировать секции и этажи» внутри объекта-корпуса — те же поля, кроме названия', 'создаст секции, этажи и квартиры'],
+        ['Кнопка «+ Узел в корень» (тип, название)', 'главная кнопка «+ Объект» (вид объекта, название); верх дерева — только объект', 'добавит корпус, паркинг, сети, благоустройство или прочее'],
+        ['Стрелки ▸ / ▾ (раскрыть)', 'на месте', 'раскроет ветку; места грузятся по мере раскрытия'], ['Кнопка «+ Узел» в каждой строке', 'меню ⋯ строки → «Добавить внутрь»', 'тип и название — как сейчас'],
+        ['Кнопка «Переименовать» в каждой строке', 'меню ⋯ строки → «Изменить» (и кнопка в карточке места)', 'название; у помещения — номера'], ['Кнопка «Удалить» в каждой строке', 'меню ⋯ строки → «Удалить»', '«Удалить … вместе со всеми вложенными?» — как сейчас'],
+        ['Метка типа и число вложенных («Корпус 3»)', 'на строке словами: «секция · 9 этажей»', 'только показ'], ['Корпуса в дереве верхним уровнем', 'список «Объекты» с видом и сводкой (на ПК — слева)', 'нажатие откроет дерево объекта'],
+        ['—', 'вид объекта: корпус · паркинг · сети · благоустройство · прочее', 'выбирается при «+ Объект»', 'new'], ['—', 'вкладки «Карточка · Объекты и места»', 'переключение внутри проекта', 'new'],
+        ['Пометка «Места этого объекта ведутся в Качестве — только просмотр»', 'та же пометка; кнопок правки нет', 'только просмотр'], ['—', 'карточка места: где, тип, строительный номер, номер БТИ (на ПК — справа)', 'нажатие на место откроет карточку', 'new']],
+      notes: ['Три кнопки в каждой строке дерева заменены одним ⋯ — дерево становится читаемым.', 'Сначала объекты (корпус, паркинг, сети…), внутри — секции, этажи, квартиры с номерами.'] }
+  };
+
+  var GROUPS = {};
+  var FULL = {"edit-pc":{"p":1,"t":0},"edit-phone":{"p":1,"t":0},"edit-tablet":{"p":1,"t":0},"list-pc":{"p":2,"t":0},"list-phone":{"p":3,"t":0},"list-tablet":{"p":2,"t":0},"roq-pc":{"p":1,"t":0},"tree-pc":{"p":3,"t":0},"tree-phone":{"p":2,"t":1},"tree-tablet":{"p":1,"t":1}};
+  var state = { group: 'list', sub: {}, size: 'phone' };
+  try { var saved = JSON.parse(localStorage.getItem('p47-compare') || 'null'); if (saved && saved.group && saved.sub && SIZES[saved.size]) state = saved; } catch (e) { /* без памяти */ }
+  function key() { return GROUPS[state.group] ? state.sub[state.group] : state.group; }
+  function frameBox(html, w, h) {
+    return '<div class="shot" data-w="' + w + '" data-h="' + h + '" style="aspect-ratio:' + w + ' / ' + h + '"><div class="device" style="width:' + w + 'px;height:' + h + 'px">' + html + '</div></div>';
+  }
+  /* макет растягивается на всю длину содержимого — как экран целиком, без прокрутки */
+  function grow() {
+    document.querySelectorAll('.shot[data-h] .device').forEach(function (d) {
+      var box = d.parentNode, m = d.firstChild, h0 = parseFloat(box.dataset.h), extra = 0;
+      if (!m) return;
+      m.style.height = h0 + 'px';
+      m.querySelectorAll('.content').forEach(function (c) { extra = Math.max(extra, c.scrollHeight - c.clientHeight); });
+      var H = h0 + Math.max(0, extra);
+      m.style.height = H + 'px'; d.style.height = H + 'px'; box.style.aspectRatio = box.dataset.w + ' / ' + H;
+    });
+  }
+  function fit() {
+    document.querySelectorAll('.shot .device').forEach(function (d) {
+      var box = d.parentNode, w = parseFloat(d.style.width);
+      d.style.transform = 'scale(' + (box.clientWidth / w) + ')';
+    });
+  }
+  function nowShots(s) {
+    if (!s.full) return '<div class="shot"><img src="' + s.now + state.size + (state.size === 'pc' ? '.jpg' : '.png') + '" alt="' + s.name + ' сейчас"></div>';
+    var f = FULL[s.full + '-' + state.size] || { p: 0, t: 0 }, out = [];
+    for (var i = 1; i <= f.p; i++) out.push('<img src="full/' + s.full + '-' + state.size + '-' + i + '.jpg" alt="">');
+    if (f.t) out.push('<div class="cut">… дальше ещё длинный список, середина пропущена …</div><img src="full/' + s.full + '-' + state.size + '-t-1.jpg" alt="">');
+    return '<div class="shot stack">' + out.join('') + '</div>';
+  }
+  var MARKS = {}, DB = null, DBSTATE = 'wait';
+  var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  function markCell(id) {
+    return '<div class="mk" data-mk="' + id + '"><div class="mk-b"><button type="button" data-mark="like">Нравится</button><button type="button" data-mark="dislike">Не нравится</button><button type="button" data-mark="keep">Как сейчас</button></div><input type="text" placeholder="Комментарий" aria-label="Комментарий"></div>';
+  }
+  function itemsHtml(k, s) {
+    var rows = s.items.map(function (it, i) {
+      var tag = it[3] === 'new' ? '<span class="itag new">новое — только с вашего «да»</span>' : it[3] === 'ask' ? '<span class="itag ask">нужно ваше решение</span>' : '';
+      return '<tr><td class="no"><i class="nbp">' + (i + 1) + '</i></td><td data-h="Сейчас">' + esc(it[0]) + tag + '</td><td data-h="Где в макете">' + esc(it[1]) + '</td><td data-h="При нажатии">' + esc(it[2] || '—') + '</td><td data-h="Ваша отметка">' + markCell(k + '__' + (i + 1)) + '</td></tr>';
+    }).join('');
+    return '<h2>Экран «' + s.name + '»: все элементы и где они в макете</h2><p class="hint">Ничего не удалено: каждый элемент из рабочего приложения либо на виду, либо в меню ⋯, в панели «Фильтр», в карточке — номер совпадает с оранжевым кружком на макете. <b>' + s.items.length + ' элементов</b>.</p>' +
+      '<ul class="nlist">' + s.notes.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ul>' +
+      '<div class="screenmark"><b>Экран целиком</b>' + markCell(k + '__0') + '</div><p class="hint" id="mk-state"></p>' +
+      '<table class="items"><thead><tr><th>№</th><th>Сейчас в приложении</th><th>Где в макете</th><th>Что произойдёт при нажатии</th><th>Ваша отметка</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      (s.parts ? '<h2 style="margin-top:22px">Из каких деталей дизайна собран экран</h2><table class="items"><thead><tr><th>Деталь</th><th>Есть или новая</th><th>Где на экране</th></tr></thead><tbody>' + s.parts.map(function (p) { return '<tr><td data-h="Деталь">' + esc(p[0]) + '</td><td data-h="Есть или новая">' + (p[1].indexOf('новая') === 0 ? '<span class="itag new" style="margin:0">' + esc(p[1]) + '</span>' : esc(p[1])) + '</td><td data-h="Где">' + esc(p[2]) + '</td></tr>'; }).join('') + '</tbody></table>' : '');
+  }
+  function paintMarks() {
+    document.querySelectorAll('[data-mk]').forEach(function (el) {
+      var m = MARKS[el.dataset.mk] || {};
+      el.querySelectorAll('[data-mark]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mark === m.mark)); b.disabled = !DB; });
+      var inp = el.querySelector('input'); inp.disabled = !DB; if (document.activeElement !== inp) inp.value = m.note || '';
+    });
+    var st = document.getElementById('mk-state');
+    if (st) st.textContent = DB ? 'Отметки сохраняются сразу — я их увижу.' : DBSTATE === 'wait' ? 'Подключаю сохранение отметок…' : 'Отметки сохраняются только на странице claude.ai (здесь — только просмотр).';
+    var total = Object.keys(MARKS).filter(function (id) { return MARKS[id].mark || MARKS[id].note; }).length, c = document.getElementById('mk-total');
+    if (c) c.textContent = total ? 'Отмечено строк: ' + total : '';
+  }
+  function saveMark(el, patch) {
+    if (!DB) return;
+    var id = el.dataset.mk, k = id.split('__')[0], n = +id.split('__')[1], s = SCREENS[k], cur = MARKS[id] || {};
+    var doc = { screen: k, screenName: s.name, item: n, label: n ? s.items[n - 1][0] : 'Экран целиком', mark: cur.mark || '', note: cur.note || '', at: Date.now() };
+    Object.keys(patch).forEach(function (f) { doc[f] = patch[f]; });
+    MARKS[id] = doc; paintMarks();
+    DB.collection('marks').doc(id).set(doc).catch(function () { var st = document.getElementById('mk-state'); if (st) st.textContent = 'Не удалось сохранить отметку — попробуйте ещё раз.'; });
+  }
+  document.getElementById('notes').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-mark]'); if (!b) return;
+    var el = b.closest('[data-mk]'), cur = MARKS[el.dataset.mk] || {};
+    saveMark(el, { mark: cur.mark === b.dataset.mark ? '' : b.dataset.mark });
+  });
+  document.getElementById('notes').addEventListener('change', function (e) {
+    if (e.target.tagName !== 'INPUT') return;
+    saveMark(e.target.closest('[data-mk]'), { note: e.target.value.trim().slice(0, 500) });
+  });
+  (function connect() {
+    var c = window.claude;
+    if (!c || typeof c.use !== 'function') { DBSTATE = 'none'; return; }
+    c.use('db').then(function (db) {
+      if (!db) { DBSTATE = 'none'; paintMarks(); return; }
+      DB = db; DBSTATE = 'ok';
+      db.collection('marks').onSnapshot(function (snap) { var m = {}; snap.docs.forEach(function (d) { m[d.id] = d.data(); }); MARKS = m; paintMarks(); }, function () { DBSTATE = 'none'; DB = null; paintMarks(); });
+      paintMarks();
+    }).catch(function () { DBSTATE = 'none'; paintMarks(); });
+  })();
+  function render() {
+    var k = key(), s = SCREENS[k], wh = SIZES[state.size];
+    var pair = document.getElementById('pair');
+    pair.className = 'pair ' + (state.size === 'phone' ? 'phone' : 'wide');
+    var nowCol = '<div class="col"><div class="col-head"><span class="tag now">Как сейчас</span><b>' + s.name + '</b><span style="color:var(--muted);font-size:13px">' + SIZE_NAME[state.size] + (s.full ? ', весь экран' : '') + '</span></div><div class="frames">' + nowShots(s) + '</div></div>';
+    var pw = 360;
+    var panels = (s.panels || []).length ? '<div class="frame-cap" style="margin-top:6px"><b>Что спрятано в меню и панелях — в раскрытом виде:</b></div><div class="panels">' + s.panels.map(function (p) { return '<div class="pbox"><div class="frame-cap">' + p[0] + '</div>' + frameBox('<div class="m" style="width:' + pw + 'px;height:60px;flex-direction:column"><div class="content" style="padding:12px">' + p[1] + '</div></div>', pw, 60) + '</div>'; }).join('') + '</div>' : '';
+    var newCol = '<div class="col"><div class="col-head"><span class="tag new">Как предлагаю</span><b>' + s.name + '</b><span style="color:var(--muted);font-size:13px">макет' + (s.full ? ', весь экран' : '') + ' · оранжевые номера = строки таблицы ниже</span></div><div class="frames">' +
+      frameBox(s.make[state.size](), wh[0], wh[1]) + panels + '</div></div>';
+    pair.innerHTML = nowCol + newCol;
+    document.getElementById('notes').innerHTML = itemsHtml(k, s);
+    paintMarks();
+    var subs = GROUPS[state.group], ctl = document.getElementById('ctl-sub');
+    ctl.hidden = !subs;
+    document.getElementById('seg-sub').innerHTML = subs ? subs.map(function (x) { return '<button type="button" data-v="' + x[0] + '" aria-pressed="' + (x[0] === k) + '">' + x[1] + '</button>'; }).join('') : '';
+    document.querySelectorAll('#seg-screen button, #seg-screen2 button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.group)); });
+    document.querySelectorAll('#seg-size button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.size)); });
+    grow(); fit();
+    try { localStorage.setItem('p47-compare', JSON.stringify(state)); } catch (e) { /* без памяти */ }
+  }
+  ['seg-screen', 'seg-screen2'].forEach(function (id) { document.getElementById(id).addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { state.group = b.dataset.v; render(); } }); });
+  document.getElementById('seg-sub').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { state.sub[state.group] = b.dataset.v; render(); } });
+  document.getElementById('seg-size').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { state.size = b.dataset.v; render(); } });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(document.getElementById('pair'));
+  window.addEventListener('resize', fit);
+  render();
+})();
+</script>

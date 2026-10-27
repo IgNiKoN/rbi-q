@@ -76,7 +76,7 @@ test('страница: группы по объектам, плитки с чи
   const went: string[] = [];
   const box = await mount(h(InboxTab, { api, me: 'ivanov@x.invalid', go: (p: string) => went.push(p) }));
   assert.deepEqual(qa(box, '[data-testid="ib-group"]').map((x) => x.getAttribute('data-project-id')), ['a', 'b']);
-  assert.equal(box.querySelector('[data-testid="ib-total"]').textContent, 'Дел: 11 · объектов: 2');
+  assert.equal(box.querySelector('[data-testid="ib-total"]').textContent, 'Дел: 11 · проектов: 2');
   const alpha = box.querySelector('[data-project-id="a"]');
   assert.deepEqual(qa(alpha, '[data-testid="ib-count"]').map((x) => x.textContent), ['8', '1', '12 поз.', '30 поз.']);
   assert.equal(alpha.querySelector('[data-testid="ib-group-tasks"]').textContent, 'Дел: 9');

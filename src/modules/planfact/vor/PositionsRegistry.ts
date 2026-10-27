@@ -128,9 +128,9 @@ function ForecastBlock(props: { row: PositionRow }): ReactElement {
     h('h4', { className: 'vr-h' }, 'Прогноз'),
     h('div', { className: 'vr-fc-grid' },
       h(KpiTile, { label: 'Прогноз окончания', value: v.finish, tone: v.late ? 'red' : undefined, metric: 'forecast',
-        hint: row.deltaDays === null ? (row.forecast && v.finish !== 'выполнено' ? 'нет срока объекта' : undefined)
-          : row.deltaDays > 0 ? `на ${row.deltaDays} дн. позже финиша объекта` : row.deltaDays < 0 ? `на ${-row.deltaDays} дн. раньше финиша объекта` : 'точно к финишу объекта' }),
-      h(KpiTile, { label: 'План на сегодня', value: row.planPctToday === null ? '—' : fmtPct(row.planPctToday), metric: 'plan_pct', hint: row.planPctToday === null ? 'нет дат объекта' : undefined }),
+        hint: row.deltaDays === null ? (row.forecast && v.finish !== 'выполнено' ? 'нет срока проекта' : undefined)
+          : row.deltaDays > 0 ? `на ${row.deltaDays} дн. позже финиша проекта` : row.deltaDays < 0 ? `на ${-row.deltaDays} дн. раньше финиша проекта` : 'точно к финишу проекта' }),
+      h(KpiTile, { label: 'План на сегодня', value: row.planPctToday === null ? '—' : fmtPct(row.planPctToday), metric: 'plan_pct', hint: row.planPctToday === null ? 'нет дат проекта' : undefined }),
       h(KpiTile, { label: 'Факт', value: row.pct === null ? '—' : fmtPct(row.pct), metric: 'fact_pct' }),
       h(KpiTile, { label: 'Отклонение', value: v.dev, tone: v.devTone || undefined, metric: 'dev', hint: 'план % − факт %' }),
       h(KpiTile, { label: 'Темп за 14 дней', value: `${fmtQty(row.fact14)} ${row.unit}`, metric: 'pace14', hint: v.noPace ? 'нет темпа — прогноз не считается' : 'факт за 14 дней' })));
@@ -177,7 +177,7 @@ export function PositionsRegistry(props: PositionsRegistryProps): ReactElement {
     notice ? h('div', { className: 'pj-notice', role: 'status', 'data-testid': 'vr-notice' }, notice) : null,
     h(RegistryTable<PositionRow>, {
       testId: 'vr-table', rows, rowKey: (r) => r.id, columns: POSITION_COLUMNS, filters: POSITION_FILTERS, state, onState,
-      isOverdue: (r) => r.st.overdue, overdueHint: finish ? undefined : 'Нет срока объекта: укажите плановое окончание в «Сводке» — тогда «Только просроченные» заработает.',
+      isOverdue: (r) => r.st.overdue, overdueHint: finish ? undefined : 'Нет срока проекта: укажите плановое окончание в «Сводке» — тогда «Только просроченные» заработает.',
       groupBy: { label: 'Корпус', key: (r) => r.corp }, toneOf: (r) => r.st.tone, toneLabel: TONE_LABEL,
       selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId, quick: { filter: 'status' }, selectMode: true,
       compact: (r) => h('span', { className: 'vr-c' },
