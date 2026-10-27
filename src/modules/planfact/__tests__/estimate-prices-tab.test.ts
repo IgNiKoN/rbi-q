@@ -75,14 +75,19 @@ test('работы: виды работ компании без цены вид�
   assert.equal(rows.length, 2);
   assert.match(el.textContent, /Устройство пола/);
   assert.match(el.textContent, /без цены/);
+  // P2-0046: список — для чтения; правка — по нажатию на строку
+  assert.equal(el.querySelector('[data-testid="pr-labor"]'), null, 'полей ввода в списке нет');
+  el.querySelector('[data-key="w:wt1"] [data-testid="pr-edit"]').click(); await tick();
   const labor = el.querySelector('[data-key="w:wt1"] [data-testid="pr-labor"]');
   typeIn(labor, '1 234,5'); blur(labor); await tick(); await tick();
   assert.deepEqual(s.calls[0], { items: [{ kind: 'work', work_type_id: 'wt1', price_labor: 1234.5, price_material: null }], source: 'manual' });
   assert.match(el.querySelector('[role="status"]').textContent, /сохранена/);
+  el.querySelector('[data-key="w:wt2"] [data-testid="pr-edit"]').click(); await tick();
   const bad = el.querySelector('[data-key="w:wt2"] [data-testid="pr-labor"]');
   typeIn(bad, '-3'); blur(bad); await tick();
   assert.equal(s.calls.length, 1, 'неверная цена не отправляется');
   assert.equal(bad.getAttribute('aria-invalid'), 'true');
+  el.querySelector('[data-key="w:wt1"] [data-testid="pr-edit"]').click(); await tick();
   el.querySelector('[data-key="w:wt1"] [data-testid="pr-hist-btn"]').click(); await tick(); await tick();
   assert.match(el.querySelector('[data-testid="pr-history"]').textContent, /вручную/);
 });

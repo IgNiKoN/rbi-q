@@ -56,6 +56,15 @@ function History(props: { api: EstimateApi; item: PriceItem }): ReactElement {
       : h('div', { className: 'pf-muted' }, 'Изменений пока нет.'));
 }
 
+/** Итог строки: работа + материалы (₽ за единицу) и расшифровка; у материала — одна цена. */
+function totalOf(l: Line): ReactElement {
+  const it = l.item!;
+  if (l.kind === 'material') return h('span', { className: 'pr-total' }, h('b', null, `${money(it.price_material)} ₽`));
+  const sum = (it.price_labor || 0) + (it.price_material || 0);
+  return h('span', { className: 'pr-total' }, h('b', null, `${money(sum)} ₽`),
+    h('span', null, `работа ${money(it.price_labor)} · мат. ${money(it.price_material)}`));
+}
+
 export function PricesTab(props: { api: EstimateApi; vor: VorApi | null; company: CompanyAccess }): ReactElement {
   const { api, vor, company } = props;
   const [items, setItems] = useState<PriceItem[] | null>(null);
@@ -67,6 +76,7 @@ export function PricesTab(props: { api: EstimateApi; vor: VorApi | null; company
   const [hist, setHist] = useState('');
   const [confirmDel, setConfirmDel] = useState('');
   const [importOpen, setImportOpen] = useState(false);
+  const [editKey, setEditKey] = useState('');   // P2-0046: правка — по нажатию на строку (список — для чтения)
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -142,15 +152,15 @@ export function PricesTab(props: { api: EstimateApi; vor: VorApi | null; company
 
   return h('div', { className: 'pj-tab pr-tab', 'data-testid': 'pr-prices' },
     h('div', { className: 'pr-tools' },
-      h('div', { className: 'pf-seg pr-seg', role: 'tablist', 'data-testid': 'pr-kinds' },
+      h('div', { className: 'p2-reg__quick pr-seg', role: 'tablist', 'data-testid': 'pr-kinds' },
         (['work', 'material'] as Kind[]).map((k) => h('button', { key: k, type: 'button', role: 'tab', 'aria-selected': kind === k, 'data-kind': k,
-          className: 'pf-seg-btn' + (kind === k ? ' pf-seg-btn--active' : ''), onClick: () => setKind(k) },
-          `${k === 'work' ? 'Работы' : 'Материалы'} · ${count(k)}`))),
-      h('input', { type: 'search', className: 'pj-input pr-search', placeholder: 'Поиск по наименованию', value: query, 'aria-label': 'Поиск',
+          className: 'p2-reg__q' + (kind === k ? ' p2-reg__q--on' : ''), onClick: () => { setKind(k); setEditKey(''); } },
+          k === 'work' ? 'Работы' : 'Материалы', h('span', { className: 'p2-reg__qn' }, String(count(k)))))),
+      h('input', { type: 'search', className: 'pj-input pr-search', placeholder: 'Найти работу или материал', value: query, 'aria-label': 'Поиск',
         onChange: (e) => setQuery((e.target as HTMLInputElement).value) }),
       h('label', { className: 'pr-check' }, h('input', { type: 'checkbox', checked: onlyEmpty, onChange: () => setOnlyEmpty(!onlyEmpty) }), 'Только без цены'),
-      h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'pr-import-open', onClick: () => setImportOpen(!importOpen) },
-        importOpen ? 'Скрыть «Взять цены из ВОР»' : 'Взять цены из загруженного ВОР')),
+      h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'pr-import-open', onClick: () => setImportOpen(!importOpen) },
+        importOpen ? 'Скрыть «Взять цены из ВОР»' : 'Взять цены из ВОР')),
     importOpen && vor
       ? h(PricesImport, { api, vor, company, current: items, workTypes,
           onDone: (text: string) => { setImportOpen(false); setNotice(text); void load(); } })
@@ -166,13 +176,17 @@ export function PricesTab(props: { api: EstimateApi; vor: VorApi | null; company
       : null,
     h('div', { className: 'pf-card pj-list', 'data-testid': 'pr-list' },
       shown.length
-        ? shown.map((l) => h('div', { key: l.key, className: 'pr-row', 'data-key': l.key },
-            h('div', { className: 'pr-name' },
-              h('b', null, l.name),
-              l.unit ? h('span', { className: 'pj-badge' }, l.unit) : null,
-              l.item ? h('span', { className: 'pr-date' + (isStale(l.item.price_date, now) ? ' pr-date--stale' : ''), title: isStale(l.item.price_date, now) ? 'Цена старше 90 дней — проверьте' : '' },
-                `от ${dateFmt(l.item.price_date)}`) : h('span', { className: 'pr-date pf-muted' }, 'без цены')),
-            h('div', { className: 'pr-prices' },
+        ? shown.map((l) => h('div', { key: l.key, className: 'pr-row' + (editKey === l.key ? ' pr-row--edit' : ''), 'data-key': l.key },
+            // P2-0046: строка для чтения — название, единица, дата; справа итог и из чего он; нажатие — правка
+            h('button', { type: 'button', className: 'pr-sum', 'aria-expanded': editKey === l.key, 'data-testid': 'pr-edit', onClick: () => setEditKey(editKey === l.key ? '' : l.key) },
+              h('span', { className: 'pr-name' },
+                h('b', null, l.name),
+                h('span', { className: 'pr-meta' }, l.unit ? `за ${l.unit}` : '', l.item
+                  ? h('span', { className: 'pr-date' + (isStale(l.item.price_date, now) ? ' pr-date--stale' : ''), title: isStale(l.item.price_date, now) ? 'Цена старше 90 дней — проверьте' : '' }, `${l.unit ? ' · ' : ''}от ${dateFmt(l.item.price_date)}`)
+                  : h('span', { className: 'pr-date' }, `${l.unit ? ' · ' : ''}без цены`))),
+              h('span', { className: 'pr-total' }, l.item ? totalOf(l) : h('span', { className: 'pf-muted' }, 'указать')),
+              h('span', { className: 'pr-chev', 'aria-hidden': 'true' })),
+            editKey !== l.key ? null : h('div', { className: 'pr-prices' },
               l.kind === 'work'
                 ? h(PriceField, { value: l.item?.price_labor ?? null, label: 'Работа, ₽', disabled: busy, testid: 'pr-labor', onSave: (v) => saveLine(l, 'labor', v) })
                 : null,
@@ -191,14 +205,26 @@ export function PricesTab(props: { api: EstimateApi; vor: VorApi | null; company
 
 export const PRICES_CSS = `
 .pr-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.pr-seg{flex:0 1 360px}
+.pr-seg{flex:0 0 auto}
 .pr-search{flex:1 1 220px}
 .pr-check{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text-main);min-height:40px;cursor:pointer}
 .pr-check input{accent-color:var(--primary)}
-.pr-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--card-border)}
+.pr-row{display:flex;flex-direction:column;gap:10px;padding:0;border-bottom:1px solid var(--card-border)}
+.pr-row--edit{background:var(--hover-bg);padding-bottom:12px}
+.pr-row--edit .pr-prices{padding:0 14px}
+.pr-sum{font:inherit;color:inherit;text-align:left;width:100%;display:flex;align-items:center;gap:12px;padding:11px 14px;border:0;background:transparent;cursor:pointer}
+.pr-sum:focus-visible{outline:2px solid var(--accent,var(--primary));outline-offset:-2px}
+.pr-sum .pr-name{flex:1 1 auto;flex-direction:column;align-items:flex-start;gap:2px}
+.pr-sum .pr-name b{font-size:14.5px;font-weight:600}
+.pr-meta{font-size:12.5px;color:var(--text-muted)}
+.pr-total{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pr-total b{font-size:15px;font-weight:600}
+.pr-total span{font-size:12px;color:var(--text-muted)}
+.pr-chev{width:8px;height:8px;border-right:2px solid var(--text-muted);border-bottom:2px solid var(--text-muted);transform:rotate(-45deg);flex:0 0 auto}
+.pr-row--edit .pr-chev{transform:rotate(45deg)}
 .pr-row:last-child{border-bottom:0}
 .pr-name{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;min-width:0;overflow-wrap:anywhere;font-size:13px}
-.pr-date{font-size:11px;color:var(--text-muted)}
+.pr-date{font-size:12.5px;color:var(--text-muted)}
 .pr-date--stale{color:var(--color-yellow);font-weight:700}
 .pr-prices{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;justify-content:flex-end}
 .pr-field{display:flex;flex-direction:column;gap:2px}
