@@ -6022,7 +6022,7 @@ function _meetingDateRangeLabel(checks) {
     return a === b ? a : (a + ' — ' + b);
 }
 
-function collectMeetingDefectStats(checks, contractorName) {
+export function collectMeetingDefectStats(checks, contractorName) {
     const byKey = {};
     let b1 = 0;
     let b2 = 0;
@@ -6042,6 +6042,8 @@ function collectMeetingDefectStats(checks, contractorName) {
             if (s !== 'fail' && s !== 'fail_escalated') return;
             const item = flat.find(function (x) { return String(x.id) === String(id); });
             const isB3 = s === 'fail_escalated' || (item && Number(item.w) === 3);
+            // P2-0049: B1 в список дефектов совещания не попадает (раньше шёл как B2), как в остальных отчётах.
+            if (!isB3 && item && Number(item.w) === 1) return;
             const name = item ? item.n : 'Дефект';
             const normPlain = _defectRemediationPlainText(item && (item.t || item.req || item.norm) || '');
             const kind = isB3 ? 'B3' : 'B2';
