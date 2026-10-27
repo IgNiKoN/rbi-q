@@ -33085,7 +33085,9 @@ const Md = { object: "объект", building: "корпус", section: "сек�
   { code: "parking", name: "Паркинг", sort_order: 2 },
   { code: "networks", name: "Сети", sort_order: 3 },
   { code: "landscaping", name: "Благоустройство", sort_order: 4 },
-  { code: "other", name: "Прочее", sort_order: 5 }
+  { code: "kindergarten", name: "Детский сад", sort_order: 5 },
+  { code: "school", name: "Школа", sort_order: 6 },
+  { code: "other", name: "Прочее", sort_order: 7 }
 ], Ea = (i, a) => {
   const r = Number(String(i).trim().replace(",", "."));
   return Number.isFinite(r) ? Math.trunc(r) : a;

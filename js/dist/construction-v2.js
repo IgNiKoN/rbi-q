@@ -3264,6 +3264,23 @@ const UNIT_STATUS_LABELS_RU = {
   transferred: "Передана",
   shareholder_defects: "Замечания дольщика"
 };
+const CORE_PLACES_HREF = "#/settings/company/objects";
+function isCoreLed(loc, id) {
+  return !!(loc && typeof loc.isCoreLed === "function" && loc.isCoreLed(id));
+}
+function floorApartmentCells(loc, floorId, floorUnits) {
+  return (loc.getChildren(floorId) || []).filter((n) => n && n.nodeType === "apartment").map((apartment) => ({ apartment, unit: floorUnits.find((u) => u.locationId === apartment.id) || null }));
+}
+function apartmentCellName(n) {
+  const s = String(n.displayName || "").trim();
+  return s.replace(/^кв\.?\s*/i, "") || s;
+}
+function corePlacesHintHtml(text, linkText, esc) {
+  return `<div data-c2-core-places-hint class="mt-4 w-full rounded-xl border border-brand-soft bg-brand-soft px-4 py-3 text-rbi-label font-bold text-ink">
+      ${esc(text)}
+      <a href="${CORE_PLACES_HREF}" class="ml-1 font-black text-brand underline">${esc(linkText)}</a>
+    </div>`;
+}
 function _t$c(key, fallback, vars) {
   var _a, _b;
   try {
@@ -3302,11 +3319,12 @@ function closeUnitCard() {
   (_a = document.getElementById("c2-unit-card")) == null ? void 0 : _a.remove();
 }
 function openUnitCard(unit, deps) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   closeUnitCard();
   unit.id;
   const guest = deps.cb.isGuest();
-  const canDel = !guest && deps.cb.canSoftDelete(unit);
+  const coreLed = isCoreLed(deps.loc, unit.locationId);
+  const canDel = !guest && !coreLed && deps.cb.canSoftDelete(unit);
   const path = _pathLabel$2(deps.loc, unit.locationId);
   const status = String(unit.status || "not_inspected");
   const hasPdf = !!(unit.pdf_url && String(unit.pdf_url).startsWith("http"));
@@ -3357,7 +3375,8 @@ function openUnitCard(unit, deps) {
           class="w-full py-2.5 rounded-xl text-rbi-label font-black uppercase text-white bg-brand border border-brand ${guest ? "opacity-50 cursor-not-allowed" : ""}"
           ${guest ? "disabled" : ""}>${_escape$b(_t$c("construction.v2.unit.acceptance", "Приёмка"))}</button>
         ${canDel ? `<button type="button" data-c2-unit-delete="${_escape$b(unit.id)}"
-                class="w-full py-2.5 rounded-xl text-rbi-label font-black uppercase text-danger border border-danger-soft bg-danger-soft">${_escape$b(_t$c("construction.v2.unit.delete_room", "Удалить помещение"))}</button>` : ""}
+                class="w-full py-2.5 rounded-xl text-rbi-label font-black uppercase text-danger border border-danger-soft bg-danger-soft">${_escape$b(_t$c("construction.v2.unit.delete_room", "Удалить помещение"))}</button>` : coreLed && !guest ? `<a href="${CORE_PLACES_HREF}" data-c2-unit-core-places
+                  class="block w-full py-2.5 rounded-xl text-center text-rbi-label font-black uppercase text-brand border border-brand-soft bg-brand-soft">${_escape$b(_t$c("construction.v2.unit.core_places", "Править в Компании →"))}</a>` : ""}
       </div>
     </div>`;
   document.body.appendChild(wrap);
@@ -3409,7 +3428,8 @@ function openUnitCard(unit, deps) {
     }
     void deps.cb.onOpenAcceptance(fresh);
   });
-  (_c = wrap.querySelector("[data-c2-unit-delete]")) == null ? void 0 : _c.addEventListener("click", (ev) => {
+  (_c = wrap.querySelector("[data-c2-unit-core-places]")) == null ? void 0 : _c.addEventListener("click", () => closeUnitCard());
+  (_d = wrap.querySelector("[data-c2-unit-delete]")) == null ? void 0 : _d.addEventListener("click", (ev) => {
     ev.preventDefault();
     if (guest) return;
     const id = ev.currentTarget.getAttribute("data-c2-unit-delete");
@@ -3584,10 +3604,11 @@ function _renderGrid$1(uSvc, loc) {
       floorLabel
     )}</div>
         <div class="flex gap-1.5 flex-1">`;
-    if (!floorUnits.length) {
+    const cells = isCoreLed(loc, _buildingId$1) ? floorApartmentCells(loc, floor.id, floorUnits) : [];
+    if (!floorUnits.length && !cells.length) {
       html += `<div class="text-rbi-caption text-muted italic py-3">${_escape$a(_t$b("construction.v2.transfer.no_rooms", "Помещений нет"))}</div>`;
     } else {
-      for (const u of floorUnits) {
+      const unitCell = (u) => {
         const bg = _cellBg$1(String(u.status || "not_inspected"));
         const pdfDot = u.pdf_url ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-brand"></span>` : "";
         const b = _bForUnit$1(u);
@@ -3606,12 +3627,28 @@ function _renderGrid$1(uSvc, loc) {
             <span class="text-rbi-body font-black">${_escape$a(u.name)}</span>
             <span class="text-rbi-caption opacity-60 font-bold">${_escape$a(u.type || "КВ")}</span>
           </button>`;
+      };
+      for (const c of cells) {
+        if (c.unit) unitCell(c.unit);
+        else html += `
+          <button type="button" data-c2-apt-cell="${_escape$a(c.apartment.id)}"
+            class="relative ${_cellBg$1("not_inspected")} border rounded-lg w-[46px] h-[46px] flex flex-col items-center justify-center cursor-pointer shadow-sm hover:scale-105 transition-transform active:scale-95 overflow-hidden">
+            <span class="text-rbi-body font-black">${_escape$a(apartmentCellName(c.apartment))}</span>
+            <span class="text-rbi-caption opacity-60 font-bold">КВ</span>
+          </button>`;
       }
+      for (const u of floorUnits) if (!cells.some((c) => c.unit === u)) unitCell(u);
     }
     html += `</div></div>`;
   }
   html += `</div></div>`;
-  if (_canManage$1() && bldUnits.length === 0) {
+  if (_canManage$1() && isCoreLed(loc, _buildingId$1)) {
+    html += corePlacesHintHtml(
+      _t$b("construction.v2.transfer.core_places", "Квартиры этого проекта ведутся в «Компания → Объекты и места»."),
+      _t$b("construction.v2.transfer.core_places_link", "Добавить квартиры — в Компании →"),
+      _escape$a
+    );
+  } else if (_canManage$1() && bldUnits.length === 0) {
     html += `
       <button type="button" data-c2-generate-grid
         class="mt-4 w-full bg-brand-soft text-brand border border-brand-soft py-3.5 rounded-xl text-rbi-caption font-black uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
@@ -3714,7 +3751,7 @@ function _bindOnce$3() {
   document.addEventListener(
     "click",
     (ev) => {
-      var _a, _b;
+      var _a, _b, _c;
       const t = ev.target;
       if (!t) return;
       const gen = (_a = t.closest) == null ? void 0 : _a.call(t, "[data-c2-generate-grid]");
@@ -3723,40 +3760,67 @@ function _bindOnce$3() {
         void _onGenerate$1();
         return;
       }
-      const cell = (_b = t.closest) == null ? void 0 : _b.call(t, "[data-c2-unit-cell]");
+      const aptCell = (_b = t.closest) == null ? void 0 : _b.call(t, "[data-c2-apt-cell]");
+      if (aptCell) {
+        ev.preventDefault();
+        void _openApartment$1(aptCell.getAttribute("data-c2-apt-cell") || "");
+        return;
+      }
+      const cell = (_c = t.closest) == null ? void 0 : _c.call(t, "[data-c2-unit-cell]");
       if (cell) {
         ev.preventDefault();
         const id = cell.getAttribute("data-c2-unit-cell");
         const uSvc = _units$1();
-        const loc = _loc$3();
         const u = id && uSvc ? uSvc.get(id) : null;
-        if (u && uSvc) {
-          openUnitCard(u, {
-            loc,
-            units: uSvc,
-            cb: {
-              onChanged: _refreshBoard$1,
-              isGuest: _isGuest$1,
-              canSoftDelete: _canSoftDelete$1,
-              toast: _toast$1,
-              onOpenApartmentPlan: async (unit) => {
-                closeUnitCard();
-                await openApartmentPlan(unit, {
-                  isGuest: _isGuest$1,
-                  toast: _toast$1,
-                  onChanged: _refreshBoard$1
-                });
-              },
-              onOpenAcceptance: async (unit) => {
-                await _openUnitAcceptance$1(unit);
-              }
-            }
-          });
-        }
+        if (u) _openUnit$1(u);
       }
     },
     true
   );
+}
+function _openUnit$1(u) {
+  const uSvc = _units$1();
+  const loc = _loc$3();
+  if (!uSvc) return;
+  openUnitCard(u, {
+    loc,
+    units: uSvc,
+    cb: {
+      onChanged: _refreshBoard$1,
+      isGuest: _isGuest$1,
+      canSoftDelete: _canSoftDelete$1,
+      toast: _toast$1,
+      onOpenApartmentPlan: async (unit) => {
+        closeUnitCard();
+        await openApartmentPlan(unit, {
+          isGuest: _isGuest$1,
+          toast: _toast$1,
+          onChanged: _refreshBoard$1
+        });
+      },
+      onOpenAcceptance: async (unit) => {
+        await _openUnitAcceptance$1(unit);
+      }
+    }
+  });
+}
+async function _openApartment$1(aptId) {
+  const uSvc = _units$1();
+  const loc = _loc$3();
+  const apt = aptId && (loc == null ? void 0 : loc.getNode) ? loc.getNode(aptId) : null;
+  if (!uSvc || !apt) return;
+  if (_isGuest$1()) {
+    _toast$1(_t$b("construction.v2.transfer.apt_not_inspected", "Квартира ещё не осматривалась"));
+    return;
+  }
+  try {
+    const u = await uSvc.create({ locationId: apt.id, name: apartmentCellName(apt), type: "КВ", sort_order: Number(apt.sort_order || 0), status: "not_inspected" });
+    await _refreshBoard$1();
+    _openUnit$1(u);
+  } catch (e) {
+    console.warn("[transfer-board] create unit", e);
+    _toast$1(_t$b("construction.v2.error_prefix", "Ошибка: {msg}", { msg: (e == null ? void 0 : e.message) || String(e) }));
+  }
 }
 async function _openUnitAcceptance$1(unit) {
   if (_isGuest$1()) {
@@ -3989,10 +4053,11 @@ function _renderGrid(uSvc, loc) {
       floorLabel
     )}</div>
         <div class="flex gap-1.5 flex-wrap flex-1">`;
-    if (!floorUnits.length) {
+    const cells = isCoreLed(loc, _buildingId) ? floorApartmentCells(loc, floor.id, floorUnits) : [];
+    if (!floorUnits.length && !cells.length) {
       html += `<div class="text-rbi-caption text-muted italic py-3">${_escape$9(_t$a("construction.v2.transfer.no_rooms", "Помещений нет"))}</div>`;
     } else {
-      for (const u of floorUnits) {
+      const unitCell = (u) => {
         const bg = _cellBg(String(u.status || "not_inspected"));
         const pdfDot = u.pdf_url ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-brand"></span>` : "";
         const b = _bForUnit(u);
@@ -4011,12 +4076,28 @@ function _renderGrid(uSvc, loc) {
             <span class="text-rbi-body font-black">${_escape$9(u.name)}</span>
             <span class="text-rbi-caption opacity-60 font-bold">${_escape$9(u.type || "КВ")}</span>
           </button>`;
+      };
+      for (const c of cells) {
+        if (c.unit) unitCell(c.unit);
+        else html += `
+          <button type="button" data-c2-tr-desk-apt-cell="${_escape$9(c.apartment.id)}"
+            class="relative ${_cellBg("not_inspected")} border rounded-lg w-[54px] h-[54px] flex flex-col items-center justify-center cursor-pointer shadow-sm hover:scale-105 transition-transform active:scale-95 overflow-hidden">
+            <span class="text-rbi-body font-black">${_escape$9(apartmentCellName(c.apartment))}</span>
+            <span class="text-rbi-caption opacity-60 font-bold">КВ</span>
+          </button>`;
       }
+      for (const u of floorUnits) if (!cells.some((c) => c.unit === u)) unitCell(u);
     }
     html += `</div></div>`;
   }
   html += `</div>`;
-  if (_canManage() && bldUnits.length === 0) {
+  if (_canManage() && isCoreLed(loc, _buildingId)) {
+    html += corePlacesHintHtml(
+      _t$a("construction.v2.transfer.core_places", "Квартиры этого проекта ведутся в «Компания → Объекты и места»."),
+      _t$a("construction.v2.transfer.core_places_link", "Добавить квартиры — в Компании →"),
+      _escape$9
+    );
+  } else if (_canManage() && bldUnits.length === 0) {
     html += `
       <button type="button" data-c2-tr-desk-generate-grid
         class="mt-4 w-full bg-brand-soft text-brand border border-brand-soft py-3.5 rounded-xl text-rbi-caption font-black uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
@@ -4119,7 +4200,7 @@ function _bindOnce$2() {
   document.addEventListener(
     "click",
     (ev) => {
-      var _a, _b;
+      var _a, _b, _c;
       const t = ev.target;
       if (!t) return;
       const gen = (_a = t.closest) == null ? void 0 : _a.call(t, "[data-c2-tr-desk-generate-grid]");
@@ -4128,40 +4209,67 @@ function _bindOnce$2() {
         void _onGenerate();
         return;
       }
-      const cell = (_b = t.closest) == null ? void 0 : _b.call(t, "[data-c2-tr-desk-unit-cell]");
+      const aptCell = (_b = t.closest) == null ? void 0 : _b.call(t, "[data-c2-tr-desk-apt-cell]");
+      if (aptCell) {
+        ev.preventDefault();
+        void _openApartment(aptCell.getAttribute("data-c2-tr-desk-apt-cell") || "");
+        return;
+      }
+      const cell = (_c = t.closest) == null ? void 0 : _c.call(t, "[data-c2-tr-desk-unit-cell]");
       if (cell) {
         ev.preventDefault();
         const id = cell.getAttribute("data-c2-tr-desk-unit-cell");
         const uSvc = _units();
-        const loc = _loc$2();
         const u = id && uSvc ? uSvc.get(id) : null;
-        if (u && uSvc) {
-          openUnitCard(u, {
-            loc,
-            units: uSvc,
-            cb: {
-              onChanged: _refreshBoard,
-              isGuest: _isGuest,
-              canSoftDelete: _canSoftDelete,
-              toast: _toast,
-              onOpenApartmentPlan: async (unit) => {
-                closeUnitCard();
-                await openApartmentPlan(unit, {
-                  isGuest: _isGuest,
-                  toast: _toast,
-                  onChanged: _refreshBoard
-                });
-              },
-              onOpenAcceptance: async (unit) => {
-                await _openUnitAcceptance(unit);
-              }
-            }
-          });
-        }
+        if (u) _openUnit(u);
       }
     },
     true
   );
+}
+function _openUnit(u) {
+  const uSvc = _units();
+  const loc = _loc$2();
+  if (!uSvc) return;
+  openUnitCard(u, {
+    loc,
+    units: uSvc,
+    cb: {
+      onChanged: _refreshBoard,
+      isGuest: _isGuest,
+      canSoftDelete: _canSoftDelete,
+      toast: _toast,
+      onOpenApartmentPlan: async (unit) => {
+        closeUnitCard();
+        await openApartmentPlan(unit, {
+          isGuest: _isGuest,
+          toast: _toast,
+          onChanged: _refreshBoard
+        });
+      },
+      onOpenAcceptance: async (unit) => {
+        await _openUnitAcceptance(unit);
+      }
+    }
+  });
+}
+async function _openApartment(aptId) {
+  const uSvc = _units();
+  const loc = _loc$2();
+  const apt = aptId && (loc == null ? void 0 : loc.getNode) ? loc.getNode(aptId) : null;
+  if (!uSvc || !apt) return;
+  if (_isGuest()) {
+    _toast(_t$a("construction.v2.transfer.apt_not_inspected", "Квартира ещё не осматривалась"));
+    return;
+  }
+  try {
+    const u = await uSvc.create({ locationId: apt.id, name: apartmentCellName(apt), type: "КВ", sort_order: Number(apt.sort_order || 0), status: "not_inspected" });
+    await _refreshBoard();
+    _openUnit(u);
+  } catch (e) {
+    console.warn("[transfer-board-desktop] create unit", e);
+    _toast(_t$a("construction.v2.error_prefix", "Ошибка: {msg}", { msg: (e == null ? void 0 : e.message) || String(e) }));
+  }
 }
 async function _openUnitAcceptance(unit) {
   if (_isGuest()) {

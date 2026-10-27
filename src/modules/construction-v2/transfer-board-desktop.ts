@@ -21,12 +21,15 @@ import {
 } from './acceptance-form';
 import { closeApartmentPlan, openApartmentPlan } from './apartment-plan';
 import { closeUnitCard, openUnitCard } from './unit-card';
+import { apartmentCellName, corePlacesHintHtml, floorApartmentCells, isCoreLed } from './core-places';
 
 type LocSvc = {
   init: () => Promise<boolean>;
   listNodes: (opts?: { nodeType?: string; parentId?: string | null }) => LocationNode[];
   getChildren: (parentId: string | null) => LocationNode[];
   getPath?: (id: string) => LocationNode[];
+  getNode?: (id: string) => LocationNode | null;
+  isCoreLed?: (id: string | null | undefined) => boolean;
 };
 
 function _floorsForBuilding(buildingId: string, loc: LocSvc): LocationNode[] {
@@ -55,6 +58,7 @@ type UnitsSvc = {
   migrateUnitsToApartmentNodes?: (buildingId: string) => Promise<number>;
   ensureApartmentForUnit?: (unitId: string) => Promise<ConstructionUnitV2>;
   get: (id: string) => ConstructionUnitV2 | null;
+  create: (input: { locationId: string; name: string; type?: string; sort_order?: number; status?: string }) => Promise<ConstructionUnitV2>;
 };
 
 type AccSvc = {
@@ -231,10 +235,12 @@ function _renderGrid(uSvc: UnitsSvc, loc: LocSvc): string {
           floorLabel
         )}</div>
         <div class="flex gap-1.5 flex-wrap flex-1">`;
-    if (!floorUnits.length) {
+    // P2-0054: проект «Компании» — клетки по квартирам дерева (помещение СК заводится при первом открытии)
+    const cells = isCoreLed(loc, _buildingId) ? floorApartmentCells(loc, floor.id, floorUnits) : [];
+    if (!floorUnits.length && !cells.length) {
       html += `<div class="text-rbi-caption text-muted italic py-3">${_escape(_t('construction.v2.transfer.no_rooms', 'Помещений нет'))}</div>`;
     } else {
-      for (const u of floorUnits) {
+      const unitCell = (u: ConstructionUnitV2) => {
         const bg = _cellBg(String(u.status || 'not_inspected'));
         const pdfDot = u.pdf_url ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-brand"></span>` : '';
         const b = _bForUnit(u);
@@ -264,13 +270,26 @@ function _renderGrid(uSvc: UnitsSvc, loc: LocSvc): string {
             <span class="text-rbi-body font-black">${_escape(u.name)}</span>
             <span class="text-rbi-caption opacity-60 font-bold">${_escape(u.type || 'КВ')}</span>
           </button>`;
+      };
+      for (const c of cells) {
+        if (c.unit) unitCell(c.unit);
+        else html += `
+          <button type="button" data-c2-tr-desk-apt-cell="${_escape(c.apartment.id)}"
+            class="relative ${_cellBg('not_inspected')} border rounded-lg w-[54px] h-[54px] flex flex-col items-center justify-center cursor-pointer shadow-sm hover:scale-105 transition-transform active:scale-95 overflow-hidden">
+            <span class="text-rbi-body font-black">${_escape(apartmentCellName(c.apartment))}</span>
+            <span class="text-rbi-caption opacity-60 font-bold">КВ</span>
+          </button>`;
       }
+      for (const u of floorUnits) if (!cells.some((c) => c.unit === u)) unitCell(u);
     }
     html += `</div></div>`;
   }
   html += `</div>`;
 
-  if (_canManage() && bldUnits.length === 0) {
+  if (_canManage() && isCoreLed(loc, _buildingId)) {
+    html += corePlacesHintHtml(_t('construction.v2.transfer.core_places', 'Квартиры этого проекта ведутся в «Компания → Объекты и места».'),
+      _t('construction.v2.transfer.core_places_link', 'Добавить квартиры — в Компании →'), _escape);
+  } else if (_canManage() && bldUnits.length === 0) {
     html += `
       <button type="button" data-c2-tr-desk-generate-grid
         class="mt-4 w-full bg-brand-soft text-brand border border-brand-soft py-3.5 rounded-xl text-rbi-caption font-black uppercase shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
@@ -390,40 +409,72 @@ function _bindOnce() {
         return;
       }
 
+      const aptCell = t.closest?.('[data-c2-tr-desk-apt-cell]') as HTMLElement | null;
+      if (aptCell) {
+        ev.preventDefault();
+        void _openApartment(aptCell.getAttribute('data-c2-tr-desk-apt-cell') || '');
+        return;
+      }
+
       const cell = t.closest?.('[data-c2-tr-desk-unit-cell]') as HTMLElement | null;
       if (cell) {
         ev.preventDefault();
         const id = cell.getAttribute('data-c2-tr-desk-unit-cell');
         const uSvc = _units();
-        const loc = _loc();
         const u = id && uSvc ? uSvc.get(id) : null;
-        if (u && uSvc) {
-          openUnitCard(u, {
-            loc,
-            units: uSvc,
-            cb: {
-              onChanged: _refreshBoard,
-              isGuest: _isGuest,
-              canSoftDelete: _canSoftDelete,
-              toast: _toast,
-              onOpenApartmentPlan: async (unit) => {
-                closeUnitCard();
-                await openApartmentPlan(unit, {
-                  isGuest: _isGuest,
-                  toast: _toast,
-                  onChanged: _refreshBoard
-                });
-              },
-              onOpenAcceptance: async (unit) => {
-                await _openUnitAcceptance(unit);
-              }
-            }
-          });
-        }
+        if (u) _openUnit(u);
       }
     },
     true
   );
+}
+
+/** Карточка помещения СК. */
+function _openUnit(u: ConstructionUnitV2): void {
+  const uSvc = _units();
+  const loc = _loc();
+  if (!uSvc) return;
+  openUnitCard(u, {
+    loc,
+    units: uSvc,
+    cb: {
+      onChanged: _refreshBoard,
+      isGuest: _isGuest,
+      canSoftDelete: _canSoftDelete,
+      toast: _toast,
+      onOpenApartmentPlan: async (unit) => {
+        closeUnitCard();
+        await openApartmentPlan(unit, {
+          isGuest: _isGuest,
+          toast: _toast,
+          onChanged: _refreshBoard
+        });
+      },
+      onOpenAcceptance: async (unit) => {
+        await _openUnitAcceptance(unit);
+      }
+    }
+  });
+}
+
+/** P2-0054: квартира проекта «Компании» без помещения СК — завести помещение и открыть карточку. */
+async function _openApartment(aptId: string): Promise<void> {
+  const uSvc = _units();
+  const loc = _loc();
+  const apt = aptId && loc?.getNode ? loc.getNode(aptId) : null;
+  if (!uSvc || !apt) return;
+  if (_isGuest()) {
+    _toast(_t('construction.v2.transfer.apt_not_inspected', 'Квартира ещё не осматривалась'));
+    return;
+  }
+  try {
+    const u = await uSvc.create({ locationId: apt.id, name: apartmentCellName(apt), type: 'КВ', sort_order: Number(apt.sort_order || 0), status: 'not_inspected' });
+    await _refreshBoard();
+    _openUnit(u);
+  } catch (e) {
+    console.warn('[transfer-board-desktop] create unit', e);
+    _toast(_t('construction.v2.error_prefix', 'Ошибка: {msg}', { msg: (e as Error)?.message || String(e) }));
+  }
 }
 
 async function _openUnitAcceptance(unit: ConstructionUnitV2): Promise<void> {

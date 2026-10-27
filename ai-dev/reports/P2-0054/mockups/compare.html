@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P2-0054 · Качество и СК 2.0 — только выбор мест</title>
+<style>
+  :root { --bg: #f5f2ec; --card: #fff; --ink: #1e293b; --muted: #64748b; --line: #e2e8f0; --brand: #b8925a; --teal: #0f766e; --teal-soft: #ccfbf1; --red: #b91c1c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0f172a; --card: #1e293b; --ink: #e2e8f0; --muted: #94a3b8; --line: #334155; --teal-soft: #134e4a; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1440px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 19px; margin: 36px 0 8px; } h3 { font-size: 15px; margin: 18px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  p { margin: 6px 0; } .muted { color: var(--muted); }
+  .lead { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  .pair.phone { grid-template-columns: repeat(2, minmax(0, 375px)); }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+  figcaption { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  figcaption.now { color: var(--muted); } figcaption.new { color: var(--teal); }
+  img { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 14px; overflow: hidden; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing: .04em; }
+  td.n { width: 36px; font-weight: 800; color: var(--muted); }
+  .same { color: var(--muted); } .chg { color: var(--teal); font-weight: 700; }
+  .toast { background: #1e293b; color: #fff; border-radius: 12px; padding: 12px 14px; max-width: 420px; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
+  .toast b { color: #5eead4; }
+  .table-wrap { overflow-x: auto; }
+  @media (max-width: 767px) { .pair, .pair.phone { grid-template-columns: 1fr; } h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>P2-0054 · этап 3: Качество и СК 2.0 только выбирают места</h1>
+  <p class="muted">Стенд с подставными данными, 27.10.2026. Слева — как сейчас, справа — как предлагаю. Изменения касаются <b>только проектов, места которых ведёт «Компания»</b>. Проекты RBI (места ведёт Качество) до перевода остаются как сейчас.</p>
+  <div class="lead">
+    <b>Коротко.</b> В проекте «ЖК Новый (ядро)» места заводятся в «Компания → Проекты и объекты → Объекты и места». В Качестве и СК 2.0 эти же корпуса, этажи и квартиры видны и выбираются. Кнопки, которые меняли места (сохранить название, добавить, удалить, сгенерировать сетку), в этих проектах заменены одной кнопкой <b>«Править в Компании →»</b>. Планы этажей и квартир (PDF), статусы, замечания и приёмки остаются как есть.
+  </div>
+
+  <h2>1. Качество → Настройки → «Объекты и планы» · этаж проекта ядра</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="q-floor-now-1440.jpg" alt="Сейчас: этаж, кнопки Сохранить, + apartment, Удалить"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="q-floor-new-1440.jpg" alt="Предлагаю: вместо кнопок — подсказка и «Править в Компании»"></figure>
+  </div>
+
+  <h2>2. То же · квартира проекта ядра</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="q-apt-now-1440.jpg" alt="Сейчас: квартира, Сохранить и Удалить"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="q-apt-new-1440.jpg" alt="Предлагаю: квартира — только просмотр и план PDF"></figure>
+  </div>
+  <h3>Телефон, 375 px</h3>
+  <div class="pair phone">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="q-apt-now-375.jpg" alt="Сейчас на телефоне"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="q-apt-new-375.jpg" alt="Предлагаю на телефоне"></figure>
+  </div>
+
+  <h2>3. Проект «как RBI» (места ведёт Качество) — без изменений</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас = предлагаю</figcaption><img src="q-rbi-same-1440.jpg" alt="Проект RBI: всё как сейчас"></figure>
+    <div class="lead">До перевода RBI (последний этап блока) у её проектов всё как сейчас: правка, добавление, удаление мест в Качестве работают. После перевода экран станет как в пунктах 1–2.</div>
+  </div>
+
+  <h2>4. СК 2.0 → «Передача · шахматка» · корпус проекта ядра</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="sk-grid-now-1440.jpg" alt="Сейчас: помещений нет и кнопка Сгенерировать сетку"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="sk-grid-new-1440.jpg" alt="Предлагаю: квартиры из дерева, подсказка и ссылка в Компанию"></figure>
+  </div>
+  <p>Сейчас квартиры из «Компании» в шахматке не видны («Помещений нет»): помещение СК заводится только вместе с квартирой в справочнике Качества. Предлагаю: шахматка берёт квартиры из дерева, помещение СК (статус передачи, план квартиры) заводится само при первом открытии карточки. Кнопка «Сгенерировать сетку квартир» создаёт квартиры — в проекте ядра её заменяет ссылка «Добавить квартиры — в Компании →».</p>
+  <h3>Телефон, 375 px</h3>
+  <div class="pair phone">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="sk-grid-now-375.jpg" alt="Сейчас на телефоне"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="sk-grid-new-375.jpg" alt="Предлагаю на телефоне"></figure>
+  </div>
+  <h3>Для сравнения — проект «как RBI», без изменений</h3>
+  <div class="pair"><figure><figcaption class="now">Сейчас = предлагаю</figcaption><img src="sk-grid-rbi-1440.jpg" alt="Шахматка проекта RBI"></figure><div></div></div>
+
+  <h2>5. Старая правка с телефона (сделана до перевода, не отправлена)</h2>
+  <div class="pair">
+    <div class="lead"><b>Сейчас:</b> сервер её примет (места ведёт Качество).<br><b>После перевода без доработки:</b> отправка мест остановится на этой правке, следом не уйдут и планы этажей.</div>
+    <div>
+      <div class="toast"><b>Места этого проекта ведутся в «Компания → Объекты и места».</b><br>Правка «Этаж 1 → Этаж 1А» не отправлена и снята на этом телефоне. Остальные данные отправлены.</div>
+      <p class="muted">Предлагаю: сообщение один раз, правка снимается, остальные записи (проверки, замечания, приёмки, планы) отправляются дальше.</p>
+    </div>
+  </div>
+
+  <h2>Опись: что было → где теперь → что при нажатии</h2>
+  <p class="muted">Только для проектов, места которых ведёт «Компания». У проектов RBI до перевода — всё в столбце «Сейчас».</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>№</th><th>Сейчас</th><th>Где в предложении</th><th>Что при нажатии</th></tr>
+    <tr><td class="n">1</td><td>Дерево мест: раскрыть / свернуть, выбрать узел</td><td class="same">там же, без изменений</td><td>как сейчас</td></tr>
+    <tr><td class="n">2</td><td>Отметки ⚠️ / 📄 / 🔗 у этажей, квартир, ЖК</td><td class="same">там же</td><td>как сейчас</td></tr>
+    <tr><td class="n">3</td><td>Плашка «C2b: каталог объектов…»</td><td class="same">там же</td><td>—</td></tr>
+    <tr><td class="n">4</td><td>Поле «Название» места</td><td class="chg">там же, только просмотр</td><td>менять — в «Компании»</td></tr>
+    <tr><td class="n">5</td><td>«Сохранить» (переименовать место)</td><td class="chg">заменено «Править в Компании →»</td><td>открывает «Компания → Проекты и объекты» на этом проекте, вкладка «Объекты и места»</td></tr>
+    <tr><td class="n">6</td><td>«+ building / section / floor / apartment»</td><td class="chg">то же — «Править в Компании →»</td><td>там «+ Объект», «+ Внутрь», «Добавить этажи», «Копировать секцию»</td></tr>
+    <tr><td class="n">7</td><td>«Удалить» место с веткой</td><td class="chg">то же — «Править в Компании →»</td><td>там меню «⋯ → Удалить»</td></tr>
+    <tr><td class="n">8</td><td>ЖК (верх дерева): «Сохранить» — переименовать ЖК</td><td class="same">там же, без изменений</td><td>переименовывает проект (как сейчас)</td></tr>
+    <tr><td class="n">9</td><td>ЖК: «+ building», «Удалить»</td><td class="chg">«Править в Компании →»</td><td>корпуса ЖК — в «Компании»</td></tr>
+    <tr><td class="n">10</td><td>Этаж: «PDF-план» — открыть, «Загрузить PDF»</td><td class="same">там же, без изменений</td><td>как сейчас</td></tr>
+    <tr><td class="n">11</td><td>Квартира: «PDF-план квартиры» — «Загрузить PDF», «Снять план»</td><td class="same">там же, без изменений</td><td>как сейчас</td></tr>
+    <tr><td class="n">12</td><td>«+ Объект» / «+ ещё объект» (новый ЖК)</td><td class="same">там же, без изменений</td><td>как сейчас</td></tr>
+    <tr><td class="n">13</td><td>«Открыть СК (новый) →»</td><td class="same">там же</td><td>как сейчас</td></tr>
+    <tr><td class="n">14</td><td>СК 2.0, шахматка: клетки квартир (только с помещением СК)</td><td class="chg">клетки — все квартиры дерева</td><td>карточка квартиры; помещение СК заводится при первом открытии</td></tr>
+    <tr><td class="n">15</td><td>«Сгенерировать сетку квартир (8 на этаж)»</td><td class="chg">подсказка + «Добавить квартиры — в Компании →»</td><td>открывает «Компанию» на этом проекте</td></tr>
+    <tr><td class="n">16</td><td>Карточка квартиры: «Статус передачи», «Открыть» план, «Замечания на плане», «Приёмка»</td><td class="same">без изменений</td><td>как сейчас</td></tr>
+    <tr><td class="n">17</td><td>Карточка квартиры: «Удалить помещение» (удаляло и квартиру)</td><td class="chg">«Править в Компании →»</td><td>квартиры удаляются в «Компании»</td></tr>
+    <tr><td class="n">18</td><td>Замечания и приёмки на плане этажа: выбор ЖК → корпус → секция → этаж</td><td class="same">без изменений</td><td>места «Компании» уже в списке (проверено на стенде)</td></tr>
+    <tr><td class="n">19</td><td>Отправка старой правки места с телефона</td><td class="chg">сообщение, правка снимается</td><td>прочие данные отправляются дальше</td></tr>
+  </table>
+  </div>
+  <p class="muted">Ничего не удаляется: всё, что меняло места, переехало в «Компания → Объекты и места» (пункты 5–7, 9, 15, 17).</p>
+</main>
+</body>
+</html>

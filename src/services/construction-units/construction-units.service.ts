@@ -122,6 +122,8 @@ type LocSvc = {
     sort_order?: number;
   }) => Promise<LocNode>;
   softDeleteNode?: (id: string, opts?: { skipLinkedUnit?: boolean }) => Promise<unknown>;
+  /** P2-0054: место из проекта, места которого ведёт «Компания» (структуру здесь не меняем). */
+  isCoreLed?: (id: string | null | undefined) => boolean;
 };
 
 function _locations(): LocSvc | undefined {
@@ -429,7 +431,8 @@ export const ConstructionUnitsService = {
     if (!opts?.skipApartment) {
       const loc = _locations();
       const node = loc?.getNode?.(cur.locationId);
-      if (node?.nodeType === 'apartment' && loc?.softDeleteNode) {
+      // P2-0054: квартиры проекта «Компании» удаляются только в «Компания → Объекты и места»
+      if (node?.nodeType === 'apartment' && loc?.softDeleteNode && !loc.isCoreLed?.(cur.locationId)) {
         await loc.softDeleteNode(cur.locationId, { skipLinkedUnit: true });
       }
     }
@@ -445,6 +448,7 @@ export const ConstructionUnitsService = {
     if (!cur) throw new Error('Помещение не найдено');
     const loc = _locations();
     if (!loc?.getNode || !loc?.createNode) return cur;
+    if (loc.isCoreLed?.(cur.locationId)) return cur;   // P2-0054: квартиры «Компании» здесь не создаются
     const node = loc.getNode(cur.locationId);
     if (node?.nodeType === 'apartment') return cur;
     const floorId =

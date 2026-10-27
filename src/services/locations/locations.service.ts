@@ -11,6 +11,38 @@ import { migrateOdCatalogToLocations as runOdMigrate, type OdMigrateReport } fro
 let _nodes: LocationNode[] = [];
 let _plans: FloorPlan[] = [];
 let _ready = false;
+/** P2-0054: узлы-проекты (ЖК), места которых ведёт «Компания → Объекты и места» (сервер: quality.core_led_roots). */
+let _coreRoots = new Set<string>();
+
+/** P2-0054: текст отказа — как у сервера (048). */
+export const CORE_PLACES_MSG = 'Места ведутся в «Компания → Объекты и места»';
+/** P2-0054: куда вести «Править в Компании». */
+export const CORE_PLACES_HREF = '#/settings/company/objects';
+
+function _coreKey() {
+  const c = (window.RBI as { qualitySync?: { companyId?: string } | null } | undefined)?.qualitySync?.companyId || '';
+  return 'rbi_core_led_roots' + (c ? '_' + c : '');
+}
+
+function _loadCoreRoots() {
+  try {
+    const v = JSON.parse(localStorage.getItem(_coreKey()) || '[]');
+    _coreRoots = new Set(Array.isArray(v) ? v.map(String) : []);
+  } catch (_e) {
+    _coreRoots = new Set();
+  }
+}
+
+/** Корень дерева (узел-проект) для узла — по всем узлам, включая удалённые. */
+function _rootOf(id: string | null | undefined): LocationNode | null {
+  let cur = id ? _nodes.find((n) => n.id === id) || null : null;
+  const guard = new Set<string>();
+  while (cur && cur.parentId && !guard.has(cur.id)) {
+    guard.add(cur.id);
+    cur = _nodes.find((n) => n.id === cur!.parentId) || null;
+  }
+  return cur;
+}
 
 function _storage() {
   return window.RBI?.services?.storage || null;
@@ -109,6 +141,7 @@ export const LocationsService = {
         : [];
       _nodes = Array.isArray(nodes) ? nodes : [];
       _plans = Array.isArray(plans) ? plans : [];
+      _loadCoreRoots();
       _ready = true;
       return true;
     } catch (e) {
@@ -119,6 +152,27 @@ export const LocationsService = {
 
   isReady(): boolean {
     return _ready;
+  },
+
+  /** P2-0054: список ЖК, места которых ведёт «Компания» (после обмена с сервером; хранится на устройстве для работы без связи). */
+  setCoreLedRoots(ids: string[]) {
+    _coreRoots = new Set((Array.isArray(ids) ? ids : []).map(String));
+    try {
+      localStorage.setItem(_coreKey(), JSON.stringify(Array.from(_coreRoots)));
+    } catch (_e) { /* ignore */ }
+    _emit({ reason: 'coreLedRoots' });
+  },
+
+  /** P2-0054: место (или ЖК) из проекта, места которого ведёт «Компания» — структура здесь только для просмотра. */
+  isCoreLed(id: string | null | undefined): boolean {
+    const root = _rootOf(id);
+    return !!root && _coreRoots.has(root.id);
+  },
+
+  /** P2-0054: узел — сам ЖК (верх дерева), а не место. */
+  isProjectNode(id: string | null | undefined): boolean {
+    const n = id ? _nodes.find((x) => x.id === id) : null;
+    return !!n && n.nodeType === 'object' && !n.parentId;
   },
 
   /** Подмена in-memory после pull sync. */
@@ -171,6 +225,7 @@ export const LocationsService = {
     const name = String(input.displayName || '').trim();
     if (!name) throw new Error('displayName обязателен');
     const parentId = input.parentId ?? null;
+    if (parentId && this.isCoreLed(parentId)) throw new Error(CORE_PLACES_MSG);
     _assertParent(input.nodeType, parentId);
 
     const siblings = this.listNodes({ parentId });
@@ -204,6 +259,11 @@ export const LocationsService = {
   ): Promise<LocationNode> {
     const cur = _nodes.find((n) => n.id === id);
     if (!cur || cur.is_deleted || cur._deleted) throw new Error('Узел не найден');
+    if (!this.isProjectNode(id) && this.isCoreLed(id)
+        && ((patch.displayName != null && String(patch.displayName).trim() && String(patch.displayName).trim() !== cur.displayName)
+            || (patch.canonical_key != null && patch.canonical_key !== cur.canonical_key))) {
+      throw new Error(CORE_PLACES_MSG);
+    }
     const next: LocationNode = {
       ...cur,
       displayName: patch.displayName != null ? String(patch.displayName).trim() || cur.displayName : cur.displayName,
@@ -236,6 +296,7 @@ export const LocationsService = {
     const cur = _nodes.find((n) => n.id === id);
     if (!cur) throw new Error('Узел не найден');
     if (cur.is_deleted || cur._deleted) return cur;
+    if (this.isCoreLed(id)) throw new Error(CORE_PLACES_MSG);
     const kids = this.getChildren(id);
     for (const k of kids) {
       await this.softDeleteNode(k.id);

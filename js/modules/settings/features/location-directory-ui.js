@@ -77,6 +77,18 @@ function _canEdit() {
     return !!(p && (p.isAdmin?.() || p.canManageHierarchy?.()));
 }
 
+/** P2-0054: места проекта ведёт «Компания → Объекты и места» — здесь просмотр и планы. */
+const CORE_PLACES_HREF = '#/settings/company/objects';
+function _isCoreLed(svc, id) {
+    return !!(svc && typeof svc.isCoreLed === 'function' && svc.isCoreLed(id));
+}
+function _corePlacesHtml() {
+    return `<div data-loc-dir-core-places class="rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/20 p-3 space-y-2">
+            <div class="text-[11px] font-bold text-teal-800 dark:text-teal-300">${_escape(_t('settings.admin.locations.core_places', 'Места этого проекта ведутся в «Компания → Объекты и места». Здесь — просмотр и планы этажей и квартир.'))}</div>
+            <a href="${CORE_PLACES_HREF}" class="inline-block bg-teal-600 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase">${_escape(_t('settings.admin.locations.core_places_link', 'Править в Компании →'))}</a>
+        </div>`;
+}
+
 function _childType(parentType) {
     if (!parentType) return 'object';
     if (parentType === 'object') return 'building';
@@ -239,7 +251,7 @@ function _renderTreeHtml(svc) {
             html += `<button type="button" data-loc-dir-action="select" data-id="${_escape(n.id)}"
                     class="flex-1 min-w-0 text-left px-2 py-1 rounded-lg ${sel}">
                     <span class="text-[9px] uppercase text-slate-400 mr-1">${_escape(n.nodeType)}</span>
-                    ${mark} ${_escape(n.displayName)}
+                    ${mark} ${_escape(n.displayName)}${!n.parentId && _isCoreLed(svc, n.id) ? ` <span class="ml-1 text-[9px] font-black uppercase text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/40 rounded px-1.5 py-0.5">${_escape(_t('settings.admin.locations.core_places_chip', 'места — в Компании'))}</span>` : ''}
                 </button>`;
             html += `</div>`;
             if (hasKids && open) {
@@ -267,14 +279,20 @@ function _editorHtml(svc) {
         </div>`;
     }
     const next = _childType(node.nodeType);
+    // P2-0054: проект «Компании» — места только просмотр (ЖК сам по себе переименовывается, как раньше)
+    const core = _isCoreLed(svc, node.id);
+    const lockPlace = core && !(node.nodeType === 'object' && !node.parentId);
     const plan = node.nodeType === 'floor' ? svc.getPlanForFloor(node.id) : null;
     const aptUnit = node.nodeType === 'apartment' ? _linkedUnitForApartment(node.id) : null;
     const aptPdfUrl = aptUnit?.pdf_url && String(aptUnit.pdf_url).startsWith('http') ? String(aptUnit.pdf_url) : '';
     return `<div class="p-4 space-y-3">
         <div class="text-[10px] font-black uppercase text-teal-700">${_escape(node.nodeType)}</div>
         <input id="loc-dir-name" type="text" value="${_escape(node.displayName)}"
-            class="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-[12px] bg-transparent" ${can ? '' : 'disabled'} />
-        ${can ? `<div class="flex flex-wrap gap-2">
+            class="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-[12px] bg-transparent" ${can && !lockPlace ? '' : 'disabled'} />
+        ${can && lockPlace ? _corePlacesHtml() : can && core ? `<div class="flex flex-wrap gap-2">
+            <button type="button" data-loc-dir-action="save" data-id="${_escape(node.id)}"
+                class="bg-slate-800 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase">${_escape(_t('settings.admin.locations.save', 'Сохранить'))}</button>
+        </div>${_corePlacesHtml()}` : can ? `<div class="flex flex-wrap gap-2">
             <button type="button" data-loc-dir-action="save" data-id="${_escape(node.id)}"
                 class="bg-slate-800 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase">${_escape(_t('settings.admin.locations.save', 'Сохранить'))}</button>
             ${next ? `<button type="button" data-loc-dir-action="add-child" data-id="${_escape(node.id)}" data-child="${next}"
