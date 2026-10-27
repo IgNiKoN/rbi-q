@@ -399,21 +399,21 @@ body.has-app-nav2 #app-root {
     }
 }
 
-/* === P2-0046: навигация общей оболочки — подписи у всех пунктов, обычный регистр, ≤ 5 пунктов на телефоне («Ещё») ===
-   Все модули (Качество, Стройконтроль, План/Факт): меняется только вид меню, пункты и адреса прежние. */
-#main-bottom-nav .nav-item {
+/* === P2-0046: нижняя панель модулей Платформы (План/Факт …) — подписи у всех пунктов, обычный регистр, ≤ 5 пунктов на телефоне («Ещё»).
+   Класс bottom-nav--platform ставит оболочка (fitBottomNav) только при window.RBI.platformNav; старое Качество и Стройконтроль — как были. */
+#main-bottom-nav.bottom-nav--platform .nav-item {
     flex: 1 1 0;
     width: auto;
     min-width: 44px;
     max-width: 96px;
 }
 
-#main-bottom-nav .nav-item.active,
-#main-bottom-nav .nav-item.active svg {
+#main-bottom-nav.bottom-nav--platform .nav-item.active,
+#main-bottom-nav.bottom-nav--platform .nav-item.active svg {
     transform: none;
 }
 
-#main-bottom-nav .nav-text {
+#main-bottom-nav.bottom-nav--platform .nav-text {
     opacity: 1;
     transform: none;
     height: auto;
@@ -429,7 +429,7 @@ body.has-app-nav2 #app-root {
     letter-spacing: 0;
 }
 
-#main-bottom-nav .nav-item--more {
+#main-bottom-nav.bottom-nav--platform .nav-item--more {
     border: 0;
     padding: 0;
     background: none;
@@ -437,18 +437,18 @@ body.has-app-nav2 #app-root {
     color: var(--text-muted);
 }
 
-#main-bottom-nav:has(.nav-item--overflow.active) .nav-item--more {
+#main-bottom-nav.bottom-nav--platform:has(.nav-item--overflow.active) .nav-item--more {
     color: var(--primary);
 }
 
 @media (max-width: 767.98px) {
-    #main-bottom-nav .nav-item--overflow {
+    #main-bottom-nav.bottom-nav--platform .nav-item--overflow {
         display: none !important;
     }
 }
 
 @media (min-width: 768px) {
-    #main-bottom-nav .nav-item--more {
+    #main-bottom-nav.bottom-nav--platform .nav-item--more {
         display: none !important;
     }
 }
@@ -502,12 +502,4 @@ body.has-app-nav2 #app-root {
 
 #shell-more-sheet .shell-nav-badge {
     margin-left: auto;
-}
-
-/* Боковое меню: читаемые подписи без ПРОПИСНЫХ */
-.app-sidebar-item-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: none;
-    letter-spacing: 0;
 }

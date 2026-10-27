@@ -233,9 +233,11 @@
   }
 
   /**
-   * P2-0046: нижняя панель телефона — не больше 5 пунктов. Больше — первые 4 видны, остальные уходят в «Ещё» (список над панелью).
-   * Пункты остаются в панели с классом nav-item--overflow: подсветка роутера, числа и nav2 (≥1280) работают как раньше;
-   * на ширине ≥ 768 «Ещё» скрыт и видны все пункты (css/app-shell.desktop.css). Скрытые правилом роли пункты не считаются.
+   * P2-0046: нижняя панель модуля Платформы (План/Факт …, window.RBI.platformNav) — подписи у всех пунктов и не больше 5 пунктов
+   * на телефоне: больше — первые 4 видны, остальные уходят в «Ещё» (список над панелью). Пункты остаются в панели с классом
+   * nav-item--overflow: подсветка роутера, числа и nav2 (≥1280) работают как раньше; на ширине ≥ 768 «Ещё» скрыт и видны все
+   * пункты (css/app-shell.desktop.css). Скрытые правилом роли пункты не считаются.
+   * Старое Качество и Стройконтроль — без изменений (решение владельца 27.10.2026: Качество не трогать, оно — образец).
    */
   var BOTTOM_NAV_MAX = 5;
   var MORE_SHEET_ID = 'shell-more-sheet';
@@ -245,6 +247,10 @@
   function fitBottomNav(nav) {
     if (!nav) return;
     closeMoreSheet();
+    var pnav = window.RBI && window.RBI.platformNav;
+    var platform = !!(pnav && Array.isArray(pnav.items) && pnav.items.length);
+    nav.classList.toggle('bottom-nav--platform', platform);
+    if (!platform) return;
     var items = Array.prototype.filter.call(nav.querySelectorAll('.nav-item[data-path]'), function (el) {
       return window.getComputedStyle(el).display !== 'none';
     });

@@ -1,6 +1,7 @@
 /// <reference types="node" />
-/** P2-0046: нижняя панель телефона — не больше 5 пунктов: больше — первые 4 видны, остальные в «Ещё» (оболочка js/core/app-shell.js
- *  в happy-dom). Пункты остаются в панели — подсветка и адреса прежние; число на «Ещё» — сумма чисел ушедших пунктов. */
+/** P2-0046: нижняя панель модуля Платформы на телефоне — не больше 5 пунктов: больше — первые 4 видны, остальные в «Ещё»
+ *  (оболочка js/core/app-shell.js в happy-dom). Пункты остаются в панели — подсветка и адреса прежние; число на «Ещё» — сумма
+ *  чисел ушедших пунктов. Старое Качество и Стройконтроль (нет window.RBI.platformNav) — панель как была. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -24,7 +25,8 @@ function shell(): N {
   return win;
 }
 
-function fill(win: N, paths: string[]): N {
+function fill(win: N, paths: string[], platform = true): N {
+  win.RBI.platformNav = platform ? { id: 'planfact', title: 'План/Факт', items: paths.map((p) => ({ path: p, label: p })) } : null;
   const nav = win.document.getElementById('main-bottom-nav');
   nav.innerHTML = paths.map((p) => '<div class="nav-item" data-path="' + p + '"><svg></svg><span class="nav-text">' + p.split('/').pop() + '</span></div>').join('');
   win.RBI.services.shell.fitBottomNav(nav);
@@ -33,9 +35,18 @@ function fill(win: N, paths: string[]): N {
 const overflow = (nav: N): string[] => Array.from(nav.querySelectorAll('.nav-item--overflow')).map((e: N) => e.getAttribute('data-path'));
 const PF = ['#/planfact', '#/planfact/inbox', '#/planfact/vor', '#/planfact/fact', '#/planfact/estimate', '#/planfact/ks2', '#/planfact/directories', '#/settings'];
 
-test('5 пунктов и меньше (Качество, Стройконтроль) — панель без изменений, «Ещё» нет', () => {
+test('Качество и Стройконтроль (не модуль Платформы): панель как была — без класса платформы и без «Ещё» даже при 7 пунктах', () => {
   const win = shell();
-  const nav = fill(win, ['#/quality/audit', '#/quality/engineer', '#/quality/analytics', '#/quality/reference', '#/settings']);
+  const nav = fill(win, ['#/construction-v2', '#/construction-v2/defects', '#/construction-v2/acceptance', '#/construction-v2/transfer',
+    '#/construction-v2/metrics', '#/construction-v2/cabinet', '#/settings'], false);
+  assert.equal(nav.classList.contains('bottom-nav--platform'), false);
+  assert.equal(nav.querySelector('.nav-item--more'), null);
+  assert.deepEqual(overflow(nav), []);
+});
+
+test('модуль Платформы, 5 пунктов и меньше — все видны, «Ещё» нет', () => {
+  const win = shell();
+  const nav = fill(win, ['#/planfact', '#/planfact/inbox', '#/planfact/vor', '#/planfact/fact', '#/settings']);
   assert.equal(nav.querySelector('.nav-item--more'), null);
   assert.deepEqual(overflow(nav), []);
   assert.equal(nav.querySelectorAll('.nav-item[data-path]').length, 5);
@@ -44,6 +55,7 @@ test('5 пунктов и меньше (Качество, Стройконтро
 test('8 пунктов (План/Факт): видны первые 4 + «Ещё», остальные 4 — в списке, все пункты остаются в панели', () => {
   const win = shell();
   const nav = fill(win, PF);
+  assert.ok(nav.classList.contains('bottom-nav--platform'));
   assert.deepEqual(overflow(nav), ['#/planfact/estimate', '#/planfact/ks2', '#/planfact/directories', '#/settings']);
   const more = nav.querySelector('.nav-item--more');
   assert.ok(more, 'есть «Ещё»');
