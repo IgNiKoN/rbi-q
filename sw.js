@@ -2,7 +2,7 @@
 // ОБЯЗАТЕЛЬНО МЕНЯЕМ ВЕРСИЮ при любых изменениях в коде!
 // ОБЯЗАТЕЛЬНО МЕНЯЕМ ВЕРСИЮ при любых изменениях в коде!
 const APP_VERSION = '18.59.0';
-const SW_VERSION = '18.94.0';
+const SW_VERSION = '18.95.0';
 // P2-0013: «разработка / выпуск» — из единственного переключателя js/services/config.service.js (выпуск: rbi-quality-* вместо старой версии).
 importScripts('./js/services/config.service.js');
 const CACHE_PREFIX = (self.APP_CONFIG && self.APP_CONFIG.SW_CACHE_PREFIX) || 'platform2-';
@@ -185,6 +185,7 @@ const urlsToCache = [
   './js/shared/photo-editor.utils.js',
   './js/shared/photo-viewer-zoom.utils.js',
   './js/shared/pdf-open.utils.js',
+  './js/shared/theme.utils.js',
   './js/shared/splash-screen.utils.js',
   './js/shared/pwa-update.utils.js',
   './js/shared/fab-export.utils.js',

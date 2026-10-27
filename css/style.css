@@ -527,6 +527,152 @@ html[data-theme="rbi-dark-v3"] {
     --color-orange: var(--gold);
     --color-blue: #7a9bb0;
 }
+/* === СТАНДАРТНАЯ (P2-0051) — основа дизайн-системы ===
+   Палитра — макеты 27.10.2026 (ai-dev/tasks/P2-0051.md §2, ai-dev/standards/DESIGN_SYSTEM.md
+   «Тема „Стандартная“»). Правила компонентов — общие с темой rbi-*-v3 (селекторы std-* стоят рядом
+   с v3 во всех правилах ниже); здесь только значения токенов. Режим «Авто» (std-auto) выбирает
+   std-light / std-dark по настройке устройства (js/shared/theme.utils.js). Те же значения для экранов
+   Платформы — src/platform/ui/tokens.ts (STD_THEME). */
+html[data-theme="std-light"] {
+    /* Канон брендкода (как в v2/v3) */
+    --graphite: #1c2b39;
+    --graphite-2: #273949;
+    --blue-steel: #4c7288;
+    --gold: #c49a5f;
+    --gold-2: #d8bd91;
+    --paper: #f7f4ee;
+    --porcelain: #fbf9f5;
+    --warm-paper: #fbf9f5;
+    --stone: #ece7de;
+    --ink: #172330;
+    --muted: #626e7b;
+    --success: #5f7f6d;
+    --focus: #8a6a35;
+    --danger: #9f4c45;
+    --warning: #b8844a;
+    --silver: #8d96a0;
+    --white: #ffffff;
+    --line: rgba(28, 43, 57, 0.14);
+    --line-strong: rgba(28, 43, 57, 0.24);
+    --shadow-1: 0 4px 16px rgba(23, 35, 48, 0.06);
+    --shadow-2: 0 12px 28px rgba(23, 35, 48, 0.08);
+    --shadow-3: 0 18px 42px rgba(23, 35, 48, 0.12);
+    --shadow-soft: var(--shadow-2);
+    --shadow-deep: var(--shadow-3);
+
+    --rbi-graphite: var(--graphite);
+    --rbi-blue: var(--blue-steel);
+    --rbi-gold: var(--gold);
+    --rbi-warm-bg: var(--paper);
+
+    --rbi-radius-sm: 4px;
+    --rbi-radius-md: 8px;
+    --rbi-radius-lg: 16px;
+    --rbi-strip-h: 60px;
+
+    /* Смысловые токены «Стандартной» */
+    --bg-main: #f7f4ee;
+    --text-main: #172330;
+    /* #66727f из макета чуть затемнён до #626e7b: на фоне #f7f4ee контраст 4.47 → 4.74 (правило ≥ 4.5:1) */
+    --text-muted: #626e7b;
+    --card-bg: #ffffff;
+    --card-bg-2: #fbf9f5;
+    --card-border: var(--line);
+    --header-bg: rgba(247, 244, 238, 0.95);
+    --nav-bg: rgba(247, 244, 238, 0.95);
+    --hover-bg: rgba(28, 43, 57, 0.055);
+    --sel-bg: rgba(196, 154, 95, 0.10);
+    --accent-text: #8a6a35;
+
+    --primary: var(--graphite);
+    --primary-hover: var(--graphite-2);
+    --btn-primary: var(--gold);
+    --btn-primary-hover: var(--gold-2);
+    --btn-primary-text: #172330;
+    --accent: var(--gold);
+    --accent-hover: var(--gold-2);
+    --accent-blue: #4c7288;
+
+    --color-green: #5f7f6d;
+    --color-red: #9f4c45;
+    --color-yellow: #b8844a;
+    --color-orange: #b8844a;
+    --color-blue: #4c7288;
+    --color-violet: #7a6aa0;
+    /* Статус как ТЕКСТ (слово «Принято», «Просрочено»…) — варианты с контрастом ≥ 4.5:1 на фоне и карточке */
+    --ok-text: #52705f;
+    --warn-text: #8a6a35;
+    --bad-text: #9f4c45;
+}
+
+html[data-theme="std-dark"] {
+    --graphite: #1c2b39;
+    --graphite-2: #273949;
+    --blue-steel: #4c7288;
+    --gold: #c49a5f;
+    --gold-2: #d8bd91;
+    --paper: #f7f4ee;
+    --porcelain: #1c2b39;
+    --warm-paper: #1c2b39;
+    --stone: #273949;
+    --ink: #172330;
+    --muted: #a8b2bd;
+    --success: #7a9a88;
+    --focus: #c49a5f;
+    --danger: #c46b63;
+    --warning: #d9b45a;
+    --silver: #a8b2bd;
+    --white: #ffffff;
+    --line: rgba(255, 255, 255, 0.12);
+    --line-strong: rgba(255, 255, 255, 0.22);
+    --shadow-1: 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-2: 0 12px 28px rgba(0, 0, 0, 0.28);
+    --shadow-3: 0 18px 42px rgba(0, 0, 0, 0.45);
+    --shadow-soft: var(--shadow-2);
+    --shadow-deep: var(--shadow-3);
+
+    --rbi-graphite: var(--graphite);
+    --rbi-blue: var(--blue-steel);
+    --rbi-gold: var(--gold);
+    --rbi-warm-bg: #101923;
+
+    --rbi-radius-sm: 4px;
+    --rbi-radius-md: 8px;
+    --rbi-radius-lg: 16px;
+    --rbi-strip-h: 60px;
+
+    --bg-main: #101923;
+    --text-main: #f7f4ee;
+    --text-muted: #a8b2bd;
+    --card-bg: #172330;
+    --card-bg-2: #1c2b39;
+    --card-border: var(--line);
+    --header-bg: rgba(16, 25, 35, 0.95);
+    --nav-bg: rgba(16, 25, 35, 0.95);
+    --hover-bg: rgba(255, 255, 255, 0.07);
+    --sel-bg: rgba(196, 154, 95, 0.13);
+    --accent-text: #d8bd91;
+
+    --primary: var(--gold);
+    --primary-hover: var(--gold-2);
+    --btn-primary: var(--gold);
+    --btn-primary-hover: var(--gold-2);
+    --btn-primary-text: #172330;
+    --accent: var(--gold);
+    --accent-hover: var(--gold-2);
+    --accent-blue: #7a9bb0;
+
+    --color-green: #7a9a88;
+    --color-red: #c46b63;
+    --color-yellow: #d9b45a;
+    --color-orange: #c49a5f;
+    --color-blue: #7a9bb0;
+    --color-violet: #a493c4;
+    --ok-text: #86a593;
+    --warn-text: #d9b45a;
+    --bad-text: #d4847c;
+}
+
 /* === ГЛОБАЛЬНЫЕ СТИЛИ === */
 html {
     scroll-behavior: smooth;
@@ -2887,12 +3033,16 @@ body {
 /* === RBI THEME v3: бренд-мост (портал) + копия v2 === */
 
 [data-theme="rbi-light-v3"] #splash-screen,
-[data-theme="rbi-dark-v3"] #splash-screen {
+[data-theme="std-light"] #splash-screen,
+[data-theme="rbi-dark-v3"] #splash-screen,
+[data-theme="std-dark"] #splash-screen {
     background: radial-gradient(circle at 50% 35%, var(--graphite-2) 0%, var(--graphite) 42%, #101923 100%);
 }
 
 [data-theme="rbi-light-v3"] .splash-pro,
-[data-theme="rbi-dark-v3"] .splash-pro {
+[data-theme="std-light"] .splash-pro,
+[data-theme="rbi-dark-v3"] .splash-pro,
+[data-theme="std-dark"] .splash-pro {
     background: linear-gradient(90deg, var(--white), var(--gold), var(--gold-2), var(--gold), var(--white));
     background-size: 300% auto;
     background-clip: text;
@@ -2901,23 +3051,31 @@ body {
 }
 
 [data-theme="rbi-light-v3"] .loader-bar,
-[data-theme="rbi-dark-v3"] .loader-bar {
+[data-theme="std-light"] .loader-bar,
+[data-theme="rbi-dark-v3"] .loader-bar,
+[data-theme="std-dark"] .loader-bar {
     background: linear-gradient(90deg, var(--gold), var(--white), var(--gold));
 }
 
 [data-theme="rbi-light-v3"] .bottom-nav,
+[data-theme="std-light"] .bottom-nav,
 [data-theme="rbi-dark-v3"] .bottom-nav,
+[data-theme="std-dark"] .bottom-nav,
 [data-theme="rbi-light-v3"] .header-fixed,
-[data-theme="rbi-dark-v3"] .header-fixed {
+[data-theme="std-light"] .header-fixed,
+[data-theme="rbi-dark-v3"] .header-fixed,
+[data-theme="std-dark"] .header-fixed {
     border-color: var(--card-border);
 }
 
 [data-theme="rbi-light-v3"] .nav-item.active,
-[data-theme="rbi-dark-v3"] .nav-item.active {
+[data-theme="std-light"] .nav-item.active,
+[data-theme="rbi-dark-v3"] .nav-item.active,
+[data-theme="std-dark"] .nav-item.active {
     color: var(--primary);
 }
 
-[data-theme="rbi-light-v3"] .nav-item.active::after {
+[data-theme="rbi-light-v3"] .nav-item.active::after, [data-theme="std-light"] .nav-item.active::after {
     content: '';
     width: 18px;
     height: 2px;
@@ -2926,7 +3084,7 @@ body {
     background: var(--primary);
     opacity: 0.9;
 }
-[data-theme="rbi-dark-v3"] .nav-item.active::after {
+[data-theme="rbi-dark-v3"] .nav-item.active::after, [data-theme="std-dark"] .nav-item.active::after {
     content: '';
     width: 18px;
     height: 2px;
@@ -2938,68 +3096,108 @@ body {
 
 /* --- indigo → graphite / gold --- */
 [data-theme="rbi-light-v3"] .bg-indigo-500,
+[data-theme="std-light"] .bg-indigo-500,
 [data-theme="rbi-light-v3"] .bg-indigo-600,
+[data-theme="std-light"] .bg-indigo-600,
 [data-theme="rbi-dark-v3"] .bg-indigo-500,
-[data-theme="rbi-dark-v3"] .bg-indigo-600 {
+[data-theme="std-dark"] .bg-indigo-500,
+[data-theme="rbi-dark-v3"] .bg-indigo-600,
+[data-theme="std-dark"] .bg-indigo-600 {
     background-color: var(--primary) !important;
 }
 [data-theme="rbi-light-v3"] .bg-indigo-700,
+[data-theme="std-light"] .bg-indigo-700,
 [data-theme="rbi-light-v3"] .bg-indigo-800,
+[data-theme="std-light"] .bg-indigo-800,
 [data-theme="rbi-light-v3"] .bg-indigo-900,
+[data-theme="std-light"] .bg-indigo-900,
 [data-theme="rbi-dark-v3"] .bg-indigo-700,
+[data-theme="std-dark"] .bg-indigo-700,
 [data-theme="rbi-dark-v3"] .bg-indigo-800,
-[data-theme="rbi-dark-v3"] .bg-indigo-900 {
+[data-theme="std-dark"] .bg-indigo-800,
+[data-theme="rbi-dark-v3"] .bg-indigo-900,
+[data-theme="std-dark"] .bg-indigo-900 {
     background-color: var(--primary-hover) !important;
 }
 [data-theme="rbi-light-v3"] .bg-indigo-50,
-[data-theme="rbi-light-v3"] .bg-indigo-100 {
+[data-theme="std-light"] .bg-indigo-50,
+[data-theme="rbi-light-v3"] .bg-indigo-100,
+[data-theme="std-light"] .bg-indigo-100 {
     background-color: rgba(28, 43, 57, 0.06) !important;
 }
 [data-theme="rbi-dark-v3"] .bg-indigo-50,
-[data-theme="rbi-dark-v3"] .bg-indigo-100 {
+[data-theme="std-dark"] .bg-indigo-50,
+[data-theme="rbi-dark-v3"] .bg-indigo-100,
+[data-theme="std-dark"] .bg-indigo-100 {
     background-color: rgba(196, 154, 95, 0.14) !important;
 }
 
 [data-theme="rbi-light-v3"] .text-indigo-400,
+[data-theme="std-light"] .text-indigo-400,
 [data-theme="rbi-light-v3"] .text-indigo-500,
+[data-theme="std-light"] .text-indigo-500,
 [data-theme="rbi-light-v3"] .text-indigo-600,
+[data-theme="std-light"] .text-indigo-600,
 [data-theme="rbi-light-v3"] .text-indigo-700,
-[data-theme="rbi-light-v3"] .text-indigo-800 {
+[data-theme="std-light"] .text-indigo-700,
+[data-theme="rbi-light-v3"] .text-indigo-800,
+[data-theme="std-light"] .text-indigo-800 {
     color: var(--graphite) !important;
 }
 [data-theme="rbi-dark-v3"] .text-indigo-400,
+[data-theme="std-dark"] .text-indigo-400,
 [data-theme="rbi-dark-v3"] .text-indigo-500,
+[data-theme="std-dark"] .text-indigo-500,
 [data-theme="rbi-dark-v3"] .text-indigo-600,
+[data-theme="std-dark"] .text-indigo-600,
 [data-theme="rbi-dark-v3"] .text-indigo-700,
-[data-theme="rbi-dark-v3"] .text-indigo-800 {
+[data-theme="std-dark"] .text-indigo-700,
+[data-theme="rbi-dark-v3"] .text-indigo-800,
+[data-theme="std-dark"] .text-indigo-800 {
     color: var(--gold) !important;
 }
 
 [data-theme="rbi-light-v3"] .border-indigo-100,
+[data-theme="std-light"] .border-indigo-100,
 [data-theme="rbi-light-v3"] .border-indigo-200,
+[data-theme="std-light"] .border-indigo-200,
 [data-theme="rbi-light-v3"] .border-indigo-300,
+[data-theme="std-light"] .border-indigo-300,
 [data-theme="rbi-light-v3"] .border-indigo-400,
-[data-theme="rbi-light-v3"] .border-indigo-800 {
+[data-theme="std-light"] .border-indigo-400,
+[data-theme="rbi-light-v3"] .border-indigo-800,
+[data-theme="std-light"] .border-indigo-800 {
     border-color: rgba(28, 43, 57, 0.22) !important;
 }
 [data-theme="rbi-dark-v3"] .border-indigo-100,
+[data-theme="std-dark"] .border-indigo-100,
 [data-theme="rbi-dark-v3"] .border-indigo-200,
+[data-theme="std-dark"] .border-indigo-200,
 [data-theme="rbi-dark-v3"] .border-indigo-300,
+[data-theme="std-dark"] .border-indigo-300,
 [data-theme="rbi-dark-v3"] .border-indigo-400,
-[data-theme="rbi-dark-v3"] .border-indigo-800 {
+[data-theme="std-dark"] .border-indigo-400,
+[data-theme="rbi-dark-v3"] .border-indigo-800,
+[data-theme="std-dark"] .border-indigo-800 {
     border-color: rgba(196, 154, 95, 0.42) !important;
 }
 
 [data-theme="rbi-light-v3"] button.bg-indigo-500,
+[data-theme="std-light"] button.bg-indigo-500,
 [data-theme="rbi-light-v3"] button.bg-indigo-600,
-[data-theme="rbi-light-v3"] button.bg-indigo-700 {
+[data-theme="std-light"] button.bg-indigo-600,
+[data-theme="rbi-light-v3"] button.bg-indigo-700,
+[data-theme="std-light"] button.bg-indigo-700 {
     background: linear-gradient(135deg, var(--graphite), var(--graphite-2)) !important;
     border: 1px solid rgba(28, 43, 57, 0.28) !important;
     color: var(--white) !important;
 }
 [data-theme="rbi-dark-v3"] button.bg-indigo-500,
+[data-theme="std-dark"] button.bg-indigo-500,
 [data-theme="rbi-dark-v3"] button.bg-indigo-600,
-[data-theme="rbi-dark-v3"] button.bg-indigo-700 {
+[data-theme="std-dark"] button.bg-indigo-600,
+[data-theme="rbi-dark-v3"] button.bg-indigo-700,
+[data-theme="std-dark"] button.bg-indigo-700 {
     background: linear-gradient(135deg, var(--gold), #9f7844) !important;
     border: 1px solid rgba(216, 189, 145, 0.35) !important;
     color: #101923 !important;
@@ -3007,328 +3205,512 @@ body {
 
 /* --- slate → ink / muted / stone / graphite surfaces --- */
 [data-theme="rbi-light-v3"] .text-slate-800,
+[data-theme="std-light"] .text-slate-800,
 [data-theme="rbi-light-v3"] .text-slate-900,
-[data-theme="rbi-light-v3"] .text-slate-700 {
+[data-theme="std-light"] .text-slate-900,
+[data-theme="rbi-light-v3"] .text-slate-700,
+[data-theme="std-light"] .text-slate-700 {
     color: var(--ink) !important;
 }
 [data-theme="rbi-light-v3"] .text-slate-600,
-[data-theme="rbi-light-v3"] .text-slate-500 {
+[data-theme="std-light"] .text-slate-600,
+[data-theme="rbi-light-v3"] .text-slate-500,
+[data-theme="std-light"] .text-slate-500 {
     color: var(--muted) !important;
 }
 [data-theme="rbi-light-v3"] .text-slate-400,
-[data-theme="rbi-light-v3"] .text-slate-300 {
+[data-theme="std-light"] .text-slate-400,
+[data-theme="rbi-light-v3"] .text-slate-300,
+[data-theme="std-light"] .text-slate-300 {
     color: var(--silver) !important;
 }
 
 [data-theme="rbi-dark-v3"] .text-slate-800,
+[data-theme="std-dark"] .text-slate-800,
 [data-theme="rbi-dark-v3"] .text-slate-900,
+[data-theme="std-dark"] .text-slate-900,
 [data-theme="rbi-dark-v3"] .text-slate-700,
+[data-theme="std-dark"] .text-slate-700,
 [data-theme="rbi-dark-v3"] .text-slate-200,
-[data-theme="rbi-dark-v3"] .text-slate-100 {
+[data-theme="std-dark"] .text-slate-200,
+[data-theme="rbi-dark-v3"] .text-slate-100,
+[data-theme="std-dark"] .text-slate-100 {
     color: var(--paper) !important;
 }
 [data-theme="rbi-dark-v3"] .text-slate-600,
+[data-theme="std-dark"] .text-slate-600,
 [data-theme="rbi-dark-v3"] .text-slate-500,
+[data-theme="std-dark"] .text-slate-500,
 [data-theme="rbi-dark-v3"] .text-slate-400,
-[data-theme="rbi-dark-v3"] .text-slate-300 {
+[data-theme="std-dark"] .text-slate-400,
+[data-theme="rbi-dark-v3"] .text-slate-300,
+[data-theme="std-dark"] .text-slate-300 {
     color: var(--text-muted) !important;
 }
 
 [data-theme="rbi-light-v3"] .bg-slate-50,
-[data-theme="rbi-light-v3"] .bg-slate-100 {
+[data-theme="std-light"] .bg-slate-50,
+[data-theme="rbi-light-v3"] .bg-slate-100,
+[data-theme="std-light"] .bg-slate-100 {
     background-color: var(--porcelain) !important;
 }
-[data-theme="rbi-light-v3"] .bg-slate-200 {
+[data-theme="rbi-light-v3"] .bg-slate-200, [data-theme="std-light"] .bg-slate-200 {
     background-color: var(--stone) !important;
 }
 [data-theme="rbi-light-v3"] .bg-slate-700,
+[data-theme="std-light"] .bg-slate-700,
 [data-theme="rbi-light-v3"] .bg-slate-800,
-[data-theme="rbi-light-v3"] .bg-slate-900 {
+[data-theme="std-light"] .bg-slate-800,
+[data-theme="rbi-light-v3"] .bg-slate-900,
+[data-theme="std-light"] .bg-slate-900 {
     background-color: var(--graphite) !important;
 }
 
 [data-theme="rbi-dark-v3"] .bg-slate-50,
+[data-theme="std-dark"] .bg-slate-50,
 [data-theme="rbi-dark-v3"] .bg-slate-100,
-[data-theme="rbi-dark-v3"] .bg-slate-200 {
+[data-theme="std-dark"] .bg-slate-100,
+[data-theme="rbi-dark-v3"] .bg-slate-200,
+[data-theme="std-dark"] .bg-slate-200 {
     background-color: rgba(255, 255, 255, 0.06) !important;
 }
 [data-theme="rbi-dark-v3"] .bg-slate-700,
+[data-theme="std-dark"] .bg-slate-700,
 [data-theme="rbi-dark-v3"] .bg-slate-800,
-[data-theme="rbi-dark-v3"] .bg-slate-900 {
+[data-theme="std-dark"] .bg-slate-800,
+[data-theme="rbi-dark-v3"] .bg-slate-900,
+[data-theme="std-dark"] .bg-slate-900 {
     background-color: var(--graphite-2) !important;
 }
 
 [data-theme="rbi-light-v3"] .border-slate-100,
+[data-theme="std-light"] .border-slate-100,
 [data-theme="rbi-light-v3"] .border-slate-200,
-[data-theme="rbi-light-v3"] .border-slate-300 {
+[data-theme="std-light"] .border-slate-200,
+[data-theme="rbi-light-v3"] .border-slate-300,
+[data-theme="std-light"] .border-slate-300 {
     border-color: var(--line) !important;
 }
 [data-theme="rbi-light-v3"] .border-slate-600,
+[data-theme="std-light"] .border-slate-600,
 [data-theme="rbi-light-v3"] .border-slate-700,
-[data-theme="rbi-light-v3"] .border-slate-800 {
+[data-theme="std-light"] .border-slate-700,
+[data-theme="rbi-light-v3"] .border-slate-800,
+[data-theme="std-light"] .border-slate-800 {
     border-color: var(--line-strong) !important;
 }
 [data-theme="rbi-dark-v3"] .border-slate-100,
+[data-theme="std-dark"] .border-slate-100,
 [data-theme="rbi-dark-v3"] .border-slate-200,
+[data-theme="std-dark"] .border-slate-200,
 [data-theme="rbi-dark-v3"] .border-slate-300,
+[data-theme="std-dark"] .border-slate-300,
 [data-theme="rbi-dark-v3"] .border-slate-600,
+[data-theme="std-dark"] .border-slate-600,
 [data-theme="rbi-dark-v3"] .border-slate-700,
-[data-theme="rbi-dark-v3"] .border-slate-800 {
+[data-theme="std-dark"] .border-slate-700,
+[data-theme="rbi-dark-v3"] .border-slate-800,
+[data-theme="std-dark"] .border-slate-800 {
     border-color: var(--line) !important;
 }
 
 /* --- green / red / yellow → brand success / danger / gold --- */
 [data-theme="rbi-light-v3"] .text-green-500,
+[data-theme="std-light"] .text-green-500,
 [data-theme="rbi-light-v3"] .text-green-600,
+[data-theme="std-light"] .text-green-600,
 [data-theme="rbi-light-v3"] .text-green-700,
+[data-theme="std-light"] .text-green-700,
 [data-theme="rbi-dark-v3"] .text-green-500,
+[data-theme="std-dark"] .text-green-500,
 [data-theme="rbi-dark-v3"] .text-green-600,
+[data-theme="std-dark"] .text-green-600,
 [data-theme="rbi-dark-v3"] .text-green-700,
+[data-theme="std-dark"] .text-green-700,
 [data-theme="rbi-light-v3"] .text-emerald-500,
+[data-theme="std-light"] .text-emerald-500,
 [data-theme="rbi-light-v3"] .text-emerald-600,
+[data-theme="std-light"] .text-emerald-600,
 [data-theme="rbi-dark-v3"] .text-emerald-500,
-[data-theme="rbi-dark-v3"] .text-emerald-600 {
+[data-theme="std-dark"] .text-emerald-500,
+[data-theme="rbi-dark-v3"] .text-emerald-600,
+[data-theme="std-dark"] .text-emerald-600 {
     color: var(--color-green) !important;
 }
 [data-theme="rbi-light-v3"] .bg-green-50,
+[data-theme="std-light"] .bg-green-50,
 [data-theme="rbi-light-v3"] .bg-emerald-50,
+[data-theme="std-light"] .bg-emerald-50,
 [data-theme="rbi-dark-v3"] .bg-green-50,
-[data-theme="rbi-dark-v3"] .bg-emerald-50 {
+[data-theme="std-dark"] .bg-green-50,
+[data-theme="rbi-dark-v3"] .bg-emerald-50,
+[data-theme="std-dark"] .bg-emerald-50 {
     background-color: rgba(95, 127, 109, 0.14) !important;
 }
 
 /* blue-50 не был в remap → input-base (--text-main светлый) на pastel blue = нечитаемо (FMEA Fix) */
 [data-theme="rbi-dark-v3"] .bg-blue-50,
-[data-theme="rbi-dark-v3"] .bg-blue-100 {
+[data-theme="std-dark"] .bg-blue-50,
+[data-theme="rbi-dark-v3"] .bg-blue-100,
+[data-theme="std-dark"] .bg-blue-100 {
     background-color: rgba(76, 114, 136, 0.22) !important;
 }
 [data-theme="rbi-dark-v3"] .text-purple-700,
-[data-theme="rbi-dark-v3"] .text-purple-600 {
+[data-theme="std-dark"] .text-purple-700,
+[data-theme="rbi-dark-v3"] .text-purple-600,
+[data-theme="std-dark"] .text-purple-600 {
     color: #c4b5fd !important;
 }
 [data-theme="rbi-dark-v3"] #manager-dev-list .bg-white,
+[data-theme="std-dark"] #manager-dev-list .bg-white,
 [data-theme="rbi-dark-v3"] #manager-roadmap-list .bg-white,
+[data-theme="std-dark"] #manager-roadmap-list .bg-white,
 [data-theme="rbi-dark-v3"] #fmea-workspace .bg-white,
+[data-theme="std-dark"] #fmea-workspace .bg-white,
 [data-theme="rbi-dark-v3"] #meeting-preview-body.bg-white,
+[data-theme="std-dark"] #meeting-preview-body.bg-white,
 [data-theme="rbi-dark-v3"] #tab-reference .item-weight-select.bg-white,
+[data-theme="std-dark"] #tab-reference .item-weight-select.bg-white,
 [data-theme="rbi-dark-v3"] #tab-reference .item-nd-select.bg-white,
+[data-theme="std-dark"] #tab-reference .item-nd-select.bg-white,
 [data-theme="rbi-dark-v3"] #modal-overlay .item-weight-select.bg-white,
-[data-theme="rbi-dark-v3"] #modal-overlay .item-nd-select.bg-white {
+[data-theme="std-dark"] #modal-overlay .item-weight-select.bg-white,
+[data-theme="rbi-dark-v3"] #modal-overlay .item-nd-select.bg-white,
+[data-theme="std-dark"] #modal-overlay .item-nd-select.bg-white {
     background-color: var(--card-bg) !important;
     color: var(--text-main) !important;
 }
 [data-theme="rbi-light-v3"] .bg-green-500,
+[data-theme="std-light"] .bg-green-500,
 [data-theme="rbi-light-v3"] .bg-green-600,
+[data-theme="std-light"] .bg-green-600,
 [data-theme="rbi-dark-v3"] .bg-green-500,
-[data-theme="rbi-dark-v3"] .bg-green-600 {
+[data-theme="std-dark"] .bg-green-500,
+[data-theme="rbi-dark-v3"] .bg-green-600,
+[data-theme="std-dark"] .bg-green-600 {
     background-color: var(--color-green) !important;
 }
 [data-theme="rbi-light-v3"] .border-green-200,
+[data-theme="std-light"] .border-green-200,
 [data-theme="rbi-light-v3"] .border-green-300,
+[data-theme="std-light"] .border-green-300,
 [data-theme="rbi-dark-v3"] .border-green-200,
-[data-theme="rbi-dark-v3"] .border-green-300 {
+[data-theme="std-dark"] .border-green-200,
+[data-theme="rbi-dark-v3"] .border-green-300,
+[data-theme="std-dark"] .border-green-300 {
     border-color: rgba(95, 127, 109, 0.45) !important;
 }
 
 [data-theme="rbi-light-v3"] .text-red-500,
+[data-theme="std-light"] .text-red-500,
 [data-theme="rbi-light-v3"] .text-red-600,
+[data-theme="std-light"] .text-red-600,
 [data-theme="rbi-light-v3"] .text-red-700,
+[data-theme="std-light"] .text-red-700,
 [data-theme="rbi-dark-v3"] .text-red-500,
+[data-theme="std-dark"] .text-red-500,
 [data-theme="rbi-dark-v3"] .text-red-600,
+[data-theme="std-dark"] .text-red-600,
 [data-theme="rbi-dark-v3"] .text-red-700,
+[data-theme="std-dark"] .text-red-700,
 [data-theme="rbi-light-v3"] .text-rose-500,
+[data-theme="std-light"] .text-rose-500,
 [data-theme="rbi-light-v3"] .text-rose-600,
+[data-theme="std-light"] .text-rose-600,
 [data-theme="rbi-dark-v3"] .text-rose-500,
-[data-theme="rbi-dark-v3"] .text-rose-600 {
+[data-theme="std-dark"] .text-rose-500,
+[data-theme="rbi-dark-v3"] .text-rose-600,
+[data-theme="std-dark"] .text-rose-600 {
     color: var(--color-red) !important;
 }
 [data-theme="rbi-light-v3"] .bg-red-50,
+[data-theme="std-light"] .bg-red-50,
 [data-theme="rbi-light-v3"] .bg-rose-50,
+[data-theme="std-light"] .bg-rose-50,
 [data-theme="rbi-dark-v3"] .bg-red-50,
-[data-theme="rbi-dark-v3"] .bg-rose-50 {
+[data-theme="std-dark"] .bg-red-50,
+[data-theme="rbi-dark-v3"] .bg-rose-50,
+[data-theme="std-dark"] .bg-rose-50 {
     background-color: rgba(159, 76, 69, 0.14) !important;
 }
 [data-theme="rbi-light-v3"] .bg-red-500,
+[data-theme="std-light"] .bg-red-500,
 [data-theme="rbi-light-v3"] .bg-red-600,
+[data-theme="std-light"] .bg-red-600,
 [data-theme="rbi-light-v3"] .bg-red-900,
+[data-theme="std-light"] .bg-red-900,
 [data-theme="rbi-dark-v3"] .bg-red-500,
+[data-theme="std-dark"] .bg-red-500,
 [data-theme="rbi-dark-v3"] .bg-red-600,
-[data-theme="rbi-dark-v3"] .bg-red-900 {
+[data-theme="std-dark"] .bg-red-600,
+[data-theme="rbi-dark-v3"] .bg-red-900,
+[data-theme="std-dark"] .bg-red-900 {
     background-color: var(--color-red) !important;
 }
 [data-theme="rbi-light-v3"] .border-red-200,
+[data-theme="std-light"] .border-red-200,
 [data-theme="rbi-light-v3"] .border-red-300,
+[data-theme="std-light"] .border-red-300,
 [data-theme="rbi-light-v3"] .border-red-800,
+[data-theme="std-light"] .border-red-800,
 [data-theme="rbi-dark-v3"] .border-red-200,
+[data-theme="std-dark"] .border-red-200,
 [data-theme="rbi-dark-v3"] .border-red-300,
-[data-theme="rbi-dark-v3"] .border-red-800 {
+[data-theme="std-dark"] .border-red-300,
+[data-theme="rbi-dark-v3"] .border-red-800,
+[data-theme="std-dark"] .border-red-800 {
     border-color: rgba(159, 76, 69, 0.45) !important;
 }
 
 [data-theme="rbi-light-v3"] .text-yellow-500,
+[data-theme="std-light"] .text-yellow-500,
 [data-theme="rbi-light-v3"] .text-yellow-600,
+[data-theme="std-light"] .text-yellow-600,
 [data-theme="rbi-light-v3"] .text-yellow-700,
+[data-theme="std-light"] .text-yellow-700,
 [data-theme="rbi-light-v3"] .text-amber-500,
+[data-theme="std-light"] .text-amber-500,
 [data-theme="rbi-light-v3"] .text-amber-600,
+[data-theme="std-light"] .text-amber-600,
 [data-theme="rbi-dark-v3"] .text-yellow-500,
+[data-theme="std-dark"] .text-yellow-500,
 [data-theme="rbi-dark-v3"] .text-yellow-600,
+[data-theme="std-dark"] .text-yellow-600,
 [data-theme="rbi-dark-v3"] .text-amber-500,
-[data-theme="rbi-dark-v3"] .text-amber-600 {
+[data-theme="std-dark"] .text-amber-500,
+[data-theme="rbi-dark-v3"] .text-amber-600,
+[data-theme="std-dark"] .text-amber-600 {
     color: var(--color-yellow) !important;
 }
 [data-theme="rbi-light-v3"] .bg-yellow-50,
+[data-theme="std-light"] .bg-yellow-50,
 [data-theme="rbi-light-v3"] .bg-amber-50,
+[data-theme="std-light"] .bg-amber-50,
 [data-theme="rbi-dark-v3"] .bg-yellow-50,
-[data-theme="rbi-dark-v3"] .bg-amber-50 {
+[data-theme="std-dark"] .bg-yellow-50,
+[data-theme="rbi-dark-v3"] .bg-amber-50,
+[data-theme="std-dark"] .bg-amber-50 {
     background-color: rgba(196, 154, 95, 0.16) !important;
 }
 
 /* --- status tags / toast / focus --- */
 [data-theme="rbi-light-v3"] .tag-green,
-[data-theme="rbi-dark-v3"] .tag-green {
+[data-theme="std-light"] .tag-green,
+[data-theme="rbi-dark-v3"] .tag-green,
+[data-theme="std-dark"] .tag-green {
     background: rgba(95, 127, 109, 0.18) !important;
     color: var(--color-green) !important;
     border-color: rgba(95, 127, 109, 0.4) !important;
 }
 [data-theme="rbi-light-v3"] .tag-red,
-[data-theme="rbi-dark-v3"] .tag-red {
+[data-theme="std-light"] .tag-red,
+[data-theme="rbi-dark-v3"] .tag-red,
+[data-theme="std-dark"] .tag-red {
     background: rgba(159, 76, 69, 0.16) !important;
     color: var(--color-red) !important;
     border-color: rgba(159, 76, 69, 0.4) !important;
 }
 [data-theme="rbi-light-v3"] .tag-yellow,
-[data-theme="rbi-dark-v3"] .tag-yellow {
+[data-theme="std-light"] .tag-yellow,
+[data-theme="rbi-dark-v3"] .tag-yellow,
+[data-theme="std-dark"] .tag-yellow {
     background: rgba(196, 154, 95, 0.18) !important;
     color: var(--gold) !important;
     border-color: rgba(196, 154, 95, 0.42) !important;
 }
 [data-theme="rbi-light-v3"] .tag-blue,
-[data-theme="rbi-dark-v3"] .tag-blue {
+[data-theme="std-light"] .tag-blue,
+[data-theme="rbi-dark-v3"] .tag-blue,
+[data-theme="std-dark"] .tag-blue {
     background: rgba(76, 114, 136, 0.16) !important;
     color: var(--blue-steel) !important;
     border-color: rgba(76, 114, 136, 0.4) !important;
 }
 
 [data-theme="rbi-light-v3"] .toast,
-[data-theme="rbi-dark-v3"] .toast {
+[data-theme="std-light"] .toast,
+[data-theme="rbi-dark-v3"] .toast,
+[data-theme="std-dark"] .toast {
     box-shadow: var(--shadow-2);
 }
 
 [data-theme="rbi-light-v3"] .bg-\[var\(--card-bg\)\],
-[data-theme="rbi-dark-v3"] .bg-\[var\(--card-bg\)\] {
+[data-theme="std-light"] .bg-\[var\(--card-bg\)\],
+[data-theme="rbi-dark-v3"] .bg-\[var\(--card-bg\)\],
+[data-theme="std-dark"] .bg-\[var\(--card-bg\)\] {
     box-shadow: var(--shadow-1);
 }
 
 [data-theme="rbi-light-v3"] input:focus,
+[data-theme="std-light"] input:focus,
 [data-theme="rbi-light-v3"] textarea:focus,
+[data-theme="std-light"] textarea:focus,
 [data-theme="rbi-light-v3"] select:focus,
+[data-theme="std-light"] select:focus,
 [data-theme="rbi-dark-v3"] input:focus,
+[data-theme="std-dark"] input:focus,
 [data-theme="rbi-dark-v3"] textarea:focus,
-[data-theme="rbi-dark-v3"] select:focus {
+[data-theme="std-dark"] textarea:focus,
+[data-theme="rbi-dark-v3"] select:focus,
+[data-theme="std-dark"] select:focus {
     border-color: var(--focus) !important;
     outline-color: var(--focus) !important;
 }
 
 [data-theme="rbi-light-v3"] .accent-indigo-600,
-[data-theme="rbi-dark-v3"] .accent-indigo-600 {
+[data-theme="std-light"] .accent-indigo-600,
+[data-theme="rbi-dark-v3"] .accent-indigo-600,
+[data-theme="std-dark"] .accent-indigo-600 {
     accent-color: var(--primary) !important;
 }
 
 
 /* --- v3 portal deltas: CTA steel (not graphite gradient), font, chrome --- */
 [data-theme="rbi-light-v3"] .bg-indigo-500,
+[data-theme="std-light"] .bg-indigo-500,
 [data-theme="rbi-light-v3"] .bg-indigo-600,
+[data-theme="std-light"] .bg-indigo-600,
 [data-theme="rbi-dark-v3"] .bg-indigo-500,
-[data-theme="rbi-dark-v3"] .bg-indigo-600 {
+[data-theme="std-dark"] .bg-indigo-500,
+[data-theme="rbi-dark-v3"] .bg-indigo-600,
+[data-theme="std-dark"] .bg-indigo-600 {
     background-color: var(--btn-primary) !important;
 }
 [data-theme="rbi-light-v3"] .bg-indigo-700,
+[data-theme="std-light"] .bg-indigo-700,
 [data-theme="rbi-light-v3"] .bg-indigo-800,
+[data-theme="std-light"] .bg-indigo-800,
 [data-theme="rbi-light-v3"] .bg-indigo-900,
+[data-theme="std-light"] .bg-indigo-900,
 [data-theme="rbi-dark-v3"] .bg-indigo-700,
+[data-theme="std-dark"] .bg-indigo-700,
 [data-theme="rbi-dark-v3"] .bg-indigo-800,
-[data-theme="rbi-dark-v3"] .bg-indigo-900 {
+[data-theme="std-dark"] .bg-indigo-800,
+[data-theme="rbi-dark-v3"] .bg-indigo-900,
+[data-theme="std-dark"] .bg-indigo-900 {
     background-color: var(--btn-primary-hover) !important;
 }
 
 [data-theme="rbi-light-v3"] button.bg-indigo-500,
+[data-theme="std-light"] button.bg-indigo-500,
 [data-theme="rbi-light-v3"] button.bg-indigo-600,
+[data-theme="std-light"] button.bg-indigo-600,
 [data-theme="rbi-light-v3"] button.bg-indigo-700,
+[data-theme="std-light"] button.bg-indigo-700,
 [data-theme="rbi-dark-v3"] button.bg-indigo-500,
+[data-theme="std-dark"] button.bg-indigo-500,
 [data-theme="rbi-dark-v3"] button.bg-indigo-600,
-[data-theme="rbi-dark-v3"] button.bg-indigo-700 {
+[data-theme="std-dark"] button.bg-indigo-600,
+[data-theme="rbi-dark-v3"] button.bg-indigo-700,
+[data-theme="std-dark"] button.bg-indigo-700 {
     background: var(--btn-primary) !important;
     border: 1px solid var(--btn-primary) !important;
-    color: var(--white) !important;
+    color: var(--btn-primary-text, var(--white)) !important;
     border-radius: 999px !important;
     font-weight: 600 !important;
     text-transform: none !important;
     letter-spacing: normal !important;
 }
 [data-theme="rbi-light-v3"] button.bg-indigo-500:hover,
+[data-theme="std-light"] button.bg-indigo-500:hover,
 [data-theme="rbi-light-v3"] button.bg-indigo-600:hover,
+[data-theme="std-light"] button.bg-indigo-600:hover,
 [data-theme="rbi-light-v3"] button.bg-indigo-700:hover,
+[data-theme="std-light"] button.bg-indigo-700:hover,
 [data-theme="rbi-dark-v3"] button.bg-indigo-500:hover,
+[data-theme="std-dark"] button.bg-indigo-500:hover,
 [data-theme="rbi-dark-v3"] button.bg-indigo-600:hover,
-[data-theme="rbi-dark-v3"] button.bg-indigo-700:hover {
+[data-theme="std-dark"] button.bg-indigo-600:hover,
+[data-theme="rbi-dark-v3"] button.bg-indigo-700:hover,
+[data-theme="std-dark"] button.bg-indigo-700:hover {
     background: var(--btn-primary-hover) !important;
     border-color: var(--btn-primary-hover) !important;
 }
 
 [data-theme="rbi-light-v3"] .rbi-btn--primary,
+[data-theme="std-light"] .rbi-btn--primary,
 [data-theme="rbi-light-v3"] .rbi-btn.primary,
+[data-theme="std-light"] .rbi-btn.primary,
 [data-theme="rbi-dark-v3"] .rbi-btn--primary,
-[data-theme="rbi-dark-v3"] .rbi-btn.primary {
+[data-theme="std-dark"] .rbi-btn--primary,
+[data-theme="rbi-dark-v3"] .rbi-btn.primary,
+[data-theme="std-dark"] .rbi-btn.primary {
     background: var(--btn-primary) !important;
     border-color: var(--btn-primary) !important;
-    color: #fff !important;
+    color: var(--btn-primary-text, #fff) !important;
     border-radius: 999px !important;
     font-weight: 600 !important;
 }
 [data-theme="rbi-light-v3"] .rbi-btn--primary:hover,
+[data-theme="std-light"] .rbi-btn--primary:hover,
 [data-theme="rbi-light-v3"] .rbi-btn.primary:hover,
+[data-theme="std-light"] .rbi-btn.primary:hover,
 [data-theme="rbi-dark-v3"] .rbi-btn--primary:hover,
-[data-theme="rbi-dark-v3"] .rbi-btn.primary:hover {
+[data-theme="std-dark"] .rbi-btn--primary:hover,
+[data-theme="rbi-dark-v3"] .rbi-btn.primary:hover,
+[data-theme="std-dark"] .rbi-btn.primary:hover {
     background: var(--btn-primary-hover) !important;
     border-color: var(--btn-primary-hover) !important;
 }
 
 [data-theme="rbi-light-v3"] .rbi-card,
-[data-theme="rbi-dark-v3"] .rbi-card {
+[data-theme="std-light"] .rbi-card,
+[data-theme="rbi-dark-v3"] .rbi-card,
+[data-theme="std-dark"] .rbi-card {
     border-radius: 20px !important;
     box-shadow: var(--shadow-1) !important;
 }
 [data-theme="rbi-light-v3"] .rbi-card--lg,
-[data-theme="rbi-dark-v3"] .rbi-card--lg {
+[data-theme="std-light"] .rbi-card--lg,
+[data-theme="rbi-dark-v3"] .rbi-card--lg,
+[data-theme="std-dark"] .rbi-card--lg {
     border-radius: 24px !important;
 }
 
 [data-theme="rbi-light-v3"] .input-base,
+[data-theme="std-light"] .input-base,
 [data-theme="rbi-light-v3"] input.input-base,
+[data-theme="std-light"] input.input-base,
 [data-theme="rbi-light-v3"] select.input-base,
+[data-theme="std-light"] select.input-base,
 [data-theme="rbi-light-v3"] textarea.input-base,
+[data-theme="std-light"] textarea.input-base,
 [data-theme="rbi-dark-v3"] .input-base,
+[data-theme="std-dark"] .input-base,
 [data-theme="rbi-dark-v3"] input.input-base,
+[data-theme="std-dark"] input.input-base,
 [data-theme="rbi-dark-v3"] select.input-base,
-[data-theme="rbi-dark-v3"] textarea.input-base {
+[data-theme="std-dark"] select.input-base,
+[data-theme="rbi-dark-v3"] textarea.input-base,
+[data-theme="std-dark"] textarea.input-base {
     border-radius: var(--rbi-radius-md) !important;
     border-width: 2px !important;
 }
 
 [data-theme="rbi-light-v3"] input:focus,
+[data-theme="std-light"] input:focus,
 [data-theme="rbi-light-v3"] textarea:focus,
+[data-theme="std-light"] textarea:focus,
 [data-theme="rbi-light-v3"] select:focus,
+[data-theme="std-light"] select:focus,
 [data-theme="rbi-dark-v3"] input:focus,
+[data-theme="std-dark"] input:focus,
 [data-theme="rbi-dark-v3"] textarea:focus,
-[data-theme="rbi-dark-v3"] select:focus {
+[data-theme="std-dark"] textarea:focus,
+[data-theme="rbi-dark-v3"] select:focus,
+[data-theme="std-dark"] select:focus {
     border-color: var(--graphite) !important;
     outline-color: var(--graphite) !important;
 }
 
 html[data-theme="rbi-light-v3"],
+html[data-theme="std-light"],
 html[data-theme="rbi-dark-v3"],
+html[data-theme="std-dark"],
 html[data-theme="rbi-light-v3"] body,
-html[data-theme="rbi-dark-v3"] body {
+html[data-theme="std-light"] body,
+html[data-theme="rbi-dark-v3"] body,
+html[data-theme="std-dark"] body {
     /* Значение токена переопределено для этих тем в css/brand/rbi.css. */
     font-family: var(--rbi-font-sans) !important;
 }
@@ -3336,54 +3718,68 @@ html[data-theme="rbi-dark-v3"] body {
 /* Portal chrome: colors + taller topbar; module rail width = default icon-rail. */
 @media (min-width: 768px) {
     html[data-theme="rbi-light-v3"],
-    html[data-theme="rbi-dark-v3"] {
+    html[data-theme="std-light"],
+    html[data-theme="rbi-dark-v3"],
+    html[data-theme="std-dark"] {
         --desk-topbar-h: 72px;
     }
 
     html[data-theme="rbi-light-v3"] #app-sidebar,
-    html[data-theme="rbi-dark-v3"] #app-sidebar {
+    html[data-theme="std-light"] #app-sidebar,
+    html[data-theme="rbi-dark-v3"] #app-sidebar,
+    html[data-theme="std-dark"] #app-sidebar {
         background: var(--header-bg);
     }
 
-    html[data-theme="rbi-light-v3"] .app-sidebar-item:hover {
+    html[data-theme="rbi-light-v3"] .app-sidebar-item:hover, html[data-theme="std-light"] .app-sidebar-item:hover {
         color: var(--text-muted);
         background: var(--hover-bg);
     }
-    html[data-theme="rbi-light-v3"] .app-sidebar-item.active:hover {
+    html[data-theme="rbi-light-v3"] .app-sidebar-item.active:hover, html[data-theme="std-light"] .app-sidebar-item.active:hover {
         color: var(--primary);
         background: var(--hover-bg);
     }
-    html[data-theme="rbi-dark-v3"] .app-sidebar-item:hover {
+    html[data-theme="rbi-dark-v3"] .app-sidebar-item:hover, html[data-theme="std-dark"] .app-sidebar-item:hover {
         color: var(--accent);
     }
 }
 
 @media (min-width: 1280px) {
     html[data-theme="rbi-light-v3"] #app-nav2,
-    html[data-theme="rbi-dark-v3"] #app-nav2 {
+    html[data-theme="std-light"] #app-nav2,
+    html[data-theme="rbi-dark-v3"] #app-nav2,
+    html[data-theme="std-dark"] #app-nav2 {
         background: var(--header-bg);
     }
 
     html[data-theme="rbi-light-v3"] .rbi-desk-module-strip,
-    html[data-theme="rbi-dark-v3"] .rbi-desk-module-strip {
+    html[data-theme="std-light"] .rbi-desk-module-strip,
+    html[data-theme="rbi-dark-v3"] .rbi-desk-module-strip,
+    html[data-theme="std-dark"] .rbi-desk-module-strip {
         background: var(--header-bg) !important;
         border-color: var(--card-border) !important;
     }
 }
 
 html[data-theme="rbi-light-v3"] .header-fixed,
+html[data-theme="std-light"] .header-fixed,
 html[data-theme="rbi-light-v3"] .bottom-nav,
+html[data-theme="std-light"] .bottom-nav,
 html[data-theme="rbi-dark-v3"] .header-fixed,
-html[data-theme="rbi-dark-v3"] .bottom-nav {
+html[data-theme="std-dark"] .header-fixed,
+html[data-theme="rbi-dark-v3"] .bottom-nav,
+html[data-theme="std-dark"] .bottom-nav {
     background: var(--header-bg) !important;
     border-color: var(--card-border) !important;
 }
 
 html[data-theme="rbi-light-v3"] .nav-item.active,
-html[data-theme="rbi-dark-v3"] .nav-item.active {
+html[data-theme="std-light"] .nav-item.active,
+html[data-theme="rbi-dark-v3"] .nav-item.active,
+html[data-theme="std-dark"] .nav-item.active {
     color: var(--graphite) !important;
 }
-html[data-theme="rbi-dark-v3"] .nav-item.active {
+html[data-theme="rbi-dark-v3"] .nav-item.active, html[data-theme="std-dark"] .nav-item.active {
     color: var(--gold) !important;
 }
 
@@ -3399,6 +3795,7 @@ html[data-theme="rbi-dark-v3"] .nav-item.active {
             0 1px 2px rgba(15, 23, 42, 0.06) !important;
     }
     html[data-theme="rbi-dark-v3"] .sub-tab-btn.active,
+    html[data-theme="std-dark"] .sub-tab-btn.active,
     html.dark .sub-tab-btn.active {
         background-color: var(--card-bg) !important;
         box-shadow:
@@ -3410,30 +3807,133 @@ html[data-theme="rbi-dark-v3"] .nav-item.active {
 
 @media (min-width: 1920px) {
     html[data-theme="rbi-light-v3"],
-    html[data-theme="rbi-dark-v3"] {
+    html[data-theme="std-light"],
+    html[data-theme="rbi-dark-v3"],
+    html[data-theme="std-dark"] {
         --desk-topbar-h: 72px;
     }
 }
 
 html[data-theme="rbi-light-v3"] .bg-red-50,
+html[data-theme="std-light"] .bg-red-50,
 html[data-theme="rbi-light-v3"] .bg-rose-50,
+html[data-theme="std-light"] .bg-rose-50,
 html[data-theme="rbi-dark-v3"] .bg-red-50,
-html[data-theme="rbi-dark-v3"] .bg-rose-50 {
+html[data-theme="std-dark"] .bg-red-50,
+html[data-theme="rbi-dark-v3"] .bg-rose-50,
+html[data-theme="std-dark"] .bg-rose-50 {
     background-color: rgba(205, 90, 62, 0.14) !important;
 }
 html[data-theme="rbi-light-v3"] .border-red-200,
+html[data-theme="std-light"] .border-red-200,
 html[data-theme="rbi-light-v3"] .border-red-300,
+html[data-theme="std-light"] .border-red-300,
 html[data-theme="rbi-light-v3"] .border-red-800,
+html[data-theme="std-light"] .border-red-800,
 html[data-theme="rbi-dark-v3"] .border-red-200,
+html[data-theme="std-dark"] .border-red-200,
 html[data-theme="rbi-dark-v3"] .border-red-300,
-html[data-theme="rbi-dark-v3"] .border-red-800 {
+html[data-theme="std-dark"] .border-red-300,
+html[data-theme="rbi-dark-v3"] .border-red-800,
+html[data-theme="std-dark"] .border-red-800 {
     border-color: rgba(205, 90, 62, 0.45) !important;
 }
 html[data-theme="rbi-light-v3"] .tag-red,
-html[data-theme="rbi-dark-v3"] .tag-red {
+html[data-theme="std-light"] .tag-red,
+html[data-theme="rbi-dark-v3"] .tag-red,
+html[data-theme="std-dark"] .tag-red {
     background: rgba(205, 90, 62, 0.16) !important;
     color: var(--danger) !important;
     border-color: rgba(205, 90, 62, 0.4) !important;
+}
+
+/* === СТАНДАРТНАЯ (P2-0051): отличия от общих правил v3 — только через токены палитры ===
+   1) Главное действие — золото с тёмным текстом (--btn-primary-text): белый на золоте < 4.5:1.
+   2) Красные подложки/рамки — от «плохо» палитры (в v3 — красный портала #CD5A3E).
+   3) Фиолетовый текст — --color-violet палитры.
+   4) Статус текстом (зелёный/жёлтый/красный) — --ok-text/--warn-text/--bad-text (≥ 4.5:1). */
+html[data-theme="std-light"] .bg-indigo-500, html[data-theme="std-light"] .bg-indigo-600,
+html[data-theme="std-light"] .bg-indigo-700, html[data-theme="std-light"] .bg-indigo-800,
+html[data-theme="std-light"] .bg-indigo-900,
+html[data-theme="std-dark"] .bg-indigo-500, html[data-theme="std-dark"] .bg-indigo-600,
+html[data-theme="std-dark"] .bg-indigo-700, html[data-theme="std-dark"] .bg-indigo-800,
+html[data-theme="std-dark"] .bg-indigo-900 {
+    color: var(--btn-primary-text);
+}
+html[data-theme="std-light"] .bg-indigo-500.text-white, html[data-theme="std-light"] .bg-indigo-600.text-white,
+html[data-theme="std-light"] .bg-indigo-700.text-white, html[data-theme="std-light"] .bg-indigo-500 .text-white,
+html[data-theme="std-light"] .bg-indigo-600 .text-white, html[data-theme="std-light"] .bg-indigo-700 .text-white,
+html[data-theme="std-dark"] .bg-indigo-500.text-white, html[data-theme="std-dark"] .bg-indigo-600.text-white,
+html[data-theme="std-dark"] .bg-indigo-700.text-white, html[data-theme="std-dark"] .bg-indigo-500 .text-white,
+html[data-theme="std-dark"] .bg-indigo-600 .text-white, html[data-theme="std-dark"] .bg-indigo-700 .text-white {
+    color: var(--btn-primary-text) !important;
+}
+/* Поверхность «бренд» (bg-brand: «Начать проверку», аватар…) — главное действие: золото с тёмным текстом в обеих
+   режимах, как кнопки макетов. Текстовый --primary в светлой остаётся графитом (золото текстом на белом 2.6:1). */
+html[data-theme="std-light"] .bg-brand, html[data-theme="std-dark"] .bg-brand {
+    background-color: var(--btn-primary) !important;
+    color: var(--btn-primary-text);
+}
+html[data-theme="std-light"] .bg-brand.text-white, html[data-theme="std-light"] .bg-brand .text-white,
+html[data-theme="std-dark"] .bg-brand.text-white, html[data-theme="std-dark"] .bg-brand .text-white {
+    color: var(--btn-primary-text) !important;
+}
+html[data-theme="std-light"] .hover\:bg-brand-hover:hover, html[data-theme="std-dark"] .hover\:bg-brand-hover:hover {
+    background-color: var(--btn-primary-hover) !important;
+}
+html[data-theme="std-light"] .bg-red-50, html[data-theme="std-light"] .bg-rose-50 {
+    background-color: rgba(159, 76, 69, 0.10) !important;
+}
+html[data-theme="std-dark"] .bg-red-50, html[data-theme="std-dark"] .bg-rose-50 {
+    background-color: rgba(196, 107, 99, 0.16) !important;
+}
+html[data-theme="std-light"] .border-red-200, html[data-theme="std-light"] .border-red-300,
+html[data-theme="std-light"] .border-red-800 {
+    border-color: rgba(159, 76, 69, 0.40) !important;
+}
+html[data-theme="std-dark"] .border-red-200, html[data-theme="std-dark"] .border-red-300,
+html[data-theme="std-dark"] .border-red-800 {
+    border-color: rgba(196, 107, 99, 0.45) !important;
+}
+html[data-theme="std-light"] .tag-red {
+    background: rgba(159, 76, 69, 0.12) !important;
+    color: var(--bad-text) !important;
+    border-color: rgba(159, 76, 69, 0.40) !important;
+}
+html[data-theme="std-dark"] .tag-red {
+    background: rgba(196, 107, 99, 0.18) !important;
+    color: var(--bad-text) !important;
+    border-color: rgba(196, 107, 99, 0.45) !important;
+}
+html[data-theme="std-light"] .text-green-500, html[data-theme="std-light"] .text-green-600,
+html[data-theme="std-light"] .text-green-700, html[data-theme="std-light"] .text-emerald-500,
+html[data-theme="std-light"] .text-emerald-600,
+html[data-theme="std-dark"] .text-green-500, html[data-theme="std-dark"] .text-green-600,
+html[data-theme="std-dark"] .text-green-700, html[data-theme="std-dark"] .text-emerald-500,
+html[data-theme="std-dark"] .text-emerald-600 {
+    color: var(--ok-text) !important;
+}
+html[data-theme="std-light"] .text-red-500, html[data-theme="std-light"] .text-red-600,
+html[data-theme="std-light"] .text-red-700, html[data-theme="std-light"] .text-rose-500,
+html[data-theme="std-light"] .text-rose-600,
+html[data-theme="std-dark"] .text-red-500, html[data-theme="std-dark"] .text-red-600,
+html[data-theme="std-dark"] .text-red-700, html[data-theme="std-dark"] .text-rose-500,
+html[data-theme="std-dark"] .text-rose-600 {
+    color: var(--bad-text) !important;
+}
+html[data-theme="std-light"] .text-yellow-500, html[data-theme="std-light"] .text-yellow-600,
+html[data-theme="std-light"] .text-yellow-700, html[data-theme="std-light"] .text-amber-500,
+html[data-theme="std-light"] .text-amber-600,
+html[data-theme="std-dark"] .text-yellow-500, html[data-theme="std-dark"] .text-yellow-600,
+html[data-theme="std-dark"] .text-yellow-700, html[data-theme="std-dark"] .text-amber-500,
+html[data-theme="std-dark"] .text-amber-600 {
+    color: var(--warn-text) !important;
+}
+html[data-theme="std-light"] .tag-green, html[data-theme="std-dark"] .tag-green { color: var(--ok-text) !important; }
+html[data-theme="std-light"] .tag-yellow, html[data-theme="std-dark"] .tag-yellow { color: var(--warn-text) !important; }
+html[data-theme="std-light"] .text-purple-600, html[data-theme="std-light"] .text-purple-700,
+html[data-theme="std-dark"] .text-purple-600, html[data-theme="std-dark"] .text-purple-700 {
+    color: var(--color-violet) !important;
 }
 
 /* === RBI interactive lightness ===
@@ -3443,7 +3943,8 @@ html[data-theme="rbi-dark-v3"] .tag-red {
 [data-theme="dark"],
 [data-theme="rbi-dark"],
 [data-theme="rbi-dark-v2"],
-[data-theme="rbi-dark-v3"] {
+[data-theme="rbi-dark-v3"],
+[data-theme="std-dark"] {
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.22);
     --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
@@ -4111,7 +4612,7 @@ body.ui-motion-off .rbi-acc {
 :root { --rbi-locked-bg: #4f46e5; --rbi-locked-fg: #fff; }
 [data-theme="rbi-light"], [data-theme="rbi-light-v2"] { --rbi-locked-bg: var(--primary); --rbi-locked-fg: #fff; }
 [data-theme="rbi-dark"], [data-theme="rbi-dark-v2"] { --rbi-locked-bg: var(--primary); --rbi-locked-fg: #101923; }
-[data-theme="rbi-light-v3"], [data-theme="rbi-dark-v3"] { --rbi-locked-bg: var(--blue-steel, #4c7288); --rbi-locked-fg: #fff; }
+[data-theme="rbi-light-v3"], [data-theme="std-light"], [data-theme="rbi-dark-v3"], [data-theme="std-dark"] { --rbi-locked-bg: var(--blue-steel, #4c7288); --rbi-locked-fg: #fff; }
 #inp-project.project-locked,
 body.rbi-audit-desktop-wide #data-block-content #inp-project.project-locked {
     background: var(--rbi-locked-bg) !important;
