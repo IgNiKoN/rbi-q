@@ -19,6 +19,7 @@ import { VOR_MANAGE } from './vor.service.ts';
 import type { VorApi, VorImport, VorProfile, VorProject } from './vor.service.ts';
 import { initialProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
 import { InHead } from '../PageHead.ts';
+import { StatusBadge } from '../../../platform/ui/index.ts';
 
 const KIND_LABEL: Record<RowKind, string> = { work: 'Работа', material: 'Материал', group: 'Группа', context: 'Место', skip: 'Пропуск' };
 type Filter = 'all' | RowKind;
@@ -46,13 +47,15 @@ function ImportsList(props: { items: VorImport[] | null; canManage: boolean; bus
   if (items === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
   return h('div', { className: 'pf-card pj-list', 'data-testid': 'vor-imports' },
     items.length
-      ? items.map((i) => h('div', { key: i.id, className: 'pj-row', 'data-import-id': i.id },
-          h('div', { className: 'pj-name' },
-            h('b', null, i.file_name), h('span', { className: 'pf-muted' }, `лист «${i.sheet_name}»`),
-            h('span', { className: 'pj-badge' + (i.status === 'confirmed' ? ' vor-badge--ok' : '') }, i.status === 'confirmed' ? 'Подтверждён' : 'Черновик'),
-            h('span', { className: 'pf-muted' }, `${i.row_count} строк · ${i.works} работ${i.positions ? ` · ${i.positions} позиций` : ''} · ${dateFmt(i.created_at)}${i.created_by_email ? ' · ' + i.created_by_email : ''}`)),
+      // P2-0046: загрузка — строка файла: имя и лист, «строк → позиций», когда и кто, статус словом и цветом
+      ? items.map((i) => h('div', { key: i.id, className: 'pj-row vor-imp', 'data-import-id': i.id },
+          h('span', { className: 'vor-imp-ic', 'aria-hidden': 'true' }, 'XLSX'),
+          h('div', { className: 'pj-name vor-imp-name' },
+            h('span', { className: 'vor-imp-top' }, h('b', null, i.file_name),
+              h(StatusBadge, { status: i.status === 'confirmed' ? 'green' : 'yellow', label: i.status === 'confirmed' ? 'Подтверждён' : 'Черновик' })),
+            h('span', { className: 'pf-muted' }, `лист «${i.sheet_name}» · строк: ${i.row_count} → ${i.positions ? `позиций: ${i.positions}` : `работ: ${i.works}`} · ${dateFmt(i.created_at)}${i.created_by_email ? ' · ' + i.created_by_email : ''}`)),
           h('span', { className: 'pj-actions' },
-            h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'vor-open', onClick: () => onOpen(i) }, i.status === 'draft' && canManage ? 'Разобрать' : 'Открыть')),
+            h('button', { type: 'button', className: 'pf-btn' + (i.status === 'draft' && canManage ? '' : ' pf-btn--ghost'), 'data-testid': 'vor-open', onClick: () => onOpen(i) }, i.status === 'draft' && canManage ? 'Разобрать' : 'Открыть')),
           canManage && i.status === 'draft'
             ? (confirm === i.id
                 ? h('span', { className: 'pj-actions' },
@@ -248,7 +251,7 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
 
   return h('div', { className: 'pj-tab vor-tab', 'data-testid': 'vor-tab' },
     picker,
-    api ? h('h3', { className: 'pf-title un-title' }, 'Загрузки проекта') : null,
+    api ? h('h3', { className: 'vor-sec' }, 'Загрузки объекта') : null,
     api ? h(ImportsList, { items: imports, canManage, busy: !!saving, onDelete: (i) => { void removeImport(i); }, onOpen: (i) => setOpenId(i.id) }) : null,
     api && imports && imports.some((i) => i.status === 'confirmed')
       ? registry
@@ -265,9 +268,14 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
             h('select', { className: 'pj-input', value: sheet, 'data-testid': 'vor-sheet', onChange: (e: ChangeEvent<HTMLSelectElement>) => { setSheet(e.currentTarget.value); setFilter('all'); } },
               file.sheets.map((s) => h('option', { key: s.name, value: s.name },
                 s.name + (s.hidden ? ' (скрытый)' : '') + (results[s.name] && !results[s.name].r.isVor ? ' — не похоже на ВОР' : '')))))
-        : h('span', { className: 'pf-muted pj-grow' }, api
-            ? 'Файл заказчика в его форме: ФКП, себестоимость, ведомость договорной цены. Сначала посмотрите разбор, затем сохраните черновик.'
-            : 'Файл заказчика в его форме: ФКП, себестоимость, ведомость договорной цены. Демо-режим: только просмотр разбора, без сохранения.'),
+        // P2-0046: вместо абзаца — четыре шага «как загрузить» (утверждённый макет)
+        : h('div', { className: 'pj-grow vor-steps' },
+            h('b', { className: 'vor-steps-title' }, api ? 'Как загрузить новую редакцию' : 'Демо-режим: только просмотр разбора, без сохранения'),
+            h('ol', { className: 'vor-steps-list', 'data-testid': 'vor-steps' },
+              h('li', null, 'Загрузите файл заказчика в любой форме: ФКП, себестоимость, ведомость договорной цены'),
+              h('li', null, 'Проверьте разбор: работы, места, единицы'),
+              h('li', null, 'Сохраните черновик'),
+              h('li', null, 'Подтвердите — появятся позиции для факта'))),
       api && canManage && res && res.isVor
         ? h('button', { type: 'button', className: 'pf-btn', disabled: !!saving, 'data-testid': 'vor-save', onClick: () => { void saveDraft(); } }, saving || 'Сохранить черновик')
         : null),
@@ -314,6 +322,21 @@ export function VorTab(props: { api?: VorApi | null; projects?: ProjectsApi | nu
 }
 
 export const VOR_CSS = POSITIONS_REGISTRY_CSS + POSITION_ACTIONS_CSS + `
+.vor-sec{margin:4px 0 0;font-size:13px;font-weight:600;color:var(--text-muted)}
+.vor-imp{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px 12px;text-align:left}
+.vor-imp .pj-actions{margin-left:auto}
+.pj-list .pj-row.vor-imp{flex-direction:row;align-items:center}
+@media (max-width:767.98px){.vor-imp-ic{width:34px;height:42px;font-size:10px}.vor-imp .pj-actions{flex:1 1 100%}}
+.vor-imp-ic{flex:0 0 auto;width:40px;height:48px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--p2-status-green-bg);color:var(--p2-status-green-fg)}
+.vor-imp-name{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;flex:1 1 220px;text-align:left}
+.vor-imp-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.vor-imp-top b{font-size:15px}
+.vor-steps{display:flex;flex-direction:column;gap:8px;min-width:0}
+.vor-steps-title{font-size:14px}
+.vor-steps-list{margin:0;padding:0;list-style:none;counter-reset:vst;display:flex;flex-direction:column;gap:8px;font-size:13.5px;color:var(--text-main)}
+.vor-steps-list li{counter-increment:vst;display:flex;align-items:flex-start;gap:10px}
+.vor-steps-list li::before{content:counter(vst);flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;border:1px solid var(--card-border);color:var(--text-main)}
+@media (min-width:1024px){.vor-steps-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 24px}}
 .vor-file{position:relative;overflow:hidden;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-height:40px}
 .vor-file input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .vor-file--busy{opacity:.7;cursor:progress}

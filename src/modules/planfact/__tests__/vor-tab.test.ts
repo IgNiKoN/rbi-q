@@ -141,7 +141,7 @@ test('ПТО: проект → «Сохранить черновик» → за�
   assert.ok(el.querySelector('[data-testid="vor-draft"]'), 'после сохранения открыт черновик');
   el.querySelector('[data-testid="vor-back"]').click(); await tick();
   assert.match(el.querySelector('[data-testid="vor-notice"]').textContent, /Черновик сохранён: 3 строк/);
-  assert.match(el.querySelector('[data-testid="vor-imports"]').textContent, /вор\.xlsx.*лист «ВОР».*Черновик/);
+  assert.match(el.querySelector('[data-testid="vor-imports"]').textContent, /вор\.xlsx.*Черновик.*лист «ВОР»/);
   el.querySelector('[data-testid="vor-delete"]').click(); await tick();
   el.querySelector('[data-testid="vor-delete-yes"]').click(); await tick();
   assert.equal(store.length, 0);
