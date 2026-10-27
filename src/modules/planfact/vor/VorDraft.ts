@@ -13,11 +13,24 @@ import type { Binding, BlockChoice, Place, TreeNode } from './places.ts';
 import type { Resolution, VorApi, VorImport, VorRow } from './vor.service.ts';
 import { VorWorks } from './VorWorks.ts';
 import { VorPositions } from './VorPositions.ts';
+import { VorRevision, RowErrorsCard, draftErrors } from './VorRevision.ts';
+import type { AcceptResult, RevisionChange } from './vor.service.ts';
 
 export interface DraftProps {
   api: VorApi; projects: ProjectsApi | null; projectId: string; companyId: string; imp: VorImport;
   canManage: boolean; canProjects: boolean; canUnits: boolean; onBack: () => void; onChanged: () => void;
+  /** P2-0006b: новая редакция принята — список загрузок с итогом. */
+  onAccepted?: (r: AcceptResult) => void;
 }
+
+/** «Редакция №N · действующая / заменена» для шапки черновика и загрузки. */
+export function revisionLabel(imp: VorImport): string {
+  const n = imp.revision_no || 1;
+  if (imp.status === 'draft') return imp.previous_import_id ? `Новая редакция №${n}` : 'Черновик';
+  return imp.is_current === false ? `Редакция №${n} · заменена` : `Редакция №${n} · действующая`;
+}
+
+const CHANGE_LABEL: Record<RevisionChange['kind'], string> = { qty: 'объём изменён', withdrawn: 'снята' };
 
 interface PlaceInfo { place: Place; rows: number; binding: Binding | null }
 
@@ -27,7 +40,11 @@ export function withLocation(r: VorRow, locationId: string | null): Resolution {
 }
 
 export function VorDraft(props: DraftProps): ReactElement {
-  const { api, projects, projectId, companyId, imp, canManage, canProjects, canUnits, onBack, onChanged } = props;
+  const { api, projects, projectId, companyId, imp, canManage, canProjects, canUnits, onBack, onChanged, onAccepted } = props;
+  const isRevision = !!imp.previous_import_id;
+  const [compare, setCompare] = useState(false);
+  const [changes, setChanges] = useState<RevisionChange[] | null>(null);
+  useEffect(() => { if (imp.status === 'confirmed' && isRevision) void api.revisionChanges(imp.id).then(setChanges); }, [imp.id]);
   const editable = canManage && imp.status === 'draft';
   const [rows, setRows] = useState<VorRow[] | null>(null);
   const [places, setPlaces] = useState<PlaceInfo[] | null>(null);
@@ -149,17 +166,36 @@ export function VorDraft(props: DraftProps): ReactElement {
   const head = h('div', { className: 'vor-draft-head' },
     h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: onBack, 'data-testid': 'vor-back' }, '← Загрузки'),
     h('div', { className: 'pj-name' }, h('b', null, imp.file_name), h('span', { className: 'pf-muted' }, `лист «${imp.sheet_name}»`),
-      h('span', { className: 'pj-badge' + (imp.status === 'confirmed' ? ' vor-badge--ok' : '') }, imp.status === 'confirmed' ? 'Подтверждён' : 'Черновик')));
+      h('span', { className: 'pj-badge' + (imp.status === 'confirmed' && imp.is_current !== false ? ' vor-badge--ok' : ''), 'data-testid': 'vor-rev-label' }, revisionLabel(imp))));
 
   if (imp.status === 'confirmed') {
+    const replaced = imp.is_current === false;
+    const fmtQ = (n: number): string => Number(n).toLocaleString('ru-RU', { maximumFractionDigits: 3 });
     return h('div', { className: 'pj-tab vor-draft', 'data-testid': 'vor-draft' }, head,
       notice ? h('div', { className: 'pj-notice', role: 'status' }, notice) : null,
       h('div', { className: 'pf-muted', 'data-testid': 'vor-confirmed' },
-        `Подтверждён ${imp.confirmed_at ? new Date(imp.confirmed_at).toLocaleString('ru-RU') : ''}. Строки, места и виды работ этой загрузки больше не меняются.`),
-      rows ? h(VorPositions, { api, projectId, importId: imp.id, rows }) : h('div', { className: 'pf-muted' }, 'Загрузка…'));
+        `Подтверждён ${imp.confirmed_at ? new Date(imp.confirmed_at).toLocaleString('ru-RU') : ''}${imp.confirmed_by_email ? ' · ' + imp.confirmed_by_email : ''}. ` +
+        (replaced ? 'Эта редакция заменена новой — только для просмотра: строки и файл не меняются, позиции и факт — в действующей.'
+          : 'Строки, места и виды работ этой загрузки больше не меняются.')),
+      changes && changes.length
+        ? h('div', { className: 'pf-card vor-missing', 'data-testid': 'vor-rev-changes' },
+            h('b', null, `Что изменила редакция №${imp.revision_no}: объём — ${changes.filter((c) => c.kind === 'qty').length}, снято — ${changes.filter((c) => c.kind === 'withdrawn').length}`),
+            h('ul', null, changes.slice(0, 50).map((c, k) => h('li', { key: c.position_id + k },
+              `${c.work_name} · ${c.location_path} — ${CHANGE_LABEL[c.kind]}` + (c.kind === 'qty' ? `: ${fmtQ(c.qty_before)} → ${fmtQ(c.qty_after)} ${c.unit_code}` : '')))))
+        : null,
+      replaced
+        ? (rows ? h('div', { className: 'pf-card vor-list', 'data-testid': 'vor-old-rows' }, rows.filter((r) => r.kind === 'work').slice(0, 500).map((r) =>
+            h('div', { key: r.row_no, className: 'vor-prow' }, h('span', { className: 'vor-prow-place' }, 'стр. ' + r.row_no), h('span', { className: 'vor-prow-name' }, r.name),
+              h('span', { className: 'pf-unit' }, r.unit_text || ''), h('span', { className: 'pf-num' }, r.qty === null ? '' : fmtQ(r.qty))))) : h('div', { className: 'pf-muted' }, 'Загрузка…'))
+        : rows ? h(VorPositions, { api, projectId, importId: imp.id, rows }) : h('div', { className: 'pf-muted' }, 'Загрузка…'));
   }
 
   if (rows === null || places === null) return h('div', { className: 'pf-muted' }, 'Загрузка черновика…');
+  if (compare && isRevision) {
+    return h(VorRevision, { api, imp, rows, canManage: editable, onBack: () => setCompare(false),
+      onAccepted: (r) => { onChanged(); if (onAccepted) onAccepted(r); else onBack(); } });
+  }
+  const errors = draftErrors(rows, true);
   const missing = missingList(places.map((p) => p.binding as Binding), places.map((p) => p.place));
   // Блоки без корпуса (выбранные и нет) — список остаётся на экране, выбор можно поменять.
   const blockRows = works.filter((r) => r.context && r.context.block && !r.context.building);
@@ -179,21 +215,25 @@ export function VorDraft(props: DraftProps): ReactElement {
   };
   const canConfirm = editable && works.length > 0 && Object.values(ready).every((n) => n === works.length);
   const confirmBlock = h('div', { className: 'pf-card vor-missing', 'data-testid': 'vor-confirm-block' },
-    h('h3', { className: 'pf-title un-title' }, 'Подтверждение'),
+    h('h3', { className: 'pf-title un-title' }, isRevision ? 'Дальше — сравнение с действующей редакцией' : 'Подтверждение'),
     h('ul', { className: 'vor-ready' },
       ([['places', 'Места привязаны'], ['types', 'Виды работ подтверждены (🟢)'], ['units', 'ЕИ распознаны'], ['qty', 'Объём указан']] as [keyof typeof ready, string][])
         .map(([k, label]) => h('li', { key: k, className: ready[k] === works.length ? 'vor-stat--ok' : 'vor-stat--bad', 'data-ready': k },
           `${ready[k] === works.length ? '✓' : '✗'} ${label}: ${ready[k]} из ${works.length}`))),
-    editable
-      ? h('button', { type: 'button', className: 'pf-btn', disabled: !canConfirm || !!busy, 'data-testid': 'vor-confirm', onClick: () => { void confirmImport(); } },
-          busy === 'Подтверждаю ВОР…' ? busy : 'Подтвердить ВОР')
-      : h('div', { className: 'pf-muted' }, 'Подтверждать ВОР может ПТО, РП или администратор.'),
-    canConfirm ? h('div', { className: 'pf-muted' }, `Будет создано позиций: ${works.length} (по одной на строку-работу). После подтверждения загрузку изменить нельзя.`) : null);
+    editable && isRevision
+      ? h('button', { type: 'button', className: 'pf-btn', disabled: !canConfirm || !!busy, 'data-testid': 'vor-to-compare', onClick: () => setCompare(true) }, 'Дальше: сравнение')
+      : editable
+        ? h('button', { type: 'button', className: 'pf-btn', disabled: !canConfirm || !!busy, 'data-testid': 'vor-confirm', onClick: () => { void confirmImport(); } },
+            busy === 'Подтверждаю ВОР…' ? busy : 'Подтвердить ВОР')
+        : h('div', { className: 'pf-muted' }, 'Подтверждать ВОР может ПТО, РП или администратор.'),
+    canConfirm && !isRevision ? h('div', { className: 'pf-muted' }, `Будет создано позиций: ${works.length} (по одной на строку-работу). После подтверждения загрузку изменить нельзя.`) : null,
+    canConfirm && isRevision ? h('div', { className: 'pf-muted' }, 'Покажем, что добавлено, удалено и где изменился объём. Факт останется на своих позициях.') : null);
 
   return h('div', { className: 'pj-tab vor-draft', 'data-testid': 'vor-draft' },
     head,
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     notice ? h('div', { className: 'pj-notice', role: 'status' }, notice) : null,
+    h(RowErrorsCard, { errors }),
     h('h3', { className: 'pf-title un-title' }, 'Места'),
     h('div', { className: 'vor-summary' },
       h('span', { className: 'vor-stat' + (boundRows === works.length ? ' vor-stat--ok' : ' vor-stat--bad'), 'data-testid': 'vor-bound' },

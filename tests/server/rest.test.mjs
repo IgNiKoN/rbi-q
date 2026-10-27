@@ -552,6 +552,47 @@ else {
       // бригаду REST-теста отправляем в архив — активные имена не накапливаются
       check('бригада REST-теста отправлена в архив', (await rpc('pf_brigade_archive', { p_brigade: brigId, p_archived: true }, tok.alfaPto)).ok);
     }
+    // --- P2-0006b (046): редакции ВОР — своя загрузка №1 → черновик №2 → принятие; права и изоляция. Данные «REST-ВОР … ред.» ---
+    const revProbe = await rpc('pf_vor_revision_changes', { p_import: imp }, tok.alfaPto);
+    if (revProbe.status === 404) { console.log('NOT RUN: 046 на сервере не применена — проверки P2-0006b пропущены'); fails++; }
+    else {
+      const row = (no, qty) => [{ row_no: no, kind: 'work', name: stampV + ' ред. штукатурка', unit_text: 'м2', qty, context: { section: '1' } }];
+      const res1 = (no) => [{ row_no: no, location_id: sec, work_type_id: wt, unit_id: m2, match: 'green' }];
+      const r1 = await j(await rpc('pf_vor_create_import', { p_project: pv, p_file_name: stampV + ' ред1.xlsx', p_sha256: sha, p_sheet: 'ВОР', p_profile: null, p_totals: {} }, tok.alfaPto));
+      await rpc('pf_vor_add_rows', { p_import: r1, p_rows: row(5, 100) }, tok.alfaPto);
+      await rpc('pf_vor_resolve_rows', { p_import: r1, p_items: res1(5) }, tok.alfaPto);
+      check('0006b: первая загрузка подтверждена', (await rpc('pf_vor_confirm', { p_import: r1 }, tok.alfaPto)).ok);
+      const l1 = (await j(await rpc('pf_vor_list_imports', { p_project: pv }, tok.alfaPto))).find((x) => x.id === r1);
+      check('0006b: первая загрузка — редакция №1, действующая', l1?.revision_no === 1 && l1?.is_current === true);
+      const p1 = (await j(await rpc('pf_vor_positions', { p_project: pv, p_location: null }, tok.alfaPto))).find((x) => x.import_id === r1);
+      const args = { p_previous: r1, p_file_name: stampV + ' ред2.xlsx', p_sha256: sha, p_sheet: 'ВОР', p_profile: null, p_totals: {} };
+      check('0006b: anon не создаёт редакцию', !(await rpc('pf_vor_create_revision', args)).ok);
+      check('0006b: прораб не создаёт редакцию', !(await rpc('pf_vor_create_revision', args, tok.alfaForeman)).ok);
+      check('0006b: Бета не создаёт редакцию к ВОР Альфы', !(await rpc('pf_vor_create_revision', args, tok.betaPto)).ok);
+      const r2 = await j(await rpc('pf_vor_create_revision', args, tok.alfaPto));
+      check('0006b: ПТО создал черновик редакции №2', typeof r2 === 'string');
+      await rpc('pf_vor_add_rows', { p_import: r2, p_rows: row(7, 80) }, tok.alfaPto);
+      await rpc('pf_vor_resolve_rows', { p_import: r2, p_items: res1(7) }, tok.alfaPto);
+      check('0006b: новую редакцию обычным подтверждением не принять', !(await rpc('pf_vor_confirm', { p_import: r2 }, tok.alfaPto)).ok);
+      const base = await j(await rpc('pf_vor_revision_base', { p_import: r2 }, tok.alfaPto));
+      check('0006b: база сравнения — строка №1 с позицией', Array.isArray(base) && base.length === 1 && base[0].position_id === p1?.id);
+      check('0006b: Бета не читает базу сравнения Альфы', !(await rpc('pf_vor_revision_base', { p_import: r2 }, tok.betaPto)).ok);
+      const items = [{ row_no: 7, position_id: p1?.id }];
+      check('0006b: Бета не принимает редакцию Альфы', !(await rpc('pf_vor_accept_revision', { p_import: r2, p_items: items, p_red: [] }, tok.betaPto)).ok);
+      check('0006b: прораб не принимает редакцию', !(await rpc('pf_vor_accept_revision', { p_import: r2, p_items: items, p_red: [] }, tok.alfaForeman)).ok);
+      const acc6 = await rpc('pf_vor_accept_revision', { p_import: r2, p_items: items, p_red: [] }, tok.alfaPto);
+      const a6 = await j(acc6);
+      check('0006b: ПТО принял №2 — объём изменён у той же позиции', acc6.ok && a6?.qty_changed === 1 && a6?.added === 0, `статус ${acc6.status}`);
+      const p2 = (await j(await rpc('pf_vor_positions', { p_project: pv, p_location: null }, tok.alfaPto))).find((x) => x.id === p1?.id);
+      check('0006b: та же позиция, объём 80, файл и строка №2', p2 && Number(p2.qty) === 80 && p2.import_id === r2 && p2.source_row_no === 7 && !p2.withdrawn);
+      const lst = await j(await rpc('pf_vor_list_imports', { p_project: pv }, tok.alfaPto));
+      check('0006b: №2 действующая, №1 заменена', lst.find((x) => x.id === r2)?.is_current === true && lst.find((x) => x.id === r1)?.is_current === false);
+      check('0006b: повторное принятие — отказ', !(await rpc('pf_vor_accept_revision', { p_import: r2, p_items: items, p_red: [] }, tok.alfaPto)).ok);
+      check('0006b: изменения редакции — 1 событие объёма', (await j(await rpc('pf_vor_revision_changes', { p_import: r2 }, tok.alfaPto))).filter((x) => x.kind === 'qty').length === 1);
+      check('0006b: Бета не видит изменения редакции Альфы', !(await rpc('pf_vor_revision_changes', { p_import: r2 }, tok.betaPto)).ok);
+      const directH = await fetch(`${URL_}/rest/v1/vor_heads`, { headers: { apikey: ANON, Authorization: `Bearer ${tok.alfaPto}`, 'Accept-Profile': 'planfact' } });
+      check('0006b: таблица редакций не открыта через REST напрямую', !directH.ok, `статус ${directH.status}`);
+    }
     const audV = await j(await rpc('pf_list_company_audit', { p_company: cV, p_limit: 100 }, tok.alfaAdmin));
     check('журнал компании: загрузка и подтверждение ВОР', audV.some((r) => r.table_name === 'vor_imports' && r.action === 'INSERT') && audV.some((r) => r.table_name === 'vor_imports' && r.new_data?.status === 'confirmed'));
     const directV = await fetch(`${URL_}/rest/v1/vor_imports`, { headers: { apikey: ANON, Authorization: `Bearer ${tok.alfaPto}`, 'Accept-Profile': 'planfact' } });

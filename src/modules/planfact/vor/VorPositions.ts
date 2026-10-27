@@ -24,7 +24,7 @@ export function sumByRow(rows: Pick<VorRow, 'row_no' | 'kind' | 'qty'>[], positi
 
 /** Порядок мест по номерам: «Корпус 7» раньше «Корпус 10». */
 const byPath = (a: string, b: string): number => a.localeCompare(b, 'ru', { numeric: true });
-const sortPositions = (list: VorPosition[]): VorPosition[] => list.slice().sort((x, y) => byPath(x.location_path, y.location_path) || byPath(x.work_type, y.work_type));
+const sortPositions = (list: VorPosition[]): VorPosition[] => list.slice().sort((x, y) => Number(!!x.withdrawn) - Number(!!y.withdrawn) || byPath(x.location_path, y.location_path) || byPath(x.work_type, y.work_type));
 
 const fmt = (n: number): string => Number(n).toLocaleString('ru-RU', { maximumFractionDigits: 3 });
 
@@ -46,7 +46,7 @@ export function VorPositions(props: { api: VorApi; projectId: string; importId?:
 
   if (all === null) return h('div', { className: 'pf-muted' }, 'Загрузка позиций…');
   const places = Array.from(new Map(all.map((p) => [p.location_id, p.location_path])).entries()).sort((a, b) => byPath(a[1], b[1]));
-  const check = rows ? sumByRow(rows, all) : null;
+  const check = rows ? sumByRow(rows, all.filter((p) => !p.withdrawn)) : null;
 
   return h('div', { className: 'pj-tab', 'data-testid': 'vor-positions' },
     h('h3', { className: 'pf-title un-title' }, importId ? 'Позиции этой загрузки' : 'Позиции ВОР проекта'),
@@ -66,7 +66,8 @@ export function VorPositions(props: { api: VorApi; projectId: string; importId?:
           list.length
             ? list.map((p) => h('div', { key: p.id, className: 'vor-prow', 'data-position': p.id },
                 h('span', { className: 'vor-prow-place' }, p.location_path, p.apartments_note ? h('span', { className: 'pf-muted' }, ' · ' + p.apartments_note) : null),
-                h('span', { className: 'vor-prow-name' }, p.work_type),
+                h('span', { className: 'vor-prow-name' }, p.work_type,
+                  p.withdrawn ? h('span', { className: 'vor-prow-wd', 'data-testid': 'vor-pos-withdrawn' }, ' · снята в новой редакции') : null),
                 h('span', { className: 'pf-unit' }, p.unit_code),
                 h('span', { className: 'pf-num' }, fmt(p.qty))))
             : h('div', { className: 'pj-empty pf-muted', 'data-testid': 'vor-pos-empty' }, 'Позиций пока нет — подтвердите загрузку ВОР.')));
@@ -77,6 +78,7 @@ export const VOR_POSITIONS_CSS = `
 .vor-prow:last-child{border-bottom:0}
 .vor-prow-place{overflow-wrap:anywhere;font-size:12px}
 .vor-prow-name{overflow-wrap:anywhere}
+.vor-prow-wd{color:var(--p2-status-red-fg);font-weight:600;font-size:12px}
 @media (max-width:600px){.vor-prow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"place place" "name name" "unit qty"}
   .vor-prow-place{grid-area:place}.vor-prow-name{grid-area:name;font-weight:700}.vor-prow .pf-unit{grid-area:unit}.vor-prow .pf-num{grid-area:qty}}
 `;
