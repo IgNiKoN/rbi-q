@@ -78,6 +78,7 @@ export const P2_REGISTRY_CSS = `
 .p2-history__head{display:flex;flex-wrap:wrap;gap:8px;font-size:12px}
 .p2-history__status{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .p2-reg__compact{display:none}
+.p2-reg__table td.p2-reg__acts{white-space:nowrap;text-align:right;vertical-align:middle}
 .p2-reg__quick{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
 .p2-reg__quick::-webkit-scrollbar{display:none}
 .p2-reg__q{font:inherit;font-size:13px;font-weight:500;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);cursor:pointer;white-space:nowrap}
@@ -89,7 +90,7 @@ export const P2_REGISTRY_CSS = `
 .p2-reg__scroll{border:0;background:transparent;overflow:visible}
 .p2-reg--compact .p2-reg__scroll{border:1px solid var(--card-border);border-radius:14px;background:var(--card-bg);overflow:hidden}
 .p2-reg--compact .p2-reg__row{border:0;border-top:1px solid var(--card-border);border-radius:0;margin:0;padding:10px 14px}
-.p2-reg--compact .p2-reg__row td{display:none}
+.p2-reg--compact .p2-reg__row td:not(.p2-reg__compact):not(.p2-reg__check){display:none}
 .p2-reg--compact .p2-reg__row td.p2-reg__compact{display:block;padding:0;text-align:left}
 .p2-reg--compact .p2-reg__row td.p2-reg__check{display:block}
 .p2-reg--compact:not(.p2-reg--nocheck) .p2-reg__row{padding-left:48px}

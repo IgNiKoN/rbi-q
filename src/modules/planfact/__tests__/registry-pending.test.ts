@@ -75,7 +75,9 @@ test('строки = очередь сервера; колонки; группы
   assert.deepEqual([...rowIds(box)].sort(), q.value.map((e) => e.id).sort(), 'очередь совпадает с pf_fact_pending');
   assert.deepEqual(qa(box, '[data-testid="p2-reg-group"] b').map((b) => b.textContent), ['Корпус 1', 'Корпус 2']);
   const heads = qa(box, '[data-testid="p2-reg-sort"]').map((b) => b.textContent);
-  for (const c of ['Работа', 'Место', 'Объём', 'План', 'Принято', 'Дата работ', 'Бригада', 'Прораб', 'Пометка', 'Через РП', 'Исправление']) assert.ok(heads.includes(c), c);
+  // P2-0046: видны главные колонки; редкие (план, принято, пометка, через РП, исправление) — в «Колонки…», пометки — в строке работы
+  for (const c of ['Работа', 'Место', 'Объём', 'Что будет', 'Дата работ', 'Бригада']) assert.ok(heads.includes(c), c);
+  for (const c of ['Прораб', 'План', 'Принято', 'Пометка', 'Через РП', 'Исправление']) assert.ok(!heads.includes(c), `${c} — скрыта`);
   const r3 = box.querySelector('tr[data-row="e3"]');
   assert.ok(r3.querySelector('[data-testid="fp-viapm"]'), '«через РП» отмечено');
   assert.equal(r3.querySelector('[data-col="date"]').textContent, '23.10.2026');
@@ -227,4 +229,25 @@ test('адреса: #/planfact/fact/pending[?вид] — подвкладка «
   assert.equal(canonicalHash('#/planfact/fact/pending?f.corp=%D0%9A', all), null);
   assert.equal(canonicalHash('#/planfact/fact/pendingx', all), '#/planfact/fact');
   assert.equal(canonicalHash('#/planfact/fact/pending', { ...all, fact: false }), '#/planfact');
+});
+
+test('P2-0046: «Без перебора / С перебором» кнопками, «Принять» в строке, «Принять без перебора» — с подтверждением', async () => {
+  win.history.replaceState(null, '', '#/planfact/fact/pending');
+  const f = stand();
+  f.entries.push({ ...f.entries[0], id: 'e5', position_id: 'a6', qty: 5, note: null } as N);
+  f.entries.push({ ...f.entries[0], id: 'e6', position_id: 'b6', qty: 4, note: null } as N);
+  const box = await mount(reg(f));
+  const chips = qa(box, '[data-testid="p2-reg-quick"] button').map((b) => b.textContent);
+  assert.deepEqual(chips, ['Все6', 'Без перебора2', 'С перебором4']);
+  assert.match(box.querySelector('tr[data-row="e1"] [data-testid="fp-after"]').textContent, /^перебор: 12 из 10$/);
+  assert.equal(box.querySelector('tr[data-row="e5"] [data-testid="fp-after"]').textContent, 'станет 50 %');
+  click(box.querySelector('tr[data-row="e5"] [data-testid="fp-row-approve"]')); await tick(); await tick();
+  assert.ok(!rowIds(box).includes('e5'), 'принятая запись ушла из очереди');
+  assert.match(box.querySelector('[data-testid="fp-notice"]').textContent, /Подтверждено/);
+  click(box.querySelector('[data-testid="fp-approve-clean"]'));
+  assert.match(box.querySelector('[data-testid="fp-askall"]').textContent, /Принять 1\?/);
+  click(box.querySelector('[data-testid="fp-approve-clean-yes"]')); await tick(); await tick();
+  assert.deepEqual(rowIds(box).sort(), ['e1', 'e2', 'e3', 'e4'], 'остались только с перебором');
+  click(box.querySelector('tr[data-row="e1"] [data-testid="fp-row-reject"]')); await tick();
+  assert.ok(box.querySelector('[data-testid="ft-reject"]'), '«Отклонить» открывает карточку с причиной');
 });

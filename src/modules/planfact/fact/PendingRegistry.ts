@@ -35,23 +35,34 @@ export function toPendingRow(e: FactPendingRow): PendingRow {
 }
 
 const QTY = '#,##0.###';
+/** P2-0046: перебор — объём после подтверждения больше плана (видно сразу, красным). */
+export const isOver = (r: PendingRow): boolean => r.afterPct !== null && r.afterPct > 100 + 1e-9;
+const afterText = (r: PendingRow): string => (r.afterPct === null ? '—' : isOver(r) ? `перебор: ${fmtQty(r.fact + r.qty)} из ${fmtQty(r.plan)}` : `станет ${fmtPct(r.afterPct)}`);
+/** Работа и пометки записи («через РП», исправление, пометка прораба) — в одной ячейке, редкие колонки скрыты. */
+function workCell(r: PendingRow): ReactElement {
+  return h('span', { className: 'fp-work' }, r.work,
+    r.viaPm ? h(StatusBadge, { status: 'blue', label: 'Через РП', testId: 'fp-viapm' }) : null,
+    r.correction ? h('span', { className: 'fp-sub' }, `Исправление: ${r.correction}`) : null,
+    r.note && !r.viaPm ? h('span', { className: 'fp-sub' }, r.note) : null);
+}
 export const PENDING_COLUMNS: RegistryColumn<PendingRow>[] = [
-  { id: 'work', label: 'Работа', value: (r) => r.work, fixed: true },
+  { id: 'work', label: 'Работа', value: (r) => r.work, fixed: true, render: workCell },
   { id: 'place', label: 'Место', value: (r) => r.place },
   { id: 'qty', label: 'Объём', value: (r) => r.qty, align: 'right', numFmt: QTY, render: (r) => `${fmtQty(r.qty)} ${r.unit}` },
-  { id: 'plan', label: 'План', value: (r) => r.plan, align: 'right', numFmt: QTY },
-  { id: 'fact', label: 'Принято', value: (r) => r.fact, align: 'right', numFmt: QTY },
-  { id: 'after', label: 'После подтв.', value: (r) => r.afterPct, align: 'right', render: (r) => (r.afterPct === null ? '—' : fmtPct(r.afterPct)) },
+  { id: 'after', label: 'Что будет', value: (r) => r.afterPct, render: (r) => h('span', { className: isOver(r) ? 'fp-over' : undefined, 'data-testid': 'fp-after' }, afterText(r)) },
   { id: 'date', label: 'Дата работ', value: (r) => r.date, render: (r) => ruDate(r.date) },
   { id: 'brigade', label: 'Бригада', value: (r) => r.brigade },
-  { id: 'author', label: 'Прораб', value: (r) => r.author },
-  { id: 'note', label: 'Пометка', value: (r) => r.note || null },
-  { id: 'viaPm', label: 'Через РП', value: (r) => (r.viaPm ? 'да' : null), render: (r) => (r.viaPm ? h(StatusBadge, { status: 'blue', label: 'Через РП', testId: 'fp-viapm' }) : '—') },
-  { id: 'correction', label: 'Исправление', value: (r) => r.correction || null },
+  { id: 'author', label: 'Прораб', value: (r) => r.author, hidden: true },
+  { id: 'plan', label: 'План', value: (r) => r.plan, align: 'right', numFmt: QTY, hidden: true },
+  { id: 'fact', label: 'Принято', value: (r) => r.fact, align: 'right', numFmt: QTY, hidden: true },
+  { id: 'note', label: 'Пометка', value: (r) => r.note || null, hidden: true },
+  { id: 'viaPm', label: 'Через РП', value: (r) => (r.viaPm ? 'да' : null), hidden: true },
+  { id: 'correction', label: 'Исправление', value: (r) => r.correction || null, hidden: true },
   { id: 'corp', label: 'Корпус', value: (r) => r.corp, hidden: true },
 ];
 
 export const PENDING_FILTERS: RegistryFilter<PendingRow>[] = [
+  { id: 'over', label: 'Перебор', get: (r) => (isOver(r) ? 'С перебором' : 'Без перебора') },
   { id: 'corp', label: 'Корпус', get: (r) => r.corp },
   { id: 'work', label: 'Работа', get: (r) => r.work },
   { id: 'author', label: 'Прораб', get: (r) => r.author },
@@ -155,7 +166,38 @@ export function PendingRegistry(props: PendingRegistryProps): ReactElement {
   };
 
   const ordered = useMemo(() => registryRows(rows || [], { filters: PENDING_FILTERS, columns: PENDING_COLUMNS, state, groupBy: GROUP }), [rows, state]);
+  const [busyId, setBusyId] = useState('');
+  const [askAll, setAskAll] = useState(false);
   if (rows === null) return h('div', { className: 'pf-muted' }, 'Загрузка очереди…');
+  // P2-0046: «Принять» прямо в строке; «Отклонить» — карточка записи (там причина); «Принять все без перебора» — с подтверждением.
+  async function approveOne(id: string): Promise<void> {
+    if (busyId) return;
+    setBusyId(id);
+    const r = await api.decide(id, true, '');
+    setBusyId('');
+    void done(r.ok ? 'Подтверждено — объём вошёл в итог' : r.message, !r.ok);
+  }
+  const clean = rows.filter((r) => !isOver(r));
+  async function approveClean(): Promise<void> {
+    setAskAll(false);
+    const r = await decideInParts(api, projectId, clean.map((x) => x.id), true, '');
+    void done(r.error ? `${r.error}${r.done ? `. Подтверждено ранее: ${r.done}` : '. Ничего не изменилось'}` : `Подтверждено без перебора: ${r.done} — объём вошёл в итог`, !!r.error);
+  }
+  const rowActs = (r: PendingRow): ReactElement => h('span', { className: 'fp-acts' },
+    h('button', { type: 'button', className: 'pf-btn fp-ok', disabled: !!busyId, 'data-testid': 'fp-row-approve', onClick: () => { void approveOne(r.id); } }, 'Принять'),
+    h('button', { type: 'button', className: 'pf-btn pf-btn--ghost fp-no', disabled: !!busyId, 'data-testid': 'fp-row-reject', onClick: () => setOpenId(r.id) }, 'Отклонить'));
+  const compact = (r: PendingRow): ReactElement => h('span', { className: 'fp-c' },
+    h('span', { className: 'fp-c-top' },
+      h('span', { className: 'fp-c-name' }, h('b', null, r.work), h('span', { className: 'fp-sub' }, `${r.place} · ${r.brigade} · ${ruDate(r.date)}`)),
+      h('span', { className: 'fp-c-q' }, h('b', null, `${fmtQty(r.qty)} ${r.unit}`), h('span', { className: isOver(r) ? 'fp-over' : 'fp-sub' }, afterText(r)))),
+    rowActs(r));
+  const tools = clean.length
+    ? askAll
+      ? h('span', { className: 'fp-askall', 'data-testid': 'fp-askall' }, `Принять ${clean.length}?`,
+          h('button', { type: 'button', className: 'pf-btn fp-ok', 'data-testid': 'fp-approve-clean-yes', onClick: () => { void approveClean(); } }, 'Да'),
+          h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: () => setAskAll(false) }, 'Нет'))
+      : h('button', { type: 'button', className: 'pf-btn fp-clean', 'data-testid': 'fp-approve-clean', onClick: () => setAskAll(true) }, `Принять без перебора · ${clean.length}`)
+    : null;
   const idx = openId ? ordered.findIndex((r) => r.id === openId) : -1;
   const open = idx >= 0 ? ordered[idx] : null;
 
@@ -164,7 +206,7 @@ export function PendingRegistry(props: PendingRegistryProps): ReactElement {
     notice ? h('div', { className: notice.bad ? 'pf-error' : 'pj-notice', role: notice.bad ? 'alert' : 'status', 'data-testid': 'fp-notice' }, notice.text) : null,
     h(RegistryTable<PendingRow>, {
       testId: 'fp-table', rows, rowKey: (r) => r.id, columns: PENDING_COLUMNS, filters: PENDING_FILTERS, state, onState, groupBy: GROUP,
-      selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId,
+      selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId, quick: { filter: 'over' }, compact, tools, rowActions: rowActs,
       actions: (sel) => h(BatchActions, { api, projectId, rows: sel, onDone: (m, bad) => { void done(m, bad); } }),
       empty: 'Нет записей, ожидающих подтверждения.',
       views: { registry: 'fact-pending', company: props.companyId, user: props.user }, linkBase: PENDING_LINK,
@@ -181,6 +223,26 @@ export const PENDING_REGISTRY_CSS = `
 .fp-registry .p2-reg__table td[data-col="place"]{min-width:120px}
 .fp-registry .p2-reg__table td[data-col="date"],.fp-registry .p2-reg__table td[data-col="qty"]{white-space:nowrap}}
 .fp-batch{flex:1 1 auto}
+.fp-work{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px}
+.fp-sub{font-size:12px;font-weight:400;color:var(--text-muted)}
+.fp-over{color:var(--p2-status-red-fg);font-weight:600}
+.fp-registry td[data-col="after"]{white-space:nowrap}
+.fp-acts{display:inline-flex;gap:6px;flex-wrap:nowrap}
+.fp-acts .pf-btn{min-height:34px;padding:6px 12px;font-size:13px}
+.fp-ok{background:var(--p2-status-green-fg);border-color:var(--p2-status-green-fg)}
+.fp-no{color:var(--p2-status-red-fg)}
+.fp-askall{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.fp-c{display:flex;flex-direction:column;gap:8px}
+.fp-c-top{display:flex;justify-content:space-between;gap:10px}
+.fp-c-name{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fp-c-name b{font-size:14.5px;font-weight:600}
+.fp-c-q{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;white-space:nowrap}
+.fp-c .fp-acts .pf-btn{flex:1 1 0;min-height:44px}
+.fp-c .fp-acts{display:flex}
+@media (max-width:767.98px){
+.fp-clean{position:fixed;z-index:900;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:calc(65px + env(safe-area-inset-bottom,0px) + 12px);min-height:50px;font-size:16px;box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.fp-registry:has(.fp-clean){padding-bottom:76px}
+}
 .fp-reject{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 320px}
 .fp-reject .pj-input{flex:1 1 220px;min-width:0}
 .ft-decide{display:flex;flex-direction:column;gap:8px}

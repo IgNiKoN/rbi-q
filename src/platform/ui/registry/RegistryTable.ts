@@ -64,6 +64,8 @@ export interface RegistryProps<T> {
   compact?: (r: T) => ReactNode;
   /** P2-0046: галочки выбора скрыты, пока не нажали «Выбрать» (или пока что-то выбрано). */
   selectMode?: boolean;
+  /** P2-0046: действия строки в последней колонке (например, «Принять / Отклонить»); на телефоне — в compact. */
+  rowActions?: (r: T) => ReactNode;
 }
 
 /** P2-0041: кнопка «Excel» панели реестра — коротко «Excel (N)»; на телефоне — «Excel»; полная подпись — для диктора и подсказки. */
@@ -143,7 +145,8 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
       visible.map((c, i) => h('td', { key: c.id, 'data-col': c.id, 'data-label': c.label, className: (c.align === 'right' ? 'p2-num p2-reg__r' : '') + (i === 0 ? ' p2-reg__main' : '') },
         i === 0 && p.onOpen
           ? h('button', { type: 'button', className: 'p2-reg__open', 'data-testid': 'p2-reg-open', onClick: () => p.onOpen!(r) }, cell(c, r))
-          : cell(c, r))));
+          : cell(c, r))),
+      p.rowActions ? h('td', { className: 'p2-reg__acts' }, p.rowActions(r)) : null);
   };
 
   const head = h('thead', null, h('tr', null,
@@ -154,7 +157,8 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
       return h('th', { key: c.id, className: c.align === 'right' ? 'p2-reg__r' : '', 'aria-sort': dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none' },
         h('button', { type: 'button', className: 'p2-reg__sort', 'data-testid': 'p2-reg-sort', 'data-col': c.id, onClick: () => setSort(c.id) },
           c.label, dir ? h('span', { 'aria-hidden': 'true' }, dir === 'asc' ? ' ↑' : ' ↓') : null));
-    })));
+    }),
+    p.rowActions ? h('th', { className: 'p2-reg__acts' }) : null));
 
   const counters = (rs: T[]): ReactNode => {
     if (!p.toneOf) return null;
@@ -167,7 +171,7 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
     ? groups.map((g) => {
         const open = !closed[g.key];
         return h('tbody', { key: g.key, 'data-group': g.key },
-          h('tr', { className: 'p2-reg__group' }, h('td', { colSpan: visible.length + (checks ? 1 : 0) + (p.compact ? 1 : 0) },
+          h('tr', { className: 'p2-reg__group' }, h('td', { colSpan: visible.length + (checks ? 1 : 0) + (p.compact ? 1 : 0) + (p.rowActions ? 1 : 0) },
             h('button', { type: 'button', className: 'p2-reg__gbtn', 'aria-expanded': open, 'data-testid': 'p2-reg-group', onClick: () => setClosed({ ...closed, [g.key]: open }) },
               h('span', { 'aria-hidden': 'true', className: 'p2-reg__chev' }, open ? '▾' : '▸'),
               h('b', null, g.key), h('span', { className: 'p2-reg__total' }, `Всего: ${g.rows.length}`)),
