@@ -20,10 +20,8 @@ begin
   if to_regclass('core.divisions') is not null then
     raise exception '045 уже применена (повтор — только после 045_projects_objects_down.sql)' using errcode = 'P0001';
   end if;
-  -- корень дерева сейчас бывает только корпусом или «прочим»: обратный перевод однозначен
-  if exists (select 1 from core.locations where parent_id is null and node_type not in ('building', 'other')) then
-    raise exception '045: есть места верхнего уровня с типом секция/этаж/квартира — сначала разобрать (проба scripts/p2-0047/01_probe.sql)'
-      using errcode = 'P0001';
+  if to_regclass('p2_backup.p2_0047_roots') is not null then
+    raise exception '045: осталась копия p2_backup.p2_0047_roots от прошлого запуска — сначала разобрать' using errcode = 'P0001';
   end if;
 end $$;
 
@@ -100,7 +98,14 @@ alter table core.locations drop constraint locations_node_type_check;
 alter table core.locations add constraint locations_node_type_check
   check (node_type = any (array['object', 'building', 'section', 'floor', 'apartment', 'other']));
 
--- перевод корней в объекты: без пометки «изменено» и без сторожа Качества (данные те же, меняется только тип)
+-- перевод корней в объекты: без пометки «изменено» и без сторожа Качества (данные те же, меняется только тип).
+-- Корень-секция / этаж / квартира (бывает у тестовых и старых деревьев, напр. «Секция 1» автопроверок ВОР) становится объектом
+-- «прочее» со всеми ссылками; исходный тип — в закрытой копии p2_backup, откат вернёт его побайтно.
+create schema if not exists p2_backup;
+revoke all on schema p2_backup from public, anon, authenticated;
+create table p2_backup.p2_0047_roots as
+  select id, node_type from core.locations where parent_id is null and node_type not in ('building', 'other');
+revoke all on p2_backup.p2_0047_roots from public, anon, authenticated;
 alter table core.locations disable trigger user;
 update core.locations set object_kind = case when node_type = 'building' then 'building' else 'other' end, node_type = 'object'
  where parent_id is null;

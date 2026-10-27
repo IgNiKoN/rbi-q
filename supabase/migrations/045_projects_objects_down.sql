@@ -30,6 +30,8 @@ drop function core.locations_root_object();
 alter table core.locations drop constraint locations_object_root_chk, drop constraint locations_object_kind_chk;
 alter table core.locations disable trigger user;
 update core.locations set node_type = case when object_kind = 'building' then 'building' else 'other' end where node_type = 'object';
+-- корни, которые были секцией / этажом / квартирой, — из копии 045
+update core.locations l set node_type = b.node_type from p2_backup.p2_0047_roots b where b.id = l.id;
 alter table core.locations enable trigger user;
 alter table core.locations drop constraint locations_node_type_check;
 alter table core.locations add constraint locations_node_type_check
@@ -42,6 +44,7 @@ alter table core.projects
   drop column division_id, drop column address, drop column manager_user_id, drop column stage, drop column our_role,
   drop column timezone, drop column country;
 
+drop table p2_backup.p2_0047_roots;
 drop table core.divisions;
 drop table core.project_roles;
 drop table core.object_kinds;
