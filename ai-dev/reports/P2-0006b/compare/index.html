@@ -1,0 +1,677 @@
+<meta charset="utf-8">
+<title>Редакции ВОР</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Раскладка: шапка с переключателями → пара «сейчас / предлагаю» (телефон — две колонки, планшет и ПК — друг под другом) → что меняется. */
+:root {
+  --bg: #eef0f2;
+  --surface: #ffffff;
+  --ink: #17212b;
+  --muted: #5f6b76;
+  --line: rgba(28, 43, 57, 0.14);
+  --accent: #1c2b39;
+  --accent-ink: #ffffff;
+  --gold: #a87c3e;
+  --now: #8a5a2b;
+  --new: #23704a;
+  --font: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Arial Narrow', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11181f; --surface: #1a242e; --ink: #e8edf1; --muted: #9aa7b2; --line: rgba(232, 237, 241, 0.14);
+    --accent: #d8bd91; --accent-ink: #11181f; --gold: #d8bd91; --now: #e0a46a; --new: #6fcf97; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11181f; --surface: #1a242e; --ink: #e8edf1; --muted: #9aa7b2; --line: rgba(232, 237, 241, 0.14);
+  --accent: #d8bd91; --accent-ink: #11181f; --gold: #d8bd91; --now: #e0a46a; --new: #6fcf97; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 4vw, 32px); line-height: 1.15; margin: 0; text-wrap: balance; }
+.lead { margin: 6px 0 0; color: var(--muted); max-width: 65ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button {
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--muted); background: none; border: 0; border-radius: 7px;
+  padding: 8px 14px; min-height: 40px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.seg-label { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin-right: 6px; }
+.ctl { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+.pair { display: grid; gap: 20px; }
+.pair.phone { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.pair.wide { grid-template-columns: 1fr; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.col-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tag { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.tag.now { color: var(--now); }
+.tag.new { color: var(--new); }
+.col-head b { font-weight: 600; }
+.frames { display: flex; flex-direction: column; gap: 14px; }
+.pair.phone .frames { max-width: 400px; }
+.frame-cap { font-size: 13px; color: var(--muted); margin-top: -4px; }
+.shot { position: relative; width: 100%; max-width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #f4f4f4; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); }
+.shot img { display: block; width: 100%; height: auto; }
+.device { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+.notes { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; }
+.notes h2 { font-size: 17px; font-weight: 600; margin: 0 0 8px; }
+.notes ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 75ch; }
+.foot { color: var(--muted); font-size: 13px; max-width: 75ch; }
+
+/* ===== Макет приложения (светлая тема RBI v3, одна картинка — без переключения темы) ===== */
+.m {
+  --g: #1c2b39; --g2: #273949; --gold: #c49a5f; --paper: #f4f4f4; --card: #ffffff; --ink: #161616; --mut: #6f6f6f;
+  --ln: rgba(28, 43, 57, 0.12); --ok: #24a148; --okbg: #e3f4e8; --warn: #9a6b1f; --warnbg: #f7ecd9; --bad: #b5452b; --badbg: #f8e1da;
+  --info: #2a6f9e; --infobg: #e1edf6; --fact: #2a6f9e;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: var(--ink); background: var(--paper);
+  font-size: 14px; line-height: 1.35; position: relative; overflow: hidden; display: flex;
+}
+.m * { box-sizing: border-box; }
+.m .tnum, .m td.n, .m .num { font-variant-numeric: tabular-nums; }
+.m .main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.m .content { flex: 1 1 auto; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.m .content > * { flex-shrink: 0; }
+.m .top { height: 56px; flex: 0 0 auto; background: var(--card); border-bottom: 1px solid var(--ln); display: flex; align-items: center; gap: 10px; padding: 0 16px; }
+.m .burger { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--ln); display: grid; place-items: center; }
+.m .burger i { width: 16px; height: 2px; background: var(--g); box-shadow: 0 -5px 0 var(--g), 0 5px 0 var(--g); display: block; }
+.m .proj { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--ln); font-weight: 600; font-size: 14px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.m .proj small { color: var(--mut); font-weight: 500; }
+.m .proj::after { content: ''; width: 7px; height: 7px; border-right: 2px solid var(--mut); border-bottom: 2px solid var(--mut); transform: rotate(45deg) translateY(-2px); margin-left: 2px; }
+.m .crumbs { color: var(--mut); font-size: 13px; }
+.m .crumbs b { color: var(--ink); font-weight: 600; }
+.m .grow { flex: 1 1 auto; }
+.m .ava { width: 32px; height: 32px; border-radius: 50%; background: var(--g); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.m .ph { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.m .ph h3 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.m .ph p { margin: 2px 0 0; color: var(--mut); font-size: 13px; }
+.m .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 1px solid var(--ln); background: var(--card); color: var(--g); white-space: nowrap; }
+.m .btn.pri { background: var(--g); color: #fff; border-color: var(--g); }
+.m .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.m .btn.ghost { background: none; border-color: transparent; color: var(--info); padding: 0 6px; }
+.m .tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--ln); padding: 0 16px; background: var(--card); flex: 0 0 auto; }
+.m .tabs.in { background: none; padding: 0; }
+.m .tabs span { padding: 12px 0 10px; font-size: 14px; font-weight: 500; color: var(--mut); border-bottom: 2px solid transparent; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.m .tabs span.on { color: var(--g); font-weight: 600; border-bottom-color: var(--gold); }
+.m .cnt { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+.m .cnt.mut { background: var(--ln); color: var(--g); }
+.m .card { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; }
+.m .sec { font-size: 13px; font-weight: 600; color: var(--mut); margin: 0; }
+.m .pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.m .pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.m .pill.bad { color: var(--bad); background: var(--badbg); }
+.m .pill.warn { color: var(--warn); background: var(--warnbg); }
+.m .pill.ok { color: #1c7c3a; background: var(--okbg); }
+.m .pill.grey { color: #5c6670; background: #eceef0; }
+.m .pill.info { color: var(--info); background: var(--infobg); }
+.m .bar { position: relative; height: 8px; border-radius: 4px; background: #e7e9ec; overflow: visible; }
+.m .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--fact); }
+.m .bar i.ok { background: var(--ok); }
+.m .bar b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--g); border-radius: 1px; }
+.m .legend { display: flex; gap: 14px; font-size: 12px; color: var(--mut); }
+.m .legend span { display: inline-flex; align-items: center; gap: 5px; }
+.m .legend .lf { width: 12px; height: 6px; border-radius: 3px; background: var(--fact); }
+.m .legend .lp { width: 2px; height: 12px; background: var(--g); }
+
+/* внимание */
+.m .att { display: flex; flex-direction: column; }
+.m .att .it { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .att .it:first-child { border-top: 0; }
+.m .att .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.m .att .dot.bad { background: var(--bad); }
+.m .att .dot.warn { background: var(--gold); }
+.m .att .tx { flex: 1 1 auto; min-width: 0; }
+.m .att .tx b { display: block; font-weight: 600; font-size: 14px; }
+.m .att .tx span { color: var(--mut); font-size: 12.5px; }
+.m .att .go { color: var(--info); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.m .chev { width: 8px; height: 8px; border-right: 2px solid #9aa3ab; border-bottom: 2px solid #9aa3ab; transform: rotate(-45deg); flex: 0 0 auto; }
+.m .attg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.m .attg .it { border: 1px solid var(--ln); border-radius: 14px; background: var(--card); align-items: flex-start; }
+.m .attg .it .go { margin-top: 6px; display: inline-block; }
+
+/* плитки */
+.m .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.m .kpis.four { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.m .kpi { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; padding: 12px 14px; }
+.m .kpi span { color: var(--mut); font-size: 12.5px; display: block; }
+.m .kpi b { font-size: 20px; font-weight: 600; display: block; margin-top: 2px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.m .kpi small { color: var(--mut); font-size: 12px; }
+.m .kpi small.bad { color: var(--bad); font-weight: 600; }
+
+/* объект — карточка (телефон) */
+.m .obj { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.m .obj .hd { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.m .obj .hd b { font-weight: 600; font-size: 15px; }
+.m .obj .pct { display: flex; justify-content: space-between; font-size: 13px; color: var(--mut); }
+.m .obj .pct b { color: var(--ink); font-size: 15px; }
+.m .kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+.m .kv span { color: var(--mut); }
+.m .kv b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* таблица */
+.m table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.m th { text-align: left; font-size: 12px; font-weight: 600; color: var(--mut); padding: 10px 12px; border-bottom: 1px solid var(--ln); white-space: nowrap; }
+.m td { padding: 11px 12px; border-bottom: 1px solid var(--ln); vertical-align: middle; }
+.m tr:last-child td { border-bottom: 0; }
+.m th.n, .m td.n { text-align: right; white-space: nowrap; }
+.m td .sub { display: block; font-size: 12px; color: var(--mut); }
+.m td b { font-weight: 600; }
+.m tr.sel td { background: #eef4f9; }
+.m .barc { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.m .barc .bar { flex: 1 1 auto; }
+.m .barc em { font-style: normal; font-weight: 600; width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* нижняя панель телефона */
+.m .bnav { height: 65px; flex: 0 0 auto; background: var(--card); border-top: 1px solid var(--ln); display: flex; }
+.m .bnav span { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--mut); position: relative; }
+.m .bnav span i { width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 6px; display: block; opacity: 0.85; }
+.m .bnav span.on { color: var(--g); }
+.m .bnav span.on::after { content: ''; position: absolute; bottom: 6px; width: 18px; height: 2px; border-radius: 1px; background: var(--gold); }
+.m .bnav .cnt { position: absolute; top: 6px; left: calc(50% + 4px); }
+.m .bnav .dots { border: 0 !important; display: grid !important; place-items: center; font-size: 18px; line-height: 1; letter-spacing: 1px; font-style: normal; }
+
+/* узкая панель модулей (планшет, ПК) */
+.m .rail { width: 88px; flex: 0 0 auto; background: var(--card); border-right: 1px solid var(--ln); display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 12px 6px; }
+.m .rail span { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px; border-radius: 12px; font-size: 10px; font-weight: 600; color: var(--mut); text-align: center; line-height: 1.15; }
+.m .rail span i { width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 6px; display: block; opacity: 0.8; }
+.m .rail span.on { background: rgba(28, 43, 57, 0.06); color: var(--g); }
+.m .rail .sp { flex: 1 1 auto; }
+.m .nav2 { width: 220px; flex: 0 0 auto; background: var(--card); border-right: 1px solid var(--ln); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; }
+.m .nav2 .lb { font-size: 12px; font-weight: 600; color: var(--mut); padding: 0 10px 8px; }
+.m .nav2 span { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #3c4650; }
+.m .nav2 span i { width: 18px; height: 18px; border: 1.8px solid currentColor; border-radius: 5px; opacity: 0.7; }
+.m .nav2 span.on { background: rgba(28, 43, 57, 0.07); color: var(--g); font-weight: 600; }
+.m .nav2 span .cnt { margin-left: auto; }
+
+/* факт */
+.m .loc { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.m .loc .r1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.m .loc .r1 b { font-size: 16px; font-weight: 600; }
+.m .loc .r1 .lk { color: var(--info); font-weight: 600; font-size: 13px; }
+.m .loc .r2 { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--mut); }
+.m .loc .r2 .bar { flex: 1 1 auto; }
+.m .chips { display: flex; gap: 8px; flex-wrap: nowrap; overflow: hidden; }
+.m .chips span { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ln); background: var(--card); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; white-space: nowrap; color: #3c4650; }
+.m .chips span.on { background: var(--g); color: #fff; border-color: var(--g); }
+.m .chips span em { font-style: normal; color: inherit; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.m .rows .rw { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .rows .rw:first-child { border-top: 0; }
+.m .rows .rw .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.m .rows .rw .t b { font-weight: 600; font-size: 14.5px; }
+.m .rows .rw .t .ln { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--mut); }
+.m .rows .rw .t .ln .bar { flex: 1 1 auto; height: 6px; }
+.m .rows .rw .p { font-weight: 600; font-size: 15px; width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+.m .tree { width: 240px; flex: 0 0 auto; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--ln); background: var(--card); }
+.m .tree .b { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; font-weight: 600; font-size: 14px; }
+.m .tree .b em { margin-left: auto; font-style: normal; color: var(--mut); font-weight: 500; font-size: 12.5px; }
+.m .tree .f { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 26px; border-radius: 9px; font-size: 13.5px; color: #3c4650; }
+.m .tree .f.on { background: #eef4f9; color: var(--g); font-weight: 600; }
+.m .tree .f em { margin-left: auto; font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--mut); }
+.m .tree .f .d { width: 8px; height: 8px; border-radius: 50%; }
+.m .tree .tw { width: 8px; height: 8px; border-right: 2px solid #9aa3ab; border-bottom: 2px solid #9aa3ab; transform: rotate(45deg); margin: 0 2px; }
+.m .tree .tw.c { transform: rotate(-45deg); }
+
+/* лист снизу и панель справа */
+.m .dim { position: absolute; inset: 0; background: rgba(15, 22, 30, 0.42); }
+.m .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 18px 18px 0 0; padding: 10px 16px 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18); }
+.m .sheet .hdl { width: 40px; height: 4px; border-radius: 2px; background: #cfd4d9; align-self: center; }
+.m .sheet h4, .m .drawer h4 { margin: 0; font-size: 18px; font-weight: 600; }
+.m .sheet .sub, .m .drawer .sub { color: var(--mut); font-size: 13px; margin-top: 2px; }
+.m .fld { display: flex; flex-direction: column; gap: 6px; }
+.m .fld label { font-size: 13px; font-weight: 600; color: #3c4650; }
+.m .inp { height: 48px; border: 1.5px solid var(--ln); border-radius: 12px; padding: 0 14px; display: flex; align-items: center; font-size: 16px; background: #fff; }
+.m .inp.big { height: 56px; font-size: 22px; font-weight: 600; border-color: var(--g); }
+.m .inp.big small { margin-left: auto; font-size: 15px; font-weight: 500; color: var(--mut); }
+.m .inp.sel::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--mut); border-bottom: 2px solid var(--mut); transform: rotate(45deg) translateY(-3px); }
+.m .quick { display: flex; gap: 8px; }
+.m .quick span { height: 34px; padding: 0 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--ln); display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--g); }
+.m .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.m .btn.full { width: 100%; height: 50px; font-size: 16px; }
+.m .drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; background: var(--card); border-left: 1px solid var(--ln); box-shadow: -12px 0 30px rgba(0, 0, 0, 0.12); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.m .drawer .x { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--ln); display: grid; place-items: center; color: var(--mut); font-size: 18px; }
+.m .drawer .foot { margin-top: auto; display: flex; gap: 10px; }
+
+/* кс-2 */
+.m .ctx { display: flex; flex-direction: column; }
+.m .ctx .r { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--ln); font-size: 13.5px; }
+.m .ctx .r:first-child { border-top: 0; }
+.m .ctx .r > span:first-child { color: var(--mut); width: 64px; flex: 0 0 auto; }
+.m .ctx .r b { flex: 1 1 auto; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m .ctx.line { flex-direction: row; flex-wrap: wrap; gap: 6px 22px; padding: 12px 16px; font-size: 13.5px; }
+.m .ctx.line div span { color: var(--mut); }
+.m .ctx.line div b { font-weight: 600; }
+.m .ctx.line .lk { color: var(--info); font-weight: 600; }
+.m .acts .ac { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .acts .ac:first-child { border-top: 0; }
+.m .acts .ac .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .acts .ac .t b { font-weight: 600; font-size: 14.5px; }
+.m .acts .ac .t span { font-size: 12.5px; color: var(--mut); }
+.m .acts .ac .s { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.m .acts .ac .s b { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
+.m .toolbar { display: flex; align-items: center; gap: 10px; }
+.m .search { height: 40px; border: 1px solid var(--ln); border-radius: 10px; background: var(--card); display: flex; align-items: center; padding: 0 12px; color: var(--mut); font-size: 14px; width: 240px; }
+.m .pin { position: absolute; left: 16px; right: 16px; bottom: 77px; }
+.m .pin.two { display: flex; gap: 10px; }
+.m .pin.two .btn { flex: 1 1 0; }
+
+/* группа в списке */
+.m .grp { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f7f8f9; border-top: 1px solid var(--ln); font-size: 13px; }
+.m .grp:first-child { border-top: 0; border-radius: 14px 14px 0 0; }
+.m .grp b { font-weight: 600; }
+.m .grp em { font-style: normal; color: var(--mut); }
+.m tr.gr td { background: #f7f8f9; font-size: 13px; padding: 8px 12px; }
+.m .mini { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.m .mini span { font-size: 11.5px; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+.m .mini .bad { color: var(--bad); background: var(--badbg); }
+.m .mini .warn { color: var(--warn); background: var(--warnbg); }
+.m .mini .info { color: var(--info); background: var(--infobg); }
+.m .mini .ok { color: #1c7c3a; background: var(--okbg); }
+.m .mini .grey { color: #5c6670; background: #eceef0; }
+/* дела (входящие) */
+.m .todo .it { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .todo .it:first-child { border-top: 0; }
+.m .todo .num { min-width: 40px; height: 32px; padding: 0 8px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+.m .todo .num.bad { color: var(--bad); background: var(--badbg); }
+.m .todo .num.warn { color: var(--warn); background: var(--warnbg); }
+.m .todo .num.info { color: var(--info); background: var(--infobg); }
+.m .todo .num.grey { color: #5c6670; background: #eceef0; }
+.m .todo .tx { flex: 1 1 auto; min-width: 0; }
+.m .todo .tx b { display: block; font-weight: 600; font-size: 14.5px; }
+.m .todo .tx span { font-size: 12.5px; color: var(--mut); }
+.m .obh { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 14px 4px; }
+.m .obh b { font-size: 15px; font-weight: 600; }
+.m .obh span { font-size: 12.5px; color: var(--mut); }
+/* шаги-подсказка */
+.m .steps { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.m .steps.row { flex-direction: row; gap: 16px; }
+.m .steps .st { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: #3c4650; flex: 1 1 0; }
+.m .steps .st i { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--paper); border: 1px solid var(--ln); display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 12px; color: var(--g); }
+.m .steps .st.done i { background: var(--okbg); color: #1c7c3a; border-color: transparent; }
+.m .file { display: flex; align-items: center; gap: 12px; padding: 14px; }
+.m .file .ic { width: 40px; height: 48px; border-radius: 8px; background: #e3f0e8; color: #1c7c3a; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: 0 0 auto; }
+.m .file .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.m .file .t b { font-weight: 600; font-size: 15px; }
+.m .file .t span { font-size: 12.5px; color: var(--mut); }
+/* шахматка */
+.m .seg2 { display: inline-flex; border: 1px solid var(--ln); border-radius: 10px; padding: 3px; background: var(--card); }
+.m .seg2 span { padding: 6px 12px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--mut); white-space: nowrap; }
+.m .seg2 span.on { background: var(--g); color: #fff; }
+.m .mx { border-collapse: separate; border-spacing: 3px; font-size: 12px; }
+.m .mx th { padding: 4px 6px; font-size: 11.5px; font-weight: 600; color: var(--mut); border: 0; white-space: nowrap; text-align: center; }
+.m .mx th.fl, .m .mx td.fl { text-align: left; position: sticky; left: 0; background: var(--card); font-weight: 600; color: var(--ink); font-size: 12.5px; padding-right: 10px; }
+.m .mx td { padding: 0; border: 0; }
+.m .mx td.c { width: 62px; height: 34px; border-radius: 6px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.m .c.done { background: #cfead7; color: #1c6a33; }
+.m .c.prog { background: #f3e2c4; color: #7a5419; }
+.m .c.pend { background: #d6e6f3; color: #1f5a85; }
+.m .c.none { background: #eceef0; color: #8a939b; }
+.m .c.rej { background: #f4d3ca; color: #9a3a23; }
+.m .lg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: #3c4650; }
+.m .lg span { display: inline-flex; align-items: center; gap: 6px; }
+.m .lg i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.m .floors .fr { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--ln); }
+.m .floors .fr:first-child { border-top: 0; }
+.m .floors .fr b { width: 62px; font-weight: 600; font-size: 14px; flex: 0 0 auto; }
+.m .floors .fr .cells { display: flex; gap: 3px; flex: 1 1 auto; }
+.m .floors .fr .cells i { flex: 1 1 0; height: 22px; border-radius: 4px; }
+.m .floors .fr em { font-style: normal; font-size: 12.5px; font-weight: 600; width: 58px; text-align: right; font-variant-numeric: tabular-nums; }
+/* ждёт РП */
+.m .dec .it { padding: 12px 14px; border-top: 1px solid var(--ln); display: flex; flex-direction: column; gap: 8px; }
+.m .dec .it:first-child { border-top: 0; }
+.m .dec .r1 { display: flex; justify-content: space-between; gap: 10px; }
+.m .dec .r1 b { font-weight: 600; font-size: 14.5px; }
+.m .dec .r1 span { font-size: 12.5px; color: var(--mut); }
+.m .dec .q { font-weight: 600; font-size: 15px; white-space: nowrap; text-align: right; }
+.m .dec .q small { display: block; font-size: 12px; font-weight: 500; color: var(--mut); }
+.m .dec .q.over small { color: var(--bad); font-weight: 600; }
+.m .dec .acts2 { display: flex; gap: 8px; }
+.m .dec .acts2 .btn { flex: 1 1 0; height: 40px; }
+.m .btn.ok { background: #1c7c3a; border-color: #1c7c3a; color: #fff; }
+.m .btn.no { color: var(--bad); }
+.m .selbar { position: absolute; left: 0; right: 0; bottom: 0; background: var(--g); color: #fff; display: flex; align-items: center; gap: 12px; padding: 12px 24px; }
+.m .selbar b { font-weight: 600; }
+.m .selbar .btn { height: 36px; }
+.m .cb { width: 18px; height: 18px; border: 1.5px solid #9aa3ab; border-radius: 4px; display: inline-block; vertical-align: middle; }
+.m .cb.on { background: var(--g); border-color: var(--g); box-shadow: inset 0 0 0 3px #fff; }
+.m td.over { color: var(--bad); font-weight: 600; }
+/* журнал */
+.m .day { padding: 8px 14px; background: #f7f8f9; font-size: 12.5px; font-weight: 600; color: var(--mut); border-top: 1px solid var(--ln); }
+.m .day:first-child { border-top: 0; border-radius: 14px 14px 0 0; }
+.m .jr { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--ln); }
+.m .jr .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .jr .t b { font-weight: 600; font-size: 14px; }
+.m .jr .t span { font-size: 12.5px; color: var(--mut); }
+.m .jr .s { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.m .jr .s b { font-weight: 600; font-variant-numeric: tabular-nums; }
+/* цены */
+.m .pr { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .pr:first-child { border-top: 0; }
+.m .pr .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .pr .t b { font-weight: 600; font-size: 14.5px; }
+.m .pr .t span { font-size: 12.5px; color: var(--mut); }
+.m .pr .s { text-align: right; font-variant-numeric: tabular-nums; }
+.m .pr .s b { display: block; font-weight: 600; font-size: 15px; }
+.m .pr .s span { font-size: 12px; color: var(--mut); }
+.m .tog { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #3c4650; white-space: nowrap; }
+.m .tog i { width: 34px; height: 20px; border-radius: 10px; background: #cfd4d9; position: relative; }
+.m .tog i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.m .note { font-size: 12.5px; color: var(--mut); background: #f7f8f9; border: 1px dashed var(--ln); border-radius: 10px; padding: 8px 12px; }
+.m .pin .btn { width: 100%; height: 50px; font-size: 16px; box-shadow: 0 6px 18px rgba(28, 43, 57, 0.25); }
+
+/* P2-0006b: выделение строк 🟡/🔴, выбор решения */
+.m .hl-rd { background: #fbeee9; }
+.m .hl-yl { background: #fbf4e6; }
+.m tr.hl-rd td { background: #fbeee9; }
+.m tr.hl-yl td { background: #fbf4e6; }
+.m .opt { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--ln); border-radius: 12px; padding: 12px 14px; }
+.m .opt.on { border-color: var(--g); box-shadow: inset 0 0 0 1px var(--g); }
+.m .opt i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #9aa4ad; flex: none; margin-top: 1px; }
+.m .opt.on i { border: 6px solid var(--g); }
+.m .opt div { display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; }
+.m .opt span { color: var(--mut); font-size: 12.5px; }
+.m .lk { color: var(--info); font-weight: 600; font-size: 13px; }
+.nownone { border: 1px dashed var(--line); border-radius: 12px; padding: 18px; color: var(--muted); background: var(--surface); font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Редакции ВОР: как сейчас и как предлагаю</h1>
+    <p class="lead">Задача P2-0006b, этап 3 — показ. Пришла исправленная ВОР от заказчика: загрузить её как новую редакцию, увидеть отличия, решить спорное и принять — факт остаётся на месте. Слева — нынешний экран (стенд), справа — макет на тех же данных. Макеты — картинки, не рабочие экраны.</p>
+  </header>
+
+  <div class="controls">
+    <div class="ctl"><span class="seg-label">Экран</span>
+      <div class="seg" id="seg-screen">
+        <button type="button" data-v="load">1 Загрузки</button>
+        <button type="button" data-v="errors">2 Ошибки в файле</button>
+        <button type="button" data-v="compare">3 Что изменилось</button>
+        <button type="button" data-v="decide">4 Решение 🟡 / 🔴</button>
+        <button type="button" data-v="history">5 После принятия</button>
+        <button type="button" data-v="pos">6 Позиции</button>
+      </div>
+    </div>
+    <div class="ctl"><span class="seg-label">Размер</span>
+      <div class="seg" id="seg-size">
+        <button type="button" data-v="phone">Телефон</button>
+        <button type="button" data-v="tablet">Планшет</button>
+        <button type="button" data-v="pc">ПК</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="pair" id="pair" aria-live="polite"></section>
+  <section class="notes" id="notes"></section>
+  <p class="foot">Данные подставные: проект «Парашютная 47», редакция №1 — 600 позиций, редакция №2 — 607 (добавлено 12, удалено 5, изменился объём 23). Телефон — 375 px (iPhone 7/SE), экран целиком по длине; планшет — 1024 × 768, ПК — 1280 × 800. Качество и другие экраны не меняются.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var SIZES = { phone: [375, 667], tablet: [1024, 768], pc: [1280, 800] };
+  var SIZE_NAME = { phone: 'телефон 375 × 667', tablet: 'планшет 1024 × 768', pc: 'ПК 1280 × 800' };
+
+  /* ---------- общие куски макета ---------- */
+  function bnav(active, ks) {
+    var it = [['Сводка'], ['Входящие', 9], ['ВОР'], ['Факт', 8], ['Ещё', 1]];
+    return '<div class="bnav">' + it.map(function (x) {
+      var on = x[0] === active ? ' class="on"' : '';
+      var icon = x[0] === 'Ещё' ? '<i class="dots">···</i>' : '<i></i>';
+      return '<span' + on + '>' + icon + (x[1] ? '<em class="cnt">' + x[1] + '</em>' : '') + x[0] + '</span>';
+    }).join('') + '</div>';
+  }
+  function phoneTop(proj) {
+    return '<div class="top"><div class="burger"><i></i></div><div class="proj">' + proj + '</div><div class="grow"></div><div class="ava">ИК</div></div>';
+  }
+  function rail() {
+    return '<div class="rail"><span><i></i>Качество</span><span><i></i>Стройконтроль</span><span class="on"><i></i>План/Факт</span><div class="sp"></div><span><i></i>Настройки</span></div>';
+  }
+  function deskTop(crumb, proj) {
+    return '<div class="top"><div class="crumbs">План/Факт › <b>' + crumb + '</b></div><div class="proj">' + proj + '</div><div class="grow"></div><div class="ava">ИК</div></div>';
+  }
+  var TABS = [['Сводка'], ['Входящие', 9], ['ВОР'], ['Факт', 8], ['Смета'], ['КС-2', 1], ['Справочники']];
+  function tabletTabs(active) {
+    return '<div class="tabs">' + TABS.map(function (t) {
+      return '<span' + (t[0] === active ? ' class="on"' : '') + '>' + t[0] + (t[1] ? '<em class="cnt">' + t[1] + '</em>' : '') + '</span>';
+    }).join('') + '</div>';
+  }
+  function nav2(active) {
+    return '<div class="nav2"><div class="lb">План/Факт</div>' + TABS.map(function (t) {
+      return '<span' + (t[0] === active ? ' class="on"' : '') + '><i></i>' + t[0] + (t[1] ? '<em class="cnt">' + t[1] + '</em>' : '') + '</span>';
+    }).join('') + '</div>';
+  }
+  function bar(pct, plan, ok) {
+    return '<div class="bar"><i class="' + (ok ? 'ok' : '') + '" style="width:' + pct + '%"></i>' + (plan != null ? '<b style="left:calc(' + plan + '% - 1px)"></b>' : '') + '</div>';
+  }
+  function shellPhone(inner, active, proj, extra, hgt) {
+    return '<div class="m" style="flex-direction:column;width:375px;height:' + (hgt || 667) + 'px">' + phoneTop(proj) + '<div class="content">' + inner + '</div>' + bnav(active) + (extra || '') + '</div>';
+  }
+  function shellTablet(inner, active, proj, extra) {
+    return '<div class="m" style="width:1024px;height:768px">' + rail() + '<div class="main">' + deskTop(active, proj) + tabletTabs(active) + '<div class="content" style="padding:20px 24px">' + inner + '</div></div>' + (extra || '') + '</div>';
+  }
+  function shellPc(inner, active, proj, extra, noPad) {
+    return '<div class="m" style="width:1280px;height:800px">' + rail() + nav2(active) + '<div class="main">' + deskTop(active, proj) + (noPad ? inner : '<div class="content" style="padding:24px 28px;gap:18px">' + inner + '</div>') + '</div>' + (extra || '') + '</div>';
+  }
+
+  var P = 'Парашютная 47 (Ultra city 3.0)';
+  function chipsOf(list, on) {
+    return '<div class="chips">' + list.map(function (c, i) { return '<span' + (i === (on || 0) ? ' class="on"' : '') + '>' + c[0] + (c[1] != null ? ' <em>' + c[1] + '</em>' : '') + '</span>'; }).join('') + '</div>';
+  }
+  function sub2(items, active, cls) {
+    return '<div class="tabs ' + (cls || 'in') + '">' + items.map(function (t) { return '<span' + (t[0] === active ? ' class="on"' : '') + '>' + t[0] + (t[1] ? '<em class="cnt mut">' + t[1] + '</em>' : '') + '</span>'; }).join('') + '</div>';
+  }
+  var VOR_TABS = [['Загрузки'], ['Позиции', 607]];
+  var W = function (fn, shell, extra) { return function () { return fn(shell, extra); }; };
+
+  /* ---------- 1. Загрузки: действующая редакция и кнопка новой ---------- */
+  var cur1 = '<div class="card file"><span class="ic">XLSX</span><div class="t"><b>ВОР Парашютная 47 ред1.xlsx</b><span><span class="pill ok">Действующая</span> редакция №1</span><span>600 позиций · подтверждена 01.10.2026 · Иванов А. (ПТО)</span></div></div>';
+  var hist1 = '<p class="sec">Другие редакции</p><div class="card"><div class="rows"><div class="rw"><div class="t"><b style="font-weight:500">Новых редакций пока не было</b><div class="ln"><span>После принятия новой здесь будет №1 — только для просмотра</span></div></div></div></div></div>';
+  var how = '<p class="sec">Пришла исправленная ВОР от заказчика</p><div class="card steps"><div class="st"><i>1</i><span>Нажмите «Загрузить новую редакцию» и выберите файл</span></div><div class="st"><i>2</i><span>Исправьте ошибки по номерам строк, проверьте места и виды работ</span></div><div class="st"><i>3</i><span>Посмотрите отличия: добавлено, удалено, изменился объём</span></div><div class="st"><i>4</i><span>Примите — факт останется на своих позициях, сводка пересчитается</span></div></div>';
+  var other = '<div class="note">Другая ВОР (ещё корпус, отдельный договор) — «⋯ → Загрузить отдельную ВОР». Её позиции добавятся к этим, а не заменят их.</div>';
+  function loadPhone() {
+    return shellPhone('<div class="ph"><h3>ВОР</h3><span class="lk" style="font-size:20px;color:var(--mut)">⋯</span></div>' + sub2(VOR_TABS, 'Загрузки') + '<p class="sec">Действующая редакция</p>' + cur1 + how + hist1 + other,
+      'ВОР', P, '<div class="pin"><span class="btn pri">Загрузить новую редакцию</span></div>', 880);
+  }
+  function loadWide(shell) {
+    return shell('<div class="ph"><div><h3>ВОР</h3><p>Ведомость объёмов работ заказчика · 600 позиций</p></div><div style="display:flex;gap:8px"><span class="btn">⋯</span><span class="btn pri">Загрузить новую редакцию</span></div></div>' +
+      sub2(VOR_TABS, 'Загрузки') + '<p class="sec">Действующая редакция</p>' + cur1 + how.replace('card steps', 'card steps row') + hist1 + other, 'ВОР', P);
+  }
+
+  /* ---------- 2. Разбор нового файла: ошибки с номером строки ---------- */
+  var ERR = [[57, 'нет ЕИ', 'Монтаж ревизионных лючков в с/у'], [112, 'объём 0 или пусто', 'Окраска откосов'], [140, 'место не найдено', '«Секция 4 · 3 этаж» — в объекте 3 секции'], [301, 'итог «Стоимость» 1 240 300 ≠ сумме строк 1 238 900', 'Итого по разделу 2']];
+  function errList(cls) {
+    return '<div class="card' + (cls || '') + '" style="border-color:#e8c9bf"><div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--ln)"><span class="pill bad">Ошибки в файле: 4</span><span style="font-size:12.5px;color:var(--mut)">нажмите — откроется строка</span></div><div class="rows">' +
+      ERR.map(function (e) { return '<div class="rw"><b class="tnum" style="width:84px;flex:none;white-space:nowrap">Строка ' + e[0] + '</b><div class="t"><b>' + e[1] + '</b><div class="ln"><span>' + e[2] + '</span></div></div><span class="chev"></span></div>'; }).join('') + '</div></div>';
+  }
+  var draftHead = '<div class="card file"><span class="ic">XLSX</span><div class="t"><b>ВОР Парашютная 47 ред2.xlsx</b><span><span class="pill warn">Черновик</span> новая редакция №2 к №1</span><span>лист «ВОР» · 649 строк → 607 работ</span></div></div>';
+  var draftSteps = '<div class="seg2"><span>1 Файл</span><span class="on">2 Ошибки и места</span><span>3 Сравнение</span><span>4 Принять</span></div>';
+  function errPhone() {
+    return shellPhone('<div class="ph"><div><h3>Новая редакция</h3><p>Шаг 2 из 4</p></div></div>' + draftHead + errList() +
+      '<div class="note">Строки без ЕИ или объёма нельзя принять — исправьте в файле и загрузите снова, или укажите ЕИ здесь. Неверный итог — только предупреждение.</div>' +
+      '<p class="sec">Места и виды работ</p><div class="card"><div class="rows"><div class="rw"><div class="t"><b>Все места найдены, кроме 1</b><div class="ln"><span>Секция 4 · 3 этаж — создать или выбрать</span></div></div><span class="chev"></span></div><div class="rw"><div class="t"><b>Виды работ: 🟢 598 · 🟡 7 · 🔴 2</b><div class="ln"><span>подтвердите 🟡 пачкой, 🔴 выберите</span></div></div><span class="chev"></span></div></div></div>',
+      'ВОР', P, '<div class="pin"><span class="btn pri" style="opacity:.45">Дальше: сравнение</span></div>', 1010);
+  }
+  function errWide(shell) {
+    return shell('<div class="ph"><div><h3>Новая редакция №2</h3><p>к действующей №1 · ВОР Парашютная 47 ред2.xlsx</p></div><div style="display:flex;gap:8px"><span class="btn">Удалить черновик</span><span class="btn pri" style="opacity:.45">Дальше: сравнение</span></div></div>' +
+      draftSteps + '<div class="two" style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start">' + errList() +
+      '<div style="display:flex;flex-direction:column;gap:12px"><div class="card"><div class="rows"><div class="rw"><div class="t"><b>Места: найдено 606 из 607</b><div class="ln"><span>Секция 4 · 3 этаж — создать или выбрать</span></div></div><span class="btn sm">Выбрать</span></div><div class="rw"><div class="t"><b>Виды работ: 🟢 598 · 🟡 7 · 🔴 2</b><div class="ln"><span>🟡 — подтвердить пачкой, 🔴 — выбрать</span></div></div><span class="btn sm">Разобрать</span></div></div></div>' +
+      '<div class="note">«Дальше» станет доступно, когда у всех работ будут ЕИ, объём, место и вид работ. Неверный итог — предупреждение, не мешает.</div></div></div>', 'ВОР', P);
+  }
+
+  /* ---------- 3. Сравнение редакций ---------- */
+  var CMP = [
+    ['rd', 'Удалено', 'Стяжка пола', 'Секция 2 · 3 этаж', '210 → —', 'факт 40', 'Факт без плана'],
+    ['yl', 'Изменился?', 'Монтаж ревизионных лючков в с/у', 'Секция 1 · 2 этаж', '12 → 12', '', 'Похожее название'],
+    ['ch', 'Изменился объём', 'Штукатурка стен', 'Секция 1 · 4 этаж', '420 → 380', 'факт 150', ''],
+    ['rd', 'Изменился объём', 'Окраска стен', 'Секция 2 · 5 этаж', '380 → 90', 'факт 120', 'Факт больше объёма'],
+    ['ad', 'Добавлено', 'Стяжка пола цементная', 'Секция 2 · 3 этаж', '— → 210', '', ''],
+    ['ad', 'Добавлено', 'Гидроизоляция санузлов', 'Секция 1 · 2 этаж', '— → 64', '', ''],
+    ['rm', 'Удалено', 'Грунтовка стен', 'Секция 2 · 5 этаж', '420 → —', '', ''],
+    ['eq', 'Без изменений', 'Плитка санузлов', 'Секция 1 · 2 этаж', '64', 'факт 20', '']];
+  var CMPCH = [['Все', 612], ['Решить', 5], ['Добавлено', 12], ['Удалено', 5], ['Объём', 23], ['Без изменений', 572]];
+  var mark = { rd: '<span class="pill bad">🔴</span>', yl: '<span class="pill warn">🟡</span>', ch: '<span class="pill info">изм.</span>', ad: '<span class="pill ok">новая</span>', rm: '<span class="pill grey">удалена</span>', eq: '<span class="pill grey">=</span>' };
+  function cmpRowsPhone() {
+    return '<div class="card rows">' + CMP.slice(0, 7).map(function (c) {
+      return '<div class="rw' + (c[0] === 'rd' || c[0] === 'yl' ? ' hl-' + c[0] : '') + '"><div class="t"><b>' + c[2] + '</b><div class="ln"><span>' + c[3] + '</span></div>' +
+        (c[6] ? '<div class="ln"><span style="color:' + (c[0] === 'rd' ? 'var(--bad)' : 'var(--warn)') + ';font-weight:600">' + c[6] + (c[0] === 'rd' && c[1] === 'Удалено' ? ' — решите' : c[0] === 'yl' ? ' — та же строка?' : '') + '</span></div>' : '') + '</div>' +
+        '<div style="text-align:right"><b class="tnum" style="font-size:14px">' + c[4] + '</b><div style="font-size:12px;color:var(--mut)">' + (c[5] || c[1].toLowerCase()) + '</div></div></div>';
+    }).join('') + '</div>';
+  }
+  function cmpTable(wide) {
+    return '<div class="card"><table><thead><tr><th></th><th>Работа</th><th>Место</th><th class="n">Строка</th><th class="n">Объём, было → стало</th><th class="n">Факт</th><th>Решение</th></tr></thead><tbody>' +
+      CMP.map(function (c, i) {
+        var dec = c[0] === 'rd' && c[1] === 'Удалено' ? '<span class="btn sm">Перенести факт…</span> <span class="btn sm ghost">Оставить</span>'
+          : c[0] === 'yl' ? '<span class="btn sm">Та же строка</span> <span class="btn sm ghost">Разные</span>'
+          : c[0] === 'rd' ? '<span style="color:var(--bad);font-size:12.5px">факт больше объёма — проверьте</span>' : '';
+        return '<tr' + (c[0] === 'rd' || c[0] === 'yl' ? ' class="hl-' + c[0] + '"' : '') + '><td>' + mark[c[0]] + '</td><td><b>' + c[2] + '</b>' + (c[6] ? '<span class="sub">' + c[6] + '</span>' : '') + '</td><td>' + c[3] + '</td><td class="n">' + [88, 41, 97, 214, '— → 118', '— → 42', 230, 44][i] + '</td><td class="n">' + c[4] + '</td><td class="n">' + (c[5].replace('факт ', '') || '—') + '</td><td>' + dec + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  var acceptBar = '<div class="pin" style="display:flex;flex-direction:column;gap:6px"><div style="font-size:12.5px;color:var(--bad);text-align:center;background:#fff;border-radius:8px;padding:4px">Осталось решить 5: 🟡 4 · 🔴 факт без плана 1</div><span class="btn pri" style="opacity:.45">Принять редакцию №2</span></div>';
+  function cmpPhone() {
+    return shellPhone('<div class="ph"><div><h3>Что изменилось</h3><p>Редакция №2 ← действующая №1</p></div></div>' + chipsOf(CMPCH, 0) +
+      '<div class="note">Строки сопоставлены по «название + ЕИ + место». Номер строки у заказчика сдвинулся — это не изменение.</div>' + cmpRowsPhone(), 'ВОР', P, acceptBar, 1000);
+  }
+  function cmpWide(shell, wide) {
+    return shell('<div class="ph"><div><h3>Что изменилось: редакция №2 ← №1</h3><p>ВОР Парашютная 47 ред2.xlsx · сопоставление «название + ЕИ + место»</p></div><div style="display:flex;gap:8px;align-items:center"><span style="font-size:13px;color:var(--bad)">Осталось решить: 5</span><span class="btn pri" style="opacity:.45">Принять редакцию №2</span></div></div>' +
+      draftSteps.replace('<span class="on">2 Ошибки и места</span><span>3 Сравнение</span>', '<span>2 Ошибки и места</span><span class="on">3 Сравнение</span>') +
+      '<div class="toolbar">' + chipsOf(CMPCH, 0) + '<div style="flex:1"></div><span class="btn">Excel</span></div>' + cmpTable(wide), 'ВОР', P);
+  }
+
+  /* ---------- 4. Решение по 🔴 и 🟡 ---------- */
+  var redSheet = '<div class="sheet"><div class="hdl"></div><h4>Факт без плана</h4>' +
+    '<div style="font-size:14px"><b>Стяжка пола</b> · Секция 2 · 3 этаж<br><span style="color:var(--mut)">В редакции №2 строки нет. На позиции факт <b style="color:var(--ink)">40 из 210 м²</b> (3 записи).</span></div>' +
+    '<label class="opt on"><i></i><div><b>Перенести факт на позицию</b><span>Стяжка пола цементная · Секция 2 · 3 этаж · новая строка 118 · м²</span><span class="lk">Выбрать другую</span></div></label>' +
+    '<label class="opt"><i></i><div><b>Оставить на снятой позиции</b><span>Факт сохранится, позиция будет видна с 🔴 «снята», новый факт на неё не внести</span></div></label>' +
+    '<div class="note">Перенос — новыми записями с причиной «Перенос при редакции №2», прежние записи останутся в истории.</div><span class="btn pri">Готово</span></div>';
+  var ylCard = '<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px;border-color:#ead7b4"><span class="pill warn" style="align-self:flex-start">🟡 Похоже на ту же строку</span>' +
+    '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px"><span style="color:var(--mut)">было, стр. 41</span><b>Монтаж ревизионных пластиковых лючков в с/у</b><span style="color:var(--mut)">стало, стр. 43</span><b>Монтаж ревизионных лючков в с/у</b><span style="color:var(--mut)">место, объём</span><span>Секция 1 · 2 этаж · 12 шт. → 12 шт. · факт 4</span></div>' +
+    '<div style="display:flex;gap:8px"><span class="btn sm pri">Та же строка — факт остаётся</span><span class="btn sm">Разные строки</span></div></div>';
+  function decPhone() {
+    return shellPhone('<div class="ph"><div><h3>Что изменилось</h3><p>Решить: 5</p></div></div>' + chipsOf(CMPCH, 0) + ylCard + cmpRowsPhone(), 'ВОР', P, '<div class="dim"></div>' + redSheet, 800);
+  }
+  function decWide(shell) {
+    var drawer = '<div class="drawer" style="position:absolute;top:0;right:0;bottom:0;width:400px;background:#fff;box-shadow:-12px 0 30px rgba(0,0,0,.14);padding:20px;display:flex;flex-direction:column;gap:14px">' +
+      redSheet.replace('<div class="sheet"><div class="hdl"></div>', '').replace(/<\/div>$/, '') + '</div>';
+    return shell('<div class="ph"><div><h3>Что изменилось: редакция №2 ← №1</h3><p>Решить: 5 · нажмите на строку с 🟡 или 🔴</p></div><span class="btn pri" style="opacity:.45">Принять редакцию №2</span></div>' + ylCard + cmpTable(false), 'ВОР', P, '<div class="dim"></div>' + drawer);
+  }
+
+  /* ---------- 5. Принято: история редакций ---------- */
+  var histRows = '<div class="card"><div class="rows">' +
+    '<div class="rw"><span class="ic" style="width:40px;height:40px;border-radius:8px;background:#e3f4e8;color:#1c7c3a;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none">№2</span><div class="t"><b>ВОР Парашютная 47 ред2.xlsx</b><div class="ln"><span>принята 27.10.2026 · Иванов А. (ПТО) · +12 −5, объём 23 · факт перенесён: 1 позиция</span></div></div><span class="pill ok">Действующая</span></div>' +
+    '<div class="rw"><span class="ic" style="width:40px;height:40px;border-radius:8px;background:#eceef0;color:#5c6670;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none">№1</span><div class="t"><b>ВОР Парашютная 47 ред1.xlsx</b><div class="ln"><span>01.10.2026 · Иванов А. · 600 позиций · заменена 27.10.2026</span></div></div><span class="btn sm">Открыть</span></div></div></div>';
+  var after = '<div class="card" style="padding:14px 16px;display:flex;flex-direction:column;gap:6px;border-color:#bfe0c9;background:#f3faf5"><b>Редакция №2 принята</b><span style="font-size:13px;color:#3c4650">Факт остался на своих позициях. Сводка, шахматка и ввод факта — уже по новым объёмам. Смета и КП построены на №1 — в смете пометка «есть новая редакция».</span></div>';
+  var changes = '<p class="sec">Что изменила редакция №2</p><div class="card rows">' +
+    [['Добавлено 12 позиций', 'Стяжка пола цементная, Гидроизоляция санузлов, …'], ['Снято 5 позиций', '2 с фактом: факт перенесён — 1, оставлен — 1 (видна с 🔴)'], ['Изменился объём — 23', 'Штукатурка стен, Секция 1 · 4 этаж: 420 → 380 м², …']].map(function (x) {
+      return '<div class="rw"><div class="t"><b>' + x[0] + '</b><div class="ln"><span>' + x[1] + '</span></div></div><span class="chev"></span></div>'; }).join('') + '</div>';
+  function histPhone() {
+    return shellPhone('<div class="ph"><h3>ВОР</h3><span class="lk" style="font-size:20px;color:var(--mut)">⋯</span></div>' + sub2(VOR_TABS, 'Загрузки') + after + '<p class="sec">Редакции</p>' + histRows + changes, 'ВОР', P, '<div class="pin"><span class="btn pri">Загрузить новую редакцию</span></div>', 1080);
+  }
+  function histWide(shell) {
+    return shell('<div class="ph"><div><h3>ВОР</h3><p>Действующая редакция №2 · 607 позиций</p></div><div style="display:flex;gap:8px"><span class="btn">⋯</span><span class="btn pri">Загрузить новую редакцию</span></div></div>' + sub2(VOR_TABS, 'Загрузки') + after +
+      '<div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start"><div style="display:flex;flex-direction:column;gap:10px"><p class="sec">Редакции</p>' + histRows + '</div><div style="display:flex;flex-direction:column;gap:10px">' + changes + '</div></div>', 'ВОР', P);
+  }
+
+  /* ---------- 6. Позиции после принятия: снятые с фактом ---------- */
+  var POS = [['Окраска стен', 'Секция 2 · 5 этаж', 90, 120, 'м²', ['bad', 'Факт больше объёма'], 'объём 380 → 90 в ред. №2'],
+    ['Стяжка пола', 'Секция 1 · 3 этаж', 0, 25, 'м²', ['bad', 'Снята в ред. №2'], 'факт оставлен · новый факт не вносится'],
+    ['Стяжка пола цементная', 'Секция 2 · 3 этаж', 210, 40, 'м²', ['warn', 'В работе'], 'новая в ред. №2 · факт перенесён'],
+    ['Штукатурка стен', 'Секция 1 · 4 этаж', 380, 150, 'м²', ['warn', 'В работе'], 'объём 420 → 380 в ред. №2'],
+    ['Плитка санузлов', 'Секция 1 · 2 этаж', 64, 20, 'м²', ['warn', 'В работе'], ''],
+    ['Грунтовка стен', 'Секция 1 · 2 этаж', 420, 420, 'м²', ['ok', 'Выполнено'], ''],
+    ['Гидроизоляция санузлов', 'Секция 1 · 2 этаж', 64, 0, 'м²', ['grey', 'Не начато'], 'новая в ред. №2']];
+  var posChips = [['Все', 608], ['Требует внимания', 2], ['В работе', 31], ['Выполнено', 40], ['Не начато', 98]];
+  function posPhone() {
+    var list = '<div class="card rows">' + POS.map(function (p) {
+      return '<div class="rw' + (p[5][0] === 'bad' ? ' hl-rd' : '') + '"><div class="t"><b>' + p[0] + '</b><div class="ln"><span>' + p[1] + '</span></div>' + (p[6] ? '<div class="ln"><span>' + p[6] + '</span></div>' : '') + '</div><div style="text-align:right"><b class="tnum" style="font-size:14px">' + p[3] + ' / ' + p[2] + ' ' + p[4] + '</b><div style="margin-top:4px"><span class="pill ' + p[5][0] + '">' + p[5][1] + '</span></div></div></div>';
+    }).join('') + '</div>';
+    return shellPhone('<div class="ph"><h3>ВОР</h3></div>' + sub2(VOR_TABS, 'Позиции') + '<div class="search" style="width:100%">Найти работу или место</div>' + chipsOf(posChips, 0) + list, 'ВОР', P, '', 1000);
+  }
+  function posWide(shell) {
+    return shell('<div class="ph"><div><h3>ВОР</h3><p>607 действующих позиций · 1 снята с фактом</p></div><span class="btn pri">Загрузить новую редакцию</span></div>' + sub2(VOR_TABS, 'Позиции') +
+      '<div class="toolbar"><div class="search">Найти работу или место</div>' + chipsOf(posChips, 0) + '<div style="flex:1"></div><span class="btn">Excel</span></div>' +
+      '<div class="card"><table><thead><tr><th>Работа</th><th>Место</th><th class="n">План</th><th class="n">Сделано</th><th>Статус</th><th>Редакция</th></tr></thead><tbody>' +
+      POS.map(function (p) { return '<tr' + (p[5][0] === 'bad' ? ' class="hl-rd"' : '') + '><td><b>' + p[0] + '</b></td><td>' + p[1] + '</td><td class="n">' + p[2] + ' ' + p[4] + '</td><td class="n">' + p[3] + '</td><td><span class="pill ' + p[5][0] + '">' + p[5][1] + '</span></td><td style="font-size:12.5px;color:var(--mut)">' + (p[6] || '—') + '</td></tr>'; }).join('') +
+      '</tbody></table></div>', 'ВОР', P);
+  }
+
+  var SCREENS = {
+    load: { name: 'Загрузки', now: 'now/vor-', make: { phone: [[loadPhone, '']], tablet: [[W(loadWide, shellTablet), '']], pc: [[W(loadWide, shellPc), '']] },
+      notes: ['Главная кнопка — «Загрузить новую редакцию» (на телефоне внизу, на ПК в шапке): исправленная ВОР от заказчика заменяет действующую, а не складывается с ней.',
+        'Сейчас вторая загрузка того же файла <b>прибавит</b> свои позиции к прежним — план задвоится. После блока так нельзя случайно.',
+        'Отдельная ВОР (ещё корпус, другой договор) — в меню «⋯», с пояснением, что её позиции добавятся.',
+        'Карточка показывает номер действующей редакции, сколько позиций, когда и кто подтвердил.'] },
+    errors: { name: 'Ошибки в файле', nowNone: 'Сейчас списка ошибок нет: видно только «итоги не сходятся: 1 из 3» и счётчики; какую строку исправлять — не сказано.',
+      make: { phone: [[errPhone, '']], tablet: [[W(errWide, shellTablet), '']], pc: [[W(errWide, shellPc), '']] },
+      notes: ['После разбора любого файла (первого и новой редакции) — список «Строка 57: нет ЕИ», «Строка 112: объём 0 или пусто», «Строка 140: место не найдено», «итог ≠ сумме строк».',
+        'Нажали на ошибку — открывается эта строка разбора.',
+        'Новая редакция — по шагам: файл → ошибки и места → сравнение → принять; «Дальше» недоступно, пока у работ нет ЕИ, объёма, места и вида работ.',
+        'Неверный итог в файле заказчика — предупреждение, принять не мешает.'] },
+    compare: { name: 'Что изменилось', nowNone: 'Сейчас сравнения нет: новая загрузка — отдельный файл, отличия от прежней никто не показывает.',
+      make: { phone: [[cmpPhone, 'Сначала — то, что надо решить']], tablet: [[W(cmpWide, shellTablet, false), '']], pc: [[W(cmpWide, shellPc, true), '']] },
+      notes: ['Строки старой и новой ВОР сопоставляются по «название + ЕИ + место». Номер строки у заказчика сдвинулся — это не изменение.',
+        'Фильтры со счётчиками: Решить 5 · Добавлено 12 · Удалено 5 · Объём 23 · Без изменений 572.',
+        '🟡 — похоже на ту же строку (другое название, дубль) — ПТО подтверждает. 🔴 — строку удалили, а факт есть, или факт больше нового объёма.',
+        '«Принять редакцию» недоступна, пока есть нерешённые 🟡 и 🔴 «факт без плана»; рядом — сколько осталось.'] },
+    decide: { name: 'Решение 🟡 / 🔴', nowNone: 'Сейчас такого решения нет.',
+      make: { phone: [[decPhone, 'Нажали на 🔴 — выбор снизу']], tablet: [[W(decWide, shellTablet), '']], pc: [[W(decWide, shellPc), 'Нажали на 🔴 — панель справа']] },
+      notes: ['🔴 «Факт без плана»: перенести факт на позицию (подсказана похожая новая строка в том же месте и с той же ЕИ) или оставить на снятой.',
+        'Перенос — новыми записями с причиной «Перенос при редакции №2»; прежние записи не удаляются, видны в истории.',
+        '🟡 «Похоже на ту же строку»: было / стало рядом, одна кнопка «Та же строка — факт остаётся» или «Разные строки».',
+        'Если место, вид работ или ЕИ разные — «та же строка» недоступна (позиция не может поменять место).'] },
+    history: { name: 'После принятия', nowNone: 'Сейчас истории редакций нет: все загрузки — равноправный список файлов.',
+      make: { phone: [[histPhone, '']], tablet: [[W(histWide, shellTablet), '']], pc: [[W(histWide, shellPc), '']] },
+      notes: ['Сразу после «Принять» — что произошло: факт на месте, сводка и шахматка — по новым объёмам.',
+        'Редакции по номерам: №2 действующая, №1 — открыть только для просмотра (её строки и файл не меняются).',
+        '«Что изменила №2»: добавлено, снято (и что сделали с фактом), изменился объём — с подробностями по нажатию.',
+        'Смета и КП, построенные на №1, не пересчитываются — в смете пометка «есть новая редакция» (пересчёт — отдельный блок).'] },
+    pos: { name: 'Позиции', nowNone: 'Сейчас у позиции нет признака редакции: снятых и изменённых не бывает.',
+      make: { phone: [[posPhone, 'Сначала — то, что требует внимания']], tablet: [[W(posWide, shellTablet), '']], pc: [[W(posWide, shellPc), '']] },
+      notes: ['Снятая позиция с оставленным фактом — 🔴 «Снята в ред. №2»: факт виден, в план не считается, новый факт на неё не внести.',
+        'Объём меньше уже сделанного — 🔴 «Факт больше объёма».',
+        'В строке — что изменила редакция: «объём 420 → 380», «новая в ред. №2», «факт перенесён».',
+        'Фильтр «Требует внимания» — оба случая одним нажатием. То же — во «Вводе факта» и в «Сводке».'] }
+  };
+
+  var state = { screen: 'load', size: 'phone' };
+  try { var saved = JSON.parse(localStorage.getItem('vor-rev-compare') || 'null'); if (saved && SCREENS[saved.screen] && SIZES[saved.size]) state = saved; } catch (e) { /* без памяти */ }
+
+  function frameBox(html, w, h) {
+    return '<div class="shot" style="aspect-ratio:' + w + ' / ' + h + '"><div class="device" style="width:' + w + 'px;height:' + h + 'px">' + html + '</div></div>';
+  }
+  function fit() {
+    document.querySelectorAll('.shot .device').forEach(function (d) {
+      var box = d.parentNode, w = parseFloat(d.style.width);
+      d.style.transform = 'scale(' + (box.clientWidth / w) + ')';
+    });
+  }
+  function render() {
+    var s = SCREENS[state.screen], wh = SIZES[state.size];
+    var pair = document.getElementById('pair');
+    pair.className = 'pair ' + (state.size === 'phone' ? 'phone' : 'wide');
+    var nowCol = '<div class="col"><div class="col-head"><span class="tag now">Как сейчас</span><b>' + s.name + '</b><span style="color:var(--muted);font-size:13px">' + SIZE_NAME[state.size] + '</span></div><div class="frames">' +
+      (s.now ? '<div class="shot"><img src="' + s.now + state.size + '.jpg" alt="' + s.name + ' сейчас, ' + SIZE_NAME[state.size] + '" width="' + wh[0] + '" height="' + wh[1] + '"></div>' : '<div class="nownone">' + s.nowNone + '</div>') + '</div></div>';
+    var newCol = '<div class="col"><div class="col-head"><span class="tag new">Как предлагаю</span><b>' + s.name + '</b><span style="color:var(--muted);font-size:13px">макет</span></div><div class="frames">' +
+      s.make[state.size].map(function (f) { var html = f[0](), mh = html.match(/^<div class="m" style="[^"]*height:(\d+)px/); return frameBox(html, wh[0], mh ? +mh[1] : wh[1]) + (f[1] ? '<div class="frame-cap">' + f[1] + '</div>' : ''); }).join('') + '</div></div>';
+    pair.innerHTML = nowCol + newCol;
+    document.getElementById('notes').innerHTML = '<h2>Что меняется на экране «' + s.name + '»</h2><ul>' + s.notes.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ul>';
+    document.querySelectorAll('#seg-screen button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.screen)); });
+    document.querySelectorAll('#seg-size button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.size)); });
+    fit();
+    try { localStorage.setItem('vor-rev-compare', JSON.stringify(state)); } catch (e) { /* без памяти */ }
+  }
+  document.getElementById('seg-screen').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { state.screen = b.dataset.v; render(); } });
+  document.getElementById('seg-size').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { state.size = b.dataset.v; render(); } });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(document.getElementById('pair'));
+  window.addEventListener('resize', fit);
+  render();
+})();
+</script>
