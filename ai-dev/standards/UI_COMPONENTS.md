@@ -52,6 +52,19 @@
 | `RegistryTable` (доп.) | `tools?` (правая часть панели), `lead?` (левая) | `.p2-reg__tools`, `.p2-reg__right`, `.p2-reg__more`, `.p2-reg__pop--right` | панель «Фильтр · Показано \| tools · ⋯»; «Только просроченные» — в панели «Фильтр»; группировка, колонки, виды, ссылка — в «⋯» |
 | `RegistryExport` | `count`, `testId`, `onClick` | `.pf-btn` | «Excel (N)», на телефоне «Excel»; полная подпись — `aria-label` |
 
+### Реализовано: экраны по макетам (P2-0046)
+
+| Компонент | API (props) | Классы | Примечания |
+| --- | --- | --- | --- |
+| `RegistryTable` (доп.) | `quick?: { filter, all? }` | `.p2-reg__quick`, `.p2-reg__q`, `.p2-reg__q--on`, `.p2-reg__qn` | фильтр-кнопки по одному из `filters`: «Все N» и значения со счётчиками (нулевые скрыты); выбранная — единственное значение фильтра |
+| | `compact?: (row) => ReactNode` | `.p2-reg--compact`, `.p2-reg__compact`, `.p2-reg__cbtn` | строка телефона (≤ 760 px) вместо карточки «подпись: значение»; с `onOpen` — открывает строку |
+| | `selectMode?: boolean` | `.p2-reg--nocheck`, кнопка `p2-reg-pick` «Выбрать / Готово» | галочки — после «Выбрать» или пока что-то выбрано; «Готово» снимает выбор |
+| | `rowActions?: (row) => ReactNode` | `.p2-reg__acts` | действия строки в последней колонке (на телефоне — в `compact`) |
+| `PageTabs` (`PlanfactApp`) | `items`, `active`, `onPick`, `testId` | `.pf-tabs`, `.pf-tab`, `.pf-tab--active`, `.pf-tab-n` | подвкладки раздела подчёркиванием; счётчик — плашкой |
+| Закреплённая кнопка | кнопка без `--ghost` в `InHead slot="actions"` | `PAGE_HEAD_CSS` | на телефоне — внизу над нижней панелью, страница получает отступ снизу |
+| `ShellService.fitBottomNav(nav)` (`js/core/app-shell.js`) | вызывается после отрисовки нижней панели | `.bottom-nav--platform`, `.nav-item--overflow`, `.nav-item--more`, `#shell-more-sheet` | только модули Платформы (`window.RBI.platformNav`): подписи у всех пунктов, ≤ 5 на телефоне + «Ещё»; Качество и Стройконтроль — как были |
+| `PortfolioHead`, `ObjectCards`, `portfolioAttention` (`summary/Portfolio.ts`) | `list`, `links`, `open` | `.pt-*` | «Требует внимания» с переходами, итоги, карточки объектов (телефон, планшет) |
+
 ### По мере появления спроса
 
 `DatePicker`, `FileUpload`, `Tree/LocationPicker`, `Breadcrumbs`, `Toolbar`, `FilterPanel`, `Pagination`, `Chart`, `Progress`, `Drawer`, `DataGrid` для больших объёмов, `MobileActionBar`, `DocumentPreview`, `TableColumnSettings`, `ThemePreview` и др. Добавляются только под конкретное утверждённое применение.
