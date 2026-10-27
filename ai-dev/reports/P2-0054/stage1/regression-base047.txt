@@ -1,0 +1,20 @@
+002_permissions | FAIL всего: 0 | 
+005_role_builder | FAIL всего: 0 | 
+006_projects_locations | НЕТ ОТЧЁТА: ERR /Users/igor/dev/platform-2-core-p2-0054/tests/server/006_projects_locations.sql: ОТЧЁТ (откат): | 
+013_dashboard | НЕТ ОТЧЁТА: ERR /Users/igor/dev/platform-2-core-p2-0054/tests/server/013_dashboard.sql: OK пороги по умолчанию 3 / 10 п.п., 3 дня | 
+027_fact_force_approval | FAIL всего: 0 | 
+028_fact_decide_batch_journal | FAIL всего: 0 | 
+029_inbox | НЕТ ОТЧЁТА: ERR /Users/igor/dev/platform-2-core-p2-0054/tests/server/029_inbox.sql: ОТЧЁТ (откат): | 
+030_fact_period_forecast | FAIL всего: 0 | 
+032_company_staff | FAIL всего: 2 | FAIL вход временным паролем: хэш совпадает;FAIL сброс: старый пароль не подходит, новый — да;
+033_rbi_roles_objects | FAIL всего: 0 | 
+039d_quality_review_fixes | FAIL всего: 0 | 
+040_quality_writes | FAIL всего: 0 | 
+043_contractor_cabinet | FAIL всего: 0 | 
+045_projects_objects | FAIL всего: 0 | 
+046_vor_revisions | FAIL всего: 0 | 
+046a_vor_revisions_fixes | FAIL всего: 0 | 
+046b_vor_revisions_ks2_moves | FAIL всего: 0 | 
+046c_vor_revisions_ks2_materials | FAIL всего: 0 | 
+044_one_places_tree | FAIL всего: 0 | 
+047_project_participation | FAIL всего: 0 | 
