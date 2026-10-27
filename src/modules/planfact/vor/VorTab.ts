@@ -326,10 +326,10 @@ export const VOR_CSS = POSITIONS_REGISTRY_CSS + POSITION_ACTIONS_CSS + `
 .vor-list{display:flex;flex-direction:column;font-size:13px}
 .vor-row{display:grid;grid-template-columns:52px 92px minmax(0,1fr) 72px 120px;gap:10px;align-items:start;padding:8px 14px;border-bottom:1px solid var(--card-border)}
 .vor-row:last-child{border-bottom:0}
-.vor-row--head{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.vor-row--head{font-size:12px;font-weight:600;color:var(--text-muted)}
 .vor-row--group .vor-c-name{font-weight:700}
 .vor-row--context{background:var(--hover-bg)}
-.vor-row--context .vor-c-name{font-weight:900}
+.vor-row--context .vor-c-name{font-weight:600}
 .vor-row--material{color:var(--text-muted)}
 .vor-row--material .vor-c-name{padding-left:14px}
 .vor-row--skip{opacity:.55}
@@ -341,7 +341,7 @@ export const VOR_CSS = POSITIONS_REGISTRY_CSS + POSITION_ACTIONS_CSS + `
 .vor-row--warn{box-shadow:inset 3px 0 0 var(--color-yellow)}
 .vor-warn{font-size:11px;font-weight:700;color:var(--color-yellow)}
 .vor-norm{display:block;font-size:11px;color:var(--text-muted)}
-.vor-kind{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:6px;border:1px solid var(--card-border);color:var(--text-muted)}
+.vor-kind{display:inline-block;font-size:12px;font-weight:600;padding:1px 6px;border-radius:6px;border:1px solid var(--card-border);color:var(--text-muted)}
 .vor-kind--work{border-color:var(--primary);color:var(--primary)}
 .vor-kind--context{border-color:var(--color-green);color:var(--color-green)}
 .vor-kind--group{color:var(--text-main)}

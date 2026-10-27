@@ -210,7 +210,7 @@ export const OVERHEADS_CSS = `
 .oh-box-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .oh-editor{display:flex;flex-direction:column;gap:12px}
 .oh-sec{display:flex;flex-direction:column;border:1px solid var(--card-border);border-radius:12px;overflow:hidden}
-.oh-sec-head{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--hover-bg);font-size:12px;font-weight:900;text-transform:uppercase}
+.oh-sec-head{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--hover-bg);font-size:13px;font-weight:600}
 .oh-line{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 12px;border-top:1px solid var(--card-border)}
 .oh-line--out{opacity:.7}
 .oh-line--out .oh-val{text-decoration:line-through}
@@ -234,6 +234,6 @@ export const OVERHEADS_CSS = `
 .oh-add{align-self:flex-start;margin:6px 12px}
 .oh-totals{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid var(--card-border);border-radius:12px}
 .oh-totals>div{display:flex;justify-content:space-between;gap:10px;font-size:13px}
-.oh-total{font-size:16px!important;font-weight:900}
+.oh-total{font-size:16px!important;font-weight:600}
 @media (max-width:600px){.oh-num,.oh-num--wide,.oh-method{width:100%;flex:1 1 100%}.oh-val{min-width:0;flex:1 1 100%;text-align:left}.oh-box-head .pj-actions .pf-btn{flex:1 1 auto}}
 `;

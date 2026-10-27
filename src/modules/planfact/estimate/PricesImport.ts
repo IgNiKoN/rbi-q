@@ -123,7 +123,7 @@ export const PRICES_IMPORT_CSS = `
 .pri-list{display:flex;flex-direction:column;max-height:60vh;overflow-y:auto;border:1px solid var(--card-border);border-radius:12px}
 .pri-row{display:flex;flex-direction:column;gap:4px;padding:8px 12px;border-bottom:1px solid var(--card-border);font-size:13px}
 .pri-row:last-child{border-bottom:0}
-.pri-status{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.pri-status{font-size:12px;font-weight:600;color:var(--text-muted)}
 .pri-row--new .pri-status{color:var(--color-green)}
 .pri-row--changed .pri-status{color:var(--color-yellow)}
 .pri-row--conflict .pri-status{color:var(--color-red)}

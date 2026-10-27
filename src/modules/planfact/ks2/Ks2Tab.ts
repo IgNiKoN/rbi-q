@@ -145,7 +145,7 @@ export const KS2_CSS = KS2_REGISTRY_CSS + `
 .k2-hint{flex-basis:100%;font-size:12px}
 .k2-no-input{width:110px}
 .k2-reason{font-size:12px}
-.k2-badge{font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:6px;border:1px solid var(--card-border);white-space:nowrap}
+.k2-badge{font-size:12px;font-weight:600;padding:1px 6px;border-radius:6px;border:1px solid var(--card-border);white-space:nowrap}
 .k2-badge--draft{color:var(--color-yellow);border-color:var(--color-yellow)}
 .k2-badge--issued{color:var(--color-green);border-color:var(--color-green)}
 .k2-badge--annulled{color:var(--text-muted)}

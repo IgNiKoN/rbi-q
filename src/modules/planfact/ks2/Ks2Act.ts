@@ -259,7 +259,7 @@ export const KS2_ACT_CSS = `
 .k2-head-grid .k2-wide{grid-column:span 2}
 .k2-rows{display:flex;flex-direction:column;max-height:70vh;overflow:auto;overscroll-behavior:contain}
 .k2-row{display:grid;grid-template-columns:56px minmax(240px,1fr) 48px 92px 92px 92px 104px 112px 120px 128px;gap:4px 8px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--card-border);font-size:13px}
-.k2-row--head{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;background:var(--card-bg);z-index:1}
+.k2-row--head{font-size:12px;font-weight:600;color:var(--text-muted);position:sticky;top:0;background:var(--card-bg);z-index:1}
 .k2-row--material .k2-c-name{padding-left:14px;color:var(--text-muted)}
 .k2-row--edited{box-shadow:inset 3px 0 0 var(--primary)}
 .k2-row--unpriced{box-shadow:inset 3px 0 0 var(--color-yellow)}
@@ -267,7 +267,7 @@ export const KS2_ACT_CSS = `
 .k2-c-no{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .k2-c-name{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;min-width:0;overflow-wrap:anywhere}
 .k2-c-act{display:flex;flex-direction:column;gap:4px;align-items:stretch}
-.k2-edited{font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:6px;border:1px solid var(--primary);color:var(--primary)}
+.k2-edited{font-size:12px;font-weight:600;padding:1px 6px;border-radius:6px;border:1px solid var(--primary);color:var(--primary)}
 .k2-in{width:100%;min-height:32px;padding:4px 8px;font-size:14px;box-sizing:border-box}
 .k2-small{min-height:30px;padding:3px 8px;font-size:12px}
 .k2-form-seg{align-self:stretch;max-width:460px}
@@ -295,8 +295,8 @@ export const KS2_ACT_CSS = `
 .k2-c-sys::before{content:'По системе: '}
 .k2-c-sum::before{content:'Сумма: '}
 .k2-c-qty,.k2-c-price{display:flex;flex-direction:column;gap:2px}
-.k2-c-qty::before{content:'В акт';font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
-.k2-c-price::before{content:'Цена, ₽';font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.k2-c-qty::before{content:'В акт';font-size:12px;font-weight:600;color:var(--text-muted)}
+.k2-c-price::before{content:'Цена, ₽';font-size:12px;font-weight:600;color:var(--text-muted)}
 .k2-head-grid .k2-wide{grid-column:1/-1}
 .k2-hrow{grid-template-columns:minmax(0,1fr) auto}
 .k2-hrow .pf-muted{grid-column:1/-1;order:3}

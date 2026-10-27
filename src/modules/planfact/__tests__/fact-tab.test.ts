@@ -90,7 +90,7 @@ test('ввод факта: этаж → работы этажа и кварти�
   typeIn(form.querySelector('[name="qty"]'), '10'); await tick();
   assert.match(form.querySelector('[data-testid="ft-after"]').textContent, /10 %/, 'прогноз до записи');
   submit(form); await tick(); await tick();
-  assert.match(card(el, 'p5').querySelector('[data-testid="ft-nums"]').textContent, /факт 10 из 100 м²/);
+  assert.match(card(el, 'p5').querySelector('[data-testid="ft-nums"]').textContent, /^10 из 100 м²$/);
   assert.equal(card(el, 'p5').querySelector('[data-testid="ft-pct"]').textContent, '10 %');
   assert.match(el.querySelector('[data-testid="ft-notice"]').textContent, /Записано: 10/);
   assert.equal((s.calls.find((c: any) => c.fn === 'add')!.args as any).brigadeId, 'b1');
@@ -151,7 +151,7 @@ test('перебор плана → ждёт РП (в итог не входит
   await enter(el, 'p5', '95');
   assert.match(el.querySelector('[data-testid="ft-notice"]').textContent, /ждёт подтверждения РП/);
   assert.equal(card(el, 'p5').querySelector('[data-testid="ft-pct"]').textContent, '10 %', 'неподтверждённый перебор в % не входит');
-  assert.match(card(el, 'p5').querySelector('[data-testid="ft-pending-badge"]').textContent, /Ждёт подтверждения РП: 95/);
+  assert.match(card(el, 'p5').querySelector('[data-testid="ft-pending-badge"]').textContent, /Ждёт РП: 95/);
 
   const pm = { ...s, vor: { async listProjects() { return [{ id: 'pr1', name: 'ЖК Тест', company_id: 'c1' }]; }, async permissions() { return PM; } } };
   // P2-0020: очередь РП — подвкладка «Ждёт подтверждения» (реестр); решение по одной записи — в карточке
@@ -304,7 +304,7 @@ test('P2-0022: «Период» — «с … по …», проверки дат
   assert.equal(sel(el, '[data-testid="ft-win"]'), null, 'после записи окно закрыто');
   const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
   assert.match(sel(el, '[data-testid="ft-notice"]').textContent, new RegExp(`Записано: 28 м² за период ${dm(isoShift(today, -13)).replace('.', '\\.')}`));
-  assert.match(card(el, 'p5').querySelector('[data-testid="ft-nums"]').textContent, /факт 28 из 100/);
+  assert.match(card(el, 'p5').querySelector('[data-testid="ft-nums"]').textContent, /^28 из 100/);
   // История позиции
   card(el, 'p5').querySelector('[data-testid="ft-history-btn"]').click(); await tick(); await tick();
   assert.match(sel(el, '[data-testid="ft-hdate"]').textContent, new RegExp(`за период ${dm(isoShift(today, -13)).replace('.', '\\.')}–${dm(today).replace('.', '\\.')}`));

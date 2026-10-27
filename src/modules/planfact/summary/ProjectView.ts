@@ -160,12 +160,12 @@ export const SUMMARY_PROJECT_CSS = `
 .sm-pos{display:flex;flex-direction:column;border-top:1px solid var(--card-border)}
 .sm-fc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 12px;font-size:13px}
 .sm-fc-cell{display:flex;flex-direction:column;gap:2px;min-width:0}
-.sm-fc-label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.sm-fc-label{font-size:12px;font-weight:600;color:var(--text-muted)}
 .sm-fc-late{color:var(--color-red)}
 .sm-fc-num{font-variant-numeric:tabular-nums}
 .sm-prow{display:grid;grid-template-columns:minmax(0,2.4fr) repeat(6,minmax(0,1fr));gap:4px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border);font-size:13px}
 .sm-prow:last-child{border-bottom:0}
-.sm-prow--head{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.sm-prow--head{font-size:12px;font-weight:600;color:var(--text-muted)}
 .sm-place{overflow-wrap:anywhere}
 @media (max-width:760px){
 .sm-prow--head{display:none}

@@ -53,7 +53,7 @@ export const SUMMARY_GAP_CSS = `
 .sm-grow{display:grid;grid-template-columns:minmax(0,3fr) repeat(3,minmax(0,1fr));gap:4px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border);font-size:13px}
 .sm-grow--money{grid-template-columns:minmax(0,3fr) repeat(5,minmax(0,1fr))}
 .sm-grow:last-child{border-bottom:0}
-.sm-grow--head{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.sm-grow--head{font-size:12px;font-weight:600;color:var(--text-muted)}
 .sm-grow--over [data-testid="sm-gap-qty"]{color:var(--color-yellow)}
 .sm-gname{overflow-wrap:anywhere}
 @media (max-width:760px){

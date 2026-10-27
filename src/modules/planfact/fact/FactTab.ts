@@ -27,6 +27,19 @@ const lastKey = (company: string): string => `pf-last-brigade:${company}`;
 export function readLast(company: string): string { try { return window.localStorage.getItem(lastKey(company)) || ''; } catch { return ''; } }
 export function writeLast(company: string, id: string): void { try { window.localStorage.setItem(lastKey(company), id); } catch { /* без хранилища — просто не запомним */ } }
 
+/** P2-0046: состояние строки «Ввода» для фильтр-кнопок: ждёт РП и отклонено — важнее объёма. */
+export type RowState = 'pending' | 'rejected' | 'done' | 'work' | 'none';
+export function rowState(p: FactPosition): RowState {
+  if (p.pending_count) return 'pending';
+  if (p.last_rejected_note) return 'rejected';
+  return p.plan_qty > 0 && p.fact_qty >= p.plan_qty - 1e-9 ? 'done' : p.fact_qty > 0 ? 'work' : 'none';
+}
+export function countStates(rows: FactPosition[]): Record<RowState, number> {
+  const c: Record<RowState, number> = { pending: 0, rejected: 0, done: 0, work: 0, none: 0 };
+  for (const p of rows) c[rowState(p)]++;
+  return c;
+}
+
 export type FactMode = 'entry' | 'chessboard' | 'pending' | 'journal';
 /** mode — подвкладка «Факта»: «Ввод» (по умолчанию), «Шахматка» (P2-0017), «Ждёт подтверждения», «Журнал» (P2-0020); объект — общим
  *  списком. onApprove — число записей, ждущих РП в выбранном объекте, или null без права fact.approve (подвкладки тогда нет). */
@@ -46,6 +59,9 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   const [historyId, setHistoryId] = useState('');
   const [closing, setClosing] = useState(false);
   const [shown, setShown] = useState(PAGE);
+  const [roots, setRoots] = useState<LocationNode[]>([]);                    // P2-0046: дерево мест на ПК — корни
+  const [kids, setKids] = useState<Record<string, LocationNode[]>>({});      // и раскрытые узлы пути
+  const [only, setOnly] = useState<RowState | ''>('');                        // фильтр-кнопка списка работ
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
@@ -76,14 +92,16 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
     if (r.ok) { setPositions(r.value); setError(''); } else { setPositions([]); setError(r.message); }
   }
   async function enterPlace(pid: string, nextPath: LocationNode[]): Promise<void> {
-    setPath(nextPath); setOpenId(''); setHistoryId(''); setClosing(false); setShown(PAGE);
+    setPath(nextPath); setOpenId(''); setHistoryId(''); setClosing(false); setShown(PAGE); setOnly('');
     const loc = nextPath.length ? nextPath[nextPath.length - 1] : null;
-    setChildren(await projects.listLocations(pid, loc ? loc.id : null));
+    const next = await projects.listLocations(pid, loc ? loc.id : null);
+    setChildren(next);
+    if (loc) setKids((k) => ({ ...k, [loc.id]: next })); else setRoots(next);
     if (loc) await loadPositions(pid, loc); else setPositions([]);
   }
   useEffect(() => {
     if (!projectId || !project) return;
-    setNotice(''); setError('');
+    setNotice(''); setError(''); setKids({}); setRoots([]);
     void enterPlace(projectId, []);
     setLastBrigade(readLast(project.company_id));
     void api.listBrigades(project.company_id, false).then(setBrigades);
@@ -146,15 +164,48 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
       h('button', { type: 'button', className: 'ft-crumb' + (i === path.length - 1 ? ' ft-crumb--cur' : ''), onClick: () => { void enterPlace(projectId, path.slice(0, i + 1)); } }, n.name))));
 
   const rows = positions || [];
-  const body = h('div', { className: 'pj-tab' }, nav,
+  // P2-0046 (утверждённый макет): место — одна карточка с итогом; работы — компактный список, фильтр-кнопки по состоянию;
+  // нажатие на работу открывает окно ввода (телефон — снизу, ПК — справа); на ПК слева — дерево корпусов и этажей.
+  const counts = countStates(rows);
+  const visibleRows = only ? rows.filter((p) => rowState(p) === only) : rows;
+  const avg = rows.length ? rows.reduce((a, p) => a + Math.min(100, percent(p.fact_qty, p.plan_qty)), 0) / rows.length : 0;
+  const pendingN = rows.reduce((a, p) => a + (p.pending_count ? 1 : 0), 0);
+  const tree = roots.length
+    ? h('nav', { className: 'pf-card ft-tree', 'aria-label': 'Места объекта', 'data-testid': 'ft-tree' }, treeNodes(roots, []))
+    : null;
+  function treeNodes(nodes: LocationNode[], above: LocationNode[]): ReactElement[] {
+    return nodes.map((n) => {
+      const on = path.length > above.length && path[above.length].id === n.id;
+      const cur = on && path.length === above.length + 1;
+      const open = on && kids[n.id] && kids[n.id].length;
+      return h('div', { key: n.id, className: 'ft-tnode' },
+        h('button', { type: 'button', className: 'ft-titem' + (cur ? ' ft-titem--cur' : '') + (on ? ' ft-titem--on' : ''), style: { paddingLeft: `${10 + above.length * 16}px` },
+          'aria-current': cur ? 'true' : undefined, 'data-location-id': n.id, onClick: () => { void enterPlace(projectId, [...above, n]); } },
+          // стрелка — у узлов, где ещё есть уровни (корпус, секция) или уже открытые дети; этаж — без стрелки
+          n.node_type === 'building' || n.node_type === 'section' || open ? h('span', { className: 'ft-tchev' + (open ? ' ft-tchev--open' : ''), 'aria-hidden': 'true' }) : h('span', { className: 'ft-tdot', 'aria-hidden': 'true' }), n.name),
+        open ? h('div', { className: 'ft-tkids' }, treeNodes(kids[n.id], [...above, n])) : null);
+    });
+  }
+  const chip = (id: RowState | '', label: string, n: number): ReactElement | null => (id && !n ? null
+    : h('button', { key: id || 'all', type: 'button', className: 'p2-reg__q' + (only === id ? ' p2-reg__q--on' : ''), 'aria-pressed': only === id, 'data-testid': 'ft-only', 'data-value': id,
+        onClick: () => setOnly(only === id ? '' : id) }, label, h('span', { className: 'p2-reg__qn' }, String(n))));
+  const placeCard = place
+    ? h('div', { className: 'pf-card ft-place-card', 'data-testid': 'ft-place-card' },
+        h('div', { className: 'ft-place-top' }, nav,
+          place && canCreate && rows.length && !closing
+            ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost ft-close-btn', 'data-testid': 'ft-close-open', onClick: () => { setClosing(true); setOpenId(''); setHistoryId(''); } }, 'Закрыть этаж целиком')
+            : null),
+        rows.length
+          ? h('div', { className: 'ft-place-sum' }, h('span', null, 'Выполнено ', h('b', null, fmtPct(Math.round(avg))), ` · работ: ${rows.length}`, pendingN ? ` · ждут РП: ${pendingN}` : ''),
+              h('div', { className: 'ft-bar', 'aria-hidden': 'true' }, h('div', { className: 'ft-bar-fill', style: { width: `${Math.min(100, avg)}%` } })))
+          : null)
+    : nav;
+  const body = h('div', { className: 'pj-tab ft-main' }, placeCard,
         children.length
-          ? h('div', { className: 'ft-tiles', 'data-testid': 'ft-children' }, children.map((c) => h('button', { key: c.id, type: 'button', className: 'ft-tile', 'data-location-id': c.id,
+          ? h('div', { className: 'ft-tiles' + (tree ? ' ft-tiles--tree' : ''), 'data-testid': 'ft-children' }, children.map((c) => h('button', { key: c.id, type: 'button', className: 'ft-tile', 'data-location-id': c.id,
               onClick: () => { void enterPlace(projectId, [...path, c]); } }, h('span', { className: 'ft-tile-type' }, NODE_LABEL[c.node_type] || ''), h('b', null, c.name))))
           : null,
         !place ? h('div', { className: 'pf-muted', 'data-testid': 'ft-pick' }, children.length ? 'Выберите корпус, секцию или этаж.' : 'В проекте пока нет мест — их создаёт ПТО в «Справочники → Объекты».') : null,
-        place && canCreate && rows.length && !closing
-          ? h('div', { className: 'pj-actions' }, h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'ft-close-open', onClick: () => { setClosing(true); setOpenId(''); setHistoryId(''); } }, 'Закрыть целиком'))
-          : null,
         notice ? h('div', { className: 'pj-notice', role: 'status', 'data-testid': 'ft-notice' }, notice) : null,
         error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
         closing && place
@@ -166,31 +217,41 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
           : null,
         place && positions === null ? h('div', { className: 'pf-muted' }, 'Загрузка…') : null,
         place && positions && !rows.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'ft-empty' }, 'Для этого места нет работ: позиции появляются после подтверждения ВОР.') : null,
-        rows.slice(0, shown).map((p) => {
-          const pct = percent(p.fact_qty, p.plan_qty);
-          const where = rel(p);
-          return h('div', { key: p.position_id, className: 'pf-card ft-card', 'data-position-id': p.position_id },
-            h('div', { className: 'ft-name' }, h('b', null, p.work_name),
-              hints.get(p.position_id) ? h('span', { className: 'pf-muted ft-vor', 'data-testid': 'ft-vor' }, hints.get(p.position_id)) : null,
-              where ? h('span', { className: 'pf-muted ft-place' }, where) : null),
-            h('div', { className: 'ft-nums' },
-              h('span', { 'data-testid': 'ft-nums' }, `факт ${fmtQty(p.fact_qty)} из ${fmtQty(p.plan_qty)} ${p.unit_code}`),
-              h('b', { className: 'ft-pct' + (pct > 100 ? ' ft-pct--over' : ''), 'data-testid': 'ft-pct' }, fmtPct(pct)),
-              h('span', { className: 'pf-muted' }, `остаток ${fmtQty(remainder(p.plan_qty, p.fact_qty))}`)),
-            h('div', { className: 'ft-bar', role: 'progressbar', 'aria-valuenow': Math.min(100, pct), 'aria-valuemin': 0, 'aria-valuemax': 100 },
-              h('div', { className: 'ft-bar-fill' + (pct > 100 ? ' ft-bar-fill--over' : ''), style: { width: `${Math.min(100, pct)}%` } })),
-            p.pending_count ? h('div', { className: 'ft-pending', 'data-testid': 'ft-pending-badge' }, `Ждёт подтверждения РП: ${fmtQty(p.pending_qty)} ${p.unit_code}`) : null,
-            p.last_rejected_note ? h('div', { className: 'ft-bad', 'data-testid': 'ft-rejected' }, `Отклонено РП: ${p.last_rejected_note}`) : null,
-            h('div', { className: 'pj-actions' },
-              canCreate ? h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'ft-enter', onClick: () => { setOpenId(p.position_id); setHistoryId(''); setClosing(false); } }, 'Внести факт') : null,
-              h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'ft-history-btn', onClick: () => { setHistoryId(historyId === p.position_id ? '' : p.position_id); setClosing(false); } }, 'История')));
-        }),
+        rows.length > 1
+          ? h('div', { className: 'p2-reg__quick', role: 'group', 'aria-label': 'Состояние работ', 'data-testid': 'ft-chips' },
+              chip('', 'Все', rows.length), chip('work', 'В работе', counts.work), chip('pending', 'Ждёт РП', counts.pending), chip('rejected', 'Отклонено', counts.rejected),
+              chip('done', 'Готово', counts.done), chip('none', 'Не начато', counts.none))
+          : null,
+        visibleRows.length
+          ? h('div', { className: 'pf-card ft-list' }, visibleRows.slice(0, shown).map((p) => {
+              const pct = percent(p.fact_qty, p.plan_qty);
+              const where = rel(p);
+              const open = (): void => { if (canCreate) { setOpenId(p.position_id); setHistoryId(''); } else setHistoryId(historyId === p.position_id ? '' : p.position_id); setClosing(false); };
+              return h('div', { key: p.position_id, className: 'ft-row', 'data-position-id': p.position_id },
+                h('button', { type: 'button', className: 'ft-row-main', onClick: open, 'aria-label': `${p.work_name}: ${canCreate ? 'внести факт' : 'история'}` },
+                  h('span', { className: 'ft-name' }, h('b', null, p.work_name),
+                    where ? h('span', { className: 'pf-muted ft-place' }, where) : null,
+                    hints.get(p.position_id) ? h('span', { className: 'pf-muted ft-vor', 'data-testid': 'ft-vor' }, hints.get(p.position_id)) : null),
+                  h('span', { className: 'ft-line' },
+                    h('span', { className: 'ft-nums', 'data-testid': 'ft-nums' }, `${fmtQty(p.fact_qty)} из ${fmtQty(p.plan_qty)} ${p.unit_code}`),
+                    h('span', { className: 'ft-bar', role: 'progressbar', 'aria-valuenow': Math.min(100, pct), 'aria-valuemin': 0, 'aria-valuemax': 100 },
+                      h('span', { className: 'ft-bar-fill' + (pct >= 100 ? ' ft-bar-fill--done' : '') + (pct > 100 ? ' ft-bar-fill--over' : ''), style: { width: `${Math.min(100, pct)}%` } })),
+                    h('span', { className: 'pf-muted ft-rest' }, `осталось ${fmtQty(remainder(p.plan_qty, p.fact_qty))}`)),
+                  p.pending_count ? h('span', { className: 'ft-pending', 'data-testid': 'ft-pending-badge' }, `Ждёт РП: ${fmtQty(p.pending_qty)} ${p.unit_code}`) : null,
+                  p.last_rejected_note ? h('span', { className: 'ft-bad', 'data-testid': 'ft-rejected' }, `Отклонено РП: ${p.last_rejected_note}`) : null),
+                h('b', { className: 'ft-pct' + (pct > 100 ? ' ft-pct--over' : ''), 'data-testid': 'ft-pct' }, fmtPct(pct)),
+                h('span', { className: 'ft-acts' },
+                  canCreate ? h('button', { type: 'button', className: 'pf-btn ft-small-btn', 'data-testid': 'ft-enter', onClick: () => { setOpenId(p.position_id); setHistoryId(''); setClosing(false); } }, 'Внести') : null,
+                  h('button', { type: 'button', className: 'pf-btn pf-btn--ghost ft-small-btn', 'data-testid': 'ft-history-btn', onClick: () => { setHistoryId(historyId === p.position_id ? '' : p.position_id); setClosing(false); } }, 'История')),
+                h('span', { className: 'ft-chev', 'aria-hidden': 'true' }));
+            }))
+          : null,
         openId && canCreate && rows.find((p) => p.position_id === openId) ? entryWindow(rows.find((p) => p.position_id === openId)!) : null,
-        rows.length > shown ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'ft-more', onClick: () => setShown(shown + PAGE) }, `Показать ещё (${rows.length - shown})`) : null);
+        visibleRows.length > shown ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'ft-more', onClick: () => setShown(shown + PAGE) }, `Показать ещё (${visibleRows.length - shown})`) : null);
 
   return h('div', { className: 'pj-tab ft-tab', 'data-testid': 'ft-tab' },
     h(ProjectPicker, { list, value: projectId, onChange: setProjectId }),
-    body);
+    h('div', { className: 'ft-entry' + (tree ? ' ft-entry--tree' : '') }, tree, body));
 }
 
 export const FACT_CSS = PENDING_REGISTRY_CSS + FACT_JOURNAL_CSS + FACT_WINDOW_CSS + `
@@ -202,9 +263,47 @@ export const FACT_CSS = PENDING_REGISTRY_CSS + FACT_JOURNAL_CSS + FACT_WINDOW_CS
 .ft-crumb--cur{color:var(--text-main);cursor:default}
 .ft-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .ft-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:56px;padding:10px 12px;border:1px solid var(--card-border);border-radius:12px;background:var(--card-bg);color:var(--text-main);cursor:pointer;text-align:left;overflow-wrap:anywhere}
-.ft-tile-type{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.ft-tile-type{font-size:11px;font-weight:500;color:var(--text-muted)}
 .ft-card{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+/* P2-0046: место — карточка с итогом; работы — компактный список; на ПК — дерево мест слева */
+.ft-entry{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ft-main{min-width:0}
+.ft-tree{display:none}
+.ft-titem{font:inherit;font-size:14px;display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:var(--text-main);cursor:pointer;text-align:left}
+.ft-titem:hover{background:var(--hover-bg)}
+.ft-titem--on{font-weight:600}
+.ft-titem--cur{background:var(--p2-status-blue-bg);color:var(--p2-status-blue-fg)}
+.ft-tchev{width:7px;height:7px;border-right:2px solid var(--text-muted);border-bottom:2px solid var(--text-muted);transform:rotate(-45deg);flex:0 0 auto}
+.ft-tchev--open{transform:rotate(45deg)}
+.ft-tdot{width:7px;flex:0 0 auto}
+.ft-place-card{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.ft-place-top{display:flex;align-items:center;justify-content:space-between;gap:6px 10px;flex-wrap:wrap}
+.ft-close-btn{min-height:36px;padding:6px 12px;font-size:13px}
+.ft-place-sum{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-muted)}
+.ft-place-sum b{color:var(--text-main)}
+.ft-place-sum .ft-bar{flex:1 1 auto;min-width:60px}
+.ft-list{padding:0;overflow:hidden}
+.ft-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--card-border)}
+.ft-row:first-child{border-top:0}
+.ft-row-main{flex:1 1 auto;min-width:0;font:inherit;color:inherit;background:transparent;border:0;padding:0;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:5px}
+.ft-row-main:focus-visible{outline:2px solid var(--accent,var(--primary));outline-offset:2px}
 .ft-name{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;overflow-wrap:anywhere}
+.ft-name b{font-weight:600;font-size:14.5px}
+.ft-line{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-muted);min-width:0}
+.ft-line .ft-nums{white-space:nowrap;font-variant-numeric:tabular-nums}
+.ft-line .ft-bar{display:block;flex:1 1 auto;min-width:50px;height:6px}
+.ft-rest{white-space:nowrap}
+.ft-acts{display:none;gap:6px;flex:0 0 auto}
+.ft-small-btn{min-height:36px;padding:6px 12px;font-size:13px}
+.ft-chev{width:8px;height:8px;border-right:2px solid var(--text-muted);border-bottom:2px solid var(--text-muted);transform:rotate(-45deg);flex:0 0 auto}
+.ft-row .ft-pct{font-size:15px;font-weight:600;min-width:52px;text-align:right;flex:0 0 auto}
+@media (min-width:768px){.ft-acts{display:inline-flex}.ft-chev{display:none}}
+@media (max-width:767.98px){.ft-rest{display:none}}
+@media (min-width:1024px){
+.ft-entry--tree{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+.ft-tree{display:flex;flex-direction:column;gap:2px;padding:8px;position:sticky;top:12px;max-height:calc(100vh - 140px);overflow-y:auto}
+.ft-tiles--tree{display:none}
+}
 .ft-place{font-size:12px}
 .ft-vor{font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .ft-nums{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-variant-numeric:tabular-nums}
@@ -213,9 +312,10 @@ export const FACT_CSS = PENDING_REGISTRY_CSS + FACT_JOURNAL_CSS + FACT_WINDOW_CS
 .ft-warn{font-size:12px;font-weight:700}
 .ft-bad{color:var(--color-red);font-size:13px}
 .ft-bar{height:8px;border-radius:6px;background:var(--hover-bg);overflow:hidden}
-.ft-bar-fill{height:100%;background:var(--color-green);border-radius:6px}
+.ft-bar-fill{display:block;height:100%;background:var(--p2-chart-fact,var(--color-green));border-radius:6px}
+.ft-bar-fill--done{background:var(--color-green)}
 .ft-bar-fill--over{background:var(--color-yellow)}
-.ft-pending{font-size:13px;font-weight:700;color:var(--color-yellow)}
+.ft-pending{font-size:12.5px;font-weight:600;color:var(--p2-status-blue-fg,var(--color-yellow))}
 .ft-form{display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:12px;background:var(--hover-bg)}
 .ft-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .ft-sheet{display:flex;flex-direction:column;gap:10px;padding:12px 14px}
@@ -228,7 +328,7 @@ export const FACT_CSS = PENDING_REGISTRY_CSS + FACT_JOURNAL_CSS + FACT_WINDOW_CS
 .ft-hrow--superseded .ft-hmain b{text-decoration:line-through;color:var(--text-muted)}
 .ft-hmain{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
 .ft-hmeta{font-size:12px;overflow-wrap:anywhere}
-.ft-badge{font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:6px;border:1px solid var(--card-border)}
+.ft-badge{font-size:12px;font-weight:600;padding:1px 6px;border-radius:6px;border:1px solid var(--card-border)}
 .ft-badge--accepted{color:var(--color-green)}
 .ft-badge--pending_approval{color:var(--color-yellow)}
 .ft-badge--rejected{color:var(--color-red)}
@@ -246,6 +346,5 @@ export const FACT_CSS = PENDING_REGISTRY_CSS + FACT_JOURNAL_CSS + FACT_WINDOW_CS
 .ft-close-qty{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .ft-close-qty .pj-input{width:110px;text-align:right}
 .ft-total{font-weight:700}
-@media (min-width:900px){.ft-card{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,2.4fr) 150px auto;align-items:center;gap:6px 16px}.ft-card>.ft-name,.ft-card>.ft-nums,.ft-card>.ft-bar,.ft-card>.pj-actions{grid-row:1}.ft-card>.pj-actions{grid-column:4;justify-content:flex-end}.ft-card>.ft-pending,.ft-card>.ft-bad,.ft-card>.ft-form{grid-column:1/-1}}
 @media (max-width:760px){.ft-close-row{grid-template-columns:minmax(0,1fr)}.ft-close-qty .pj-input{flex:1 1 110px}}
 `;

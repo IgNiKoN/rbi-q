@@ -73,7 +73,7 @@ export const INBOX_CSS = `
 .ib-tab{display:flex;flex-direction:column;gap:12px}
 .ib-total{font-size:13px}
 .ib-empty{padding:24px 16px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
-.ib-empty__title{font-size:15px;font-weight:900;color:var(--text-main)}
+.ib-empty__title{font-size:15px;font-weight:600;color:var(--text-main)}
 .ib-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 .ib-group{padding:0;display:flex;flex-direction:column;overflow:hidden}
 .ib-group__head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:12px 14px 6px}

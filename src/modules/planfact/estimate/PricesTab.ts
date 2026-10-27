@@ -202,7 +202,7 @@ export const PRICES_CSS = `
 .pr-date--stale{color:var(--color-yellow);font-weight:700}
 .pr-prices{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;justify-content:flex-end}
 .pr-field{display:flex;flex-direction:column;gap:2px}
-.pr-field-label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.pr-field-label{font-size:12px;font-weight:600;color:var(--text-muted)}
 .pr-input{width:150px;min-height:40px;box-sizing:border-box;text-align:right}
 .pr-input--bad{border-color:var(--color-red)}
 .pr-acts{display:flex;gap:6px}

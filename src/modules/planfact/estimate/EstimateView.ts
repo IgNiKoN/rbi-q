@@ -187,7 +187,7 @@ export const ESTIMATE_CSS = `
 .es-area{width:140px}
 .es-totals{display:flex;flex-direction:column;padding:6px 0}
 .es-trow{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:8px;padding:6px 14px;font-size:13px}
-.es-trow--head{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.es-trow--head{font-size:12px;font-weight:600;color:var(--text-muted)}
 .es-trow--all{border-top:1px solid var(--card-border);font-weight:700}
 .es-warn{color:var(--color-yellow);font-size:11px;font-weight:700}
 .es-filter{flex:0 1 460px}
@@ -195,19 +195,19 @@ export const ESTIMATE_CSS = `
 .es-rows{display:flex;flex-direction:column;max-height:70vh;overflow:auto;overscroll-behavior:contain}
 .es-row{display:grid;grid-template-columns:44px minmax(0,1fr) 56px 110px 130px 130px 120px 120px;gap:4px 8px;align-items:center;padding:4px 12px;border-bottom:1px solid var(--card-border);font-size:13px}
 .es-row:last-child{border-bottom:0}
-.es-row--head{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);position:sticky;top:0;background:var(--card-bg);z-index:1}
+.es-row--head{font-size:12px;font-weight:600;color:var(--text-muted);position:sticky;top:0;background:var(--card-bg);z-index:1}
 .es-row--group,.es-row--context{background:var(--hover-bg);font-weight:700}
 .es-row--material .es-name{padding-left:14px;color:var(--text-muted)}
 .es-row--unpriced{box-shadow:inset 3px 0 0 var(--color-yellow)}
 .es-no{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums}
 .es-gname{grid-column:2/-1;min-width:0;overflow-wrap:anywhere}
 .es-name{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;min-width:0;overflow-wrap:anywhere}
-.es-badge{font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:6px;border:1px solid var(--primary);color:var(--primary)}
+.es-badge{font-size:12px;font-weight:600;padding:1px 6px;border-radius:6px;border:1px solid var(--primary);color:var(--primary)}
 .es-badge--none{border-color:var(--color-yellow);color:var(--color-yellow)}
 .es-hint{flex-basis:100%;font-size:11px;color:var(--text-muted)}
 .es-price .pr-field-label{display:none}
 .es-price .pr-input{width:100%;min-height:32px;padding:4px 8px}
-.es-sheet{padding:10px 12px 4px;font-size:12px;font-weight:900;text-transform:uppercase;color:var(--text-main);border-bottom:1px solid var(--card-border)}
+.es-sheet{padding:10px 12px 4px;font-size:12px;font-weight:600;color:var(--text-main);border-bottom:1px solid var(--card-border)}
 @media (max-width:1200px){
 .es-row--head{display:none}
 .es-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:10px 12px}

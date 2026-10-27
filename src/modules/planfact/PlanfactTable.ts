@@ -57,7 +57,7 @@ export const PLANFACT_CSS = `
 .pf-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
 .pf-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;overflow-x:auto;box-shadow:var(--shadow-card)}
 .pf-table{width:100%;border-collapse:collapse;font-size:13px}
-.pf-table th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);padding:10px 14px;border-bottom:1px solid var(--card-border);white-space:nowrap}
+.pf-table th{text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);padding:10px 14px;border-bottom:1px solid var(--card-border);white-space:nowrap}
 .pf-table td{padding:10px 14px;border-bottom:1px solid var(--card-border)}
 .pf-table tbody tr:last-child td{border-bottom:0}
 .pf-table tbody tr:hover{background:var(--hover-bg)}
