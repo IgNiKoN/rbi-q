@@ -129,7 +129,7 @@ test('экран на подставном сервере: 600 позиций, �
   const sum = (await stand.summary.positions('pr1', null) as N).value.find((p: N) => p.position_id === 'p1-1-3');
   const row = box.querySelector('tr[data-row="p1-1-3"]');
   const cell = (c: string) => row.querySelector(`td[data-col="${c}"]`).textContent;
-  assert.deepEqual([cell('plan'), cell('fact'), cell('pct'), cell('rest')], [String(sum.plan_qty), String(sum.fact_qty), `${sum.pct} %`, String(sum.rest_qty)]);
+  assert.deepEqual([cell('plan').split(' ')[0], cell('fact'), cell('pct'), cell('rest')], [String(sum.plan_qty), String(sum.fact_qty), `${sum.pct} %`, String(sum.rest_qty)], 'план — с единицей («100 м²»), готовность — полоса и %');
   assert.equal(cell('status'), 'В работе');
 
   // фильтр-чип по статусу через панель

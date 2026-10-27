@@ -43,7 +43,9 @@ async function mountReg(stand: N, perms: string[], o: { archived?: boolean; save
   await settle();
   return box;
 }
-const pick = (box: N, ids: string[]) => { for (const id of ids) click(box.querySelector(`tr[data-row="${id}"] [data-testid="p2-reg-select"]`)); };
+/** P2-0046: галочки — после «Выбрать» (режим выбора реестра позиций). */
+const picking = (box: N) => { if (!box.querySelector('[data-testid="p2-reg-select"]')) click(box.querySelector('[data-testid="p2-reg-pick"]')); };
+const pick = (box: N, ids: string[]) => { picking(box); for (const id of ids) click(box.querySelector(`tr[data-row="${id}"] [data-testid="p2-reg-select"]`)); };
 const dialog = () => win.document.querySelector('[data-testid="vr-close-dialog"]') as N;
 async function send(): Promise<void> {
   await settle();
@@ -85,7 +87,7 @@ test('«Закрыть через РП»: 3 позиции → пачка ост
 test('«Закрыть выбранные» — как обычный факт (без флага): принято сразу; > 500 строк — частями по 500', async () => {
   const stand = makeStand(standPositions(3, 10, 20), { finish: '2026-12-31' });   // 600
   const box = await mountReg(stand, ['planfact.fact.view', 'planfact.fact.create']);
-  click(box.querySelector('[data-testid="p2-reg-select-all"]'));
+  picking(box); click(box.querySelector('[data-testid="p2-reg-select-all"]'));
   assert.match(box.querySelector('[data-testid="p2-reg-selected"]').textContent, /Выбрано: 600/);
   click(box.querySelector('[data-testid="vr-close"]'));
   await send();
@@ -119,7 +121,7 @@ test('отказ сервера показывается в окне; при о�
 
   const part = makeStand(standPositions(3, 10, 20), { failBatchAt: 2, batchError: 'Позиция не найдена в проекте' });
   box = await mountReg(part, ['planfact.fact.view', 'planfact.fact.create']);
-  click(box.querySelector('[data-testid="p2-reg-select-all"]'));
+  picking(box); click(box.querySelector('[data-testid="p2-reg-select-all"]'));
   click(box.querySelector('[data-testid="vr-close"]'));
   await send();
   assert.match(dialog().querySelector('[role="alert"]').textContent, /Записано строк: 500 из 600; остальные не записаны: Позиция не найдена/);
@@ -140,7 +142,7 @@ test('«Выгрузить в Excel»: выбранные строки и вид
   assert.match(saved[0].name, /^Позиции ВОР \d\d\.\d\d\.\d{4}\.xlsx$/);
   const wb = new ExcelJS.Workbook(); await wb.xlsx.load(saved[0].bytes);
   const ws = wb.worksheets[0];
-  assert.deepEqual((ws.getRow(1).values as N[]).slice(1), ['Работа', 'Место', 'ЕИ', 'План', 'Факт', '%', 'Остаток', 'Статус']);
+  assert.deepEqual((ws.getRow(1).values as N[]).slice(1), ['Работа', 'Место', 'ЕИ', 'План', 'Факт', 'Готовность', 'Остаток', 'Статус']);
   assert.equal(ws.rowCount, 3);
   assert.deepEqual((ws.getRow(2).values as N[]).slice(1, 5), ['Работа 2', 'Корпус 1 · 1 этаж', 'шт.', 100]);
   assert.match(box.querySelector('[data-testid="vr-export-all"]').textContent, /\(6\)/);

@@ -58,10 +58,13 @@ const QTY = '#,##0.###';
 export const POSITION_COLUMNS: RegistryColumn<PositionRow>[] = [
   { id: 'work', label: 'Работа', value: (r) => r.work, fixed: true },
   { id: 'place', label: 'Место', value: (r) => r.place },
-  { id: 'unit', label: 'ЕИ', value: (r) => r.unit },
-  { id: 'plan', label: 'План', value: (r) => r.plan, align: 'right', numFmt: QTY },
+  { id: 'unit', label: 'ЕИ', value: (r) => r.unit, hidden: true },
+  { id: 'plan', label: 'План', value: (r) => r.plan, align: 'right', numFmt: QTY, render: (r) => `${fmtQty(r.plan)} ${r.unit}` },
   { id: 'fact', label: 'Факт', value: (r) => r.fact, align: 'right', numFmt: QTY },
-  { id: 'pct', label: '%', value: (r) => r.pct, align: 'right', render: (r) => (r.pct === null ? '—' : fmtPct(r.pct)) },
+  // P2-0046: готовность — полоса и %, отставание видно без чтения цифр
+  { id: 'pct', label: 'Готовность', value: (r) => r.pct, render: (r) => h('span', { className: 'vr-pct' },
+    h('span', { className: 'vr-bar', 'aria-hidden': 'true' }, h('span', { className: 'vr-bar-fill' + (r.st.state === 'done' ? ' vr-bar-fill--done' : ''), style: { width: `${Math.min(100, Math.max(0, r.pct || 0))}%` } })),
+    h('b', null, r.pct === null ? '—' : fmtPct(r.pct))) },
   { id: 'rest', label: 'Остаток', value: (r) => r.rest, align: 'right', numFmt: QTY },
   { id: 'status', label: 'Статус', value: (r) => r.st.label + (r.st.overdue && r.st.state !== 'done' ? ', просрочено' : ''), render: (r) => statusCell(r.st) },
   { id: 'pace', label: 'Темп к сроку', value: (r) => r.st.paceText, hidden: true },
@@ -166,7 +169,8 @@ export function PositionsRegistry(props: PositionsRegistryProps): ReactElement {
   if (rows === null) return h('div', { className: 'pf-muted' }, 'Загрузка позиций…');
   const idx = openId ? ordered.findIndex((r) => r.id === openId) : -1;
   const open = idx >= 0 ? ordered[idx] : null;
-  const visibleCols = POSITION_COLUMNS.filter((c) => c.fixed || (state.cols ? state.cols.includes(c.id) : !c.hidden));
+  // Выгрузка — видимые колонки; ЕИ на экране показана в «Плане» («100 м²»), в Excel — своей колонкой после «Места» (числа без единиц не читаются)
+  const visibleCols = POSITION_COLUMNS.filter((c) => c.fixed || c.id === 'unit' || (state.cols ? state.cols.includes(c.id) : !c.hidden));
 
   return h('div', { className: 'pj-tab vr-tab', 'data-testid': 'vor-registry' },
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
@@ -175,7 +179,10 @@ export function PositionsRegistry(props: PositionsRegistryProps): ReactElement {
       testId: 'vr-table', rows, rowKey: (r) => r.id, columns: POSITION_COLUMNS, filters: POSITION_FILTERS, state, onState,
       isOverdue: (r) => r.st.overdue, overdueHint: finish ? undefined : 'Нет срока объекта: укажите плановое окончание в «Сводке» — тогда «Только просроченные» заработает.',
       groupBy: { label: 'Корпус', key: (r) => r.corp }, toneOf: (r) => r.st.tone, toneLabel: TONE_LABEL,
-      selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId,
+      selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId, quick: { filter: 'status' }, selectMode: true,
+      compact: (r) => h('span', { className: 'vr-c' },
+        h('span', { className: 'vr-c-name' }, h('b', null, r.work), h('span', { className: 'pf-muted' }, r.place)),
+        h('span', { className: 'vr-c-q' }, h('b', null, `${fmtQty(r.fact)} / ${fmtQty(r.plan)} ${r.unit}`), statusCell(r.st))),
       actions: props.actions ? (sel) => props.actions!(sel, { reload, clear: () => setSelected(new Set()), notify: setNotice, columns: visibleCols }) : undefined,
       tools: props.tools ? props.tools({ rows: ordered, columns: visibleCols }) : undefined,
       empty: 'Позиций пока нет — загрузите и подтвердите ВОР во вкладке «Загрузка».',
@@ -187,6 +194,18 @@ export function PositionsRegistry(props: PositionsRegistryProps): ReactElement {
 
 export const POSITIONS_REGISTRY_CSS = `
 .vr-tab{min-width:0}
+.vr-pct{display:inline-flex;align-items:center;gap:8px;min-width:130px}
+.vr-pct b{font-weight:600;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.vr-bar{flex:1 1 auto;height:6px;border-radius:3px;background:var(--p2-chart-track,var(--hover-bg));overflow:hidden;min-width:60px}
+.vr-bar-fill{display:block;height:100%;background:var(--p2-chart-fact)}
+.vr-bar-fill--done{background:var(--p2-status-green-fg)}
+.vr-c{display:flex;justify-content:space-between;gap:10px}
+.vr-c-name{display:flex;flex-direction:column;gap:2px;min-width:0}
+.vr-c-name b{font-size:14.5px;font-weight:600}
+.vr-c-name .pf-muted{font-size:12.5px}
+.vr-c-q{display:flex;flex-direction:column;align-items:flex-end;gap:4px;white-space:nowrap}
+.vr-c-q b{font-variant-numeric:tabular-nums}
+.p2-reg__table td[data-col="plan"]{white-space:nowrap}
 .vr-status{display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
 .p2-reg__table td[data-col="status"]{text-align:left}
 .p2-reg__table td[data-col="status"] .vr-status{justify-content:flex-start}
