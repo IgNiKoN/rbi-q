@@ -81,7 +81,7 @@
 | `RecordFields` — карточка записи | `fields: { id, label, value }[]`, `cols?` | `.p2-rec*` | «подпись — значение»: ПК — `cols` (4), планшет — 2, телефон — 1; пустое — «—» |
 | `StageBadge` | `label`, `tone`, `testId?` | `StatusBadge` | метка стадии или вида: цвет и слово вместе |
 | `StageStrip` | `items: { code, name }[]`, `current` | `.p2-stages*` | пройденные / текущая / будущие стадии; подписи — из справочника сервера |
-| `PlaceTree` — дерево мест | `roots`, `kids`, `open`, `onToggle`, `selected?`, `onSelect?`, `kind`, `meta?`, `menu?`, `limit?`, `more?`, `onMore?` | `.p2-tree*`, `P2_TREE_CSS` | строка: ▸/▾, название, вид · сводка, «⋯»; дети грузит экран при раскрытии; длинный список — «ещё N» |
+| `PlaceTree` — дерево мест | `roots`, `kids`, `open`, `onToggle`, `selected?`, `onSelect?`, `kind`, `meta?`, `menu?`, `limit?`, `more?`, `onMore?`, `check?` (галочка у узла: `{checked, onChange, disabled?}` или null; P2-0048), `extra?` (строка под названием — метки), `action?` (кнопка справа, напр. «+») | `.p2-tree*`, `P2_TREE_CSS` | строка: ▸/▾, название, вид · сводка, «⋯»; дети грузит экран при раскрытии; длинный список — «ещё N» |
 | `RegistryTable` (доп.) | `noSelect?: boolean` | — | справочник без массовых действий: ни галочек, ни «Выбрать» |
 
 ### По мере появления спроса
