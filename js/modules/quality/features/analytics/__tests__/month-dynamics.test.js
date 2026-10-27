@@ -302,3 +302,30 @@ describe('этап 3: подрядчики, дефекты, повторы, пр
     assert.ok(r.findings.recs.some((t) => t.includes('не указана причина')));
   });
 });
+
+describe('режим «Компания» (решение владельца 28.10: как «Компания» в Сводке)', () => {
+  let rl, rg;
+  before(() => {
+    const d = [];
+    for (let i = 1; i <= 8; i++) d.push(chk(`2026-09-${String(i).padStart(2, '0')}T10:00:00`, { c: 'А', obj: 'ЖК 1', final: 90 }));
+    for (let i = 1; i <= 8; i++) d.push(chk(`2026-09-${String(i + 10).padStart(2, '0')}T10:00:00`, { c: 'А', obj: 'ЖК 2', final: 60, b3: 1 }));
+    for (let i = 1; i <= 8; i++) d.push(chk(`2026-08-${String(i).padStart(2, '0')}T10:00:00`, { c: 'А', obj: 'ЖК 2', final: 85 }));
+    rl = computeMonthDynamics(d, { month: '2026-09' });
+    rg = computeMonthDynamics(d, { month: '2026-09', mode: 'global' });
+  });
+  it('подрядчик на каждом объекте — отдельно («подрядчик [объект]»)', () => {
+    assert.deepEqual(rl.cons.map((c) => c.name), ['А']);
+    assert.deepEqual(rg.cons.map((c) => c.name).sort(), ['А [ЖК 1]', 'А [ЖК 2]']);
+  });
+  it('объекты: этот / прошлый месяц, ИУрК объекта, заметное изменение', () => {
+    const o2 = rg.objs.find((o) => o.name === 'ЖК 2');
+    assert.equal(o2.mon.N, 8);
+    assert.equal(o2.monPrev.N, 8);
+    assert.equal(o2.mon.base.mean, 60);
+    assert.equal(o2.cmpBase.kind, 'notable');
+    assert.equal(o2.cmpBase.good, false);
+    assert.ok(o2.iurk && o2.iurk.groups === 1);
+    const o1 = rg.objs.find((o) => o.name === 'ЖК 1');
+    assert.equal(o1.cmpBase.kind, 'few'); // в августе на ЖК 1 проверок нет
+  });
+});

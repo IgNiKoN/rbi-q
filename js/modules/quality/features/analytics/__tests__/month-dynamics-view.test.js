@@ -59,6 +59,19 @@ describe('«Сводка / Динамика за месяц»', () => {
     assert.equal(document.querySelector('[data-md-view="month"]').getAttribute('aria-pressed'), 'true');
   });
 
+  it('«Компания» в тумблере Сводки — блок «Объекты компании»', async () => {
+    window.onepagerMode = 'global';
+    view.syncMonthDynamics();
+    await wait(60);
+    const root = document.getElementById('md-root');
+    assert.match(root.textContent, /Объекты компании за/);
+    assert.match(root.textContent, /Компания: все объекты/);
+    window.onepagerMode = 'local';
+    view.syncMonthDynamics();
+    await wait(60);
+    assert.doesNotMatch(root.textContent, /Объекты компании за/);
+  });
+
   it('обратно на «Сводку» — экран месяца скрыт, Сводка видна', async () => {
     document.querySelector('[data-md-view="summary"]').click();
     await wait(10);

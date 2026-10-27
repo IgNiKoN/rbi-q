@@ -50,6 +50,7 @@ const HINTS = {
   sys: '<b>Системность брака B2</b> — у каждого подрядчика пункт веса B2 с наибольшей долей невыполнения за месяц. От 20 % — штраф к УрК, от 40 % — красная зона.',
   pareto: '<b>Причины дефектов (Парето)</b> — какие причины дают 80 % дефектов. Причину инженер указывает по желанию; дефекты без причины показаны отдельно.',
   iko: '<b>ИКО — индекс критичности объекта</b> (как в «Сводке»): 0 — нет риска, 1 — максимальный; до 0,3 — низкий риск, 0,3–0,6 — повышенный, от 0,6 — высокий. Считается за 3 месяца по связкам «подрядчик × вид работ» от 7 проверок.',
+  cobj: '<b>Объекты компании</b> — как «Компания» в обычной Сводке, но за календарный месяц: у каждого объекта базовый УрК, ИУрК (надёжность), ИКО за 3 месяца, доля проверок с B3 и красной зоны; изменение к прошлому месяцу — «заметно», только если больше разброса.',
   concl: '<b>Выводы месяца</b> собираются автоматически. «Заметно изменилось» — только то, что больше разброса; остальное — «в пределах разброса».'
 };
 
@@ -96,6 +97,11 @@ function zoneOfUrk(v) { return v >= 85 ? 'ok' : v >= 70 ? 'warn' : 'bad'; }
 function hint(k) { return '<button type="button" class="md-hint" data-md-hint="' + k + '" aria-label="Как считается">?</button>'; }
 
 /* ---------- Режим ---------- */
+
+/** «Объект / Компания» — общий тумблер Сводки (window.onepagerMode). */
+function getOnepagerScope() {
+  return typeof window !== 'undefined' && window.onepagerMode === 'global' ? 'global' : 'local';
+}
 
 export function getOnepagerView() {
   try { return localStorage.getItem(MODE_KEY) === 'month' ? 'month' : 'summary'; } catch (_) { return 'summary'; }
@@ -607,13 +613,14 @@ function blockTiles(r) {
     + '<div class="md-d6"><div class="md-tiles">' + r.tiles.map((t) => tileHtml(t, r)).join('') + '</div></div>';
 }
 
-function blockTrend(r) {
+function blockTrend(r, n) {
   const first = r.trend[0].key, last = r.trend[r.trend.length - 1].key;
-  return '<h2 class="md-sec"><span class="n">3</span>Динамика за 12 месяцев<span class="note">' + esc(monthFull(first).toLowerCase()) + ' — ' + esc(monthFull(last).toLowerCase()) + '</span></h2>'
+  n = n || 3;
+  return '<h2 class="md-sec"><span class="n">' + n + '</span>Динамика за 12 месяцев<span class="note">' + esc(monthFull(first).toLowerCase()) + ' — ' + esc(monthFull(last).toLowerCase()) + '</span></h2>'
     + '<div class="md-card md-d4"><h3>Уровень качества (УрК) по месяцам' + hint('trend') + '</h3>'
     + '<div class="md-lg"><span><i class="line" style="background:var(--md-gold)"></i>Базовый УрК</span><span><i style="background:var(--md-gold);opacity:.3"></i>разброс ±</span><span><i class="dash"></i>ИУрК (надёжность)</span><span><i class="hollow"></i>меньше 7 проверок</span><span><i style="background:var(--md-line2)"></i>число проверок</span></div>'
     + '<div class="md-chart" data-md-chart="trend"></div></div>'
-    + '<div class="md-card md-d2"><h3><span class="md-sec" style="margin:0;font-size:13px"><span class="n">4</span></span>Зоны качества по месяцам' + hint('zones') + '</h3>'
+    + '<div class="md-card md-d2"><h3>Зоны качества по месяцам' + hint('zones') + '</h3>'
     + '<div class="md-lg"><span><i style="background:var(--md-ok)"></i>зелёная (от 85)</span><span><i style="background:var(--md-warn)"></i>жёлтая (70–84)</span><span><i style="background:var(--md-bad)"></i>красная (B3 или ниже 70)</span></div>'
     + '<div class="md-chart" data-md-chart="zones"></div></div>';
 }
@@ -749,6 +756,37 @@ function blockObjects(r) {
     + '<div class="md-card md-d3"><h3>Объекты за ' + esc(monthFull(r.month).toLowerCase()) + hint('iko') + '</h3><p class="sub">ИКО: 0 — нет риска, 1 — максимальный; «мало данных» — нет связок от 7 проверок за 3 месяца</p><div class="md-tblw"><table class="md-tbl cards"><thead><tr><th>Объект</th><th class="r">ИКО</th><th class="r">' + ps + '</th><th>Риск</th><th>Зоны</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
 }
 
+function cmpCell(cmp, d) {
+  if (!cmp || cmp.d == null) return '<span class="md-dlt same">—<small>нет прошлого</small></span>';
+  if (cmp.kind === 'few') return '<span class="md-dlt same">' + fmtS(cmp.d, d) + '<small>мало данных</small></span>';
+  const cls = cmp.kind === 'notable' ? (cmp.good ? 'good' : 'bad') : 'same';
+  return '<span class="md-dlt ' + cls + '">' + (cmp.d > 0 ? '▲ ' : cmp.d < 0 ? '▼ ' : '') + fmtS(cmp.d, d) + '<small>' + (cmp.kind === 'notable' ? 'заметно' : 'в пределах разброса') + '</small></span>';
+}
+
+/** Режим «Компания»: объекты компании «этот / прошлый месяц» (как глобальная Сводка — рейтинг и антирейтинг объектов). */
+function blockCompanyObjects(r) {
+  const ps = monthShort(r.prevMonth);
+  const rows = r.objs.map((o, k) => {
+    const c = o.cur, p = o.prev, m = o.mon, mp = o.monPrev;
+    const d = c && p ? c.iko - p.iko : null;
+    const mark = k < 5 ? '<span style="display:inline-block;width:10px;height:3px;border-radius:2px;vertical-align:3px;margin-right:6px;background:' + OBJ_COLORS[k] + '"></span>' : '';
+    const few = m.N < FEW_DATA_N;
+    return '<tr class="' + (few ? 'faint' : '') + '"><td data-label="Объект" class="name full nolbl">' + mark + esc(o.name) + '<small>' + m.N + ' ' + plural(m.N, 'проверка', 'проверки', 'проверок') + ' · ' + ps + ': ' + mp.N + '</small></td>'
+      + '<td data-label="Базовый УрК" class="r">' + (m.base ? '<b class="md-' + zoneOfUrk(m.base.mean) + '">' + fmt(m.base.mean, 1) + '</b>' + (m.base.E != null ? ' <span class="md-muted">± ' + fmt(m.base.E, 1) + '</span>' : '') : '—') + '</td>'
+      + '<td data-label="Изменение УрК">' + cmpCell(o.cmpBase, 1) + '</td>'
+      + '<td data-label="ИУрК" class="r">' + (o.iurk ? '<b class="md-' + zoneOfUrk(o.iurk.mean) + '">' + fmt(o.iurk.mean, 1) + '</b>' + (o.iurk.few ? ' <span class="md-muted">мало</span>' : '') : '—') + '</td>'
+      + '<td data-label="Изменение ИУрК">' + cmpCell(o.cmpIurk, 1) + '</td>'
+      + '<td data-label="ИКО" class="r"><b class="' + (c ? 'md-' + (c.zone === 'green' ? 'ok' : c.zone === 'yellow' ? 'warn' : 'bad') : 'md-muted') + '">' + (c ? fmt(c.iko, 2) : '—') + '</b>' + (d != null ? ' <span class="md-dlt ' + (d > 0.005 ? 'bad' : d < -0.005 ? 'good' : 'same') + '">' + (d > 0 ? '▲' : d < 0 ? '▼' : '') + fmtS(d, 2) + '</span>' : '') + '</td>'
+      + '<td data-label="Риск">' + (c ? zoneChip(c.zone, c.status) : '<span class="md-muted">мало данных</span>') + '</td>'
+      + '<td data-label="С B3" class="r">' + (m.b3share ? fmt(m.b3share.mean) + ' %' : '—') + '</td>'
+      + '<td data-label="Красная зона" class="r">' + (m.red ? fmt(m.red.mean) + ' %' : '—') + '</td></tr>';
+  }).join('');
+  return '<h2 class="md-sec"><span class="n">3</span>Объекты компании за ' + esc(monthFull(r.month).toLowerCase()) + hint('cobj') + '<span class="note">сначала высокий риск (ИКО); изменения — к прошлому месяцу</span></h2>'
+    + '<div class="md-card md-d6"><div class="md-tblw"><table class="md-tbl cards"><thead><tr><th>Объект</th><th class="r">Базовый УрК</th><th>Изменение ' + hint('delta') + '</th><th class="r">ИУрК ' + hint('iurk') + '</th><th>Изменение</th><th class="r">ИКО ' + hint('iko') + '</th><th>Риск</th><th class="r">С B3</th><th class="r">Красная</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + '<p class="sub" style="margin:8px 0 0">Бледные строки — меньше 7 проверок за месяц. Нажмите «Объект» вверху, чтобы смотреть один объект.</p></div>'
+    + '<div class="md-card md-d6"><h3>ИКО объектов по месяцам' + hint('iko') + '</h3><div class="md-lg">' + r.objs.slice(0, 5).map((o, k) => '<span><i class="line" style="background:' + OBJ_COLORS[k] + '"></i>' + esc(o.name) + '</span>').join('') + '<span>фон: зелёный — низкий риск, жёлтый — повышенный, красный — высокий</span></div><div class="md-chart" data-md-chart="iko"></div></div>';
+}
+
 function blockConcl(r) {
   const F = r.findings;
   const li = (a) => a.map((t) => '<li>' + esc(t) + '</li>').join('');
@@ -822,19 +860,23 @@ export function renderMonthDynamics(root, checks) {
   const months = availableMonths(checks);
   const month = pickMonth(months);
   state.month = month;
-  const r = computeMonthDynamics(checks, Object.assign({ month }, calcOptions()));
+  const global = getOnepagerScope() === 'global';
+  const r = computeMonthDynamics(checks, Object.assign({ month, mode: global ? 'global' : 'local' }, calcOptions()));
   state.result = r;
   const c = r.cur;
   const bar = '<div class="md-bar"><label class="md-f"><span>Месяц</span><select data-md-month>' + monthOptions(months, month) + '</select></label></div>'
     + '<div class="md-summary"><b>' + esc(monthFull(month)) + '</b> · ' + fmt(c.N) + ' ' + plural(c.N, 'проверка', 'проверки', 'проверок')
     + ' · надёжность «' + esc(c.conf.name) + '» · сравнение с: ' + esc(monthFull(r.prevMonth).toLowerCase())
+    + ' · ' + (global ? '<b>Компания</b>: все объекты, подрядчики — по объектам' : 'вид «Объект»')
     + (r.skippedNoMetrics ? ' · без оценки: ' + r.skippedNoMetrics : '') + '</div>'
     + '<div class="md-summary">Объект, подрядчик, вид работ и инспектор — из фильтров выше; период фильтров здесь не действует.</div>';
   let body;
   if (!c.N) {
     body = blockVolume(r, checks) + '<div class="md-card md-d6"><p class="md-empty">За этот месяц нет проверок по выбранным фильтрам.</p></div>';
   } else {
-    body = blockVolume(r, checks) + blockTiles(r) + blockTrend(r) + blockCons(r) + blockDefects(r) + blockObjects(r) + blockConcl(r);
+    body = global
+      ? blockVolume(r, checks) + blockTiles(r) + blockCompanyObjects(r) + blockTrend(r, 4) + blockCons(r) + blockDefects(r) + blockConcl(r)
+      : blockVolume(r, checks) + blockTiles(r) + blockTrend(r) + blockCons(r) + blockDefects(r) + blockObjects(r) + blockConcl(r);
   }
   root.innerHTML = bar + '<div class="md-grid">' + body + '</div>';
   drawCharts(root);
@@ -951,7 +993,7 @@ function ensureRoot(section) {
 function fingerprint(data) {
   let last = '';
   for (let i = 0; i < data.length; i++) { const d = data[i] && data[i].date; if (d && d > last) last = d; }
-  return [state.month || '', data.length, last, document.documentElement.getAttribute('data-theme') || ''].join('|');
+  return [state.month || '', data.length, last, getOnepagerScope()].join('|');
 }
 
 function applyView(force) {

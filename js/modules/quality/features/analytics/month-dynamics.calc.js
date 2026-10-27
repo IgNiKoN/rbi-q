@@ -379,9 +379,14 @@ export function contractorMonthMetrics(list, opts) {
   };
 }
 
-function _byContractor(list) {
+/** Режим «Компания» (как глобальная Сводка): подрядчик на каждом объекте отдельно — «подрядчик [объект]». */
+function _contractorKey(c, opts) {
+  return opts && opts.mode === 'global' ? checkContractor(c) + ' [' + checkObject(c) + ']' : checkContractor(c);
+}
+
+function _byContractor(list, opts) {
   var g = {};
-  (list || []).forEach(function (c) { var k = checkContractor(c); (g[k] = g[k] || []).push(c); });
+  (list || []).forEach(function (c) { var k = _contractorKey(c, opts); (g[k] = g[k] || []).push(c); });
   return g;
 }
 
@@ -439,7 +444,7 @@ export function computeMonthDetails(byMonth, keys, month, opts) {
   var prevL = (byMonth[prevKey] || []).filter(hasMetrics);
 
   // Подрядчики: календарный месяц, все проверки (без «последних 15»).
-  var gc = _byContractor(curL), gp = _byContractor(prevL);
+  var gc = _byContractor(curL, opts), gp = _byContractor(prevL, opts);
   var cons = Object.keys(gc).map(function (name) {
     var m = contractorMonthMetrics(gc[name], opts);
     if (!m) return null;
@@ -499,7 +504,7 @@ export function computeMonthDetails(byMonth, keys, month, opts) {
       var streak = 0, hist = [];
       for (var j = 0; j < 24; j++) {
         var mk = shiftMonth(month, -j);
-        var l = (byMonth[mk] || []).filter(function (c) { return checkContractor(c) === name && c.state && c.state[ids[k].id] && checkType(c) === ids[k].type; });
+        var l = (byMonth[mk] || []).filter(function (c) { return _contractorKey(c, opts) === name && c.state && c.state[ids[k].id] && checkType(c) === ids[k].type; });
         var fl = l.filter(function (c) { return _isFail(c.state[ids[k].id]); }).length;
         if (fl >= 2 || (fl >= 1 && l.length <= 3)) { streak++; hist.unshift({ key: mk, chk: l.length, fail: fl }); } else break;
       }
@@ -542,7 +547,16 @@ export function computeMonthDetails(byMonth, keys, month, opts) {
         zone: v < 0.3 ? 'green' : v < 0.6 ? 'yellow' : 'red' };
     });
     var mon = aggregateChecks(curL.filter(function (c) { return checkObject(c) === o; }));
-    return { name: o, series: series, cur: series[series.length - 1], prev: series[series.length - 2] || null, mon: mon };
+    var monPrev = aggregateChecks(prevL.filter(function (c) { return checkObject(c) === o; }));
+    var iurk = integralUrk(mon.list, opts), iurkPrev = integralUrk(monPrev.list, opts);
+    return { name: o, series: series, cur: series[series.length - 1], prev: series[series.length - 2] || null, mon: mon, monPrev: monPrev,
+      iurk: iurk, iurkPrev: iurkPrev,
+      cmpBase: compareMonths(mon.base, monPrev.base, true), cmpIurk: compareMonths(iurk, iurkPrev, true) };
+  });
+  // Сравнение объектов компании: сначала высокий риск (ИКО), объекты без ИКО — ниже.
+  objs.sort(function (a, b) {
+    var ia = a.cur ? a.cur.iko : -1, ib = b.cur ? b.cur.iko : -1;
+    return ib - ia || b.mon.N - a.mon.N;
   });
 
   return { cons: cons, sysB2: sysB2, top: top, heat1: heat1, heat3: heat3, repeats: repeats,
