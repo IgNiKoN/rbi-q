@@ -957,7 +957,7 @@ else {
     const uuid = () => crypto.randomUUID();
     const cA7 = (await j(await rpc('pf_my_company_access', {}, tok.alfaAdmin))).find((c) => c.company_name === 'Альфа')?.company_id;
     const d7 = await j(dictsProbe);
-    check('0047: справочники — 6 стадий, 5 видов объектов', d7?.stages?.length === 6 && d7?.object_kinds?.length === 5);
+    check('0047: справочники — 6 стадий, 7 видов объектов (P2-0054: + детский сад, школа)', d7?.stages?.length === 6 && d7?.object_kinds?.length === 7);
     check('0047: без входа справочники не отдаются', !(await rpc('pf_project_dicts', {})).ok);
     const cat = await j(await rpc('pf_project_catalog', { p_company: cA7 }, tok.alfaAdmin));
     const p7 = Array.isArray(cat) ? cat.find((x) => x.name === REST_PROJECT && !x.archived_at) : null;
