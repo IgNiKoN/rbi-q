@@ -1,0 +1,1529 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Месяц: динамика и дефекты — макет</title>
+<style>
+/* Токены — из css/style.css приложения: темы rbi-dark-v2 / rbi-light-v2 */
+:root,[data-theme="dark"]{
+  --bg:#101923;--card:#172330;--card2:#1c2b39;--text:#f7f4ee;--muted:#a8b2bd;--line:rgba(255,255,255,.12);--line2:rgba(255,255,255,.22);
+  --gold:#c49a5f;--gold2:#d8bd91;--accent-text:#d8bd91;--ok:#7a9a88;--warn:#d9b45a;--bad:#c46b63;--blue:#7a9bb0;--violet:#a493c4;
+  --hover:rgba(255,255,255,.07);--sel:rgba(196,154,95,.10);--chip:rgba(196,154,95,.14);--shadow:0 12px 28px rgba(0,0,0,.28);--header:rgba(16,25,35,.95);
+  --frame:#0a1118;color-scheme:dark}
+[data-theme="light"]{
+  --bg:#f7f4ee;--card:#ffffff;--card2:#fbf9f5;--text:#172330;--muted:#66727f;--line:rgba(28,43,57,.14);--line2:rgba(28,43,57,.24);
+  --gold:#c49a5f;--gold2:#d8bd91;--accent-text:#8a6a35;--ok:#5f7f6d;--warn:#b8844a;--bad:#9f4c45;--blue:#4c7288;--violet:#7a6aa0;
+  --hover:rgba(28,43,57,.055);--sel:rgba(196,154,95,.13);--chip:rgba(196,154,95,.16);--shadow:0 12px 28px rgba(23,35,48,.08);--header:rgba(247,244,238,.95);
+  --frame:#e4dfd5;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--frame);color:var(--text);font-family:Inter,"Segoe UI",Roboto,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,select,input{font:inherit;color:inherit}
+a{color:var(--accent-text)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ===== Панель макета ===== */
+.mock-bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 16px;background:#0b1219;color:#e9e4da;border-bottom:1px solid rgba(255,255,255,.1);font-size:12px}
+[data-theme="light"] .mock-bar{background:#1c2b39}
+.mock-bar b{font-weight:800;letter-spacing:.01em}
+.mock-bar .tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1c2b39;background:#c49a5f;border-radius:4px;padding:2px 6px}
+.seg{display:inline-flex;border:1px solid rgba(255,255,255,.18);border-radius:8px;overflow:hidden}
+.seg button{background:transparent;border:0;color:#cfd6dd;padding:5px 10px;cursor:pointer;font-size:12px;font-weight:650}
+.seg button+button{border-left:1px solid rgba(255,255,255,.18)}
+.seg button.on{background:#c49a5f;color:#172330}
+.mock-bar .sp{flex:1}
+.mock-bar a{color:#d8bd91;font-weight:700;text-decoration:none}
+@media (max-width:640px){.mock-bar{position:static;padding:8px 12px}.mock-bar b{font-size:11px}}
+
+/* ===== Рамка устройства ===== */
+.stage{padding:16px 0 48px}
+.device{margin:0 auto;background:var(--bg);transition:max-width .2s}
+.device[data-dev="phone"]{max-width:375px;border:1px solid var(--line2);border-radius:22px;box-shadow:var(--shadow)}
+.device[data-dev="tablet"]{max-width:768px;border:1px solid var(--line2);border-radius:16px;box-shadow:var(--shadow)}
+.device[data-dev="desktop"]{max-width:1440px;border-top:1px solid var(--line)}
+.device[data-dev="phone"] .app-head,.device[data-dev="tablet"] .app-head{border-radius:16px 16px 0 0}
+.app{container-type:inline-size;container-name:app;min-width:0}
+
+/* ===== Шапка приложения и подвкладки ===== */
+.app-head{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.02em}
+.logo i{width:26px;height:26px;border-radius:6px;background:var(--gold);color:#172330;display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:900}
+.nav{display:flex;gap:4px;margin-left:8px}
+.nav span{padding:6px 10px;border-radius:6px;color:var(--muted);font-weight:650;font-size:12px}
+.nav span.on{color:var(--text);background:var(--hover)}
+.head-user{margin-left:auto;color:var(--muted);font-size:12px}
+.subtabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--card);overflow-x:auto;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.subtabs span{flex:none;padding:11px 12px 9px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.subtabs span.on{color:var(--accent-text);border-bottom-color:var(--gold)}
+.subtabs span.on em{font-style:normal;font-size:9px;font-weight:800;color:#172330;background:var(--gold);border-radius:4px;padding:1px 4px;margin-left:5px;vertical-align:1px}
+
+/* ===== Фильтры (закреплены) ===== */
+.filters{position:sticky;top:var(--mbh,44px);z-index:20;background:var(--header);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 16px 8px}
+.f-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f span{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.f select{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:6px 26px 6px 9px;font-size:12.5px;font-weight:650;max-width:100%;appearance:none;-webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 13px) 55%,calc(100% - 9px) 55%;background-size:4px 4px;background-repeat:no-repeat}
+.f-month select{border-color:var(--gold);font-weight:800}
+.f-more{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.btn.f-toggle{display:none}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:750;cursor:pointer;text-decoration:none;color:var(--text);white-space:nowrap}
+.btn:hover{background:var(--hover)}
+.btn-gold{gap:4px;background:var(--gold);border-color:var(--gold);color:#172330}
+.btn-gold:hover{background:var(--gold2)}
+.f-actions{display:flex;gap:6px;margin-left:auto}
+.f-summary{margin-top:7px;font-size:11.5px;color:var(--muted)}
+.f-summary b{color:var(--text)}
+
+/* ===== Сетка блоков ===== */
+.content{padding:14px 16px 28px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.grid>*{min-width:0}
+.sec{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;margin:14px 0 0;font-size:15px;font-weight:800;letter-spacing:-.01em}
+.sec .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--chip);color:var(--accent-text);font-size:11px;font-weight:900;flex:none;transform:translateY(-1px)}
+.sec .note{font-size:11.5px;font-weight:600;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(15,23,42,.04);min-width:0}
+.card h3{margin:0 0 4px;font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px}
+.card .sub{margin:0 0 10px;font-size:11.5px;color:var(--muted)}
+.chart{width:100%;min-height:60px}
+.muted{color:var(--muted)}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+.chipz{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.chipz.green{background:color-mix(in srgb,var(--ok) 20%,transparent);color:var(--ok)}
+.chipz.yellow{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+.chipz.red{background:color-mix(in srgb,var(--bad) 20%,transparent);color:var(--bad)}
+.chipz.grey{background:var(--hover);color:var(--muted)}
+.conf{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap}
+.conf i{display:inline-flex;gap:1.5px}
+.conf i b{width:4px;height:10px;border-radius:1px;background:var(--line2)}
+.conf i b.on{background:var(--gold)}
+.conf.few{color:var(--muted)}
+
+/* подсказка «как считается» */
+.hint{flex:none;width:17px;height:17px;border-radius:50%;border:1px solid var(--line2);background:transparent;color:var(--muted);font-size:10px;font-weight:800;line-height:1;cursor:help;padding:0;display:inline-grid;place-items:center}
+.hint:hover,.hint.on{border-color:var(--gold);color:var(--accent-text)}
+#pop{position:fixed;z-index:100;max-width:300px;background:var(--card2);color:var(--text);border:1px solid var(--gold);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.45;box-shadow:var(--shadow);display:none}
+#pop b{color:var(--accent-text)}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:9px 14px;font-size:12px;display:none;z-index:120;max-width:calc(100vw - 32px)}
+
+/* 1. Объём выборки */
+.vol-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.vol-strip>div{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.vol-strip .k{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.vol-strip .v{font-size:20px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+.vol-strip .v small{font-size:11px;font-weight:600;color:var(--muted);margin-left:4px}
+.ladder{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin:6px 0 4px}
+.ladder div{padding:6px 4px 5px;border-radius:6px;background:var(--hover);text-align:center;font-size:10px;line-height:1.2;color:var(--muted);font-weight:650;min-width:0;hyphens:auto;-webkit-hyphens:auto}
+.ladder div small{display:block;font-size:9px;opacity:.8;font-weight:600}
+.ladder div.past{background:color-mix(in srgb,var(--gold) 18%,transparent);color:var(--text)}
+.ladder div.cur{background:var(--gold);color:#172330;font-weight:800}
+.comp{display:grid;gap:5px}
+.comp .row{display:grid;grid-template-columns:92px minmax(0,1fr) 62px;gap:8px;align-items:center;font-size:11.5px}
+.comp .bar{position:relative;height:10px;background:var(--hover);border-radius:3px}
+.comp .bar b{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--gold);opacity:.8}
+.comp .bar i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.55}
+.comp .row span:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.note-box{margin-top:10px;font-size:11.5px;color:var(--muted);border-left:3px solid var(--gold);padding:4px 0 4px 10px}
+.vol-cols{display:grid;gap:14px}
+
+/* 2. Плитки */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 11px 9px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.tile:last-child{grid-column:1/-1}
+.t-head{display:flex;align-items:flex-start;gap:6px;justify-content:space-between}
+.t-title{font-size:10.5px;font-weight:750;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);line-height:1.25}
+.t-val{font-size:26px;font-weight:850;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums;margin-top:3px}
+.t-val small{font-size:14px;font-weight:700;margin-left:1px}
+.t-val .pm{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0;margin-left:4px}
+.t-range{font-size:11px;color:var(--muted)}
+.t-prev{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.t-prev b{color:var(--text);font-weight:700}
+.t-delta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:11px;font-weight:750;margin-top:3px;font-variant-numeric:tabular-nums}
+.t-delta .badge{font-size:10px;font-weight:800;border-radius:999px;padding:1px 7px;background:var(--hover);color:var(--muted)}
+.t-delta.notable.good .badge{background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok)}
+.t-delta.notable.bad .badge{background:color-mix(in srgb,var(--bad) 22%,transparent);color:var(--bad)}
+.t-delta.notable.good{color:var(--ok)} .t-delta.notable.bad{color:var(--bad)}
+.t-delta.within,.t-delta.few{color:var(--muted)}
+.tile .spark{margin-top:4px;width:100%;height:24px}
+
+/* таблицы → карточки на узком экране */
+.tbl-wrap{overflow-x:auto;max-width:100%}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.tbl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.r,.tbl th.r{text-align:right}
+.tbl .name{font-weight:750}
+.rk-inline{display:none;color:var(--muted);margin-right:4px}
+.tbl .name small{display:block;font-weight:500;color:var(--muted);font-size:11px}
+.tbl tr.faint td{opacity:.62}
+.rng{position:relative;height:14px;min-width:110px;background:linear-gradient(90deg,color-mix(in srgb,var(--bad) 14%,transparent) 0 70%,color-mix(in srgb,var(--warn) 14%,transparent) 70% 85%,color-mix(in srgb,var(--ok) 14%,transparent) 85% 100%);border-radius:3px}
+.rng b{position:absolute;top:5px;height:4px;background:var(--gold);opacity:.6;border-radius:2px}
+.rng i{position:absolute;top:2px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--gold);border:2px solid var(--card)}
+.rng i.hollow{background:var(--card);border-color:var(--gold)}
+.dlt{font-weight:800;white-space:nowrap}
+.dlt small{display:block;font-weight:650;font-size:10px;color:var(--muted)}
+.dlt.good{color:var(--ok)} .dlt.bad{color:var(--bad)} .dlt.same{color:var(--muted)}
+
+/* 6. Дефекты */
+.crit-big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.crit-big .v{font-size:30px;font-weight:850;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.mini-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.mini-kpis>div{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.mini-kpis .k{font-size:10px;color:var(--muted);font-weight:700}
+.mini-kpis .v{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.top{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.top li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.top li:last-child{border-bottom:0}
+.top .rk{font-size:11px;font-weight:800;color:var(--muted);text-align:center}
+.top .nm{font-weight:700;font-size:12.5px;line-height:1.3;min-width:0}
+.top .nm small{display:block;color:var(--muted);font-weight:500;font-size:11px}
+.bclass{display:inline-block;font-size:9.5px;font-weight:850;border-radius:4px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.bclass.b1{background:color-mix(in srgb,var(--blue) 24%,transparent);color:var(--blue)}
+.bclass.b2{background:color-mix(in srgb,var(--warn) 24%,transparent);color:var(--warn)}
+.bclass.b3{background:color-mix(in srgb,var(--bad) 24%,transparent);color:var(--bad)}
+.top .rt{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.top .of{font-size:12px;font-weight:800;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.top .of small{display:block;font-size:10.5px;font-weight:600;color:var(--muted)}
+.top .meter{grid-column:2/3;height:4px;background:var(--hover);border-radius:2px;position:relative}
+.top .meter b{position:absolute;left:0;top:0;bottom:0;background:var(--bad);border-radius:2px;opacity:.75}
+.top .meter i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.5}
+.arrow{font-size:11px;font-weight:800;white-space:nowrap}
+.arrow.up{color:var(--bad)} .arrow.down{color:var(--ok)} .arrow.eq,.arrow.na{color:var(--muted);font-weight:650}
+.photo{width:34px;height:34px;border-radius:6px;flex:none;position:relative;overflow:hidden;background:repeating-linear-gradient(135deg,var(--hover) 0 6px,transparent 6px 12px),var(--card2);border:1px solid var(--line2);display:grid;place-items:center;cursor:pointer}
+.photo svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.8}
+.photo em{position:absolute;right:1px;bottom:0;font-style:normal;font-size:9px;font-weight:800;color:var(--text)}
+.photo.none{opacity:.35;cursor:default}
+.heat{width:100%;border-collapse:separate;border-spacing:3px;font-size:11.5px}
+.heat th{font-size:10px;font-weight:700;color:var(--muted);text-align:center;padding:2px;white-space:nowrap}
+.heat th.rowh{text-align:left;font-size:11.5px;color:var(--text);font-weight:750;white-space:nowrap}
+.heat td{text-align:center;border-radius:6px;padding:7px 2px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.heat td small{display:block;font-size:9px;font-weight:650;opacity:.8}
+.heat td.empty{background:transparent;color:var(--line2);font-weight:500}
+.heat td.pale{opacity:.45;background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgba(127,127,127,.18) 4px 6px)}
+.heat-scale{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.heat-scale span{width:22px;height:10px;border-radius:2px;display:inline-block}
+.seg2{display:inline-flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden;margin-left:auto}
+.seg2 button{background:transparent;border:0;padding:3px 8px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer}
+.seg2 button.on{background:var(--chip);color:var(--accent-text)}
+.rep{list-style:none;margin:0;padding:0}
+.rep li{padding:8px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
+.rep li:last-child{border-bottom:0}
+.rep .nm{font-weight:700;font-size:12.5px;min-width:0}
+.rep .nm small{display:block;color:var(--muted);font-weight:500;font-size:11px}
+.rep .streak{font-size:11px;font-weight:800;color:var(--bad);white-space:nowrap;text-align:right}
+.rep .hist{grid-column:1/-1;display:flex;gap:4px;flex-wrap:wrap}
+.rep .hist span{font-size:10.5px;background:var(--hover);border-radius:4px;padding:1px 6px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rep .hist span b{color:var(--text)}
+.more{margin-top:8px;background:transparent;border:1px dashed var(--line2);border-radius:8px;padding:6px 10px;width:100%;font-size:12px;font-weight:700;color:var(--accent-text);cursor:pointer}
+.pareto{display:grid;gap:5px}
+.pareto .row{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) 74px;gap:8px;align-items:center;font-size:11.5px}
+.pareto .row .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pareto .row.in80 .lbl{font-weight:750}
+.pareto .bar{position:relative;height:14px;background:var(--hover);border-radius:3px}
+.pareto .bar b{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--gold);opacity:.4}
+.pareto .row.in80 .bar b{opacity:.9}
+.pareto .bar i{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--bad)}
+.pareto .row span:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.pareto .row span:last-child b{color:var(--text)}
+.split{display:grid;gap:12px}
+.sysb2{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.sysb2 h4{margin:0 0 6px;font-size:12px;font-weight:800;display:flex;gap:6px;align-items:center}
+.sysb2 .row{display:grid;grid-template-columns:110px minmax(0,1fr) 46px;gap:8px;align-items:center;font-size:11.5px;padding:3px 0}
+.sysb2 .bar{height:8px;background:var(--hover);border-radius:3px;position:relative}
+.sysb2 .bar b{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.zbar{display:flex;height:10px;border-radius:3px;overflow:hidden;min-width:90px;background:var(--hover)}
+.zbar b{display:block;height:100%}
+.zbar .g{background:var(--ok)} .zbar .y{background:var(--warn)} .zbar .r{background:var(--bad)}
+.aging{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.aging>div{border-radius:8px;padding:7px 9px;background:var(--card2);border:1px solid var(--line)}
+.aging .k{font-size:10.5px;color:var(--muted);font-weight:700}
+.aging .v{font-size:17px;font-weight:850;font-variant-numeric:tabular-nums}
+.banner{font-size:11.5px;border-radius:8px;padding:7px 10px;background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--text);margin-bottom:10px;border:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
+.banner.grey{background:var(--hover);border-color:var(--line)}
+
+/* 9. Выводы */
+.concl{display:grid;gap:14px}
+.concl h4{margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.concl ul{margin:0;padding-left:18px;display:grid;gap:5px}
+.concl li{font-size:12.5px}
+.concl li.good::marker{color:var(--ok)} .concl li.bad::marker{color:var(--bad)}
+.concl .within li{color:var(--muted)}
+.foot{font-size:11px;color:var(--muted);padding:6px 16px 20px;text-align:center}
+
+/* ===== Адаптив (по ширине рамки приложения) ===== */
+@container app (max-width: 719px){
+  .nav,.head-user{display:none}
+  .filters{padding:8px 12px 7px}
+  .f-row{gap:6px}
+  .f-month{flex:1 1 140px}
+  .f-month select{width:100%}
+  .f-actions{margin-left:0}
+  .f-actions .btn:not(.btn-gold){display:none}
+  .wide-only{display:none}
+  .f-month{flex:1 1 120px}
+  .content{padding:12px 12px 24px}
+  .t-val{font-size:23px}
+  .heat-wrap .heat thead{display:none}
+  .heat-wrap .heat,.heat-wrap .heat tbody{display:block}
+  .heat-wrap .heat tr{display:flex;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .heat-wrap .heat th.rowh{flex-basis:100%;padding:0 0 2px}
+  .heat-wrap .heat td{flex:0 0 calc(25% - 3px);padding:5px 2px}
+  .heat-wrap .heat td::before{content:attr(data-label);display:block;font-size:9px;font-weight:650;opacity:.85;margin-bottom:1px}
+  .heat-wrap .heat td.empty{display:none}
+  .pareto .row{grid-template-columns:minmax(0,112px) minmax(0,1fr) 64px}
+}
+@container app (min-width: 720px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .d6,.d4,.d2,.sec{grid-column:1/-1}
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .tile:nth-child(4){grid-column:auto}
+  .tile:last-child{grid-column:span 2}
+  .vol-strip{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .vol-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .split{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .concl{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+}
+@container app (min-width: 1180px){
+  .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+  .d6{grid-column:span 6} .d4{grid-column:span 4} .d3{grid-column:span 3} .d2{grid-column:span 2}
+  .tiles{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  .tile:last-child{grid-column:auto}
+  .t-val{font-size:28px}
+  .vol-cols{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr)}
+  .content{padding:16px 22px 32px}
+}
+@container app (max-width: 899px){
+  .tbl.cards thead{display:none}
+  .tbl.cards,.tbl.cards tbody,.tbl.cards tr,.tbl.cards td{display:block;width:100%}
+  .tbl.cards tr{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--card2);display:grid;grid-template-columns:1fr 1fr;gap:2px 10px}
+  .tbl.cards td{border:0;padding:2px 0;display:block;min-width:0}
+  .tbl.cards td::before{content:attr(data-label);display:block;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .tbl.cards td.rk{display:none}
+  .tbl.cards .rk-inline{display:inline}
+  .tbl.cards td.name{font-size:13.5px}
+  .tbl.cards td.full{grid-column:1/-1}
+  .tbl.cards td.nolbl::before{display:none}
+  .tbl.cards td.r{text-align:left}
+  .tbl.cards .rng{min-width:0}
+}
+@container app (min-width: 600px) and (max-width: 899px){
+  .tbl.cards tbody{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tbl.cards tr{margin-bottom:0}
+}
+@container app (max-width: 1023px){
+  .btn.f-toggle{display:inline-flex}
+  .f-more{display:none;flex-basis:100%;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+  .f-more.open{display:grid}
+  .f-more .f select{width:100%}
+}
+/* --- графики (общие для макета и отчёта) --- */
+.chart-svg{display:block;max-width:100%;height:auto;overflow:visible;font-family:inherit}
+.chart-svg .ax{font-size:10px;fill:var(--muted)}
+.chart-svg .ax-sel{fill:var(--text);font-weight:700}
+.chart-svg .ax-bad{fill:var(--bad);font-weight:700}
+.chart-svg .val{font-size:11px;font-weight:800;fill:var(--text)}
+.chart-svg .in-bar{font-size:9.5px;font-weight:700;fill:#fff;opacity:.92}
+.chart-svg .grid{stroke:var(--line);stroke-width:1}
+.chart-svg .thr{stroke-width:1.2;stroke-dasharray:4 4}
+.chart-svg .thr-ok{stroke:var(--ok)} .chart-svg .thr-bad{stroke:var(--bad)}
+.chart-svg .thr-lbl-ok{fill:var(--ok);font-weight:700} .chart-svg .thr-lbl-bad{fill:var(--bad);font-weight:700}
+.chart-svg .sel-band{fill:var(--sel)}
+.chart-svg .ci-band{fill:var(--gold);opacity:.18}
+.chart-svg .ln{fill:none;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.chart-svg .ln-base{stroke:var(--gold)}
+.chart-svg .ln-final{stroke:var(--blue);stroke-width:1.6;stroke-dasharray:5 4}
+.chart-svg .dot-base{fill:var(--gold);stroke:var(--card);stroke-width:1.5}
+.chart-svg .dot-final{fill:var(--blue)}
+.chart-svg .dot-hollow{fill:var(--card);stroke:var(--gold);stroke-width:2}
+.chart-svg .bar-n{fill:var(--line2)} .chart-svg .bar-sel{fill:var(--gold);opacity:.75}
+.chart-svg .bar-few{fill:none;stroke:var(--bad);stroke-width:1.2;stroke-dasharray:3 2}
+.chart-svg .z-ok{fill:var(--ok)} .chart-svg .z-warn{fill:var(--warn)} .chart-svg .z-bad{fill:var(--bad)}
+.chart-svg .few{opacity:.38}
+.chart-svg .b-1{fill:var(--blue)} .chart-svg .b-2{fill:var(--warn)} .chart-svg .b-3{fill:var(--bad)}
+.chart-svg .s-1{stroke:var(--gold)} .chart-svg .s-2{stroke:var(--blue)} .chart-svg .s-3{stroke:var(--violet)}
+.chart-svg circle.dot.s-1{fill:var(--gold);stroke:var(--card)} .chart-svg circle.dot.s-2{fill:var(--blue);stroke:var(--card)} .chart-svg circle.dot.s-3{fill:var(--violet);stroke:var(--card)}
+.chart-svg .zone-bg-ok{fill:var(--ok);opacity:.08} .chart-svg .zone-bg-warn{fill:var(--warn);opacity:.08} .chart-svg .zone-bg-bad{fill:var(--bad);opacity:.09}
+.chart-svg .sk-iss{fill:var(--blue)} .chart-svg .sk-cls{fill:var(--ok)}
+.chart-svg .ln-open{stroke:var(--bad);stroke-width:2}
+.chart-svg .dot-open{fill:var(--bad);stroke:var(--card);stroke-width:1.2}
+.spark{display:block}
+.spark .ln-spark{fill:none;stroke:var(--gold);stroke-width:1.6;opacity:.85}
+.spark .dot-base{fill:var(--gold)} .spark .dot-hollow{fill:var(--card);stroke:var(--gold);stroke-width:1.4}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:var(--muted);margin:2px 0 8px}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.lg i.line{height:3px;border-radius:2px;vertical-align:3px;width:16px}
+.lg i.dash{height:0;border-top:2px dashed;width:16px;vertical-align:3px;border-radius:0}
+.lg i.hollow{border-radius:50%;border:2px solid var(--gold);background:transparent;width:9px;height:9px}
+
+</style>
+</head>
+<body>
+<div class="mock-bar" id="mockbar">
+  <span class="tag">Макет</span><b>Аналитика → Месяц: динамика и дефекты</b>
+  <span class="sp"></span>
+  <div class="seg" id="seg-dev" role="group" aria-label="Ширина экрана">
+    <button data-dev="phone">Телефон</button><button data-dev="tablet">Планшет</button><button data-dev="desktop" class="on">ПК</button>
+  </div>
+  <div class="seg" id="seg-theme" role="group" aria-label="Тема">
+    <button data-th="dark" class="on">Тёмная</button><button data-th="light">Светлая</button>
+  </div>
+  <a href="report.html">Образец отчёта (PDF) →</a>
+</div>
+
+<div class="stage">
+ <div class="device" id="device" data-dev="desktop">
+  <div class="app" id="app">
+    <div class="app-head">
+      <div class="logo"><i>RBI</i>Качество</div>
+      <div class="nav"><span>Проверки</span><span>Замечания</span><span class="on">Аналитика</span><span>Отчёты</span><span>База знаний</span></div>
+      <div class="head-user">Руководитель проекта</div>
+    </div>
+    <div class="subtabs" role="tablist" aria-label="Подвкладки Аналитики">
+      <span>Подрядчики</span><span>Сводка</span><span class="on">Месяц<em>новое</em></span><span>История</span><span>ПК СК</span><span>График</span>
+    </div>
+    <div class="filters" id="filters">
+      <div class="f-row">
+        <label class="f f-month"><span>Месяц</span><select id="f-month"></select></label>
+        <button class="btn f-toggle" id="f-toggle" aria-expanded="false">Фильтры<b id="f-count"></b></button>
+        <div class="f-more" id="f-more">
+          <label class="f"><span>Объект</span><select id="f-obj"></select></label>
+          <label class="f"><span>Подрядчик</span><select id="f-con"></select></label>
+          <label class="f"><span>Вид работ</span><select id="f-type"></select></label>
+          <label class="f"><span>Инспектор</span><select id="f-ins"></select></label>
+          <button class="btn" id="f-reset">Сбросить</button>
+        </div>
+        <div class="f-actions">
+          <button class="btn" data-demo="PDF">PDF</button><button class="btn" data-demo="PowerPoint">PowerPoint</button>
+          <a class="btn btn-gold" href="report.html">Отчёт<span class="wide-only">за месяц</span></a>
+        </div>
+      </div>
+      <div class="f-summary" id="f-summary"></div>
+    </div>
+    <main class="content"><div class="grid" id="grid"></div></main>
+    <div class="foot">Макет. Все данные выдуманы: 3 ЖК, 6 подрядчиков, 8 видов работ, ноябрь 2025 — октябрь 2026. Числа посчитаны по формулам приложения (math.utils.js) из выдуманных проверок.</div>
+  </div>
+ </div>
+</div>
+<div id="pop" role="tooltip"></div>
+<div id="toast"></div>
+
+<script>
+/* ===== Общие данные и расчёты (одинаковые в index.html и report.html) =====
+   Исходные данные выдуманы генератором с фиксированным зерном.
+   Формулы перенесены из js/shared/math.utils.js (УрК базовый/итоговый, Kc/Kcrit,
+   УрК подрядчика Ks/KB3, ±E по Стьюденту, ступени 7/16/24/32/51, зоны 85/70, ИКО)
+   и sk.actions.js (ИСД), sk.desktop.content.js (ИДЗ). */
+var MQ = (function () {
+  'use strict';
+
+  function rng(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  var R = rng(20261027);
+  function pickW(arr, wkey) {
+    var tot = 0, i; for (i = 0; i < arr.length; i++) tot += arr[i][wkey];
+    var x = R() * tot;
+    for (i = 0; i < arr.length; i++) { x -= arr[i][wkey]; if (x <= 0) return arr[i]; }
+    return arr[arr.length - 1];
+  }
+
+  /* ---------- Справочники ---------- */
+  var M_FULL = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  var M_PREP = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре'];
+  var M_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  var MONTHS = [];
+  for (var mi = 0; mi < 12; mi++) {
+    var y = 2025 + Math.floor((10 + mi) / 12), m = (10 + mi) % 12;
+    var startDay = Math.round((Date.UTC(y, m, 1) - Date.UTC(2025, 10, 1)) / 864e5);
+    var endDay = Math.round((Date.UTC(y, m + 1, 1) - Date.UTC(2025, 10, 1)) / 864e5) - 1;
+    MONTHS.push({
+      i: mi, y: y, m: m, start: startDay, end: endDay,
+      full: M_FULL[m].charAt(0).toUpperCase() + M_FULL[m].slice(1) + ' ' + y,
+      prep: M_PREP[m] + ' ' + y,
+      short: M_SHORT[m] + (m === 0 || mi === 0 ? ' ' + String(y).slice(2) : '')
+    });
+  }
+
+  var OBJECTS = [
+    { id: 'o1', name: 'ЖК «Северный парк»', short: 'Северный парк' },
+    { id: 'o2', name: 'ЖК «Речной квартал»', short: 'Речной квартал' },
+    { id: 'o3', name: 'ЖК «Лесная гавань»', short: 'Лесная гавань' }
+  ];
+  var CONTRACTORS = [
+    { id: 'A', name: 'Подрядчик А', base: 0.042, trend: function (i) { return 1.05 - i * 0.012; }, sk: 9, onTime: 0.80 },
+    { id: 'B', name: 'Подрядчик Б', base: 0.125, trend: function (i) { return 1.55 - i * 0.07; }, sk: 6, onTime: 0.62 },
+    { id: 'V', name: 'Подрядчик В', base: 0.085, trend: function (i) { return i >= 10 ? 1.55 : 0.9; }, sk: 5, onTime: 0.70 },
+    { id: 'G', name: 'Подрядчик Г', base: 0.150, trend: function () { return 1.0; }, sk: 6, onTime: 0.48 },
+    { id: 'D', name: 'Подрядчик Д', base: 0.060, trend: function () { return 1.0; }, sk: 4, onTime: 0.86 },
+    { id: 'E', name: 'Подрядчик Е', base: 0.055, trend: function () { return 1.0; }, sk: 2, onTime: 0.75 }
+  ];
+  var INSPECTORS = [
+    { id: 'i1', name: 'Орлов Д. (выдуманный)' , short: 'Орлов Д.' },
+    { id: 'i2', name: 'Белова К. (выдуманная)', short: 'Белова К.' },
+    { id: 'i3', name: 'Захаров М. (выдуманный)', short: 'Захаров М.' },
+    { id: 'i4', name: 'Лебедева Т. (выдуманная)', short: 'Лебедева Т.' }
+  ];
+  var TYPES = [
+    { id: 'mono', name: 'Монолитные работы', short: 'Монолит', risk: 1.5, items: [
+      ['Шаг и диаметр арматуры', 3], ['Защитный слой бетона', 3], ['Нахлёст и анкеровка арматуры', 2], ['Геометрия стен и колонн', 2],
+      ['Раковины, сколы, оголение арматуры', 2], ['Закладные детали и проёмообразователи', 2], ['Крепление и зазоры опалубки', 1], ['Уход за бетоном', 1], ['Чистота основания перед бетонированием', 1], ['Отметки верха плиты', 2], ['Рабочие швы бетонирования', 2], ['Вибрирование, пустоты', 2], ['Отбор образцов бетона', 1]] },
+    { id: 'brick', name: 'Кладка стен', short: 'Кладка', risk: 1.2, items: [
+      ['Армирование кладки', 3], ['Опирание перемычек', 3], ['Перевязка швов', 2], ['Вертикальность и ровность кладки', 2],
+      ['Примыкание к перекрытию', 2], ['Толщина швов', 1], ['Заполнение швов раствором', 1], ['Чистота лицевой поверхности', 1], ['Деформационные швы', 2], ['Утеплитель и пена в швах', 1], ['Размеры проёмов', 2], ['Гидроизоляция под первым рядом', 2]] },
+    { id: 'roof', name: 'Кровля', short: 'Кровля', risk: 1.4, items: [
+      ['Примыкания к парапетам и шахтам', 3], ['Пробная проливка', 3], ['Уклон к воронкам', 2], ['Нахлёст рулонов', 2],
+      ['Пароизоляция', 2], ['Воронки и обогрев', 2], ['Стыки утеплителя', 1], ['Огрунтовка основания', 1], ['Крепёж утеплителя', 2], ['Аэраторы', 1], ['Защитный слой кровли', 1], ['Фартуки и отливы парапетов', 2]] },
+    { id: 'facade', name: 'Фасад (навесной)', short: 'Фасад', risk: 1.3, items: [
+      ['Анкеровка кронштейнов', 3], ['Противопожарные отсечки', 3], ['Шаг кронштейнов', 2], ['Крепление утеплителя дюбелями', 2],
+      ['Вертикальность направляющих', 2], ['Ветрозащитная мембрана', 1], ['Зазоры облицовки', 1], ['Отливы и откосы', 1], ['Термошайбы под кронштейнами', 2], ['Крепёж облицовки', 2], ['Примыкание к окнам', 2], ['Маркировка панелей', 1]] },
+    { id: 'plaster', name: 'Штукатурка', short: 'Штукатурка', risk: 1.0, items: [
+      ['Отслоение, бухтение', 3], ['Ровность под правилом', 2], ['Трещины', 2], ['Маяки удалены', 2],
+      ['Сетка на стыках разных материалов', 2], ['Углы и откосы', 1], ['Грунтование основания', 1], ['Толщина слоя', 1], ['Ровность откосов', 2], ['Чистота поверхности', 1], ['Защита окон и инженерии', 1], ['Примыкание к потолку', 1]] },
+    { id: 'screed', name: 'Стяжка пола', short: 'Стяжка', risk: 1.0, items: [
+      ['Прочность, бухтение стяжки', 3], ['Горизонтальность', 2], ['Демпферная лента', 2], ['Трещины и усадка', 2],
+      ['Толщина стяжки', 1], ['Армирование сеткой', 1], ['Уход за стяжкой', 1], ['Чистота основания', 1], ['Звукоизоляция', 2], ['Отметка чистого пола', 2], ['Деформационные швы стяжки', 2], ['Обмазка примыканий', 1]] },
+    { id: 'windows', name: 'Окна и витражи', short: 'Окна', risk: 1.2, items: [
+      ['Крепление рамы', 3], ['Монтажный шов (наружный слой)', 2], ['Пароизоляционная лента', 2], ['Вертикаль и горизонт рамы', 2],
+      ['Герметизация примыканий', 2], ['Отлив и подоконник', 1], ['Регулировка фурнитуры', 1], ['Защитная плёнка снята', 1], ['Внутренний слой шва', 2], ['Зазоры по периметру', 1], ['Дренажные отверстия', 2], ['Откосы', 1]] },
+    { id: 'mep', name: 'Инженерные сети', short: 'Инж. сети', risk: 1.4, items: [
+      ['Опрессовка систем', 3], ['Огнезащита проходок', 3], ['Уклоны канализации', 2], ['Крепления трубопроводов', 2],
+      ['Гильзы в перекрытиях', 2], ['Теплоизоляция труб', 1], ['Маркировка', 1], ['Доступ к арматуре', 1], ['Ревизии и прочистки', 2], ['Заземление', 3], ['Шумоизоляция стояков', 1], ['Исполнительные схемы на месте', 1]] }
+  ];
+  var ITEM = {}, TYPE = {}, CON = {}, OBJ = {}, INS = {};
+  TYPES.forEach(function (t) {
+    TYPE[t.id] = t;
+    t.items = t.items.map(function (a, k) {
+      var it = { id: t.id + '_' + k, name: a[0], w: a[1], type: t.id, diff: 0.6 + R() * 0.8 };
+      ITEM[it.id] = it; return it;
+    });
+  });
+  CONTRACTORS.forEach(function (c) { CON[c.id] = c; });
+  OBJECTS.forEach(function (o) { OBJ[o.id] = o; });
+  INSPECTORS.forEach(function (o) { INS[o.id] = o; });
+
+  /* Участки: объект × подрядчик × вид работ, с частотой проверок */
+  var PAIRS = [
+    { o: 'o1', c: 'A', t: 'mono', wt: 4 }, { o: 'o1', c: 'A', t: 'brick', wt: 2 }, { o: 'o1', c: 'V', t: 'roof', wt: 3 },
+    { o: 'o1', c: 'G', t: 'plaster', wt: 3 }, { o: 'o1', c: 'E', t: 'mep', wt: 1 },
+    { o: 'o2', c: 'A', t: 'mono', wt: 3 }, { o: 'o2', c: 'B', t: 'facade', wt: 3 }, { o: 'o2', c: 'D', t: 'windows', wt: 2 }, { o: 'o2', c: 'E', t: 'mep', wt: 1 },
+    { o: 'o3', c: 'B', t: 'facade', wt: 2 }, { o: 'o3', c: 'V', t: 'brick', wt: 2 }, { o: 'o3', c: 'G', t: 'screed', wt: 2 }, { o: 'o3', c: 'D', t: 'windows', wt: 2 }
+  ];
+  /* «Горячие» пункты — системный брак у конкретного подрядчика */
+  var HOT = [
+    { c: 'G', item: 'plaster_1', f: function () { return 3.2; } },
+    { c: 'G', item: 'screed_2', f: function (i) { return i >= 8 ? 3.0 : 1.4; } },
+    { c: 'V', item: 'roof_0', f: function (i) { return i >= 10 ? 7.0 : 1.2; } },
+    { c: 'B', item: 'facade_0', f: function (i) { return i < 6 ? 3.0 : 1.0; } },
+    { c: 'A', item: 'mono_3', f: function () { return 1.8; } },
+    { c: 'D', item: 'windows_1', f: function (i) { return i >= 9 ? 3.2 : 1.0; } }
+  ];
+  var CAUSES = [
+    { name: 'Нарушение технологии', wt: 30 }, { name: 'Нет контроля мастера', wt: 22 }, { name: 'Квалификация бригады', wt: 15 },
+    { name: 'Спешка, сжатые сроки', wt: 11 }, { name: 'Материалы', wt: 8 }, { name: 'Ошибка в проекте / РД', wt: 5 },
+    { name: 'Погода', wt: 4 }, { name: '(причина не указана)', wt: 12 }
+  ];
+  var N_BY_MONTH = [48, 41, 6, 29, 55, 62, 70, 78, 86, 81, 73, 84];
+
+  /* ---------- УрК одной проверки (math.utils.js: getProductMetrics) ---------- */
+  function productMetrics(state, items) {
+    var W_tot = 0, W_ok = 0, checked = 0, b1 = 0, b2chk = 0, b2 = 0, b3 = 0, b3f = false, esc = false;
+    items.forEach(function (i) {
+      var s = state[i.id]; if (!s) return;
+      checked++;
+      var w = i.w, isB3 = w === 3, isB2 = w === 2, isB1 = w === 1;
+      if (s === 'fail_escalated') { w = 3; isB3 = true; isB2 = false; esc = true; }
+      W_tot += w;
+      if (isB2) b2chk++;
+      if (s === 'ok') W_ok += w;
+      else { if (isB1) b1++; if (isB2) b2++; if (isB3) { b3++; b3f = true; } }
+    });
+    var base = W_tot > 0 ? W_ok / W_tot * 100 : 0;
+    var Kc = 1;
+    if (b2chk > 0) { var r = b2 / b2chk; if (r > 0 && r < 0.2) Kc = 0.95; else if (r >= 0.2 && r < 0.5) Kc = 0.85; else if (r >= 0.5) Kc = 0.70; }
+    var Kcrit = b3f ? 0.5 : 1;
+    var fin = Math.round(base * Kc * Kcrit);
+    if (b2 > 0 || b3f || Kc < 1 || Kcrit < 1) fin = Math.min(fin, 84);
+    var zone = (b3f || fin < 70) ? 'red' : (fin >= 85 ? 'green' : 'yellow');
+    return { base: Math.round(base), final: fin, checked: checked, b1: b1, b2: b2, b3: b3, b3f: b3f, esc: esc, kc: Kc, kcrit: Kcrit, zone: zone };
+  }
+
+  /* ---------- Генерация проверок ---------- */
+  var INSPECTIONS = [];
+  var seq = 0;
+  MONTHS.forEach(function (M) {
+    for (var k = 0; k < N_BY_MONTH[M.i]; k++) {
+      var p = pickW(PAIRS, 'wt');
+      var c = CON[p.c], t = TYPE[p.t];
+      var insp = INSPECTORS[Math.floor(R() * INSPECTORS.length)];
+      var state = {}, causes = {}, photos = {}, nChecked = 0;
+      t.items.forEach(function (it) {
+        if (R() > 0.82) return; // выборочный аудит: пункт в этот раз не проверяли
+        nChecked++;
+        var pf = c.base * it.diff * c.trend(M.i) * (it.w === 3 ? 0.3 : 1);
+        HOT.forEach(function (h) { if (h.c === c.id && h.item === it.id) pf *= h.f(M.i); });
+        pf = Math.min(pf, 0.85);
+        if (R() < pf) {
+          state[it.id] = (it.w === 2 && R() < 0.08) ? 'fail_escalated' : 'fail';
+          causes[it.id] = pickW(CAUSES, 'wt').name;
+          photos[it.id] = R() < 0.8;
+        } else state[it.id] = 'ok';
+      });
+      if (nChecked < 3) { t.items.slice(0, 3).forEach(function (it) { if (!state[it.id]) state[it.id] = 'ok'; }); }
+      var day = 1 + Math.floor(R() * (M.end - M.start + 1));
+      var rec = { id: 'q' + (++seq), mi: M.i, day: M.start + day - 1, dom: day, o: p.o, c: p.c, t: p.t, ins: insp.id, state: state, causes: causes, photos: photos };
+      rec.m = productMetrics(state, t.items);
+      INSPECTIONS.push(rec);
+    }
+  });
+  /* доля видов работ за 12 месяцев — для УрК «с постоянным составом» */
+  var TYPE_SHARE = {};
+  INSPECTIONS.forEach(function (x) { TYPE_SHARE[x.t] = (TYPE_SHARE[x.t] || 0) + 1; });
+  Object.keys(TYPE_SHARE).forEach(function (k) { TYPE_SHARE[k] /= INSPECTIONS.length; });
+
+  /* ---------- Стройконтроль (ПК СК), выдуманные замечания ---------- */
+  var SK = [];
+  CONTRACTORS.forEach(function (c) {
+    var objs = PAIRS.filter(function (p) { return p.c === c.id; });
+    MONTHS.forEach(function (M) {
+      var n = Math.round(c.sk * (0.7 + R() * 0.6) * (N_BY_MONTH[M.i] / 30));
+      for (var k = 0; k < n; k++) {
+        var p = objs[Math.floor(R() * objs.length)];
+        var issued = M.start + Math.floor(R() * (M.end - M.start + 1));
+        var due = issued + 14, closed = null, r = R();
+        if (r < c.onTime) closed = issued + 2 + Math.floor(R() * 12);
+        else if (r < c.onTime + (1 - c.onTime) * 0.85) closed = due + 1 + Math.floor(R() * 35);
+        if (closed !== null && closed > MONTHS[11].end) closed = null;
+        SK.push({ c: c.id, o: p.o, t: p.t, issued: issued, due: due, closed: closed });
+      }
+    });
+  });
+  var VOLUME = { A: 530, B: 160, V: 190, G: 400, D: 520, E: 230 }; // объём, единиц (захваток) — вносится вручную
+
+  /* ---------- Статистика (math.utils.js: t_crit, ступени, стабильность) ---------- */
+  function tCrit(N) {
+    if (N === 2) return 12.7; if (N === 3) return 4.3; if (N === 4) return 3.18; if (N === 5) return 2.78; if (N === 6) return 2.57;
+    if (N >= 7 && N <= 10) return 2.3; if (N >= 11 && N <= 15) return 2.1; if (N >= 16 && N <= 23) return 2.0;
+    if (N >= 24 && N <= 31) return 1.98; if (N >= 32 && N <= 50) return 1.97; return 1.96;
+  }
+  var STEPS = [
+    { min: 0, name: 'Сбор данных', note: 'меньше 7 проверок', cls: 'low' },
+    { min: 7, name: 'Предварительный', note: '7–15', cls: 'low' },
+    { min: 16, name: 'Базовый', note: '16–23', cls: 'med' },
+    { min: 24, name: 'Уверенный', note: '24–31', cls: 'med' },
+    { min: 32, name: 'Стабильный', note: '32–50', cls: 'high' },
+    { min: 51, name: 'Эталонный', note: '51 и больше', cls: 'high' }
+  ];
+  function confidence(N) { var s = 0; for (var i = 0; i < STEPS.length; i++) if (N >= STEPS[i].min) s = i; return { idx: s, name: STEPS[s].name, cls: STEPS[s].cls, few: N < 7 }; }
+  function sum(a) { return a.reduce(function (x, y) { return x + y; }, 0); }
+  function stat(arr) {
+    var N = arr.length; if (!N) return null;
+    var mean = sum(arr) / N, s = 0, E = null;
+    if (N >= 2) { s = Math.sqrt(arr.reduce(function (a, v) { return a + (v - mean) * (v - mean); }, 0) / (N - 1)); E = tCrit(N) * s / Math.sqrt(N); }
+    return { N: N, mean: mean, s: s, E: E, lo: E == null ? null : mean - E, hi: E == null ? null : mean + E };
+  }
+  /* Доля в % с разбросом: тот же коэффициент Стьюдента, дисперсия доли с поправкой (k+1)/(N+2) */
+  function statShare(k, N) {
+    if (!N) return null;
+    var p = k / N, pa = (k + 1) / (N + 2);
+    var E = N >= 2 ? tCrit(N) * Math.sqrt(pa * (1 - pa) / N) * 100 : null;
+    return { N: N, k: k, mean: p * 100, E: E, lo: E == null ? null : Math.max(0, p * 100 - E), hi: E == null ? null : Math.min(100, p * 100 + E) };
+  }
+
+  /* ---------- Сводка по набору проверок (месяц) ---------- */
+  function agg(list) {
+    var N = list.length, r = { N: N, list: list };
+    r.conf = confidence(N);
+    r.items = sum(list.map(function (x) { return x.m.checked; }));
+    r.b1 = sum(list.map(function (x) { return x.m.b1; }));
+    r.b2 = sum(list.map(function (x) { return x.m.b2; }));
+    r.b3 = sum(list.map(function (x) { return x.m.b3; }));
+    r.fails = r.b1 + r.b2 + r.b3;
+    function uniq(k) { var s = {}; list.forEach(function (x) { s[x[k]] = 1; }); return Object.keys(s).length; }
+    r.nObj = uniq('o'); r.nCon = uniq('c'); r.nIns = uniq('ins'); r.nTypes = uniq('t');
+    r.base = stat(list.map(function (x) { return x.m.base; }));
+    r.final = stat(list.map(function (x) { return x.m.final; }));
+    var nb3 = list.filter(function (x) { return x.m.b3f; }).length;
+    var nred = list.filter(function (x) { return x.m.zone === 'red'; }).length;
+    var nyel = list.filter(function (x) { return x.m.zone === 'yellow'; }).length;
+    r.b3share = statShare(nb3, N); r.nB3insp = nb3;
+    r.red = statShare(nred, N); r.yellow = statShare(nyel, N); r.green = statShare(N - nred - nyel, N);
+    r.nRed = nred; r.nYellow = nyel; r.nGreen = N - nred - nyel;
+    var rates = stat(list.map(function (x) { return x.m.checked ? (x.m.b1 + x.m.b2 + x.m.b3) / x.m.checked * 100 : 0; }));
+    r.per100 = N ? { N: N, mean: r.items ? r.fails / r.items * 100 : 0, E: rates ? rates.E : null } : null;
+    if (r.per100 && r.per100.E != null) { r.per100.lo = Math.max(0, r.per100.mean - r.per100.E); r.per100.hi = r.per100.mean + r.per100.E; }
+    r.b1p = r.items ? r.b1 / r.items * 100 : 0; r.b2p = r.items ? r.b2 / r.items * 100 : 0; r.b3p = r.items ? r.b3 / r.items * 100 : 0;
+    r.critShare = r.fails ? r.b3 / r.fails * 100 : null;
+    r.byType = {}; list.forEach(function (x) { r.byType[x.t] = (r.byType[x.t] || 0) + 1; });
+    // УрК с постоянными долями видов работ (за 12 месяцев)
+    var num = 0, den = 0;
+    Object.keys(r.byType).forEach(function (t) {
+      var a = list.filter(function (x) { return x.t === t; }).map(function (x) { return x.m.base; });
+      num += TYPE_SHARE[t] * sum(a) / a.length; den += TYPE_SHARE[t];
+    });
+    r.baseMix = den ? num / den : null;
+    return r;
+  }
+
+  /* ---------- УрК подрядчика (math.utils.js: getContractorMetrics) ---------- */
+  function contractorMetrics(list, sliding) {
+    if (!list || !list.length) return null;
+    var sorted = list.slice().sort(function (a, b) { return b.day - a.day; });
+    var win = sliding ? sorted.slice(0, 15) : sorted;
+    var N = win.length;
+    var urk = win.map(function (x) { return x.m.final; });
+    var NB3 = win.filter(function (x) { return x.m.b3f; }).length;
+    var itemStats = {};
+    win.forEach(function (x) {
+      Object.keys(x.state).forEach(function (id) {
+        var s = x.state[id]; if (!itemStats[id]) itemStats[id] = { chk: 0, fail: 0 };
+        itemStats[id].chk++; if (s === 'fail' || s === 'fail_escalated') itemStats[id].fail++;
+      });
+    });
+    var base = Math.round(sum(urk) / N);
+    var Rsys = 0, RsysItem = null;
+    Object.keys(itemStats).forEach(function (id) {
+      if (ITEM[id].w === 2 && itemStats[id].chk > 0) {
+        var r = itemStats[id].fail / itemStats[id].chk * 100; if (r > Rsys) { Rsys = r; RsysItem = id; }
+      }
+    });
+    var Ks = 1; if (Rsys >= 60) Ks = 0.5; else if (Rsys >= 40) Ks = 0.7; else if (Rsys >= 20) Ks = 0.85; else if (Rsys >= 10) Ks = 0.95;
+    var RB3 = NB3 / N * 100;
+    var KB3 = 1; if (RB3 >= 30) KB3 = 0.5; else if (RB3 >= 20) KB3 = 0.7; else if (RB3 >= 10) KB3 = 0.85; else if (RB3 >= 5) KB3 = 0.9; else if (RB3 > 0) KB3 = 0.95;
+    var U = Math.round(base * Ks * KB3), cap = false;
+    if ((Ks < 1 || KB3 < 1) && U > 84) { U = 84; cap = true; }
+    var st = stat(urk);
+    var stab = Math.round(Math.max(0, 1 - st.s / 50) * 100);
+    var stabText = stab >= 80 ? 'Высокая' : stab >= 60 ? 'Средняя' : stab >= 40 ? 'Низкая' : 'Критическая';
+    var zone, zoneText;
+    if (U < 70 || RB3 >= 20 || Rsys >= 40) { zone = 'red'; zoneText = 'Красная зона'; }
+    else if (U >= 85 && RB3 === 0 && Rsys < 10) { zone = 'green'; zoneText = 'Образцовое'; }
+    else { zone = 'yellow'; zoneText = 'Жёлтая зона'; }
+    return { U: U, base: base, N: N, E: st.E, lo: st.E == null ? null : U - st.E, s: st.s, conf: confidence(N), stab: stab, stabText: stabText,
+      Ks: Ks, KB3: KB3, RB3: RB3, NB3: NB3, Rsys: Rsys, RsysItem: RsysItem, cap: cap, zone: zone, zoneText: zoneText };
+  }
+
+  /* ---------- ИКО объекта (math.utils.js: getObjectIntegralMetrics), окно 3 месяца ---------- */
+  function objectIKO(list) {
+    var g = {};
+    list.forEach(function (x) { var k = x.c + '|' + x.t; (g[k] = g[k] || []).push(x); });
+    var valid = 0, red = 0, yel = 0, grn = 0, sKW = 0, sW = 0, pairs = 0;
+    Object.keys(g).forEach(function (k) {
+      var d = g[k], N = d.length; if (N < 7) return;
+      valid += N; pairs++;
+      var m = contractorMetrics(d, true);
+      if (m.U < 70) red += N; else if (m.U <= 84) yel += N; else grn += N;
+      var Wr = TYPE[d[0].t].risk;
+      var Kop = 1 - (m.U / 100 * m.stab / 100 * (1 - 0.5 * (m.NB3 > 0 ? 1 : 0)));
+      sKW += Kop * Wr; sW += Wr;
+    });
+    if (!valid || !sW) return null;
+    var iko = sKW / sW;
+    return { iko: iko, valid: valid, pairs: pairs, red: Math.round(red / valid * 100), yellow: Math.round(yel / valid * 100), green: Math.round(grn / valid * 100),
+      status: iko < 0.3 ? 'Низкий риск' : iko < 0.6 ? 'Повышенный риск' : 'Высокий риск', zone: iko < 0.3 ? 'green' : iko < 0.6 ? 'yellow' : 'red' };
+  }
+
+  /* ---------- Стройконтроль за месяц: выдано/закрыто/открыто, в срок, ИДЗ, ИСД ---------- */
+  function skMonth(recs, M) {
+    var issued = recs.filter(function (r) { return r.issued >= M.start && r.issued <= M.end; });
+    var closed = recs.filter(function (r) { return r.closed !== null && r.closed >= M.start && r.closed <= M.end; });
+    var open = recs.filter(function (r) { return r.issued <= M.end && (r.closed === null || r.closed > M.end); });
+    var onTime = closed.filter(function (r) { return r.closed <= r.due; }).length;
+    var late = closed.filter(function (r) { return r.closed > r.due; });
+    var overdueOpen = open.filter(function (r) { return r.due < M.end; });
+    var onTimePct = closed.length ? onTime / closed.length * 100 : null;
+    var overduePct = open.length ? overdueOpen.length / open.length * 100 : 0;
+    var avgLate = late.length ? sum(late.map(function (r) { return r.closed - r.due; })) / late.length : 0;
+    var idz = onTimePct == null ? null : Math.max(0, onTimePct * 0.6 + (100 - overduePct) * 0.4 - avgLate);
+    var age = { a: 0, b: 0, c: 0 };
+    open.forEach(function (r) { var d = M.end - r.issued; if (d <= 7) age.a++; else if (d <= 30) age.b++; else age.c++; });
+    return { issued: issued.length, closed: closed.length, open: open.length, onTimePct: onTimePct, overduePct: overduePct, avgLate: avgLate, idz: idz, age: age, overdueOpen: overdueOpen.length };
+  }
+  function isd(cid, skCount) {
+    var all = INSPECTIONS.filter(function (x) { return x.c === cid; });
+    var items = 0, def = 0;
+    all.forEach(function (x) { items += x.m.checked; def += x.m.b2 + x.m.b3; });
+    var rate = items ? def / items : 0.05;
+    var expected = Math.max(1, Math.round(VOLUME[cid] * rate));
+    return { isd: Math.round(skCount / expected * 100), expected: expected, rate: rate * 100 };
+  }
+
+  /* ---------- Формат чисел по-русски ---------- */
+  function fmt(x, d) {
+    if (x == null || isNaN(x)) return '—';
+    d = d || 0;
+    return Number(x).toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/ /g, ' ');
+  }
+  function fmtS(x, d) { if (x == null || isNaN(x)) return '—'; var v = Number(x.toFixed(d || 0)); return (v > 0 ? '+' : v < 0 ? '−' : '±') + fmt(Math.abs(v), d); }
+  function plural(n, a, b, c) { n = Math.abs(n) % 100; var n1 = n % 10; if (n > 10 && n < 20) return c; if (n1 > 1 && n1 < 5) return b; if (n1 === 1) return a; return c; }
+
+  /* ---------- Сравнение «этот / прошлый» ---------- */
+  /* higherIsBetter: true — рост = лучше. Возвращает {d, kind:'few'|'within'|'notable', good:bool} */
+  function compare(cur, prev, higherIsBetter) {
+    if (!cur || !prev) return { kind: 'few', d: null };
+    var d = cur.mean - prev.mean;
+    if (cur.N < 7 || prev.N < 7) return { kind: 'few', d: d };
+    var Ec = cur.E || 0, Ep = prev.E || 0;
+    var notable = Math.abs(d) > Ec && Math.abs(d) > Ep;
+    return { kind: notable ? 'notable' : 'within', d: d, good: higherIsBetter ? d > 0 : d < 0 };
+  }
+
+  /* ---------- Полный расчёт месяца по фильтрам ---------- */
+  function compute(f) {
+    f = f || {};
+    var mi = f.month == null ? 11 : f.month;
+    var filt = INSPECTIONS.filter(function (x) {
+      return (!f.obj || x.o === f.obj) && (!f.con || x.c === f.con) && (!f.type || x.t === f.type) && (!f.ins || x.ins === f.ins);
+    });
+    var byM = MONTHS.map(function (M) { return filt.filter(function (x) { return x.mi === M.i; }); });
+    var months = byM.map(function (l) { return agg(l); });
+    var cur = months[mi], prev = mi > 0 ? months[mi - 1] : null;
+    var curL = byM[mi], prevL = mi > 0 ? byM[mi - 1] : [];
+
+    // Плитки
+    var tiles = [
+      { key: 'base', title: 'Базовый УрК', unit: '%', hib: true, cur: cur.base, prev: prev && prev.base, d: 0 },
+      { key: 'final', title: 'Итоговый УрК', unit: '%', hib: true, cur: cur.final, prev: prev && prev.final, d: 0 },
+      { key: 'b3', title: 'Проверок с критичным дефектом (B3)', unit: '%', hib: false, cur: cur.b3share, prev: prev && prev.b3share, d: 0 },
+      { key: 'per100', title: 'Невыполненных пунктов на 100 проверенных', unit: '', hib: false, cur: cur.per100, prev: prev && prev.per100, d: 1 },
+      { key: 'red', title: 'Проверок в красной зоне', unit: '%', hib: false, cur: cur.red, prev: prev && prev.red, d: 0 }
+    ];
+    tiles.forEach(function (t) { t.cmp = compare(t.cur, t.prev, t.hib); });
+
+    // Подрядчики (календарный месяц, все проверки, без «последних 15»)
+    var cons = CONTRACTORS.map(function (c) {
+      var l = curL.filter(function (x) { return x.c === c.id; });
+      var lp = prevL.filter(function (x) { return x.c === c.id; });
+      var m = contractorMetrics(l, false), mp = contractorMetrics(lp, false);
+      if (!m) return null;
+      var d = mp ? m.U - mp.U : null;
+      var kind = 'few';
+      if (mp && m.N >= 7 && mp.N >= 7) kind = (Math.abs(d) > (m.E || 0) && Math.abs(d) > (mp.E || 0)) ? 'notable' : 'within';
+      var types = {}; l.forEach(function (x) { types[x.t] = 1; });
+      return { c: c, m: m, mp: mp, d: d, kind: kind, types: Object.keys(types) };
+    }).filter(Boolean);
+    cons.sort(function (a, b) {
+      var fa = a.m.N < 7 ? 1 : 0, fb = b.m.N < 7 ? 1 : 0;
+      if (fa !== fb) return fa - fb; // меньше 7 проверок — ниже всех («сбор данных»)
+      var la = a.m.lo == null ? -1e9 : a.m.lo, lb = b.m.lo == null ? -1e9 : b.m.lo;
+      return lb - la;
+    });
+
+    // Топ дефектов: пункт → проверено/не выполнено
+    function itemAgg(l) {
+      var s = {};
+      l.forEach(function (x) {
+        Object.keys(x.state).forEach(function (id) {
+          var st = x.state[id]; var e = s[id] || (s[id] = { id: id, chk: 0, fail: 0, photos: 0, cons: {} });
+          e.chk++;
+          if (st !== 'ok') { e.fail++; if (x.photos[id]) e.photos++; e.cons[x.c] = (e.cons[x.c] || 0) + 1; }
+        });
+      });
+      return s;
+    }
+    var ic = itemAgg(curL), ip = itemAgg(prevL);
+    var top = Object.keys(ic).map(function (id) { return ic[id]; }).filter(function (e) { return e.fail > 0; })
+      .sort(function (a, b) { return b.fail - a.fail || b.fail / b.chk - a.fail / a.chk; }).slice(0, 10)
+      .map(function (e) {
+        var p = ip[e.id], rate = e.fail / e.chk * 100, prate = p && p.chk >= 3 ? p.fail / p.chk * 100 : null;
+        var main = Object.keys(e.cons).sort(function (a, b) { return e.cons[b] - e.cons[a]; })[0];
+        return { item: ITEM[e.id], chk: e.chk, fail: e.fail, rate: rate, prate: prate, pchk: p ? p.chk : 0, pfail: p ? p.fail : 0,
+          d: prate == null ? null : rate - prate, photos: e.photos, mainCon: CON[main], mainConN: e.cons[main] };
+      });
+
+    // Тепловая карта подрядчик × вид работ (месяц и 3 месяца)
+    function heat(l) {
+      var h = {};
+      l.forEach(function (x) {
+        var k = x.c + '|' + x.t, e = h[k] || (h[k] = { n: 0, items: 0, fails: 0 });
+        e.n++; e.items += x.m.checked; e.fails += x.m.b1 + x.m.b2 + x.m.b3;
+      });
+      Object.keys(h).forEach(function (k) { h[k].v = h[k].items ? h[k].fails / h[k].items * 100 : 0; });
+      return h;
+    }
+    var heat1 = heat(curL);
+    var heat3 = heat(filt.filter(function (x) { return x.mi <= mi && x.mi >= mi - 2; }));
+
+    // Повторяемость: тот же пункт у того же подрядчика не выполнен 2+ месяца подряд (до выбранного включительно)
+    var repeats = [];
+    CONTRACTORS.forEach(function (c) {
+      var ids = {};
+      curL.filter(function (x) { return x.c === c.id; }).forEach(function (x) { Object.keys(x.state).forEach(function (id) { if (x.state[id] !== 'ok') ids[id] = 1; }); });
+      Object.keys(ids).forEach(function (id) {
+        var streak = 0, hist = [];
+        for (var j = mi; j >= 0; j--) {
+          var l = byM[j].filter(function (x) { return x.c === c.id && x.state[id]; });
+          var fl = l.filter(function (x) { return x.state[id] !== 'ok'; }).length;
+          if (fl >= 2 || (fl >= 1 && l.length <= 3)) { streak++; hist.unshift({ mi: j, chk: l.length, fail: fl }); } else break;
+        }
+        if (streak >= 2) repeats.push({ c: c, item: ITEM[id], streak: streak, hist: hist.slice(-4) });
+      });
+    });
+    repeats.sort(function (a, b) { return b.streak - a.streak || b.item.w - a.item.w; });
+    var sysB2 = cons.map(function (r) { return { c: r.c, Rsys: r.m.Rsys, item: r.m.RsysItem ? ITEM[r.m.RsysItem] : null, N: r.m.N }; })
+      .filter(function (r) { return r.Rsys > 0; }).sort(function (a, b) { return b.Rsys - a.Rsys; });
+
+    // Парето причин
+    var cz = {}, czTotal = 0, noCause = 0;
+    curL.forEach(function (x) { Object.keys(x.causes).forEach(function (id) { var n = x.causes[id]; if (n.charAt(0) === '(') { noCause++; return; } cz[n] = (cz[n] || 0) + 1; czTotal++; }); });
+    var cum = 0;
+    var pareto = Object.keys(cz).map(function (k) { return { name: k, n: cz[k] }; }).sort(function (a, b) { return b.n - a.n; })
+      .map(function (e) { var before = cum; cum += e.n; e.pct = e.n / czTotal * 100; e.cum = cum / czTotal * 100; e.in80 = before / czTotal * 100 < 80; return e; });
+
+    // Объекты: ИКО по месяцам (окно 3 месяца) — фильтр по объекту/подрядчику/виду работ применяется
+    var objs = OBJECTS.filter(function (o) { return !f.obj || o.id === f.obj; }).map(function (o) {
+      var series = MONTHS.map(function (M) {
+        return objectIKO(filt.filter(function (x) { return x.o === o.id && x.mi <= M.i && x.mi >= M.i - 2; }));
+      });
+      var mon = agg(curL.filter(function (x) { return x.o === o.id; }));
+      return { o: o, series: series, cur: series[mi], prev: mi > 0 ? series[mi - 1] : null, mon: mon };
+    });
+
+    // Стройконтроль
+    var skRecs = SK.filter(function (r) { return (!f.obj || r.o === f.obj) && (!f.con || r.c === f.con) && (!f.type || r.t === f.type); });
+    var skSeries = MONTHS.map(function (M) { return skMonth(skRecs, M); });
+    var skCons = CONTRACTORS.filter(function (c) { return !f.con || c.id === f.con; }).map(function (c) {
+      var rr = skRecs.filter(function (r) { return r.c === c.id; });
+      var cm = skMonth(rr, MONTHS[mi]), pm = mi > 0 ? skMonth(rr, MONTHS[mi - 1]) : null;
+      var is = isd(c.id, cm.issued);
+      return { c: c, cur: cm, prev: pm, isd: is };
+    }).filter(function (r) { return r.cur.issued + r.cur.open > 0; }).sort(function (a, b) { return (b.cur.idz || 0) - (a.cur.idz || 0); });
+
+    var res = { f: f, mi: mi, M: MONTHS[mi], P: mi > 0 ? MONTHS[mi - 1] : null, months: months, cur: cur, prev: prev, tiles: tiles, cons: cons,
+      top: top, heat1: heat1, heat3: heat3, repeats: repeats, sysB2: sysB2, pareto: pareto, noCause: noCause, czTotal: czTotal,
+      objs: objs, sk: skSeries, skCons: skCons };
+    res.findings = findings(res);
+    return res;
+  }
+
+  /* ---------- Выводы месяца (автотекст) ---------- */
+  function findings(r) {
+    var cur = r.cur, M = r.M, out = { main: [], notable: [], within: [], recs: [], warn: [] };
+    var Mname = M.prep;
+    if (cur.N === 0) { out.warn.push('За ' + M.full.toLowerCase() + ' нет проверок по выбранным фильтрам.'); return out; }
+    if (cur.conf.few) out.warn.push('В ' + Mname + ' всего ' + cur.N + ' ' + plural(cur.N, 'проверка', 'проверки', 'проверок') + ' — это «мало данных»: сравнения с прошлым месяцем не делаем.');
+    out.main.push('Проверено ' + fmt(cur.N) + ' ' + plural(cur.N, 'раз', 'раза', 'раз') + ' (' + fmt(cur.items) + ' ' + plural(cur.items, 'пункт', 'пункта', 'пунктов') + ' чек-листов), надёжность месяца — «' + cur.conf.name + '».');
+    var tb = r.tiles[0];
+    if (cur.base) {
+      var s = 'Базовый УрК ' + fmt(cur.base.mean) + (cur.base.E != null ? ' ± ' + fmt(cur.base.E) : '') + ' %';
+      if (tb.cmp.kind === 'notable') s += ' — ' + (tb.cmp.good ? 'заметно лучше' : 'заметно хуже') + ' прошлого месяца (' + fmtS(tb.cmp.d) + ' п.п.).';
+      else if (tb.cmp.kind === 'within') s += ', изменение к прошлому месяцу ' + fmtS(tb.cmp.d) + ' п.п. — в пределах разброса, то есть «не изменилось».';
+      else s += '.';
+      out.main.push(s);
+    }
+    r.tiles.forEach(function (t) {
+      if (t.cmp.kind === 'few' || t.cmp.d == null) return;
+      var line = t.title + ': ' + fmt(t.prev.mean, t.d) + ' → ' + fmt(t.cur.mean, t.d) + (t.unit ? ' ' + t.unit : '') + ' (' + fmtS(t.cmp.d, t.d) + (t.unit === '%' ? ' п.п.' : '') + ')';
+      if (t.cmp.kind === 'notable') out.notable.push({ text: line + (t.cmp.good ? ' — улучшение' : ' — ухудшение'), good: t.cmp.good });
+      else out.within.push(line);
+    });
+    r.cons.forEach(function (x) {
+      if (x.kind !== 'notable') return;
+      out.notable.push({ text: x.c.name + ': УрК подрядчика ' + x.mp.U + ' → ' + x.m.U + ' (' + fmtS(x.d) + ')' + (x.d > 0 ? ' — улучшение' : ' — ухудшение'), good: x.d > 0 });
+    });
+    var red = r.cons.filter(function (x) { return x.m.zone === 'red'; });
+    var redOk = red.filter(function (x) { return !x.m.conf.few; });
+    if (redOk.length) out.main.push('В красной зоне: ' + redOk.map(function (x) { return x.c.name + ' (УрК ' + x.m.U + ' %, ' + x.m.N + ' ' + plural(x.m.N, 'проверка', 'проверки', 'проверок') + ')'; }).join(', ') + '.');
+    else if (red.length) out.main.push('Есть подрядчики в красной зоне, но по ним мало проверок (меньше 7) — вывод предварительный: ' + red.map(function (x) { return x.c.name; }).join(', ') + '.');
+    if (r.top.length) {
+      var t0 = r.top[0];
+      out.main.push('Самый частый дефект — «' + t0.item.name + '» (' + TYPE[t0.item.type].short.toLowerCase() + '): не выполнен ' + t0.fail + ' из ' + t0.chk + ' раз, чаще всего у ' + t0.mainCon.name.replace('Подрядчик', 'подрядчика') + '.');
+    }
+    var longRep = r.repeats.filter(function (x) { return x.streak >= 3; });
+    if (r.repeats.length) out.main.push('Повторяются ' + r.repeats.length + ' ' + plural(r.repeats.length, 'дефект', 'дефекта', 'дефектов') + ' (2 месяца подряд и дольше)' + (longRep.length ? ', из них ' + longRep.length + ' — 3 месяца и дольше' : '') + '.');
+    if (r.pareto.length) {
+      var p80 = r.pareto.filter(function (x) { return x.in80; });
+      out.main.push('80 % дефектов дают ' + p80.length + ' ' + plural(p80.length, 'причина', 'причины', 'причин') + ': ' + p80.map(function (x) { return x.name.toLowerCase(); }).join(', ') + '.');
+    }
+    // Рекомендации
+    redOk.forEach(function (x) { out.recs.push(x.c.name + ': совещание с руководством подрядчика, разбор причин' + (x.m.NB3 ? ' критичных дефектов (B3)' : '') + ', план исправлений к следующему месяцу.'); });
+    r.repeats.slice(0, 3).forEach(function (x) { out.recs.push('«' + x.item.name + '» у ' + x.c.name.replace('Подрядчик', 'подрядчика') + ' держится ' + x.streak + ' ' + plural(x.streak, 'месяц', 'месяца', 'месяцев') + ' — проверить технологию на месте, провести обучение бригады.'); });
+    if (r.noCause > 0) out.recs.push('У ' + r.noCause + ' ' + plural(r.noCause, 'дефекта', 'дефектов', 'дефектов') + ' не указана причина — сделать причину обязательной для B2 и B3, чтобы Парето было полным.');
+    var fewCons = r.cons.filter(function (x) { return x.m.conf.few; });
+    if (fewCons.length) out.recs.push('Мало проверок (меньше 7) у: ' + fewCons.map(function (x) { return x.c.name; }).join(', ') + ' — добавить выборку в следующем месяце.');
+    return out;
+  }
+
+  return { R: R, MONTHS: MONTHS, OBJECTS: OBJECTS, CONTRACTORS: CONTRACTORS, INSPECTORS: INSPECTORS, TYPES: TYPES, ITEM: ITEM, TYPE: TYPE, CON: CON, OBJ: OBJ, INS: INS,
+    STEPS: STEPS, INSPECTIONS: INSPECTIONS, SK: SK, compute: compute, fmt: fmt, fmtS: fmtS, plural: plural, tCrit: tCrit, confidence: confidence };
+})();
+
+</script>
+<script>
+/* ===== SVG-графики (без библиотек). Цвета — через CSS-переменные темы ===== */
+var CH = (function () {
+  'use strict';
+  var fmt = MQ.fmt;
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function lin(d0, d1, r0, r1) { return function (v) { return r0 + (v - d0) / (d1 - d0) * (r1 - r0); }; }
+  function svgOpen(w, h, label) { return '<svg class="chart-svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="' + esc(label) + '">'; }
+  function txt(x, y, s, cls, anchor) { return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" class="' + (cls || 'ax') + '" text-anchor="' + (anchor || 'middle') + '">' + esc(s) + '</text>'; }
+  function xAxis(r, x, bw, y, w) {
+    var out = '', step = bw < 30 ? 2 : 1;
+    MQ.MONTHS.forEach(function (M, i) {
+      var show = (i % step === (11 % step)) || i === r.mi;
+      if (show) out += txt(x(i), y, M.short, i === r.mi ? 'ax ax-sel' : 'ax');
+    });
+    return out;
+  }
+  function band(n, w, pl, pr) { var bw = (w - pl - pr) / n; return { bw: bw, x: function (i) { return pl + bw * (i + 0.5); } }; }
+
+  /* 3. Тренд УрК за 12 месяцев: полоса разброса + столбики числа проверок */
+  function trend(w, r) {
+    var narrow = w < 520;
+    var pl = 30, pr = narrow ? 8 : 26, pt = 16, h1 = narrow ? 170 : 200, gap = 26, h2 = narrow ? 52 : 62, h = pt + h1 + gap + h2 + 20;
+    var ms = r.months, B = band(12, w, pl, pr), x = B.x, bw = B.bw;
+    var mn = 100;
+    ms.forEach(function (m) { if (m.base) { mn = Math.min(mn, m.base.lo != null ? m.base.lo : m.base.mean, m.final.mean); } });
+    var ymin = Math.max(0, Math.floor((mn - 3) / 10) * 10); if (ymin > 70) ymin = 60;
+    var y = lin(ymin, 100, pt + h1, pt);
+    var s = svgOpen(w, h, 'Тренд УрК за 12 месяцев');
+    s += '<rect x="' + (x(r.mi) - bw / 2).toFixed(1) + '" y="' + (pt - 6) + '" width="' + bw.toFixed(1) + '" height="' + (h1 + gap + h2 + 6) + '" class="sel-band"/>';
+    for (var g = ymin; g <= 100; g += 10) s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(g).toFixed(1) + '" y2="' + y(g).toFixed(1) + '" class="grid"/>' + txt(pl - 6, y(g) + 3.5, g, 'ax', 'end');
+    [[85, 'ok'], [70, 'bad']].forEach(function (z) {
+      if (z[0] < ymin) return;
+      s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(z[0]).toFixed(1) + '" y2="' + y(z[0]).toFixed(1) + '" class="thr thr-' + z[1] + '"/>';
+      if (!narrow) s += txt(w - pr + 3, y(z[0]) + 3.5, z[0], 'ax thr-lbl-' + z[1], 'start');
+    });
+    // полоса разброса (только где ≥2 проверок)
+    var run = [];
+    function flush() {
+      if (run.length > 1) {
+        var up = run.map(function (i) { return x(i).toFixed(1) + ',' + y(Math.min(100, ms[i].base.hi)).toFixed(1); });
+        var dn = run.slice().reverse().map(function (i) { return x(i).toFixed(1) + ',' + y(Math.max(ymin, ms[i].base.lo)).toFixed(1); });
+        s += '<polygon points="' + up.concat(dn).join(' ') + '" class="ci-band"/>';
+      }
+      run = [];
+    }
+    ms.forEach(function (m, i) { if (m.base && m.base.E != null) run.push(i); else flush(); }); flush();
+    function line(key, cls) {
+      var d = '', started = false;
+      ms.forEach(function (m, i) { if (!m[key]) { started = false; return; } d += (started ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(m[key].mean).toFixed(1); started = true; });
+      return '<path d="' + d + '" class="' + cls + '"/>';
+    }
+    s += line('final', 'ln ln-final');
+    s += line('base', 'ln ln-base');
+    ms.forEach(function (m, i) {
+      if (!m.base) return;
+      var few = m.N < 7, M = MQ.MONTHS[i];
+      var tip = M.full + ': проверок ' + m.N + (few ? ' (мало данных)' : '') + '\nБазовый УрК ' + fmt(m.base.mean, 1) + (m.base.E != null ? ' ± ' + fmt(m.base.E, 1) : '') + ' %\nИтоговый УрК ' + fmt(m.final.mean, 1) + ' %';
+      s += '<g class="pt"><title>' + esc(tip) + '</title>';
+      s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(m.final.mean).toFixed(1) + '" r="2.6" class="dot-final"/>';
+      s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(m.base.mean).toFixed(1) + '" r="' + (i === r.mi ? 5 : 4) + '" class="' + (few ? 'dot-hollow' : 'dot-base') + '"/>';
+      s += '<rect x="' + (x(i) - bw / 2).toFixed(1) + '" y="' + pt + '" width="' + bw.toFixed(1) + '" height="' + h1 + '" fill="transparent"/></g>';
+      if (i === r.mi) s += txt(x(i), y(m.base.hi != null ? Math.min(100, m.base.hi) : m.base.mean) - 6, fmt(m.base.mean, 1), 'val');
+    });
+    // столбики числа проверок
+    var y0 = pt + h1 + gap, maxN = Math.max.apply(null, ms.map(function (m) { return m.N; })) || 1;
+    s += txt(pl - 6, y0 + 8, 'N', 'ax', 'end');
+    ms.forEach(function (m, i) {
+      var bh = m.N / maxN * (h2 - 12), bx = x(i) - Math.min(bw * 0.6, 22) / 2, bwid = Math.min(bw * 0.6, 22);
+      s += '<rect x="' + bx.toFixed(1) + '" y="' + (y0 + h2 - bh).toFixed(1) + '" width="' + bwid.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="2" class="' + (m.N < 7 ? 'bar-few' : i === r.mi ? 'bar-sel' : 'bar-n') + '"><title>' + esc(MQ.MONTHS[i].full + ': ' + m.N + ' проверок') + '</title></rect>';
+      if (!narrow || i === r.mi || m.N < 7) s += txt(x(i), y0 + h2 - bh - 3, m.N, m.N < 7 ? 'ax ax-bad' : 'ax');
+    });
+    s += xAxis(r, x, bw, h - 4, w);
+    return s + '</svg>';
+  }
+
+  /* 4. Зоны качества по месяцам — доли проверок */
+  function zones(w, r) {
+    var narrow = w < 520, pl = 30, pr = 8, pt = 10, h1 = narrow ? 170 : 190, h = pt + h1 + 22;
+    var B = band(12, w, pl, pr), x = B.x, bw = B.bw, y = lin(0, 100, pt + h1, pt);
+    var s = svgOpen(w, h, 'Зоны качества по месяцам');
+    [0, 50, 100].forEach(function (g) { s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(g) + '" y2="' + y(g) + '" class="grid"/>' + txt(pl - 6, y(g) + 3.5, g + '%', 'ax', 'end'); });
+    r.months.forEach(function (m, i) {
+      if (!m.N) return;
+      var bwid = Math.min(bw * 0.72, 34), bx = x(i) - bwid / 2, acc = 0, few = m.N < 7;
+      [['green', m.green.mean, 'z-ok'], ['yellow', m.yellow.mean, 'z-warn'], ['red', m.red.mean, 'z-bad']].forEach(function (z) {
+        var v = z[1]; if (v <= 0) return;
+        var y1 = y(acc + v), y2 = y(acc);
+        s += '<rect x="' + bx.toFixed(1) + '" y="' + y1.toFixed(1) + '" width="' + bwid.toFixed(1) + '" height="' + Math.max(0, y2 - y1 - 1).toFixed(1) + '" class="' + z[2] + (few ? ' few' : '') + '"><title>' + esc(MQ.MONTHS[i].full + ': ' + (z[0] === 'green' ? 'зелёная' : z[0] === 'yellow' ? 'жёлтая' : 'красная') + ' ' + fmt(v) + ' % из ' + m.N + ' проверок') + '</title></rect>';
+        if (!narrow && bwid >= 22 && y2 - y1 > 14) s += txt(x(i), (y1 + y2) / 2 + 3.5, fmt(v), 'in-bar');
+        acc += v;
+      });
+      if (few) s += txt(x(i), pt + 10, 'мало', 'ax ax-bad');
+    });
+    s += xAxis(r, x, bw, h - 4, w);
+    return s + '</svg>';
+  }
+
+  /* 6. B1/B2/B3 на 100 проверенных пунктов — столбики с накоплением */
+  function bclass(w, r) {
+    var narrow = w < 520, pl = 30, pr = 8, pt = 18, h1 = narrow ? 160 : 180, h = pt + h1 + 22;
+    var ms = r.months, mx = 0;
+    ms.forEach(function (m) { mx = Math.max(mx, m.b1p + m.b2p + m.b3p); });
+    mx = Math.ceil(mx / 5) * 5 || 5;
+    var B = band(12, w, pl, pr), x = B.x, bw = B.bw, y = lin(0, mx, pt + h1, pt);
+    var s = svgOpen(w, h, 'Дефекты B1, B2, B3 на 100 проверенных пунктов');
+    for (var g = 0; g <= mx; g += 5) s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(g).toFixed(1) + '" y2="' + y(g).toFixed(1) + '" class="grid"/>' + txt(pl - 6, y(g) + 3.5, g, 'ax', 'end');
+    ms.forEach(function (m, i) {
+      if (!m.N) return;
+      var bwid = Math.min(bw * 0.62, 28), bx = x(i) - bwid / 2, acc = 0;
+      [['B1', m.b1p, 'b-1', m.b1], ['B2', m.b2p, 'b-2', m.b2], ['B3', m.b3p, 'b-3', m.b3]].forEach(function (z) {
+        if (z[1] <= 0) return;
+        var y1 = y(acc + z[1]), y2 = y(acc);
+        s += '<rect x="' + bx.toFixed(1) + '" y="' + y1.toFixed(1) + '" width="' + bwid.toFixed(1) + '" height="' + Math.max(0, y2 - y1 - 1).toFixed(1) + '" class="' + z[2] + (m.N < 7 ? ' few' : '') + '"><title>' + esc(MQ.MONTHS[i].full + ': ' + z[0] + ' — ' + fmt(z[1], 1) + ' на 100 пунктов (' + z[3] + ' из ' + m.items + ')') + '</title></rect>';
+        acc += z[1];
+      });
+      if (i === r.mi || (!narrow && i === r.mi - 1)) s += txt(x(i), y(acc) - 5, fmt(acc, 1), i === r.mi ? 'val' : 'ax');
+    });
+    s += xAxis(r, x, bw, h - 4, w);
+    return s + '</svg>';
+  }
+
+  /* 7. ИКО объектов по месяцам */
+  var OBJ_CLS = ['s-1', 's-2', 's-3'];
+  function iko(w, r) {
+    var narrow = w < 520, pl = 34, pr = 8, pt = 12, h1 = narrow ? 160 : 180, h = pt + h1 + 22;
+    var B = band(12, w, pl, pr), x = B.x, bw = B.bw, y = lin(0, 1, pt + h1, pt);
+    var s = svgOpen(w, h, 'Индекс критичности объектов по месяцам');
+    s += '<rect x="' + pl + '" y="' + y(1) + '" width="' + (w - pl - pr) + '" height="' + (y(0.6) - y(1)) + '" class="zone-bg-bad"/>';
+    s += '<rect x="' + pl + '" y="' + y(0.6) + '" width="' + (w - pl - pr) + '" height="' + (y(0.3) - y(0.6)) + '" class="zone-bg-warn"/>';
+    s += '<rect x="' + pl + '" y="' + y(0.3) + '" width="' + (w - pl - pr) + '" height="' + (y(0) - y(0.3)) + '" class="zone-bg-ok"/>';
+    [0, 0.3, 0.6, 1].forEach(function (g) { s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(g) + '" y2="' + y(g) + '" class="grid"/>' + txt(pl - 6, y(g) + 3.5, fmt(g, 1), 'ax', 'end'); });
+    s += '<rect x="' + (x(r.mi) - bw / 2).toFixed(1) + '" y="' + pt + '" width="' + bw.toFixed(1) + '" height="' + h1 + '" class="sel-band"/>';
+    r.objs.forEach(function (o) {
+      var k = MQ.OBJECTS.indexOf(o.o), d = '', st = false;
+      o.series.forEach(function (v, i) { if (!v) { st = false; return; } d += (st ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v.iko).toFixed(1); st = true; });
+      s += '<path d="' + d + '" class="ln ' + OBJ_CLS[k] + '"/>';
+      o.series.forEach(function (v, i) {
+        if (!v) return;
+        s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(v.iko).toFixed(1) + '" r="' + (i === r.mi ? 4.5 : 3) + '" class="dot ' + OBJ_CLS[k] + '"><title>' + esc(o.o.name + ', ' + MQ.MONTHS[i].full + ': ИКО ' + fmt(v.iko, 2) + ' — ' + v.status + ' (' + v.pairs + ' участков от 7 проверок)') + '</title></circle>';
+      });
+    });
+    s += xAxis(r, x, bw, h - 4, w);
+    return s + '</svg>';
+  }
+
+  /* 8. Стройконтроль: выдано / закрыто (столбики) и открыто на конец (линия) */
+  function sk(w, r) {
+    var narrow = w < 520, pl = 30, pr = 8, pt = 14, h1 = narrow ? 160 : 180, h = pt + h1 + 22;
+    var ss = r.sk, mx = 0;
+    ss.forEach(function (m) { mx = Math.max(mx, m.issued, m.closed, m.open); });
+    mx = Math.ceil(mx / 20) * 20 || 20;
+    var B = band(12, w, pl, pr), x = B.x, bw = B.bw, y = lin(0, mx, pt + h1, pt);
+    var s = svgOpen(w, h, 'Стройконтроль: выдано, закрыто, открыто');
+    for (var g = 0; g <= mx; g += mx / 4) s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(g).toFixed(1) + '" y2="' + y(g).toFixed(1) + '" class="grid"/>' + txt(pl - 6, y(g) + 3.5, fmt(g), 'ax', 'end');
+    s += '<rect x="' + (x(r.mi) - bw / 2).toFixed(1) + '" y="' + pt + '" width="' + bw.toFixed(1) + '" height="' + h1 + '" class="sel-band"/>';
+    ss.forEach(function (m, i) {
+      var bwid = Math.min(bw * 0.34, 12);
+      s += '<rect x="' + (x(i) - bwid - 1).toFixed(1) + '" y="' + y(m.issued).toFixed(1) + '" width="' + bwid.toFixed(1) + '" height="' + (y(0) - y(m.issued)).toFixed(1) + '" class="sk-iss"><title>' + esc(MQ.MONTHS[i].full + ': выдано ' + m.issued) + '</title></rect>';
+      s += '<rect x="' + (x(i) + 1).toFixed(1) + '" y="' + y(m.closed).toFixed(1) + '" width="' + bwid.toFixed(1) + '" height="' + (y(0) - y(m.closed)).toFixed(1) + '" class="sk-cls"><title>' + esc(MQ.MONTHS[i].full + ': закрыто ' + m.closed) + '</title></rect>';
+    });
+    var d = '';
+    ss.forEach(function (m, i) { d += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(m.open).toFixed(1); });
+    s += '<path d="' + d + '" class="ln ln-open"/>';
+    ss.forEach(function (m, i) { s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(m.open).toFixed(1) + '" r="3" class="dot-open"><title>' + esc(MQ.MONTHS[i].full + ': открыто на конец месяца ' + m.open) + '</title></circle>'; });
+    s += xAxis(r, x, bw, h - 4, w);
+    return s + '</svg>';
+  }
+
+  /* Мини-линия для плитки */
+  function spark(w, h, vals, sel, few) {
+    var v = vals.filter(function (a) { return a != null; });
+    if (v.length < 2) return '';
+    var mn = Math.min.apply(null, v), mx = Math.max.apply(null, v); if (mx - mn < 1) { mx += 0.5; mn -= 0.5; }
+    var x = lin(0, vals.length - 1, 3, w - 3), y = lin(mn, mx, h - 3, 3), d = '', st = false, dots = '';
+    vals.forEach(function (a, i) {
+      if (a == null) { st = false; return; }
+      d += (st ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(a).toFixed(1); st = true;
+      if (i === sel) dots += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(a).toFixed(1) + '" r="2.6" class="dot-base"/>';
+      else if (few[i]) dots += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(a).toFixed(1) + '" r="2" class="dot-hollow"/>';
+    });
+    return '<svg class="spark" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true"><path d="' + d + '" class="ln ln-spark"/>' + dots + '</svg>';
+  }
+
+  return { trend: trend, zones: zones, bclass: bclass, iko: iko, sk: sk, spark: spark, esc: esc };
+})();
+
+</script>
+<script>
+/* ===== Отрисовка макета подвкладки «Месяц» ===== */
+(function () {
+  'use strict';
+  var fmt = MQ.fmt, fmtS = MQ.fmtS, pl = MQ.plural, esc = CH.esc;
+  var S = { month: 11, obj: '', con: '', type: '', ins: '', heat: 1, repAll: false, topAll: false };
+  var R = null;
+  var GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+  /* Подсказки «как считается» — простым языком */
+  var H = {
+    vol: '<b>Объём выборки</b> — сколько проверок сделали в календарном месяце и сколько пунктов чек-листов в них реально осмотрели. Это не вся стройка: проверяем выборочно. Все показатели ниже — про осмотренное.',
+    conf: '<b>Надёжность месяца</b> — по числу проверок: меньше 7 — «Сбор данных» (мало данных, стрелки не рисуем), 7–15 — «Предварительный», 16–23 — «Базовый», 24–31 — «Уверенный», 32–50 — «Стабильный», 51 и больше — «Эталонный». Те же ступени, что в рейтинге подрядчиков.',
+    comp: '<b>Состав выборки</b> — какие виды работ проверяли в этом месяце (полоска) и какая их доля обычно за 12 месяцев (чёрточка). Если в месяце больше проверили «трудный» вид работ, общий УрК может упасть без реального ухудшения — поэтому рядом показан УрК с постоянным составом.',
+    mix: '<b>УрК с постоянным составом</b> — средний базовый УрК по каждому виду работ, сложенный с теми долями видов работ, что были в среднем за 12 месяцев. Убирает эффект «в этом месяце больше проверяли кровлю».',
+    base: '<b>Базовый УрК</b> одной проверки = вес выполненных пунктов ÷ вес проверенных пунктов × 100. Вес пункта: B1 = 1, B2 = 2, B3 = 3. Непроверенные пункты не считаются. За месяц — среднее по всем проверкам месяца.<br><br><b>± разброс</b> = коэффициент Стьюдента × (стандартное отклонение ÷ √N). «Скорее всего от … до …» — с вероятностью около 95 %.',
+    final: '<b>Итоговый УрК</b> = базовый × Kc × Kcrit. Kc — штраф за долю невыполненных B2: до 20 % → 0,95; 20–50 % → 0,85; от 50 % → 0,70. Kcrit = 0,5, если есть B3. При любом B2 или B3 итог не выше 84. За месяц — среднее по проверкам.',
+    b3: '<b>Доля проверок с B3</b> = проверок, где найден хотя бы один критичный дефект (B3, в том числе «превышение >1,5») ÷ все проверки месяца × 100. Разброс для доли считается по формуле для долей с тем же коэффициентом Стьюдента.',
+    per100: '<b>Невыполненных пунктов на 100 проверенных</b> = все невыполненные пункты (B1 + B2 + B3) ÷ все проверенные пункты × 100. Делим на пункты, а не на проверки: чек-листы разной длины. Разброс — по разбросу этого числа между проверками.',
+    red: '<b>Красная зона</b> — проверка со статусом «Брак / стоп»: есть B3 или итоговый УрК ниже 70. Доля = таких проверок ÷ все проверки месяца × 100.',
+    delta: '<b>Изменение</b> = этот месяц − прошлый. <b>«Заметно»</b> — только если изменение больше разброса и этого, и прошлого месяца. Иначе — <b>«в пределах разброса»</b>: разница может быть случайной из-за выборки. Если в любом из месяцев меньше 7 проверок — «мало данных», стрелку не рисуем.',
+    trend: '<b>Линия</b> — базовый УрК месяца, <b>полоса</b> — разброс ±E. Пунктир — итоговый УрК. <b>Пустой кружок</b> — меньше 7 проверок (мало данных). Столбики внизу — число проверок: месяц с 5 проверками весит меньше месяца с 80. Пороги 85 и 70 — границы зон.',
+    zones: '<b>Зоны по проверкам</b>: зелёная — итоговый УрК от 85 и нет B3 («Принято»); жёлтая — 70–84 («Исправить»); красная — есть B3 или ниже 70 («Брак / стоп»). Доли от числа проверок месяца.',
+    cons: '<b>УрК подрядчика за месяц</b> = среднее итоговых УрК его проверок за календарный месяц (все проверки, без «последних 15») × Ks × KB3. Ks — системность: самый частый невыполненный пункт B2 (10 % → 0,95; 20 % → 0,85; 40 % → 0,70; 60 % → 0,50). KB3 — доля проверок с B3 (до 5 % → 0,95 … от 30 % → 0,50). При штрафе — не выше 84.<br><br><b>Сортировка — по нижней границе</b> (УрК − разброс): подрядчик с 2–3 случайно хорошими проверками не окажется первым. Подрядчики с меньше 7 проверками («сбор данных») — всегда внизу списка.',
+    stab: '<b>Стабильность</b> = (1 − стандартное отклонение ÷ 50) × 100. От 80 — высокая, 60–79 — средняя, 40–59 — низкая, ниже 40 — критическая.',
+    zoneC: '<b>Зона подрядчика</b>: красная — УрК ниже 70, или B3 в 20 % проверок и больше, или системность от 40 %; «образцовое» — от 85, без B3 и системность ниже 10 %; иначе жёлтая.',
+    bcl: '<b>B1 / B2 / B3 на 100 проверенных пунктов</b> = невыполненных пунктов этого класса ÷ все проверенные пункты × 100. B1 — малозначительный, B2 — значительный, B3 — критичный. Блёклые столбики — месяц с малым числом проверок.',
+    crit: '<b>Доля критичных</b> = невыполненных пунктов B3 ÷ все невыполненные пункты × 100.',
+    top: '<b>Топ-10 типовых дефектов</b>: «5 из 8» — пункт не выполнен в 5 проверках из 8, где его проверяли (частота, а не просто количество). Чёрточка на полоске — прошлый месяц. Стрелка: ▲ чаще на 5 п.п. и больше, ▼ реже, ≈ почти так же; «—» — в прошлом месяце пункт проверяли меньше 3 раз.',
+    heat: '<b>Тепловая карта</b> = невыполненных пунктов на 100 проверенных для пары «подрядчик × вид работ». Под числом — число проверок. Бледная штриховка — меньше 7 проверок: цифра ненадёжна.',
+    rep: '<b>Повторяемость</b>: тот же пункт у того же подрядчика не выполнен 2 и больше месяцев подряд (в месяце — 2 и больше раз, или хоть раз при 1–3 проверках этого пункта). Счёт идёт назад от выбранного месяца. Это не «открыто снова после устранения» — такого признака в данных пока нет.',
+    sys: '<b>Системность брака B2</b> — у подрядчика за месяц: самый часто невыполняемый пункт B2, % его невыполнения от числа проверок этого пункта. От 20 % — заметный штраф к УрК подрядчика, от 40 % — красная зона.',
+    pareto: '<b>Парето причин</b>: причины дефектов месяца по убыванию. Жирные — те, что вместе дают первые 80 % дефектов. Красная чёрточка — накопленный %. Дефекты без указанной причины в расчёт не входят (показаны отдельно).',
+    iko: '<b>ИКО — индекс критичности объекта</b> (0…1). Для каждой пары «подрядчик × вид работ» с 7 и больше проверками: опасность = 1 − УрК × стабильность × (0,5, если были B3). Затем среднее по парам с весом риска вида работ (кровля 1,4, монолит 1,5 …). Ниже 0,30 — низкий риск, 0,30–0,59 — повышенный, от 0,60 — высокий. Берём 3 месяца, иначе почти у всех пар меньше 7 проверок.',
+    sk: '<b>Стройконтроль</b>: выдано — замечаний с датой выдачи в месяце; закрыто — с датой закрытия в месяце; открыто — не закрыты на последний день месяца. <b>В срок</b> — закрыто не позже срока ÷ закрыто в месяце. <b>Просрочено</b> — открытые со сроком, который прошёл, ÷ открытые.',
+    idz: '<b>ИДЗ — индекс дисциплины закрытия</b> = доля в срок × 0,6 + (100 − доля просроченных) × 0,4 − средняя просрочка, дней. Чем выше, тем лучше.',
+    isd: '<b>ИСД — индекс «прозрачности» выдачи</b> = замечаний выдано ÷ ожидаемое число × 100. Ожидаемое = объём работ × частота брака B2+B3 по проверкам. Около 100 — замечания выдают столько, сколько ожидалось; сильно ниже — брак, возможно, не фиксируют.',
+    concl: '<b>Выводы</b> собираются автоматически из чисел выше. В «заметно изменилось» попадают только изменения больше разброса обоих месяцев.'
+  };
+  function hint(k) { return '<button type="button" class="hint" data-hint="' + k + '" aria-label="Как считается">?</button>'; }
+
+  function zoneOfUrk(v) { return v >= 85 ? 'ok' : v >= 70 ? 'warn' : 'bad'; }
+  function confHtml(c, N) {
+    var bars = ''; for (var i = 1; i <= 5; i++) bars += '<b class="' + (c.idx >= i ? 'on' : '') + '"></b>';
+    return '<span class="conf ' + (c.few ? 'few' : '') + '"><i>' + bars + '</i>' + c.name + '</span>';
+  }
+  function zoneChip(z, t) { return '<span class="chipz ' + z + '">' + t + '</span>'; }
+  var CAM = '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+
+  /* ---------- Блоки ---------- */
+  function blockVolume(r) {
+    var c = r.cur, M = r.M;
+    var types = Object.keys(c.byType).sort(function (a, b) { return c.byType[b] - c.byType[a]; });
+    var share = {}; MQ.INSPECTIONS.forEach(function (x) { share[x.t] = (share[x.t] || 0) + 1; });
+    var tot = MQ.INSPECTIONS.length;
+    var comp = types.map(function (t) {
+      var p = c.byType[t] / c.N * 100, avg = share[t] / tot * 100;
+      return '<div class="row"><span>' + MQ.TYPE[t].short + '</span><div class="bar"><b style="width:' + p.toFixed(1) + '%"></b><i style="left:' + avg.toFixed(1) + '%" title="обычно ' + fmt(avg) + ' %"></i></div><span>' + c.byType[t] + ' · ' + fmt(p) + ' %</span></div>';
+    }).join('');
+    var lad = MQ.STEPS.map(function (s, i) { return '<div class="' + (i === c.conf.idx ? 'cur' : i < c.conf.idx ? 'past' : '') + '">' + s.name + '<small>' + s.note + '</small></div>'; }).join('');
+    return '<h2 class="sec"><span class="n">1</span>Объём выборки и надёжность месяца' + hint('vol') + '</h2>' +
+      '<div class="card d6"><div class="vol-strip">' +
+      '<div><div class="k">Проверок</div><div class="v">' + fmt(c.N) + (r.prev ? '<small>' + r.P.short + ': ' + fmt(r.prev.N) + '</small>' : '') + '</div></div>' +
+      '<div><div class="k">Проверено пунктов</div><div class="v">' + fmt(c.items) + '</div></div>' +
+      '<div><div class="k">Объектов</div><div class="v">' + c.nObj + '</div></div>' +
+      '<div><div class="k">Подрядчиков</div><div class="v">' + c.nCon + '</div></div>' +
+      '<div><div class="k">Инспекторов</div><div class="v">' + c.nIns + '</div></div></div>' +
+      '<div class="vol-cols"><div><h3>Надёжность месяца' + hint('conf') + '</h3><p class="sub">' + fmt(c.N) + ' ' + pl(c.N, 'проверка', 'проверки', 'проверок') + ' — ступень «' + c.conf.name + '»' + (c.conf.few ? '. <b class="bad">Мало данных:</b> изменения к прошлому месяцу не оцениваем.' : '') + '</p><div class="ladder">' + lad + '</div></div>' +
+      '<div><h3>Состав выборки по видам работ' + hint('comp') + '</h3><p class="sub">Полоска — этот месяц, чёрточка — обычная доля за 12 месяцев</p><div class="comp">' + (comp || '<span class="muted">нет проверок</span>') + '</div></div>' +
+      '<div><h3>Поправка на состав' + hint('mix') + '</h3><p class="sub">УрК, если бы виды работ проверяли в обычных долях</p>' +
+      '<div class="crit-big"><span class="v ' + (c.baseMix != null ? zoneOfUrk(c.baseMix) : '') + '">' + fmt(c.baseMix, 1) + ' %</span><span class="muted">обычный базовый УрК: ' + (c.base ? fmt(c.base.mean, 1) + ' %' : '—') + '</span></div>' +
+      '<div class="note-box">Это доля брака <b>среди осмотренного</b>, а не по всей стройке. Пересчитывать её на весь объём работ нельзя.</div></div></div></div>';
+  }
+
+  function tileHtml(t, r) {
+    var c = t.cur, p = t.prev, d = t.d, u = t.unit;
+    if (!c) return '<div class="tile"><div class="t-head"><span class="t-title">' + t.title + '</span>' + hint(t.key) + '</div><div class="t-val muted">—</div><div class="t-range">нет проверок</div></div>';
+    var valCls = (t.key === 'base' || t.key === 'final') ? zoneOfUrk(c.mean) : '';
+    var cmp = t.cmp, dl = '';
+    if (cmp.kind === 'few') dl = '<div class="t-delta few"><span class="badge">мало данных</span>' + (cmp.d != null ? '<span>' + fmtS(cmp.d, d) + (u === '%' ? ' п.п.' : '') + ' — не сравниваем</span>' : '') + '</div>';
+    else {
+      var arrow = Math.abs(cmp.d) < Math.pow(10, -d) / 2 ? '=' : cmp.d > 0 ? '▲' : '▼';
+      var cls = cmp.kind + (cmp.kind === 'notable' ? (cmp.good ? ' good' : ' bad') : '');
+      dl = '<div class="t-delta ' + cls + '"><span>' + arrow + ' ' + fmtS(cmp.d, d) + (u === '%' ? ' п.п.' : '') + '</span><span class="badge">' + (cmp.kind === 'notable' ? (cmp.good ? 'заметно лучше' : 'заметно хуже') : 'в пределах разброса') + '</span>' + hint('delta') + '</div>';
+    }
+    var series = r.months.map(function (m) { var k = t.key, v = k === 'base' ? m.base : k === 'final' ? m.final : k === 'b3' ? m.b3share : k === 'per100' ? m.per100 : m.red; return v ? v.mean : null; });
+    var few = r.months.map(function (m) { return m.N < 7; });
+    return '<div class="tile"><div class="t-head"><span class="t-title">' + t.title + '</span>' + hint(t.key) + '</div>' +
+      '<div class="t-val ' + valCls + '">' + fmt(c.mean, d) + '<small>' + (u || '') + '</small>' + (c.E != null ? '<span class="pm">± ' + fmt(c.E, d) + '</span>' : '') + '</div>' +
+      '<div class="t-range">' + (c.E != null ? 'скорее всего от ' + fmt(Math.max(0, c.mean - c.E), d) + ' до ' + fmt(u === '%' ? Math.min(100, c.mean + c.E) : c.mean + c.E, d) : 'разброс не посчитать') + '</div>' +
+      '<div class="t-prev">' + (r.P ? r.P.full.split(' ')[0] + ': <b>' + (p ? fmt(p.mean, d) + (u || '') : '—') + '</b>' + (p && p.E != null ? ' ± ' + fmt(p.E, d) : '') + (p ? ' · ' + p.N + ' пр.' : '') : 'нет прошлого месяца') + '</div>' +
+      dl + '<div class="spk" data-spark="' + t.key + '" data-vals="' + series.map(function (v) { return v == null ? '' : v.toFixed(2); }).join(',') + '" data-few="' + few.map(function (f) { return f ? 1 : 0; }).join(',') + '"></div></div>';
+  }
+  function blockTiles(r) {
+    return '<h2 class="sec"><span class="n">2</span>' + r.M.full + (r.P ? ' против ' + GEN[r.P.m] + (r.P.y !== r.M.y ? ' ' + r.P.y : '') : '') + hint('delta') + '<span class="note">этот / прошлый / изменение</span></h2>' +
+      '<div class="d6"><div class="tiles">' + r.tiles.map(function (t) { return tileHtml(t, r); }).join('') + '</div></div>';
+  }
+  function blockTrend(r) {
+    return '<h2 class="sec"><span class="n">3</span>Динамика за 12 месяцев<span class="note">ноябрь 2025 — октябрь 2026</span></h2>' +
+      '<div class="card d4"><h3>Уровень качества (УрК) по месяцам' + hint('trend') + '</h3>' +
+      '<div class="lg"><span><i class="line" style="background:var(--gold)"></i>Базовый УрК</span><span><i style="background:var(--gold);opacity:.3"></i>разброс ±</span><span><i class="dash" style="border-color:var(--blue)"></i>Итоговый УрК</span><span><i class="hollow"></i>меньше 7 проверок</span><span><i style="background:var(--line2)"></i>число проверок</span></div>' +
+      '<div class="chart" data-ch="trend"></div></div>' +
+      '<div class="card d2"><h3><span class="n" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--chip);color:var(--accent-text);font-size:11px;font-weight:900">4</span>Зоны качества по месяцам' + hint('zones') + '</h3>' +
+      '<div class="lg"><span><i style="background:var(--ok)"></i>зелёная (от 85)</span><span><i style="background:var(--warn)"></i>жёлтая (70–84)</span><span><i style="background:var(--bad)"></i>красная (B3 или ниже 70)</span></div>' +
+      '<div class="chart" data-ch="zones"></div></div>';
+  }
+  function rngBar(m) {
+    var lo = m.E != null ? Math.max(0, m.U - m.E) : null, hi = m.E != null ? Math.min(100, m.U + m.E) : null;
+    return '<div class="rng" title="' + (lo != null ? 'скорее всего от ' + fmt(lo) + ' до ' + fmt(hi) : 'разброс не посчитать') + '">' + (lo != null ? '<b style="left:' + lo + '%;width:' + (hi - lo) + '%"></b>' : '') + '<i class="' + (m.conf.few ? 'hollow' : '') + '" style="left:' + m.U + '%"></i></div>';
+  }
+  function blockCons(r) {
+    var rows = r.cons.map(function (x, i) {
+      var m = x.m, mp = x.mp, d = x.d;
+      var dcls = x.kind === 'notable' ? (d > 0 ? 'good' : 'bad') : 'same';
+      var dtxt = d == null ? '—' : (d > 0 ? '▲ ' : d < 0 ? '▼ ' : '') + fmtS(d);
+      var dsub = d == null ? 'нет прошлого' : x.kind === 'notable' ? 'заметно' : x.kind === 'within' ? 'в пределах разброса' : 'мало данных';
+      return '<tr class="' + (m.conf.few ? 'faint' : '') + '">' +
+        '<td data-label="Место" class="r rk">' + (i + 1) + '</td>' +
+        '<td data-label="Подрядчик" class="name full nolbl"><span class="rk-inline">' + (i + 1) + '.</span>' + x.c.name + '<small>' + x.types.map(function (t) { return MQ.TYPE[t].short; }).join(', ') + '</small></td>' +
+        '<td data-label="УрК за ' + r.M.short + '" class="r"><b class="' + zoneOfUrk(m.U) + '" style="font-size:15px">' + m.U + '</b>' + (m.E != null ? ' <span class="muted">± ' + fmt(m.E) + '</span>' : '') + '</td>' +
+        '<td data-label="Разброс (0–100)" class="full">' + rngBar(m) + '</td>' +
+        '<td data-label="' + (r.P ? r.P.short : 'Прошлый') + '" class="r">' + (mp ? mp.U + ' <span class="muted">(' + mp.N + ' пр.)</span>' : '—') + '</td>' +
+        '<td data-label="Изменение"><span class="dlt ' + dcls + '">' + dtxt + '<small>' + dsub + '</small></span></td>' +
+        '<td data-label="Проверок" class="r">' + m.N + '</td>' +
+        '<td data-label="Надёжность">' + confHtml(m.conf) + '</td>' +
+        '<td data-label="Зона">' + zoneChip(m.zone, m.zoneText) + (m.NB3 ? '<small class="muted" style="display:block;font-size:10.5px">B3 в ' + m.NB3 + ' из ' + m.N + '</small>' : '') + '</td>' +
+        '<td data-label="Стабильность">' + m.stabText + ' <span class="muted">' + m.stab + '</span></td></tr>';
+    }).join('');
+    return '<h2 class="sec"><span class="n">5</span>Подрядчики за ' + r.M.full.toLowerCase() + hint('cons') + '<span class="note">сортировка по нижней границе разброса</span></h2>' +
+      '<div class="card d6">' + (rows ? '<div class="tbl-wrap"><table class="tbl cards"><thead><tr><th class="r">#</th><th>Подрядчик</th><th class="r">УрК ' + hint('cons') + '</th><th>Разброс</th><th class="r">' + (r.P ? r.P.short : '') + '</th><th>Изменение ' + hint('delta') + '</th><th class="r">Проверок</th><th>Надёжность ' + hint('conf') + '</th><th>Зона ' + hint('zoneC') + '</th><th>Стабильность ' + hint('stab') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="muted">Нет проверок</p>') +
+      '<p class="sub" style="margin:8px 0 0">Бледные строки — меньше 7 проверок (сбор данных). Пустой кружок на шкале — то же.</p></div>';
+  }
+
+  function heatColor(v) {
+    var p = Math.min(1, v / 30);
+    var col = p < 0.33 ? 'var(--ok)' : p < 0.66 ? 'var(--warn)' : 'var(--bad)';
+    var pct = 22 + Math.round(p * 50);
+    return 'background:color-mix(in srgb,' + col + ' ' + pct + '%,var(--card));';
+  }
+  function blockDefects(r) {
+    var c = r.cur, p = r.prev;
+    // B1/B2/B3 + доля критичных
+    var critCmp = '';
+    if (p && p.critShare != null && c.critShare != null) critCmp = (r.P.short + ': ' + fmt(p.critShare) + ' %');
+    var html = '<h2 class="sec"><span class="n">6</span>Дефекты<span class="note">главный блок · всё на 100 проверенных пунктов, с учётом выборки</span></h2>';
+    html += '<div class="card d4"><h3>Невыполненные пункты B1 / B2 / B3 на 100 проверенных' + hint('bcl') + '</h3>' +
+      '<div class="lg"><span><i style="background:var(--blue)"></i>B1 малозначительные</span><span><i style="background:var(--warn)"></i>B2 значительные</span><span><i style="background:var(--bad)"></i>B3 критичные</span></div>' +
+      '<div class="chart" data-ch="bclass"></div></div>';
+    html += '<div class="card d2"><h3>Доля критичных среди всех дефектов' + hint('crit') + '</h3><p class="sub">' + r.M.full + '</p>' +
+      '<div class="crit-big"><span class="v ' + (c.critShare > 15 ? 'bad' : '') + '">' + fmt(c.critShare) + ' %</span><span class="muted">' + c.b3 + ' из ' + c.fails + ' дефектов' + (critCmp ? ' · ' + critCmp : '') + '</span></div>' +
+      '<div class="mini-kpis"><div><div class="k">B1 на 100</div><div class="v" style="color:var(--blue)">' + fmt(c.b1p, 1) + '</div><div class="k">' + c.b1 + ' шт.</div></div>' +
+      '<div><div class="k">B2 на 100</div><div class="v" style="color:var(--warn)">' + fmt(c.b2p, 1) + '</div><div class="k">' + c.b2 + ' шт.</div></div>' +
+      '<div><div class="k">B3 на 100</div><div class="v" style="color:var(--bad)">' + fmt(c.b3p, 1) + '</div><div class="k">' + c.b3 + ' шт.</div></div></div>' +
+      '<div class="note-box">Всего проверено ' + fmt(c.items) + ' ' + pl(c.items, 'пункт', 'пункта', 'пунктов') + ', не выполнено ' + fmt(c.fails) + '.</div></div>';
+    // Топ-10
+    var topRows = r.top.map(function (t, i) {
+      var arrow;
+      if (t.d == null) arrow = '<span class="arrow na" title="в прошлом месяце проверяли меньше 3 раз">— нет сравнения</span>';
+      else if (t.d >= 5) arrow = '<span class="arrow up">▲ ' + fmtS(t.d) + ' п.п.</span>';
+      else if (t.d <= -5) arrow = '<span class="arrow down">▼ ' + fmtS(t.d) + ' п.п.</span>';
+      else arrow = '<span class="arrow eq">≈ как в ' + r.P.short + '</span>';
+      var fewChk = t.chk < 7 ? ' <span class="chipz grey" title="пункт проверяли меньше 7 раз">мало проверок</span>' : '';
+      return '<li><span class="rk">' + (i + 1) + '</span><div class="nm"><span class="bclass b' + t.item.w + '">B' + t.item.w + '</span>' + esc(t.item.name) + fewChk +
+        '<small>' + MQ.TYPE[t.item.type].short + ' · чаще у ' + t.mainCon.name.replace('Подрядчик ', '') + ' (' + t.mainConN + ') · ' + arrow + '</small></div>' +
+        '<div class="rt"><div class="of">' + t.fail + ' из ' + t.chk + '<small>' + fmt(t.rate) + ' %</small></div><span class="photo ' + (t.photos ? '' : 'none') + '" title="' + (t.photos ? 'фото-примеры: ' + t.photos : 'нет фото') + '" data-photo="' + esc(t.item.name) + '" data-n="' + t.photos + '">' + CAM + (t.photos ? '<em>' + t.photos + '</em>' : '') + '</span></div>' +
+        '<div class="meter"><b style="width:' + t.rate.toFixed(1) + '%"></b>' + (t.prate != null ? '<i style="left:' + t.prate.toFixed(1) + '%" title="' + r.P.short + ': ' + fmt(t.prate) + ' %"></i>' : '') + '</div></li>';
+    });
+    var showTop = S.topAll ? topRows : topRows.slice(0, 6);
+    html += '<div class="card d3"><h3>Топ-10 типовых дефектов' + hint('top') + '</h3><p class="sub">«из N» — сколько раз пункт проверяли в этом месяце</p>' +
+      (topRows.length ? '<ol class="top">' + showTop.join('') + '</ol>' + (topRows.length > 6 ? '<button class="more" data-act="topAll">' + (S.topAll ? 'Свернуть' : 'Ещё ' + (topRows.length - 6)) + '</button>' : '') : '<p class="muted">Дефектов нет</p>') + '</div>';
+    // Тепловая карта
+    var H1 = S.heat === 1 ? r.heat1 : r.heat3;
+    var tps = MQ.TYPES.filter(function (t) { return Object.keys(H1).some(function (k) { return k.split('|')[1] === t.id; }); });
+    var cns = MQ.CONTRACTORS.filter(function (cc) { return Object.keys(H1).some(function (k) { return k.split('|')[0] === cc.id; }); });
+    var heat = '<table class="heat"><thead><tr><th></th>' + tps.map(function (t) { return '<th>' + t.short + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      cns.map(function (cc) {
+        return '<tr><th class="rowh">' + cc.name.replace('Подрядчик ', 'Подр. ') + '</th>' + tps.map(function (t) {
+          var e = H1[cc.id + '|' + t.id];
+          if (!e) return '<td class="empty" data-label="' + t.short + '">·</td>';
+          return '<td data-label="' + t.short + '" class="' + (e.n < 7 ? 'pale' : '') + '" style="' + heatColor(e.v) + '" title="' + esc(cc.name + ' · ' + t.name + ': ' + fmt(e.v, 1) + ' на 100 пунктов, проверок ' + e.n + (e.n < 7 ? ' (мало)' : '')) + '">' + fmt(e.v, 1) + '<small>' + e.n + ' пр.</small></td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody></table>';
+    html += '<div class="card d3"><h3>Подрядчик × вид работ' + hint('heat') + '<span class="seg2"><button data-heat="1" class="' + (S.heat === 1 ? 'on' : '') + '">Месяц</button><button data-heat="3" class="' + (S.heat === 3 ? 'on' : '') + '">3 месяца</button></span></h3>' +
+      '<p class="sub">Невыполненных пунктов на 100 проверенных · под числом — проверок</p><div class="heat-wrap">' + (cns.length ? heat : '<p class="muted">Нет данных</p>') + '</div>' +
+      '<div class="heat-scale">меньше <span style="' + heatColor(2) + '"></span><span style="' + heatColor(12) + '"></span><span style="' + heatColor(28) + '"></span> больше · <span style="background:var(--hover);background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgba(127,127,127,.3) 4px 6px)"></span> меньше 7 проверок</div></div>';
+    // Повторяемость
+    var reps = r.repeats.map(function (x) {
+      return '<li><div class="nm"><span class="bclass b' + x.item.w + '">B' + x.item.w + '</span>' + esc(x.item.name) + '<small>' + x.c.name + ' · ' + MQ.TYPE[x.item.type].short + '</small></div>' +
+        '<div class="streak">держится ' + x.streak + ' ' + pl(x.streak, 'месяц', 'месяца', 'месяцев') + '</div>' +
+        '<div class="hist">' + x.hist.map(function (h) { return '<span>' + MQ.MONTHS[h.mi].short + ': <b>' + h.fail + '</b> из ' + h.chk + '</span>'; }).join('') + '</div></li>';
+    });
+    var showRep = S.repAll ? reps : reps.slice(0, 4);
+    var sys = r.sysB2.slice(0, 6).map(function (x) {
+      var col = x.Rsys >= 40 ? 'var(--bad)' : x.Rsys >= 20 ? 'var(--warn)' : 'var(--ok)';
+      return '<div class="row"><span>' + x.c.name + '</span><div class="bar" title="' + esc(x.item ? x.item.name : '') + '"><b style="width:' + Math.min(100, x.Rsys).toFixed(0) + '%;background:' + col + '"></b></div><span class="num" style="text-align:right;font-weight:800">' + fmt(x.Rsys) + ' %</span></div>';
+    }).join('');
+    html += '<div class="card d3"><h3>Повторяемость: держится 2+ месяца' + hint('rep') + '</h3><p class="sub">Тот же пункт у того же подрядчика, месяц за месяцем</p>' +
+      (reps.length ? '<ul class="rep">' + showRep.join('') + '</ul>' + (reps.length > 4 ? '<button class="more" data-act="repAll">' + (S.repAll ? 'Свернуть' : 'Ещё ' + (reps.length - 4)) + '</button>' : '') : '<p class="muted">Повторов нет</p>') +
+      '<div class="sysb2"><h4>Системность брака B2 за месяц' + hint('sys') + '</h4>' + (sys || '<span class="muted">нет невыполненных B2</span>') + '</div></div>';
+    // Парето
+    var par = r.pareto.map(function (x) {
+      var mx = r.pareto[0].n;
+      return '<div class="row ' + (x.in80 ? 'in80' : '') + '"><span class="lbl" title="' + esc(x.name) + '">' + esc(x.name) + '</span><div class="bar"><b style="width:' + (x.n / mx * 100).toFixed(1) + '%"></b><i style="left:' + Math.min(99, x.cum).toFixed(1) + '%" title="накоплено ' + fmt(x.cum) + ' %"></i></div><span><b>' + x.n + '</b> · ' + fmt(x.cum) + ' %</span></div>';
+    }).join('');
+    var p80 = r.pareto.filter(function (x) { return x.in80; }).length;
+    html += '<div class="card d3"><h3>Причины дефектов (Парето)' + hint('pareto') + '</h3><p class="sub">' + (r.pareto.length ? '<b style="color:var(--text)">' + p80 + ' ' + pl(p80, 'причина', 'причины', 'причин') + '</b> из ' + r.pareto.length + ' дают 80 % дефектов · число · накоплено' : 'нет данных') + '</p>' +
+      '<div class="pareto">' + par + '</div>' +
+      (r.noCause ? '<div class="banner grey" style="margin:10px 0 0">Ещё ' + r.noCause + ' ' + pl(r.noCause, 'дефект', 'дефекта', 'дефектов') + ' без указанной причины — в Парето не входят.</div>' : '') + '</div>';
+    return html;
+  }
+
+  function blockObjects(r) {
+    var rows = r.objs.map(function (o, k) {
+      var c = o.cur, p = o.prev, m = o.mon;
+      var d = c && p ? c.iko - p.iko : null;
+      return '<tr><td data-label="Объект" class="name full nolbl"><span style="display:inline-block;width:10px;height:3px;border-radius:2px;vertical-align:3px;margin-right:6px;background:var(' + ['--gold', '--blue', '--violet'][MQ.OBJECTS.indexOf(o.o)] + ')"></span>' + o.o.name + '<small>' + m.N + ' ' + pl(m.N, 'проверка', 'проверки', 'проверок') + ' в месяце · базовый УрК ' + (m.base ? fmt(m.base.mean, 1) + ' %' : '—') + '</small></td>' +
+        '<td data-label="ИКО" class="r"><b class="' + (c ? (c.zone === 'green' ? 'ok' : c.zone === 'yellow' ? 'warn' : 'bad') : 'muted') + '" style="font-size:15px">' + (c ? fmt(c.iko, 2) : '—') + '</b></td>' +
+        '<td data-label="' + (r.P ? r.P.short : 'Прошлый') + '" class="r">' + (p ? fmt(p.iko, 2) : '—') + (d != null ? ' <span class="dlt ' + (d > 0.005 ? 'bad' : d < -0.005 ? 'good' : 'same') + '">' + (d > 0 ? '▲' : d < 0 ? '▼' : '') + fmtS(d, 2) + '</span>' : '') + '</td>' +
+        '<td data-label="Риск">' + (c ? zoneChip(c.zone, c.status) : '<span class="muted">мало данных</span>') + '</td>' +
+        '<td data-label="Зоны (доля проверок)" class="full">' + (c ? '<div class="zbar" title="зелёная ' + c.green + ' %, жёлтая ' + c.yellow + ' %, красная ' + c.red + ' %"><b class="g" style="width:' + c.green + '%"></b><b class="y" style="width:' + c.yellow + '%"></b><b class="r" style="width:' + c.red + '%"></b></div><small class="muted">' + c.green + ' / ' + c.yellow + ' / ' + c.red + ' % · ' + c.pairs + ' ' + pl(c.pairs, 'участок', 'участка', 'участков') + '</small>' : '—') + '</td></tr>';
+    }).join('');
+    return '<h2 class="sec"><span class="n">7</span>Объекты<span class="note">индекс критичности (ИКО), окно 3 месяца</span></h2>' +
+      '<div class="card d3"><h3>ИКО по месяцам' + hint('iko') + '</h3><div class="lg">' + r.objs.map(function (o) { return '<span><i class="line" style="background:var(' + ['--gold', '--blue', '--violet'][MQ.OBJECTS.indexOf(o.o)] + ')"></i>' + o.o.short + '</span>'; }).join('') + '<span>фон: зелёный — низкий риск, жёлтый — повышенный, красный — высокий</span></div><div class="chart" data-ch="iko"></div></div>' +
+      '<div class="card d3"><h3>Объекты за ' + r.M.full.toLowerCase() + hint('iko') + '</h3><p class="sub">ИКО: 0 — нет риска, 1 — максимальный; зоны — доли проверок участков</p><div class="tbl-wrap"><table class="tbl cards"><thead><tr><th>Объект</th><th class="r">ИКО</th><th class="r">' + (r.P ? r.P.short : '') + '</th><th>Риск</th><th>Зоны</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
+
+  function blockSK(r) {
+    var s = r.sk[r.mi], sp = r.mi > 0 ? r.sk[r.mi - 1] : null;
+    var rows = r.skCons.map(function (x) {
+      var c = x.cur, p = x.prev, d = c.idz != null && p && p.idz != null ? c.idz - p.idz : null;
+      return '<tr><td data-label="Подрядчик" class="name full nolbl">' + x.c.name + '</td>' +
+        '<td data-label="Выдано" class="r">' + c.issued + '</td><td data-label="Закрыто" class="r">' + c.closed + '</td><td data-label="Открыто" class="r">' + c.open + '</td>' +
+        '<td data-label="В срок" class="r">' + (c.onTimePct != null ? fmt(c.onTimePct) + ' %' : '—') + '</td>' +
+        '<td data-label="Просрочено" class="r">' + fmt(c.overduePct) + ' %</td>' +
+        '<td data-label="Ср. просрочка" class="r">' + fmt(c.avgLate, 1) + ' дн.</td>' +
+        '<td data-label="ИДЗ" class="r"><b class="' + (c.idz == null ? 'muted' : c.idz >= 70 ? 'ok' : c.idz >= 45 ? 'warn' : 'bad') + '">' + (c.idz != null ? fmt(c.idz) : '—') + '</b>' + (d != null ? ' <span class="dlt ' + (d > 0 ? 'good' : d < 0 ? 'bad' : 'same') + '" style="font-size:11px">' + fmtS(d) + '</span>' : '') + '</td>' +
+        '<td data-label="ИСД" class="r">' + x.isd.isd + '<small class="muted" style="display:block;font-size:10px">ожидалось ' + x.isd.expected + '</small></td></tr>';
+    }).join('');
+    return '<h2 class="sec"><span class="n">8</span>Стройконтроль (ПК СК)<span class="note">замечания: выдано / закрыто / открыто</span></h2>' +
+      '<div class="card d2"><div class="banner">Пример. Цифры блока покажем после того, как договоримся об одном правиле «открыто» и «просрочено» (сейчас в приложении считается в двух местах по-разному).</div>' +
+      '<h3>Замечания по месяцам' + hint('sk') + '</h3><div class="lg"><span><i style="background:var(--blue)"></i>выдано</span><span><i style="background:var(--ok)"></i>закрыто</span><span><i class="line" style="background:var(--bad)"></i>открыто на конец месяца</span></div>' +
+      '<div class="chart" data-ch="sk"></div>' +
+      '<div class="aging"><div><div class="k">Висят 0–7 дней</div><div class="v">' + s.age.a + '</div></div><div><div class="k">8–30 дней</div><div class="v warn">' + s.age.b + '</div></div><div><div class="k">больше 30 дней</div><div class="v bad">' + s.age.c + '</div></div></div></div>' +
+      '<div class="card d4"><h3>Дисциплина закрытия по подрядчикам' + hint('idz') + '</h3><p class="sub">' + r.M.full + ': выдано ' + s.issued + ', закрыто ' + s.closed + (s.closed >= s.issued ? ' <b class="ok">— закрыли больше, чем выдали</b>' : ' <b class="bad">— выдали больше, чем закрыли</b>') + ', открыто ' + s.open + (sp ? ' (' + r.P.short + ': ' + sp.open + ')' : '') + '</p>' +
+      '<div class="tbl-wrap"><table class="tbl cards"><thead><tr><th>Подрядчик</th><th class="r">Выдано</th><th class="r">Закрыто</th><th class="r">Открыто</th><th class="r">В срок</th><th class="r">Просроч.</th><th class="r">Ср. проср.</th><th class="r">ИДЗ ' + hint('idz') + '</th><th class="r">ИСД ' + hint('isd') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
+
+  function blockConcl(r) {
+    var F = r.findings;
+    var li = function (a) { return a.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join(''); };
+    return '<h2 class="sec"><span class="n">9</span>Выводы месяца' + hint('concl') + '<span class="note">собираются автоматически</span></h2>' +
+      '<div class="card d6"><div class="concl"><div>' +
+      (F.warn.length ? '<div class="banner">' + F.warn.map(esc).join('<br>') + '</div>' : '') +
+      '<h4>Главное</h4><ul>' + li(F.main) + '</ul>' +
+      '<h4 style="margin-top:14px">Что сделать</h4><ul>' + li(F.recs) + '</ul></div><div>' +
+      '<h4>Заметно изменилось</h4>' + (F.notable.length ? '<ul>' + F.notable.map(function (n) { return '<li class="' + (n.good ? 'good' : 'bad') + '"><b class="' + (n.good ? 'ok' : 'bad') + '">' + esc(n.text) + '</b></li>'; }).join('') + '</ul>' : '<p class="muted" style="margin:0">Ничего: все изменения в пределах разброса или мало данных.</p>') +
+      '<h4 style="margin-top:14px">В пределах разброса (не считаем изменением)</h4><ul class="within">' + (F.within.length ? li(F.within) : '<li>—</li>') + '</ul></div></div></div>';
+  }
+
+  /* ---------- Рендер ---------- */
+  function render() {
+    R = MQ.compute({ month: S.month, obj: S.obj, con: S.con, type: S.type, ins: S.ins });
+    var r = R;
+    document.getElementById('f-summary').innerHTML = '<b>' + r.M.full + '</b> · ' + fmt(r.cur.N) + ' ' + pl(r.cur.N, 'проверка', 'проверки', 'проверок') + ' · надёжность «' + r.cur.conf.name + '»' + (r.P ? ' · сравнение с: ' + r.P.full.toLowerCase() : '');
+    var n = [S.obj, S.con, S.type, S.ins].filter(Boolean).length;
+    document.getElementById('f-count').textContent = n ? ' · ' + n : '';
+    var g = document.getElementById('grid');
+    if (!r.cur.N) {
+      g.innerHTML = blockVolume(r) + '<div class="card d6"><p class="muted">За этот месяц нет проверок по выбранным фильтрам.</p></div>';
+    } else {
+      g.innerHTML = blockVolume(r) + blockTiles(r) + blockTrend(r) + blockCons(r) + blockDefects(r) + blockObjects(r) + blockSK(r) + blockConcl(r);
+    }
+    drawCharts();
+  }
+  function drawCharts() {
+    if (!R) return;
+    document.querySelectorAll('[data-ch]').forEach(function (el) {
+      var w = Math.floor(el.clientWidth); if (w < 120) return;
+      el.innerHTML = CH[el.getAttribute('data-ch')](w, R);
+    });
+    document.querySelectorAll('[data-spark]').forEach(function (el) {
+      var w = Math.floor(el.clientWidth); if (w < 40) return;
+      var vals = el.getAttribute('data-vals').split(',').map(function (v) { return v === '' ? null : +v; });
+      var few = el.getAttribute('data-few').split(',').map(function (v) { return v === '1'; });
+      el.innerHTML = CH.spark(w, 24, vals, R.mi, few);
+    });
+  }
+
+  /* ---------- Фильтры ---------- */
+  function opts(sel, arr, all) {
+    sel.innerHTML = (all ? '<option value="">' + all + '</option>' : '') + arr.map(function (a) { return '<option value="' + a[0] + '">' + a[1] + '</option>'; }).join('');
+  }
+  opts(document.getElementById('f-month'), MQ.MONTHS.map(function (M) { return [M.i, M.full + (MQ.INSPECTIONS.filter(function (x) { return x.mi === M.i; }).length < 7 ? ' · мало данных' : '')]; }).reverse());
+  opts(document.getElementById('f-obj'), MQ.OBJECTS.map(function (o) { return [o.id, o.name]; }), 'Все объекты');
+  opts(document.getElementById('f-con'), MQ.CONTRACTORS.map(function (o) { return [o.id, o.name]; }), 'Все подрядчики');
+  opts(document.getElementById('f-type'), MQ.TYPES.map(function (o) { return [o.id, o.name]; }), 'Все виды работ');
+  opts(document.getElementById('f-ins'), MQ.INSPECTORS.map(function (o) { return [o.id, o.short]; }), 'Все инспекторы');
+  document.getElementById('f-month').value = '11';
+  [['f-month', 'month'], ['f-obj', 'obj'], ['f-con', 'con'], ['f-type', 'type'], ['f-ins', 'ins']].forEach(function (p) {
+    document.getElementById(p[0]).addEventListener('change', function (e) { S[p[1]] = p[1] === 'month' ? +e.target.value : e.target.value; render(); });
+  });
+  document.getElementById('f-reset').addEventListener('click', function () {
+    S.obj = S.con = S.type = S.ins = '';
+    ['f-obj', 'f-con', 'f-type', 'f-ins'].forEach(function (id) { document.getElementById(id).value = ''; });
+    render();
+  });
+  document.getElementById('f-toggle').addEventListener('click', function () {
+    var m = document.getElementById('f-more'); m.classList.toggle('open');
+    this.setAttribute('aria-expanded', m.classList.contains('open'));
+  });
+
+  /* ---------- Подсказки, кнопки ---------- */
+  var pop = document.getElementById('pop'), popFor = null;
+  function showPop(btn) {
+    var k = btn.getAttribute('data-hint'); if (!H[k]) return;
+    pop.innerHTML = H[k]; pop.style.display = 'block';
+    var b = btn.getBoundingClientRect(), pw = Math.min(300, window.innerWidth - 24);
+    pop.style.maxWidth = pw + 'px';
+    var left = Math.max(12, Math.min(b.left + b.width / 2 - pw / 2, window.innerWidth - pw - 12));
+    pop.style.left = left + 'px';
+    var ph = pop.offsetHeight, top = b.bottom + 8;
+    if (top + ph > window.innerHeight - 8) top = Math.max(8, b.top - ph - 8);
+    pop.style.top = top + 'px';
+    if (popFor) popFor.classList.remove('on');
+    popFor = btn; btn.classList.add('on');
+  }
+  function hidePop() { pop.style.display = 'none'; if (popFor) popFor.classList.remove('on'); popFor = null; }
+  document.addEventListener('click', function (e) {
+    var h = e.target.closest('.hint');
+    if (h) { e.preventDefault(); if (popFor === h) hidePop(); else showPop(h); return; }
+    if (!e.target.closest('#pop')) hidePop();
+    var a = e.target.closest('[data-act]');
+    if (a) { var k = a.getAttribute('data-act'); S[k] = !S[k]; render(); return; }
+    var hb = e.target.closest('[data-heat]');
+    if (hb) { S.heat = +hb.getAttribute('data-heat'); render(); return; }
+    var d = e.target.closest('[data-demo]');
+    if (d) { toast('В макете выгрузка «' + d.getAttribute('data-demo') + '» не работает. Как будет выглядеть отчёт — ссылка «Отчёт за месяц».'); return; }
+    var ph = e.target.closest('.photo:not(.none)');
+    if (ph) { toast('Здесь откроются фото-примеры дефекта «' + ph.getAttribute('data-photo') + '» (' + ph.getAttribute('data-n') + ' шт.)'); }
+  });
+  document.addEventListener('mouseover', function (e) {
+    if (!window.matchMedia('(hover: hover)').matches) return;
+    var h = e.target.closest('.hint'); if (h && h !== popFor) showPop(h);
+  });
+  document.addEventListener('mouseout', function (e) {
+    if (!window.matchMedia('(hover: hover)').matches) return;
+    var h = e.target.closest('.hint'); if (h && !(e.relatedTarget && (e.relatedTarget.closest && (e.relatedTarget.closest('#pop') || e.relatedTarget.closest('.hint') === h)))) hidePop();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hidePop(); });
+  window.addEventListener('scroll', hidePop, { passive: true });
+  var tt = null;
+  function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(tt); tt = setTimeout(function () { el.style.display = 'none'; }, 3200); }
+
+  /* ---------- Переключатели макета ---------- */
+  function setMbh() { var mb = document.getElementById('mockbar'); document.documentElement.style.setProperty('--mbh', (getComputedStyle(mb).position === 'sticky' ? mb.offsetHeight : 0) + 'px'); }
+  document.getElementById('seg-dev').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    document.getElementById('device').setAttribute('data-dev', b.getAttribute('data-dev'));
+    try { localStorage.setItem('mq-dev', b.getAttribute('data-dev')); } catch (er) { }
+  });
+  document.getElementById('seg-theme').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    document.documentElement.setAttribute('data-theme', b.getAttribute('data-th'));
+    try { localStorage.setItem('mq-theme', b.getAttribute('data-th')); } catch (er) { }
+  });
+  try {
+    var sd = localStorage.getItem('mq-dev'), st = localStorage.getItem('mq-theme');
+    if (sd) { var bd = document.querySelector('#seg-dev [data-dev="' + sd + '"]'); if (bd) bd.click(); }
+    if (st) { var bt = document.querySelector('#seg-theme [data-th="' + st + '"]'); if (bt) bt.click(); }
+  } catch (er) { }
+
+  var rt = null;
+  if (window.ResizeObserver) new ResizeObserver(function () { clearTimeout(rt); rt = setTimeout(function () { setMbh(); drawCharts(); }, 60); }).observe(document.getElementById('app'));
+  window.addEventListener('resize', setMbh);
+  setMbh();
+  render();
+})();
+
+</script>
+</body>
+</html>

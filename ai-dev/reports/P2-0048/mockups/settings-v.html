@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Настройки — вариант В</title>
+<style>
+/* ===== Стенд прототипа (вне экрана приложения) ===== */
+:root{--sbg:#0b121b;--sui:#e7ecf1;--suim:#8d99a6;--sline:rgba(255,255,255,.12);--gold:#c49a5f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--sbg);color:var(--sui);font:14px/1.45 Inter,'IBM Plex Sans',-apple-system,system-ui,sans-serif}
+.ctl{position:sticky;top:0;z-index:20;background:#0b121bf2;border-bottom:1px solid var(--sline);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.ctl h1{font-size:15px;margin:0}
+.ctl .seg{display:inline-flex;border:1px solid var(--sline);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.ctl .seg button{background:none;border:0;color:var(--suim);padding:6px 10px;font:inherit;cursor:pointer;min-height:34px}
+.ctl .seg button.on{background:var(--gold);color:#111}
+.ctl input[type=range]{width:220px;accent-color:var(--gold)}
+.ctl .w{min-width:150px;color:var(--sui)}
+.ctl .w b{color:var(--gold)}
+.ctl a{color:var(--gold)}
+.frame-wrap{padding:16px}
+.frame{border:1px solid var(--sline);border-radius:12px;overflow:hidden;background:#05090e;position:relative}
+.scaler{transform-origin:0 0}
+.legend{padding:0 16px 30px;color:var(--suim);max-width:1200px}
+.legend b{color:var(--sui)}
+
+/* ===== Экран приложения ===== */
+.vp{container-type:inline-size;container-name:vp;min-height:780px;
+  --bg:#101923;--card:#172331;--card2:#1c2a3a;--line:rgba(255,255,255,.12);--text:#f4f4f4;--muted:#a8b2bd;--acc:#c49a5f;--ok:#4caf7d;--warn:#e0b34f;--bad:#e06b5f;
+  background:var(--bg);color:var(--text);font:15px/1.45 Inter,'IBM Plex Sans',-apple-system,system-ui,sans-serif}
+.vp.light{--bg:#f6f3ee;--card:#fff;--card2:#faf8f4;--line:rgba(28,43,57,.14);--text:#1c2b39;--muted:#66727f}
+.vp *{box-sizing:border-box}
+.inner{display:grid;grid-template-columns:minmax(0,1fr);min-height:780px}
+.nav{display:none}
+.main{min-width:0;padding:12px 16px 100px}
+.back{display:flex;align-items:center;gap:6px;min-height:44px;color:var(--acc);font-weight:600;cursor:pointer;background:none;border:0;font:inherit;padding:0}
+.ttl{font-size:22px;font-weight:800;margin:2px 0 4px}
+.sub{color:var(--muted);font-size:13px}
+.h{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 4px 6px}
+.search{width:100%;font:16px inherit;min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:0 14px}
+.list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.it{display:flex;align-items:center;gap:12px;min-height:56px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.it:last-child{border-bottom:0}
+.it.on{box-shadow:inset 3px 0 var(--acc);background:color-mix(in srgb,var(--acc) 8%,var(--card))}
+.it .x{flex:1;min-width:0}
+.it b{font-weight:700}
+.it .d{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);font-size:16px}
+.chev{color:var(--muted)}
+.cnt{color:var(--muted);font-size:13px;white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.set{display:flex;gap:12px;align-items:center;justify-content:space-between;min-height:56px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.set:last-child{border-bottom:0}
+.set .x{flex:1 1 200px;min-width:0}
+.set .d{color:var(--muted);font-size:13px}
+.seg2{display:flex;flex-wrap:wrap;gap:6px}
+.seg2>span{border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:44px;display:inline-flex;align-items:center;font-size:14px;cursor:pointer;background:var(--card)}
+.seg2>span.on{border-color:var(--acc);color:var(--acc);font-weight:700}
+.sw{width:50px;height:30px;border-radius:999px;background:var(--line);position:relative;flex:none;cursor:pointer}
+.sw.on{background:var(--ok)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on::after{left:23px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font:600 15px inherit;cursor:pointer;white-space:nowrap}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#111}
+.btn.d{color:var(--bad)}
+.btn.s{min-height:40px;padding:0 12px;font-size:14px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.pill{display:inline-flex;align-items:center;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;border:1px solid var(--line);margin:3px 4px 0 0;white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,transparent)}
+.pill.w{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,transparent)}
+.pill.r{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,transparent)}
+.pill.g{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 50%,transparent)}
+.inp{font:16px inherit;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:0 12px;width:100%}
+.f{display:grid;gap:4px;margin:10px 0}
+.f label{font-size:13px;color:var(--muted);font-weight:600}
+.att{border-color:color-mix(in srgb,var(--warn) 55%,transparent)}
+.av{width:40px;height:40px;border-radius:50%;background:var(--card2);border:1px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.tabs2{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.tabs2 span{padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);cursor:pointer;min-height:44px;display:inline-flex;align-items:center;font-weight:600;font-size:14px}
+.tabs2 span.on{background:var(--acc);border-color:var(--acc);color:#111}
+.fab{position:sticky;bottom:14px;display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.fab .btn{box-shadow:0 6px 18px #0007}
+.tree{border:1px solid var(--line);border-radius:10px;padding:4px 10px;background:var(--card)}
+.tree div{display:flex;align-items:center;gap:8px;min-height:44px}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
+.chk{display:flex;align-items:center;gap:10px;min-height:44px}
+.steps{display:flex;gap:6px;margin-bottom:12px}
+.steps div{flex:1;text-align:center;font-size:12px;color:var(--muted)}
+.steps i{display:block;height:4px;border-radius:2px;background:var(--line);margin-bottom:4px}
+.steps .on i{background:var(--acc)}
+.steps .cur{color:var(--text);font-weight:700}
+.meter{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--acc)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:0 12px}
+.split{display:block}
+.detail-empty{display:none}
+.wide-only{display:none}
+.danger{border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.note{border:1px dashed var(--acc);color:var(--acc);border-radius:10px;padding:8px 10px;font-size:12.5px;margin:10px 0}
+.crumb{color:var(--muted);font-size:13px}
+.nav .g{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 10px 6px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;color:var(--text);cursor:pointer;min-height:42px;font-size:14px}
+.nav a .cnt{margin-left:auto}
+.nav a.on{background:var(--acc);color:#111;font-weight:700}
+.nav a.on .cnt{color:#111}
+.nav .nic{display:inline-flex;opacity:.85}
+.search{padding-left:40px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8b2bd' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:12px center;background-size:18px}
+
+/* Планшет: 600–1023 — меню разделов слева, содержимое справа */
+@container vp (min-width:600px){
+  .inner{grid-template-columns:250px minmax(0,1fr)}
+  .nav{display:block;border-right:1px solid var(--line);padding:12px 8px;position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}
+  .main{padding:16px 20px 60px}
+  .back.home{display:none}
+  .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fab{display:none}
+  .wide-only{display:inline-flex}
+}
+/* ПК: от 1024 — у списков деталь справа (список · карточка) */
+@container vp (min-width:1024px){
+  .inner{grid-template-columns:270px minmax(0,1fr)}
+  .main{padding:20px 28px 40px}
+  .split{display:grid;grid-template-columns:minmax(320px,400px) minmax(0,1fr);gap:16px;align-items:start}
+  .split .detail-empty{display:block}
+  .back.inlist{display:none}
+}
+/* Очень широкий: от 1600 — по центру, не шире 1440 */
+@container vp (min-width:1600px){
+  .inner{max-width:1440px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+<div class="ctl">
+  <h1>Настройки — вариант В (прототип)</h1>
+  <span class="w">Ширина экрана: <b id="wl"></b></span>
+  <input type="range" id="wr" min="320" max="2560" step="10" value="390" aria-label="Ширина экрана">
+  <div class="seg" id="pre"></div>
+  <div class="seg" id="th"><button data-t="dark" class="on">Тёмная</button><button data-t="light">Светлая</button></div>
+  <div class="seg" id="who"><button data-r="admin" class="on">Администратор</button><button data-r="foreman">Прораб</button><button data-r="platform">Админ платформы</button></div>
+  <a href="index.html">← сравнение А / Б / В</a>
+</div>
+<div class="frame-wrap"><div class="frame" id="frame"><div class="scaler" id="scaler"><div class="vp" id="vp"></div></div></div></div>
+<div class="legend">
+  <p><b>Как пользоваться.</b> Двигайте «Ширину экрана» — раскладка переключается по диапазонам, а внутри диапазона тянется: <b>телефон до 599</b> (главная → раздел), <b>планшет 600–1023</b> (разделы слева, содержимое справа), <b>ПК от 1024</b> (разделы · список · карточка), <b>от 1600</b> — по центру, не шире 1440. Нажимайте разделы, людей, «+ Назначить», поиск. «Кто вошёл» меняет, что видно.</p>
+  <p><b>Названия.</b> Четыре группы: «Личные» (касается только меня и этого устройства) · «Компания» (общее для всех сотрудников, видит администратор) · «Модули» (настройки Качества и План/Факта) · «Платформа» (только администратор платформы). Внутри — разделы с понятными названиями; редкие настройки спрятаны в «Дополнительно».</p>
+</div>
+
+<script>
+
+// ===== Иконки (SVG, линия 1.8, как в приложении) =====
+const IC={
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/>',
+ palette:'<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1.1.2-2.2 1.4-2.2H17a4 4 0 0 0 4-4c0-5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/>',
+ bell:'<path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+ drive:'<rect x="3" y="13" width="18" height="7" rx="2"/><path d="M5 13l3-8h8l3 8"/><circle cx="17" cy="16.5" r=".8"/>',
+ inspect:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4M9 17h6"/>',
+ help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.6-5 6.5-5s5.5 1.5 6.5 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2 .6 3.2 2.2 3.5 5"/>',
+ building:'<path d="M4 21V5l8-2v18M12 8l8 2v11M3 21h18M7 8h2M7 12h2M7 16h2M15 13h2M15 17h2"/>',
+ partners:'<path d="M3 12l4-4 3 2 3-3 4 4M7 8l-4 4 5 5 2-2M17 11l4 1-5 5-2-2"/><path d="M10 15l2 2M12 13l2 2"/>',
+ ruler:'<path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>',
+ tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+ puzzle:'<path d="M9 3h4v3a2 2 0 1 0 4 0V3h4v6h-3a2 2 0 1 0 0 4h3v8h-6v-3a2 2 0 1 0-4 0v3H3v-8h3a2 2 0 1 0 0-4H3V3z"/>',
+ history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
+ quality:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+ chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+ wrench:'<path d="M14.5 6.5a4 4 0 0 0 5 5L12 19l-3 1 1-3 7.5-7.5zM5 5l4 4M3 7l4-4"/>',
+ home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+ alert:'<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17v.01"/>'};
+const svg=(n,sz=20)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||''}</svg>`;
+
+// ===== Структура настроек (все разделы приложения) =====
+const NAV = [
+ ['Личные', 'all', [
+   ['profile','user','Мой профиль','имя, почта, пароль, выход'],
+   ['look','palette','Вид и удобство','тема, размер текста, меню, язык'],
+   ['notify','bell','Уведомления','push, новые задачи'],
+   ['device','drive','Данные на устройстве','работа без сети, место, очистка'],
+   ['inspect','inspect','Осмотр','жесты, свёртывание, ИИ-помощник'],
+   ['help','help','Помощь и о программе','что нового, обучение, сброс']]],
+ ['Компания', 'admin', [
+   ['people','users','Сотрудники и доступ','24 сотрудника · 8 ролей · 3 заявки'],
+   ['projects','building','Проекты и объекты','6 проектов, объекты, места'],
+   ['partners','partners','Контрагенты','31: заказчики, подрядчики'],
+   ['dicts','ruler','Справочники','единицы измерения'],
+   ['brand','tag','Фирменный стиль и отчёты','логотип, цвет, шаблоны PDF'],
+   ['modules','puzzle','Модули','3 из 4 включены'],
+   ['log','history','Журнал изменений','кто что менял']]],
+ ['Модули', 'admin', [
+   ['quality','quality','Качество','объекты и планы, подрядчики, чек-листы'],
+   ['planfact','chart','План/Факт','шаблоны отчётов']]],
+ ['Платформа', 'platform', [
+   ['platform','wrench','Платформа','компании, образцы экранов, миграция']]]];
+const S = {page:'home', sub:null, tab:'people', person:null, view:'list', step:1, q:'', w:390, theme:'dark', who:'admin',
+  set:{theme:0, size:1, menu:0, push:1, tasks:1, offline:1, ai:1, aiWay:0, mini:0, swipe:1, fold:1, groups:0, quick:0, kb:0, auto:1, thr:1}};
+const groupsFor = () => NAV.filter(([,acc])=>acc==='all' || S.who==='platform' || (acc==='admin' && S.who==='admin'));
+const items = () => groupsFor().flatMap(([g,,it])=>it.map(i=>[...i,g]));
+
+// ===== Данные =====
+const PEOPLE=[['ИА','Иванов А. И.','Инженер СК · Качество: Большевиков, 22','',''],['ПП','Петров П. П.','Прораб · ЖК Альфа (секции 1, 2), ЖК Бета','факт',''],['КМ','Капустин М. А.','Руководство · вся компания','',''],['ТС','Тарасов С. Ю.','Инженер СК · Качество: 2 объекта','',''],['СЕ','Сидорова Е. В.','Прораб · ЖК Альфа (секция 3)','','пароль'],['НН','Новиков Н. Н.','нет ролей','','нет'],['ОК','Орлова К. Д.','ПТО · вся компания','',''],['ЛВ','Лебедев В. А.','Подрядчик · ООО «Фасад Про»','','']];
+const P=(t,c='')=>`<span class="pill ${c}">${t}</span>`;
+const sw=(k)=>`<span class="sw ${S.set[k]?'on':''}" data-sw="${k}"></span>`;
+const seg=(k,opts)=>`<div class="seg2">${opts.map((o,i)=>`<span class="${S.set[k]===i?'on':''}" data-seg="${k}:${i}">${o}</span>`).join('')}</div>`;
+const set=(t,d,ctl)=>`<div class="set"><div class="x"><b>${t}</b>${d?`<div class="d">${d}</div>`:''}</div>${ctl}</div>`;
+const card=(t,body,cls='')=>`<div class="card ${cls}" style="padding:0">${t?`<div style="padding:12px 14px 0;font-weight:800">${t}</div>`:''}${body}</div>`;
+const more=(t,body)=>`<details class="card" style="padding:0"><summary style="padding:14px;cursor:pointer;font-weight:700;min-height:48px">Дополнительно: ${t}</summary>${body}</details>`;
+
+// ===== Страницы =====
+const PAGES = {
+profile:()=>card('',`<div class="set"><div class="av" style="width:56px;height:56px;font-size:18px">КИ</div><div class="x"><b style="font-size:18px">Кондратьев И. Н.</b><div class="d">admin@stand.invalid · вход по почте</div></div><button class="btn s">Изменить имя</button></div>`)
+  +card('Вход',set('Пароль','последняя смена: 12.09.2026','<button class="btn s">Сменить пароль</button>')+set('Компания','RBI-стенд · администратор','<button class="btn s">Сменить</button>'))
+  +`<button class="btn d" style="width:100%">Выйти</button>`,
+look:()=>card('Тема',`<div style="padding:10px 14px 14px">${seg('theme',['Как в системе','Светлая','Тёмная'])}</div>`)
+  +card('Размер текста и кнопок',`<div style="padding:4px 14px 2px" class="d">Крупнее — удобнее на объекте, в перчатках.</div><div style="padding:8px 14px 14px">${seg('size',['<span style="font-size:12px">Аа</span>&nbsp;Мелкий','<span style="font-size:15px">Аа</span>&nbsp;Обычный','<span style="font-size:18px">Аа</span>&nbsp;Крупный','<span style="font-size:21px">Аа</span>&nbsp;Очень крупный'])}</div>`)
+  +card('Меню разделов',`<div style="padding:4px 14px 2px" class="d">Где кнопки «Качество», «План/Факт», «Настройки».</div><div style="padding:8px 14px 14px">${seg('menu',['Само: на телефоне внизу, на ПК слева','Всегда сверху','Всегда снизу'])}</div>`)
+  +card('',set('Язык','','<span class="cnt">Русский ›</span>'))
+  +more('цветовая палитра, анимации, прокрутка',set('Палитра','фирменная RBI или другие','<span class="cnt">RBI ›</span>')+set('Фильтры при прокрутке','сворачивать при прокрутке вниз',seg('auto',['Сами','По нажатию']))+set('Анимации','плавные переходы и всплывающие окна',sw('anim'))+set('Обновление страницы свайпом вниз','на Android можно запретить, чтобы не обновлять случайно',sw('pull')))
+  +`<div class="sub" style="margin:6px 4px">Сохраняется сразу. Действует на этом устройстве.</div>`,
+notify:()=>card('',set('Push-уведомления','на это устройство',sw('push'))+set('Новые задачи стройконтроля','когда вам назначили замечание',sw('tasks'))),
+device:()=>card('Место на устройстве',`<div style="padding:8px 14px 14px"><div class="meter"><i style="width:38%"></i></div><div class="d">Занято 1,2 ГБ из 3,1 ГБ · фото 0,9 ГБ · отчёты 0,2 ГБ · база знаний 0,1 ГБ</div></div>`)
+  +card('Работа без сети',set('Сохранять фото и PDF на устройстве','чтобы открывались без интернета',sw('offline'))+set('Скачать заранее','перед поездкой на объект','<div class="seg2"><span>Последние 30 дней</span><span>Базу знаний</span><span>Отчёты</span></div>')+set('Синхронизация с командой','последняя: сегодня 14:05','<button class="btn s">Синхронизировать</button>'))
+  +card('Очистка',set('Чистить автоматически','когда память заполнена на',seg('thr',['60 %','80 %','90 %']))+set('Хранить фото проверок','',`<span class="cnt">90 дней ›</span>`)+set('Хранить PDF-отчёты','',`<span class="cnt">30 дней ›</span>`)+set('Хранить документы базы знаний, TWI и узлы','',`<span class="cnt">180 дней ›</span>`))
+  +more('резервные копии, очистка вручную',set('Резервная копия','выгрузить данные этого устройства в файл','<button class="btn s">Выгрузить</button>')+set('Очистить кэш','освободить место; данные в облаке не удаляются','<button class="btn s">Очистить</button>')+set('Удалить мусор','повреждённые и лишние файлы','<button class="btn s">Удалить</button>')),
+inspect:()=>card('Экран осмотра',set('Мини-сводка в шапке','',seg('mini',['Кратко','Подробно','Скрыть']))+set('Жесты вправо / влево','отметить пункт свайпом',sw('swipe'))+set('Сворачивать пройденные пункты','',sw('fold'))+set('Открывать группы свёрнутыми','',sw('groups'))+set('Быстрый режим','скрыть тексты нормативов',sw('quick')))
+  +card('ИИ-помощник',set('Подсказки и разбор замечаний','',sw('ai'))+set('Как подключать','',seg('aiWay',['Через учётку компании','Свой ключ']))+(S.set.aiWay===1?`<div style="padding:0 14px 14px"><div class="f"><label>Ключ DeepSeek</label><input class="inp" placeholder="sk-…"><div class="d">Хранится только на этом устройстве.</div></div></div>`:''))
+  +card('База знаний',set('Показ','',seg('kb',['Карточки','Список']))),
+help:()=>`<div class="list">${[['Что нового','история версий'],['Обучение','пошаговое знакомство с платформой'],['Методология RBI','как считаются индексы, ответы на вопросы'],['Предложить улучшение','или сообщить об ошибке'],['Проверить обновления','версия 18.95.0']].map(([t,d])=>`<div class="it"><div class="x"><b>${t}</b><div class="d">${d}</div></div><span class="chev">›</span></div>`).join('')}</div>
+  <div class="h">Сброс</div>${card('',set('Вернуть настройки по умолчанию','вид, осмотр, уведомления — как при первом входе','<button class="btn s">Вернуть</button>')+set('Полный сброс','удалить с устройства все данные и выйти','<button class="btn s d">Сбросить…</button>'),'danger')}
+  <div class="sub" style="margin:10px 4px">RBI Platform · Construction OS — ОС управления строительством</div>`,
+people:()=>peoplePage(),
+projects:()=>`<input class="search" placeholder="Найти проект по названию или коду"><div class="bar"><span class="pill g">Стройка 4</span><span class="pill">Проект 1</span><span class="pill">Сдан 1</span><span class="sub" style="margin-left:auto">Сортировка: по названию ▾</span></div>
+  <div class="list">${[['ЖК Альфа','ALF-1 · Стройка · рук. Петров П. П.','2 объекта · 312 мест'],['ЖК Бета','BET · Стройка · рук. Иванов А. И.','1 объект · 120 мест'],['Школа 400','SH400 · Проект','1 объект'],['Паркинг Восток','PV · Стройка · рук. Сидорова Е. В.','1 объект']].map(r=>`<div class="it"><div class="x"><b>${r[0]}</b><div class="d">${r[1]}</div></div><span class="cnt">${r[2]}</span><span class="chev">›</span></div>`).join('')}</div>
+  <div class="bar"><button class="btn">Подразделения</button><button class="btn">Архив · 2</button></div><div class="note">Карточка проекта и «Объекты и места» — как сейчас (сделаны в P2-0046/0047).</div><div class="fab"><button class="btn p">+ Проект</button></div>`,
+partners:()=>`<input class="search" placeholder="Поиск по названию или ИНН"><div class="bar"><span class="pill g">Все 31</span><span class="pill">Заказчики 4</span><span class="pill">Подрядчики 22</span><span class="pill">Поставщики 5</span><span class="pill w">Без ИНН 1</span></div>
+  <div class="list">${[['ООО «СтройМонолит»','ИНН 7801234567 · подрядчик'],['АО «Заказчик-Инвест»','ИНН 7709876543 · заказчик'],['ООО «Фасад Про»','ИНН 7812345678 · подрядчик'],['ИП Сергеев','нужен ИНН · подрядчик']].map(r=>`<div class="it"><div class="x"><b>${r[0]}</b><div class="d">${r[1]}</div></div><span class="chev">›</span></div>`).join('')}</div><div class="bar"><button class="btn">Архив · 3</button></div><div class="fab"><button class="btn p">+ Контрагент</button></div>`,
+dicts:()=>`<div class="tabs2"><span class="on">Единицы измерения</span><span style="opacity:.5">Виды работ — скоро</span></div>
+  ${card('Свои единицы компании',`${[['пог. м','погонный метр'],['компл.','комплект']].map(r=>set(r[0],r[1],'<button class="btn s d">Удалить…</button>')).join('')}<div style="padding:10px 14px"><button class="btn">+ Добавить единицу</button></div>`)}
+  ${card('Общие (для всех компаний)',[['м²','квадратный метр'],['м³','кубический метр'],['шт','штука'],['т','тонна']].map(r=>set(r[0],r[1],'')).join(''))}`,
+brand:()=>card('Фирменный стиль',set('Логотип','в шапке и отчётах, PNG или SVG до 1 МБ','<div class="bar" style="margin:0"><span class="av" style="border-radius:10px">лого</span><button class="btn s">Загрузить</button></div>')+set('Фирменный цвет','кнопки и акценты отчётов','<div class="bar" style="margin:0"><span style="width:44px;height:44px;border-radius:10px;background:#c49a5f"></span><input class="inp" style="width:120px" value="#C49A5F"></div>')+`<div class="bar" style="padding:0 14px 14px"><button class="btn p">Применить для всей компании</button><button class="btn">Вернуть стандартный</button></div>`)
+  +card('Шаблоны отчётов (PDF)',[['Сводка по объекту','Качество · 2 колонки, логотип, QR'],['Глобальная сводка компании','Качество · 1 колонка'],['Акт КС-2','План/Факт']].map(r=>set(r[0],r[1],'<span class="chev">›</span>')).join('')+`<div style="padding:10px 14px"><button class="btn">+ Новый шаблон</button></div>`),
+modules:()=>`<div class="sub" style="margin-bottom:8px">Какие модули работают у компании. Включает администратор платформы.</div><div class="list">${[['Качество','осмотры, проверки, аналитика',1],['Стройконтроль','замечания и приёмки',1],['План/Факт','сметы, ВОР, факт, КС-2',1],['Склад','учёт материалов',0]].map(r=>`<div class="it"><div class="x"><b>${r[0]}</b><div class="d">${r[1]}</div></div>${P(r[2]?'включён':'не подключён',r[2]?'ok':'')}</div>`).join('')}</div>`,
+log:()=>`<div class="grid2"><div class="f"><label>Период</label><input class="inp" value="последние 30 дней"></div><div class="f"><label>Что</label><select class="inp"><option>Всё</option><option>Сотрудники и доступ</option><option>Роли</option><option>Проекты</option></select></div></div>
+  <div class="list">${[['сегодня 14:05 · Кондратьев','Назначил Петрова прорабом: ЖК Альфа, секции 1–2, отвечает за факт'],['сегодня 13:58 · Кондратьев','Перепривязал Иванова: Большевиков, 22 → Струны'],['вчера 18:20 · Кондратьев','Создал роль «Инженер СК»'],['вчера 10:02 · Кондратьев','Отозвал роль «ПТО» у Сидоровой']].map(r=>`<div class="it" style="align-items:flex-start"><div class="x"><div class="d">${r[0]}</div>${r[1]}</div></div>`).join('')}</div><div class="bar" style="justify-content:center"><button class="btn">Показать ещё</button></div>`,
+quality:()=>`<div class="list">${[['Объекты и планы этажей','2 заявки на новые объекты','w'],['Подрядчики','справочник, 1 заявка','w'],['Заявки на доступ','3 новых','w'],['Чек-листы','официальные версии',''],['Панель руководителя','рейтинги, отчёты, команда',''],['Облако и файлы','удалённые, битые ссылки','']].map(([t,d,c])=>`<div class="it"><div class="x"><b>${t}</b><div class="d">${d}</div></div>${c?P(d.match(/\d+/)[0],'w'):''}<span class="chev">›</span></div>`).join('')}</div>
+  <div class="note">Кто к каким объектам Качества имеет доступ — одно место: «Компания › Сотрудники и доступ» (карточка сотрудника → «Изменить»). Экраны Качества не меняются — пункты открывают их как сейчас.</div>`,
+planfact:()=>`<div class="list">${[['Шаблоны отчётов','конструктор PDF'],['Пороги светофора по умолчанию','отставание 3 / 10 п. п., 3 дня']].map(([t,d])=>`<div class="it"><div class="x"><b>${t}</b><div class="d">${d}</div></div><span class="chev">›</span></div>`).join('')}</div>`,
+platform:()=>`<div class="list">${[['Компании','создать, модули, администратор компании'],['Образцы экранов','дизайн-система'],['Миграция данных','перенос из старого Качества']].map(([t,d])=>`<div class="it"><div class="x"><b>${t}</b><div class="d">${d}</div></div><span class="chev">›</span></div>`).join('')}</div>`
+};
+
+// ===== Сотрудники и доступ =====
+function personRow(p,i){return `<div class="it ${S.person===i?'on':''}" data-person="${i}"><span class="av">${p[0]}</span><div class="x"><b>${p[1]}</b><div class="d">${p[2]}</div></div>${p[3]?P('факт','ok'):''}${p[4]==='пароль'?P('пароль','w'):p[4]==='нет'?P('нет ролей','r'):''}<span class="chev">›</span></div>`;}
+function personCard(){
+  const p=PEOPLE[S.person];
+  return `<button class="back inlist" data-act="unperson">‹ Сотрудники</button>
+   <div class="card"><div style="display:flex;gap:12px;align-items:center"><span class="av" style="width:52px;height:52px">${p[0]}</span><div class="x" style="flex:1;min-width:0"><b style="font-size:18px">${p[1]}</b><div class="sub">${p[1].split(' ')[0].toLowerCase()}@company.ru${p[4]==='пароль'?' · ещё не сменил временный пароль':''}</div></div>
+   <details style="position:relative"><summary class="btn s" style="list-style:none">⋯</summary><div class="card" style="position:absolute;right:0;top:46px;width:230px;z-index:2;padding:6px"><div class="it">Изменить имя</div><div class="it">Сбросить пароль…</div><div class="it" style="color:var(--bad)">Отключить доступ…</div></div></details></div></div>
+   <div class="h">Где работает</div>
+   <div class="list">${S.person===1?`<div class="it" style="align-items:flex-start;cursor:default"><div class="x"><b>ЖК Альфа</b> · Прораб<div class="d">Секция 1, Секция 2</div>${P('отвечает за факт','ok')}${P('до 31.12.2026')}</div><button class="btn s" data-act="wizard">Изменить</button></div>
+     <div class="it" style="align-items:flex-start;cursor:default"><div class="x"><b>ЖК Бета</b> · Прораб<div class="d">весь проект · бессрочно</div></div><button class="btn s" data-act="wizard">Изменить</button></div>`
+     :`<div class="it" style="align-items:flex-start;cursor:default"><div class="x"><b>${p[2].split(' · ')[0]}</b><div class="d">${p[2].split(' · ').slice(1).join(' · ')||'—'}</div></div><button class="btn s" data-act="wizard">Изменить</button></div>`}</div>
+   <div class="bar"><button class="btn p" data-act="wizard" style="flex:1">+ Добавить участие</button></div>
+   <div class="sub">«Отозвать» — внутри «Изменить», с подтверждением.</div>`;
+}
+function byProject(){
+  const r=(n,who,lvl,warn)=>`<div class="it" style="padding-left:${14+lvl*20}px;align-items:flex-start;cursor:default"><div class="x"><b>${n}</b><div>${who}</div>${warn?`<div class="d" style="color:var(--warn);white-space:normal">${warn}</div>`:''}</div><button class="btn s" data-act="wizard">+</button></div>`;
+  return `<select class="inp" style="margin-bottom:10px"><option>ЖК Альфа</option><option>ЖК Бета</option></select>
+   <div class="list">${r('Весь проект',P('Капустин · руководство')+P('Орлова · ПТО'),0)}${r('Корпус 1','',0)}${r('Секция 1',P('Петров · факт','ok')+P('Лебедев · подрядчик'),1)}${r('Секция 2',P('Петров · факт','ok'),1)}${r('Секция 3',P('Сидорова'),1,'нет ответственного за факт — вносит любой прораб проекта')}</div>`;
+}
+function wizard(){
+  const stp=['Кто','Роль и где','Проверка'];
+  const head=`<div class="steps">${stp.map((t,i)=>`<div class="${i<S.step?'on':''} ${i===S.step-1?'cur':''}"><i></i>${i+1}. ${t}</div>`).join('')}</div>`;
+  const b = S.step===1 ? `<input class="search" placeholder="Найти сотрудника"><div class="list" style="margin-top:8px">${PEOPLE.slice(0,6).map((p,i)=>`<label class="it"><input type="checkbox" ${i===1||i===4?'checked':''}><span class="av">${p[0]}</span><div class="x"><b>${p[1]}</b><div class="d">${p[2]}</div></div></label>`).join('')}</div><div class="sub" style="margin-top:6px">Выбрано: 2</div>`
+   : S.step===2 ? `<div class="f"><label>Роль</label><select class="inp"><option>Прораб</option><option>Инженер СК</option><option>ПТО</option></select><div class="sub">Даёт: смотреть работы, смотреть и вносить факт.</div></div>
+     <div class="f"><label>Где</label><div class="seg2"><span>Вся компания</span><span class="on">Проект</span></div></div>
+     <div class="f"><label>Проект</label><select class="inp"><option>ЖК Альфа</option></select></div>
+     <div class="f"><label>Места (ничего не отмечено — весь проект)</label><div class="tree"><div>▾ <input type="checkbox"> Корпус 1</div><div style="padding-left:24px"><input type="checkbox" checked> Секция 1</div><div style="padding-left:24px"><input type="checkbox" checked> Секция 2</div><div style="padding-left:24px"><input type="checkbox"> Секция 3</div></div></div>
+     <label class="chk"><input type="checkbox" checked> Отвечает за факт по этим местам</label>
+     <details class="card" style="padding:0"><summary style="padding:12px;cursor:pointer">Дополнительно: срок, фирма подрядчика</summary><div style="padding:0 12px 12px" class="grid2"><div class="f"><label>Срок до</label><input class="inp" placeholder="бессрочно"></div><div class="f"><label>Фирма подрядчика</label><select class="inp" disabled><option>для роли подрядчика</option></select></div></div></details>
+     <div class="sub">Для роли Качества вместо дерева — галочки «Объекты Качества».</div>`
+   : `<div class="card"><b>Петров П. П., Сидорова Е. В.</b><div style="margin-top:6px">→ <b>Прораб</b> · ЖК Альфа · Секция 1, Секция 2</div>${P('отвечают за факт','ok')}${P('бессрочно')}<div class="sub" style="margin-top:8px">Будет 4 назначения. Увидят в План/Факте только эти секции. Запись появится в журнале.</div></div>`;
+  return `<button class="back" data-act="unwizard">‹ Отмена</button><div class="ttl" style="font-size:19px">Назначить</div>${head}${b}
+   <div class="bar" style="justify-content:flex-end;position:sticky;bottom:0;background:var(--bg);padding:10px 0"><button class="btn" data-act="${S.step>1?'prev':'unwizard'}">${S.step>1?'Назад':'Отмена'}</button><button class="btn p" data-act="${S.step<3?'next':'unwizard'}">${S.step<3?'Далее':'Сохранить'}</button></div>`;
+}
+function rolesView(){
+  const roles=[['Администратор компании','всё',3],['Руководитель проекта','проекты, факт, деньги, КС-2',2],['Прораб','работы, факт',6],['ПТО','ВОР, работы',1],['Инженер СК','Качество, стройконтроль',4],['Подрядчик (своя фирма)','замечания своей фирмы',2]];
+  return `<div class="split"><div><div class="list">${roles.map(([n,d,c],i)=>`<div class="it ${i===2?'on':''}"><div class="x"><b>${n}</b><div class="d">${d} · у ${c} чел.</div></div><span class="chev">›</span></div>`).join('')}</div><div class="bar"><button class="btn" style="flex:1">+ Новая роль (копия)</button></div></div>
+   <div class="detail-empty"><div class="card"><b style="font-size:18px">Прораб</b> ${P('шаблон')}<div class="sub">Может: смотреть работы, смотреть и вносить факт, чек-лист. У 6 человек.</div><div class="bar"><button class="btn s">Переименовать</button><button class="btn s">Копировать</button><button class="btn s d">Удалить…</button></div></div>
+   ${[['Работы и план','1 из 3'],['Факт','2 из 3'],['Деньги и КС-2','0 из 2'],['Качество','0 из 2'],['Администрирование','0 из 2']].map(([g,c],i)=>`<details class="card" style="padding:0" ${i===1?'open':''}><summary style="padding:14px;cursor:pointer;font-weight:700">${g} <span class="sub">${c}</span></summary>${i===1?'<div style="padding:0 14px 8px"><label class="chk"><input type="checkbox" checked> Смотреть факт</label><label class="chk"><input type="checkbox" checked> Вносить факт</label><label class="chk"><input type="checkbox"> Подтверждать перебор и чужие записи</label></div>':''}</details>`).join('')}
+   <div class="bar" style="justify-content:flex-end"><button class="btn">Отменить</button><button class="btn p">Сохранить</button></div></div></div>`;
+}
+function requestsView(){
+  return `<div class="list">${[['Соколов Д. А.','просит доступ: Инженер СК · объект Струны','сегодня'],['Фролова М. В.','просит доступ: Качество · просмотр','вчера'],['ООО «Фасад Про»','подрядчик: доступ к замечаниям своей фирмы','2 дня']].map(r=>`<div class="it" style="flex-wrap:wrap;cursor:default"><div class="x" style="flex:1 1 200px"><b>${r[0]}</b><div class="d" style="white-space:normal">${r[1]} · ${r[2]}</div></div><button class="btn s">Отклонить</button><button class="btn s p">Одобрить…</button></div>`).join('')}</div><div class="sub" style="margin-top:6px">«Одобрить» открывает назначение с уже выбранными ролью и объектом.</div>`;
+}
+function peoplePage(){
+  if(S.view==='wizard') return wizard();
+  const tabs=`<div class="tabs2">${[['people','Сотрудники · 24'],['roles','Роли и права · 8'],['requests','Заявки · 3']].map(([id,t])=>`<span class="${S.tab===id?'on':''}" data-tab="${id}">${t}</span>`).join('')}</div>`;
+  if(S.tab==='roles') return tabs+rolesView();
+  if(S.tab==='requests') return tabs+requestsView();
+  const head=`<div class="bar" style="margin-top:0"><button class="btn p wide-only" data-act="wizard">+ Назначить</button><button class="btn wide-only">+ Сотрудник</button></div>`;
+  const filt=`<input class="search" placeholder="Найти: имя, почта, проект"><div class="bar">${P('Все 24','g')}${P('Без ролей 2','r')}${P('Не сменили пароль 1','w')}${P('Отключены 1')}</div>
+   <div class="tabs2" style="margin-top:0">${[['list','Люди'],['proj','По проектам']].map(([v,t])=>`<span class="${(S.view==='proj'?'proj':'list')===v?'on':''}" data-view="${v}">${t}</span>`).join('')}</div>`;
+  if(S.view==='proj') return tabs+head+filt+byProject();
+  const list=`<div class="list">${PEOPLE.map(personRow).join('')}<div class="it" style="justify-content:center;color:var(--muted)">ещё 16</div></div><div class="fab"><button class="btn p" data-act="wizard">+ Назначить</button></div>`;
+  // телефон/планшет: список ИЛИ карточка; ПК: список И карточка
+  return tabs+head+`<div class="split" data-split>${S.person!=null?`<div class="lst-wrap">${filt}${list}</div><div>${personCard()}</div>`:`<div>${filt}${list}</div><div class="detail-empty"><div class="card sub" style="text-align:center;padding:40px">Выберите сотрудника слева</div></div>`}</div>`;
+}
+
+// ===== Главная и поиск =====
+const ATT=[['2 сотрудника без ролей','people','r'],['Секция 3 (ЖК Альфа) — нет ответственного за факт','people','w'],['3 заявки на доступ','people','w'],['1 сотрудник не сменил временный пароль','people','w']];
+function home(){
+  const adm=S.who!=='foreman';
+  const who=S.who==='foreman'?'Петров П. П. · прораб':S.who==='platform'?'Кондратьев И. Н. · администратор платформы':'Кондратьев И. Н. · администратор';
+  return `<div class="ttl">Настройки</div><div class="sub" style="margin-bottom:10px">${who} · RBI-стенд</div>
+   <input class="search" id="q" placeholder="Найти: тема, пароль, роль, объект…" value="${S.q}">
+   ${S.q?searchRes():`${adm?`<div class="h">Требует внимания</div><div class="list att">${ATT.map(([t,p,c])=>`<div class="it" data-go="${p}"><span class="ic" style="color:var(--${c==='r'?'bad':'warn'});background:color-mix(in srgb,var(--${c==='r'?'bad':'warn'}) 14%,transparent)">${svg('alert',18)}</span><div class="x" style="white-space:normal">${t}</div><span class="chev">›</span></div>`).join('')}</div>
+   <div class="bar">${['+ Назначить','+ Сотрудник','+ Проект'].map((t,i)=>`<button class="btn s ${i===0?'p':''}" data-go="people" ${i===0?'data-act="wizard"':''}>${t}</button>`).join('')}</div>`:''}
+   ${groupsFor().map(([g,,it])=>`<div class="h">${g}</div><div class="list">${it.map(([id,ic,n,d])=>`<div class="it" data-go="${id}"><span class="ic">${svg(ic)}</span><div class="x"><b>${n}</b><div class="d">${d}</div></div><span class="chev">›</span></div>`).join('')}</div>`).join('')}
+   ${S.who==='foreman'?'<div class="sub" style="margin:10px 4px">Разделов компании не видно: у прораба нет права администрировать.</div>':''}`}`;
+}
+const INDEX=[['Тема','look','Личные › Вид и удобство'],['Размер текста','look','Личные › Вид и удобство'],['Меню разделов сверху / снизу','look','Личные › Вид и удобство'],['Пароль — сменить свой','profile','Личные › Мой профиль'],['Выйти','profile','Личные › Мой профиль'],['Push-уведомления','notify','Личные › Уведомления'],['Работа без сети','device','Личные › Данные на устройстве'],['Очистить кэш','device','Личные › Данные на устройстве'],['ИИ-помощник, ключ DeepSeek','inspect','Личные › Осмотр'],['Жесты в осмотре','inspect','Личные › Осмотр'],['Сброс настроек','help','Личные › Помощь'],
+ ['Сбросить пароль сотрудника','people','Компания › Сотрудники и доступ › сотрудник › ⋯'],['Временный пароль не сменён · 1','people','Компания › Сотрудники и доступ'],['Роли и права','people','Компания › Сотрудники и доступ › Роли'],['Назначить на проект / секцию','people','Компания › Сотрудники и доступ'],['Объекты Качества у инженера','people','Компания › Сотрудники и доступ › сотрудник'],['Подразделения','projects','Компания › Проекты и объекты'],['ИНН контрагента','partners','Компания › Контрагенты'],['Единицы измерения','dicts','Компания › Справочники'],['Логотип, фирменный цвет','brand','Компания › Фирменный стиль и отчёты'],['Шаблоны PDF','brand','Компания › Фирменный стиль и отчёты'],['Подрядчики Качества','quality','Модули › Качество'],['Чек-листы','quality','Модули › Качество']];
+function searchRes(){
+  const q=S.q.toLowerCase(); const allowed=new Set(items().map(i=>i[0]));
+  const r=INDEX.filter(([t,p,w])=>allowed.has(p)&&(t+' '+w).toLowerCase().includes(q));
+  const ppl=allowed.has('people')?PEOPLE.filter(p=>(p[1]+' '+p[2]).toLowerCase().includes(q)):[];
+  return `<div class="h">Найдено: ${r.length+ppl.length}</div><div class="list">${r.map(([t,p,w])=>`<div class="it" data-go="${p}"><div class="x"><b>${t}</b><div class="d">${w}</div></div><span class="chev">›</span></div>`).join('')}${ppl.map(p=>`<div class="it" data-go="people" data-person="${PEOPLE.indexOf(p)}"><span class="av">${p[0]}</span><div class="x"><b>${p[1]}</b><div class="d">Сотрудник · ${p[2]}</div></div><span class="chev">›</span></div>`).join('')||''}</div>${!r.length&&!ppl.length?'<div class="sub" style="margin:8px 4px">Ничего не нашлось</div>':''}`;
+}
+
+// ===== Каркас =====
+function navCol(){
+  return `<div style="padding:4px 6px 8px"><input class="search" id="q2" placeholder="Найти настройку" value="${S.q}"></div>
+   <a class="${S.page==='home'?'on':''}" data-go="home"><span class="nic">${svg('home',18)}</span>Главная настроек</a>
+   ${groupsFor().map(([g,,it])=>`<div class="g">${g}</div>${it.map(([id,ic,n])=>`<a class="${S.page===id?'on':''}" data-go="${id}"><span class="nic">${svg(ic,18)}</span>${n}${id==='people'&&S.who!=='foreman'?'<span class="cnt">3</span>':''}</a>`).join('')}`).join('')}`;
+}
+function render(){
+  const vp=document.getElementById('vp');
+  vp.className='vp '+(S.theme==='light'?'light':''); vp.style.width=S.w+'px';
+  const it=items().find(i=>i[0]===S.page);
+  if(S.page!=='home' && !it) S.page='home';
+  const isPhone=S.w<600;
+  // на планшете и ПК вместо пустой «главной» — главная справа
+  const body = S.page==='home' ? home()
+    : `<button class="back home" data-go="home">‹ Настройки</button><div class="crumb">${it[4]}</div><div class="ttl">${it[2]}</div>${PAGES[S.page]()}`;
+  vp.innerHTML=`<div class="inner"><nav class="nav">${navCol()}</nav><main class="main">${body}</main></div>`;
+  document.getElementById('wl').textContent = `${S.w} px — ${S.w<600?'телефон':S.w<1024?'планшет':S.w<1600?'ПК':'ПК, широкий: по центру ≤1440'}`;
+  document.getElementById('wr').value=S.w;
+  document.querySelectorAll('#pre button').forEach(b=>b.classList.toggle('on',+b.dataset.w===S.w));
+  // на телефоне в «Сотрудниках»: открыта карточка — список скрыт
+  const sp=vp.querySelector('[data-split]');
+  if(sp && S.person!=null && S.w<1024){ sp.firstElementChild.style.display='none'; }
+  fit();
+  for(const id of ['q','q2']){ const q=vp.querySelector('#'+id); if(q) q.oninput=e=>{S.q=e.target.value; if(id==='q2'){S.page='home';} render(); const n=vp.querySelector('#'+(id==='q2'&&S.w>=600?'q2':'q')); if(n){n.focus(); n.setSelectionRange(n.value.length,n.value.length);} }; }
+}
+function fit(){
+  const fr=document.getElementById('frame'), sc=document.getElementById('scaler'), vp=document.getElementById('vp');
+  fr.style.maxWidth=S.w+'px'; fr.style.margin='0 auto';
+  const k=Math.min(1, fr.clientWidth/S.w); sc.style.transform=`scale(${k})`; fr.style.height=(vp.offsetHeight*k)+'px';
+}
+document.getElementById('vp').addEventListener('click',e=>{
+  const t=e.target;
+  const s=t.closest('[data-sw]'); if(s){S.set[s.dataset.sw]=S.set[s.dataset.sw]?0:1; return render();}
+  const g=t.closest('[data-seg]'); if(g){const [k,v]=g.dataset.seg.split(':'); S.set[k]=+v; return render();}
+  const tb=t.closest('[data-tab]'); if(tb){S.tab=tb.dataset.tab; S.view='list'; S.person=null; return render();}
+  const vw=t.closest('[data-view]'); if(vw){S.view=vw.dataset.view; S.person=null; return render();}
+  const a=t.closest('[data-act]');
+  const go=t.closest('[data-go]'); if(go){S.page=go.dataset.go; S.q=''; S.tab='people'; S.view='list'; S.person=go.dataset.person!=null?+go.dataset.person:null;}
+  const pr=t.closest('[data-person]'); if(pr && !go){S.person=+pr.dataset.person;}
+  if(a){const v=a.dataset.act; if(v==='wizard'){S.view='wizard';S.step=1;} if(v==='unwizard'){S.view='list';} if(v==='next')S.step++; if(v==='prev')S.step--; if(v==='unperson')S.person=null;}
+  if(go||pr||a){ render(); document.getElementById('frame').scrollIntoView({block:'nearest'}); }
+});
+const PRE=[[375,'Телефон 375'],[414,'414'],[600,'600'],[768,'Планшет 768'],[1023,'1023'],[1024,'ПК 1024'],[1280,'1280'],[1440,'1440'],[1920,'1920'],[2560,'2560']];
+document.getElementById('pre').innerHTML=PRE.map(([w,l])=>`<button data-w="${w}">${l}</button>`).join('');
+document.getElementById('pre').onclick=e=>{const b=e.target.closest('button'); if(b){S.w=+b.dataset.w; render();}};
+document.getElementById('wr').oninput=e=>{S.w=+e.target.value; render();};
+document.getElementById('th').onclick=e=>{const b=e.target.closest('button'); if(!b)return; document.querySelectorAll('#th button').forEach(x=>x.classList.toggle('on',x===b)); S.theme=b.dataset.t; render();};
+document.getElementById('who').onclick=e=>{const b=e.target.closest('button'); if(!b)return; document.querySelectorAll('#who button').forEach(x=>x.classList.toggle('on',x===b)); S.who=b.dataset.r; S.page='home'; S.q=''; render();};
+addEventListener('resize',fit);
+render();
+</script>
+</body>
+</html>
