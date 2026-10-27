@@ -1,7 +1,8 @@
 /**
- * settings.routes.js — адреса «Настроек» (P2-0038): две зоны и уровни.
+ * settings.routes.js — адреса «Настроек» (P2-0038; P2-0048 этап 3 — главная настроек, группы варианта В).
  *
- *   Моё (видят все):          #/settings/my/<profile|interface|device|notifications|quality|help>
+ *   Главная настроек:         #/settings, #/settings/home (поиск, «Требует внимания», группы разделов)
+ *   Личные (видят все):       #/settings/my/<profile|interface|device|notifications|quality|help>
  *   Администрирование:        #/settings/company/<вкладка CompanyApp>
  *                             #/settings/modules/<quality|planfact>
  *                             #/settings/platform/companies
@@ -11,7 +12,8 @@
  * Старые адреса (#/settings/platform, /platform-admin, /admin, /directories, /quality, /construction; с этапа 3 —
  * #/planfact/directories/objects|units: объекты и единицы переехали в «Компанию») перенаправляет
  * settingsLegacyRedirect — его вызывает AppRouter.normalizeSubPath (замена адреса, без лишней записи в истории).
- * Права здесь не проверяются: закрытый подраздел без права settings.render.js открывает как «Моё → Профиль».
+ * Права здесь не проверяются: закрытый подраздел без права settings.render.js открывает главную настроек.
+ * Группы и пункты левой колонки / главной (Личные · Компания · Модули · Платформа) — settings.nav.js.
  */
 
 export const SETTINGS_BASE = '#/settings';
@@ -22,6 +24,7 @@ export const PLATFORM_TABS = ['companies'];
 
 /** Ключ панели → адрес без базы. */
 const KEY_TO_PATH = {
+    home: 'home',
     'my-profile': 'my/profile',
     'my-interface': 'my/interface',
     'my-device': 'my/device',
@@ -35,12 +38,15 @@ const KEY_TO_PATH = {
 };
 
 export const SETTINGS_KEYS = Object.keys(KEY_TO_PATH);
-export const DEFAULT_KEY = 'my-profile';
+/** P2-0048: вход в «Настройки» — главная настроек. */
+export const DEFAULT_KEY = 'home';
 /** Ключи зоны «Администрирование». */
 export const ADMIN_KEYS = ['company', 'admin', 'modules-planfact', 'platform-admin'];
 /** Ключи уровня «Модули» (вкладка на модуль). */
 export const MODULE_KEYS = ['admin', 'modules-planfact'];
 
+const HOME_PATH = SETTINGS_BASE + '/home';
+/** Личный профиль — куда ведут старые «личные» адреса (#/settings/platform, /construction, /my/<нет такой>). */
 const DEFAULT_PATH = SETTINGS_BASE + '/my/profile';
 
 /** P2-0038 этап 3: справочники План/Факта, переехавшие в «Компанию». */
@@ -75,12 +81,13 @@ export function settingsLegacyRedirect(path) {
     const seg = segments(path);
     if (!seg) return path;
     const [a, b] = seg;
-    if (!a) return DEFAULT_PATH;
+    if (!a) return HOME_PATH;
+    if (a === 'home') return seg.length === 1 ? path : HOME_PATH;
     if (a === 'company') return path;
     if (a === 'my') return MY_TABS.indexOf(b) !== -1 && seg.length === 2 ? path : DEFAULT_PATH;
     if (a === 'modules') return MODULE_TABS.indexOf(b) !== -1 && seg.length === 2 ? path : SETTINGS_BASE + '/modules/' + MODULE_TABS[0];
     if (a === 'platform' && b) return PLATFORM_TABS.indexOf(b) !== -1 && seg.length === 2 ? path : SETTINGS_BASE + '/platform/' + PLATFORM_TABS[0];
-    return LEGACY[a] || DEFAULT_PATH;
+    return LEGACY[a] || HOME_PATH;
 }
 
 /** Адрес → ключ панели (старый адрес сначала переводится в новый); не «Настройки» — null. */
@@ -96,13 +103,14 @@ export function settingsKeyFromHash(hash) {
     return DEFAULT_KEY;
 }
 
-/** Ключ панели → адрес; неизвестный — «Моё → Профиль». */
+/** Ключ панели → адрес; неизвестный — главная настроек. */
 export function settingsPathForKey(key) {
     return SETTINGS_BASE + '/' + (KEY_TO_PATH[key] || KEY_TO_PATH[DEFAULT_KEY]);
 }
 
-/** Ключ → зона: 'admin' (Администрирование) или 'my'. */
+/** Ключ → зона: 'home' (главная), 'admin' (Компания · Модули · Платформа) или 'my' (Личные). */
 export function settingsZoneForKey(key) {
+    if (key === 'home') return 'home';
     return ADMIN_KEYS.indexOf(key) !== -1 ? 'admin' : 'my';
 }
 

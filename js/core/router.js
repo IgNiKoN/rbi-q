@@ -96,16 +96,18 @@ window.AppRouter = {
                 'ref-sub-practices': 'practices'
             }
         },
-        // P2-0038: первый уровень «Настроек» (второй — вкладка уровня, его разбирает settings.routes.js)
+        // P2-0038: первый уровень «Настроек» (второй — вкладка уровня, его разбирает settings.routes.js); P2-0048: главная настроек
         '#/settings': {
-            defaultSlug: 'my',
+            defaultSlug: 'home',
             slugToId: {
+                home: 'home',
                 my: 'my-profile',
                 company: 'company',
                 modules: 'admin',
                 platform: 'platform-admin'
             },
             idToSlug: {
+                home: 'home',
                 'my-profile': 'my',
                 company: 'company',
                 admin: 'modules',

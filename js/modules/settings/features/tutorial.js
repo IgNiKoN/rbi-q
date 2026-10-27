@@ -57,7 +57,7 @@ function go(hash) {
     else if (hash) window.location.hash = hash;
 }
 
-/** P2-0038: подраздел «Настроек» по ключу панели (адреса двух зон — settings.routes.js). */
+/** P2-0038: подраздел «Настроек» по ключу панели (адреса — settings.routes.js; P2-0048: 'home' — главная настроек). */
 function goSettings(key) {
     var routes = window.SettingsRoutes;
     var path = routes && typeof routes.pathForKey === 'function' ? routes.pathForKey(key) : '#/settings';
@@ -888,11 +888,11 @@ var tutorialSteps = [
     {
         chapter: 'settings',
         title: '41. Настройки платформы',
-        text: '«Моё» — личные настройки (профиль, интерфейс, устройство и данные, уведомления, Качество, помощь); «Администрирование» — Компания, Модули, Платформа (видно по правам).',
-        targets: ['#settings-subnav', '#settings-panel-my-profile'].concat(NAV_SETTINGS),
+        text: 'Главная настроек — поиск и «Требует внимания». «Личные» — свои настройки (профиль, вид и удобство, уведомления, данные на устройстве, осмотр, помощь); «Компания», «Модули», «Платформа» — видно по правам.',
+        targets: ['#settings-subnav', '#settings-panel-home', '#settings-panel-my-profile'].concat(NAV_SETTINGS),
         action: function () {
             ensureQualityMode();
-            goSettings('my-profile');
+            goSettings('home');
         }
     },
     {

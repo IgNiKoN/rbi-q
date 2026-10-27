@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { CompanyApp, COMPANY_CSS, COMPANY_ROUTE_EVENT } from './CompanyApp.ts';
 import { createCompanyService } from './company.service.ts';
+import { renderAttention } from './CompanyHome.ts';
 import { createCoreService } from '../core/core.service.ts';
 import type { CoreApi } from '../core/core.service.ts';
 import { createProjectsService } from '../core/projects.service.ts';
@@ -69,6 +70,12 @@ export function unmount(): void {
   root = null;
   if (mountedEl) mountedEl.replaceChildren();
   mountedEl = null;
+}
+
+/** P2-0048: «Требует внимания» на главной «Настроек» (сотрудники без ролей, не сменили временный пароль, отключены). */
+export function mountHome(el: HTMLElement): Promise<void> {
+  getAuth();
+  return renderAttention(el, api);
 }
 
 export function isMounted(): boolean {

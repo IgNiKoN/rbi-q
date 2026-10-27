@@ -1,0 +1,34 @@
+P2-0048 этап 3 — стенд (подставной сервер, localhost:8863), снимки через DevTools-протокол headless Chrome (эмуляция ширины), 27.10.2026.
+Строка: снимок: ширина окна, scrollWidth (OK = нет прокрутки вбок), адрес, страница, колонки каркаса, тема.
+home-375-dark: iw=375 scrollWidth=375 OK hash=#/settings/home page=home cols=359px theme=rbi-dark-v3
+home-375-light: iw=375 scrollWidth=375 OK hash=#/settings/home page=home cols=359px theme=rbi-light-v3
+home-414-dark: iw=414 scrollWidth=414 OK hash=#/settings/home page=home cols=398px theme=rbi-dark-v3
+home-414-light: iw=414 scrollWidth=414 OK hash=#/settings/home page=home cols=398px theme=rbi-light-v3
+home-600-dark: iw=600 scrollWidth=600 OK hash=#/settings/home page=home cols=568px theme=rbi-dark-v3
+home-600-light: iw=600 scrollWidth=600 OK hash=#/settings/home page=home cols=568px theme=rbi-light-v3
+home-768-dark: iw=768 scrollWidth=768 OK hash=#/settings/home page=home cols=250px 398px theme=rbi-dark-v3
+home-768-light: iw=768 scrollWidth=768 OK hash=#/settings/home page=home cols=250px 398px theme=rbi-light-v3
+home-1023-dark: iw=1023 scrollWidth=1023 OK hash=#/settings/home page=home cols=250px 653px theme=rbi-dark-v3
+home-1023-light: iw=1023 scrollWidth=1023 OK hash=#/settings/home page=home cols=250px 653px theme=rbi-light-v3
+home-1024-dark: iw=1024 scrollWidth=1024 OK hash=#/settings/home page=home cols=250px 654px theme=rbi-dark-v3
+home-1024-light: iw=1024 scrollWidth=1024 OK hash=#/settings/home page=home cols=250px 654px theme=rbi-light-v3
+home-1280-dark: iw=1280 scrollWidth=1280 OK hash=#/settings/home page=home cols=250px 710px theme=rbi-dark-v3
+home-1280-light: iw=1280 scrollWidth=1280 OK hash=#/settings/home page=home cols=250px 710px theme=rbi-light-v3
+home-1440-dark: iw=1440 scrollWidth=1440 OK hash=#/settings/home page=home cols=270px 850px theme=rbi-dark-v3
+home-1440-light: iw=1440 scrollWidth=1440 OK hash=#/settings/home page=home cols=270px 850px theme=rbi-light-v3
+home-1920-dark: iw=1920 scrollWidth=1920 OK hash=#/settings/home page=home cols=270px 1302px theme=rbi-dark-v3
+home-1920-light: iw=1920 scrollWidth=1920 OK hash=#/settings/home page=home cols=270px 1302px theme=rbi-light-v3
+home-2560-dark: iw=2560 scrollWidth=2560 OK hash=#/settings/home page=home cols=270px 1170px theme=rbi-dark-v3
+home-2560-light: iw=2560 scrollWidth=2560 OK hash=#/settings/home page=home cols=270px 1170px theme=rbi-light-v3
+sec-375-dark-company-members: iw=375 scrollWidth=375 OK hash=#/settings/company/members page=section cols=359px theme=rbi-dark-v3
+sec-375-light-my-interface: iw=375 scrollWidth=375 OK hash=#/settings/my/interface page=section cols=359px theme=rbi-light-v3
+sec-414-light-company-roles: iw=414 scrollWidth=414 OK hash=#/settings/company/roles page=section cols=398px theme=rbi-light-v3
+sec-768-dark-company-objects: iw=768 scrollWidth=768 OK hash=#/settings/company/objects page=section cols=250px 398px theme=rbi-dark-v3
+sec-1024-light-company-branding: iw=1024 scrollWidth=1024 OK hash=#/settings/company/branding page=section cols=250px 654px theme=rbi-light-v3
+sec-1440-dark-company-members: iw=1440 scrollWidth=1440 OK hash=#/settings/company/members page=section cols=270px 850px theme=rbi-dark-v3
+sec-1440-light-company-members: iw=1440 scrollWidth=1440 OK hash=#/settings/company/members page=section cols=270px 850px theme=rbi-light-v3
+sec-1920-dark-my-profile: iw=1920 scrollWidth=1920 OK hash=#/settings/my/profile page=section cols=270px 1302px theme=rbi-dark-v3
+sec-2560-dark-company-audit: iw=2560 scrollWidth=2560 OK hash=#/settings/company/audit page=section cols=270px 1170px theme=rbi-dark-v3
+sec-1280-light-company-counterparties: iw=1280 scrollWidth=1280 OK hash=#/settings/company/counterparties page=section cols=250px 710px theme=rbi-light-v3
+search-1440-dark: iw=1440 scrollWidth=1440 OK hash=#/settings/home page=home cols=270px 850px theme=rbi-dark-v3
+search-375-light: iw=375 scrollWidth=375 OK hash=#/settings/home page=home cols=359px theme=rbi-light-v3

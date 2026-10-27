@@ -1,12 +1,14 @@
 /**
  * settings.desktop.render.js
- * Desktop Настройки (≥1280): платформенный split — rail секций | stage.
- * Mobile markup settings.render.js не переписывает.
+ * Широкие «Настройки»: снимает ограничение ширины оболочки (#app-root) на время раздела.
+ * P2-0048 этап 3: левая колонка разделов и раскладка по диапазонам — в самой разметке settings.render.js
+ * (каркас варианта В, @container в css/settings.desktop.css); разметку здесь больше не перестраиваем.
  */
 
 import { settingsKeyFromHash, DEFAULT_KEY } from './settings.routes.js';
 
-const DESKTOP_MIN = 1280;
+/** P2-0048: с планшета (600) раздел занимает всю ширину — диапазоны раскладки считаются по ширине контейнера. */
+const DESKTOP_MIN = 600;
 const WIDE_CLASS = 'rbi-settings-desktop-wide';
 const CSS_HREF = './css/settings.desktop.css';
 const TAB_ID = 'tab-settings';
@@ -18,16 +20,17 @@ let _localeBound = false;
 
 // P2-0038: подписи подразделов двух зон (подзаголовок полосы ПК)
 const SECTION_FALLBACKS = {
-  'my-profile': 'Моё · Профиль и вход',
-  'my-interface': 'Моё · Интерфейс',
-  'my-device': 'Моё · Устройство и данные',
-  'my-notifications': 'Моё · Уведомления',
-  'my-quality': 'Моё · Качество',
-  'my-help': 'Моё · Помощь',
-  company: 'Администрирование · Компания',
-  admin: 'Администрирование · Модули · Качество',
-  'modules-planfact': 'Администрирование · Модули · План/Факт',
-  'platform-admin': 'Администрирование · Платформа'
+  home: 'Главная настроек',
+  'my-profile': 'Личные · Мой профиль',
+  'my-interface': 'Личные · Вид и удобство',
+  'my-device': 'Личные · Данные на устройстве',
+  'my-notifications': 'Личные · Уведомления',
+  'my-quality': 'Личные · Осмотр',
+  'my-help': 'Личные · Помощь и о программе',
+  company: 'Компания',
+  admin: 'Модули · Качество',
+  'modules-planfact': 'Модули · План/Факт',
+  'platform-admin': 'Платформа'
 };
 
 function _t(key, fallback) {
@@ -101,72 +104,9 @@ function applyDeskChromeI18n() {
   syncStripSubtitle();
 }
 
+/** P2-0048: каркас варианта В сам раскладывается по ширине — прежняя перестройка (rail | stage) не нужна. */
 function ensureDeskStructure() {
-  const tab = document.getElementById(TAB_ID);
-  if (!tab) return null;
-  if (tab.querySelector('.settings-desk-body')) return tab;
-
-  const sticky = tab.querySelector('.sticky-top-panel');
-  const panels = tab.querySelector('.settings-panels');
-  const subnav = document.getElementById('settings-subnav');
-  if (!sticky || !panels || !subnav) return tab;
-
-  // Strip: brand + platform chip + actions from sticky header row
-  const strip = document.createElement('div');
-  strip.className = 'settings-desk-topbar-strip rbi-desk-module-strip';
-  strip.innerHTML =
-    '<div class="settings-desk-topbar-strip-inner rbi-desk-module-strip-inner">' +
-    '<div class="settings-desk-topbar-brand">' +
-    '<span class="settings-desk-topbar-label" data-i18n="nav.settings">' +
-    _escapeHtml(_t('nav.settings', 'Настройки')) + '</span>' +
-    '<span class="rbi-chip" id="settings-desk-platform-chip" data-i18n="settings.strip_chip">' +
-    _escapeHtml(_t('settings.strip_chip', 'Платформа')) + '</span>' +
-    '<span class="settings-desk-topbar-sub" id="settings-desk-strip-sub"></span>' +
-    '</div>' +
-    '<div class="settings-desk-topbar-actions" id="settings-desk-strip-actions"></div>' +
-    '</div>';
-
-  const actionsHost = strip.querySelector('#settings-desk-strip-actions');
-  const actionRow = sticky.querySelector('.flex.justify-between.items-center');
-  if (actionRow && actionsHost) {
-    const btns = actionRow.querySelector('.flex.items-center.gap-2.shrink-0');
-    if (btns) actionsHost.appendChild(btns);
-  }
-
-  const body = document.createElement('div');
-  body.className = 'settings-desk-body';
-
-  const rail = document.createElement('nav');
-  rail.className = 'settings-desk-rail';
-  rail.setAttribute('aria-label', _t('settings.rail_aria', 'Разделы настроек'));
-  rail.setAttribute('data-i18n', 'settings.rail_aria');
-  rail.setAttribute('data-i18n-attr', 'aria-label');
-  // Move subnav into rail (keep same buttons / handlers)
-  const subWrap = subnav.parentElement;
-  rail.appendChild(subnav);
-  if (subWrap && subWrap !== sticky && subWrap.childNodes.length === 0) {
-    try { subWrap.remove(); } catch (_) { /* ignore */ }
-  }
-
-  const stage = document.createElement('div');
-  stage.className = 'settings-desk-stage';
-  stage.appendChild(panels);
-
-  body.appendChild(rail);
-  body.appendChild(stage);
-
-  sticky.replaceWith(strip);
-  tab.appendChild(body);
-
-  return tab;
-}
-
-function _escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return document.getElementById(TAB_ID);
 }
 
 function restoreMobileStructure() {

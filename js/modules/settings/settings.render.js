@@ -16,7 +16,35 @@ import { mountCloudDeletedPurgeUI } from './features/cloud-deleted-purge-ui.js';
 import { mountCloudOrphanUrlsUI } from './features/cloud-orphan-urls-ui.js';
 import { mountRoleMatrixUI } from './features/role-matrix-ui.js';
 import { mountOfficialTemplatesUI } from './features/official-templates-ui.js';
-import { SETTINGS_KEYS, ADMIN_KEYS, MODULE_KEYS, DEFAULT_KEY, settingsKeyFromHash, settingsPathForKey, settingsZoneForKey } from './settings.routes.js';
+import { SETTINGS_KEYS, MODULE_KEYS, DEFAULT_KEY, settingsKeyFromHash, settingsPathForKey } from './settings.routes.js';
+import { SETTINGS_NAV, settingsIcon, settingsNavItems, settingsNavItem, settingsNavIdFromHash, searchSettings } from './settings.nav.js';
+
+/** P2-0048: пункты левой колонки (все; видимость по правам ставит _syncCompanyTab атрибутом hidden). */
+function _navHtml() {
+    var home = '<button type="button" class="stv-nav-a" data-settings-go="home" data-settings-item="home">'
+        + '<span class="stv-nic">' + settingsIcon('home', 18) + '</span><span class="stv-nav-l">Главная настроек</span></button>';
+    return home + SETTINGS_NAV.map(function (g) {
+        return '<div class="stv-nav-g" data-settings-group="' + g.id + '"><div class="stv-g">' + g.title + '</div>'
+            + g.items.map(function (it) {
+                return '<button type="button" class="stv-nav-a" data-settings-go="' + it.id + '" data-settings-item="' + it.id + '"'
+                    + (it.id === 'my-quality' ? ' id="settings-subnav-my-quality"' : '') + '>'
+                    + '<span class="stv-nic">' + settingsIcon(it.icon, 18) + '</span><span class="stv-nav-l">' + it.label + '</span></button>';
+            }).join('') + '</div>';
+    }).join('');
+}
+
+/** P2-0048: главная настроек — группы списком (иконка, название, короткая подпись). */
+function _homeGroupsHtml() {
+    return SETTINGS_NAV.map(function (g) {
+        return '<div class="stv-home-g" data-settings-group="' + g.id + '"><div class="stv-h">' + g.title + '</div><div class="stv-list">'
+            + g.items.map(function (it) {
+                return '<button type="button" class="stv-it" data-settings-go="' + it.id + '" data-settings-item="' + it.id + '">'
+                    + '<span class="stv-ic">' + settingsIcon(it.icon, 20) + '</span>'
+                    + '<span class="stv-x"><b>' + it.label + '</b><span class="stv-d">' + it.desc + '</span></span>'
+                    + '<span class="stv-chev">' + settingsIcon('chev', 18) + '</span></button>';
+            }).join('') + '</div></div>';
+    }).join('');
+}
 
 var SettingsRender = {
     // =====================================================================
@@ -27,56 +55,34 @@ var SettingsRender = {
     renderMarkup: function () {
         return `
         <div id="tab-settings" class="view-section">
-            <div
-                class="sticky-top-panel bg-[var(--card-border)]/80 backdrop-blur-md p-3 rounded-xl border border-[var(--card-border)] shadow-sm mb-4 z-40 flex flex-col gap-2.5">
-                <div class="flex justify-between items-center gap-2">
-                    <h2
-                        class="text-rbi-body font-black uppercase tracking-tight text-ink dark:text-white flex items-center gap-1.5 min-w-0">
-                        <svg class="w-5 h-5 text-brand shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                            stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
-                            </path>
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z">
-                            </path>
-                        </svg>
-                        <span data-i18n="nav.settings">Настройки</span>
-                    </h2>
-                    <div class="flex items-center gap-2 shrink-0">
+            <!-- P2-0048 этап 3: каркас «Настроек» по варианту В — левая колонка разделов (#settings-subnav), шапка раздела,
+                 главная настроек. Раскладка — по ширине контейнера .stv (css/settings.desktop.css, @container). -->
+            <div class="stv" id="settings-v" data-page="home">
+            <div class="stv-inner">
+            <nav id="settings-subnav" class="stv-nav" aria-label="Разделы настроек">
+                <div class="stv-nav-search"><input type="search" id="settings-nav-search" class="stv-search" placeholder="Найти настройку" aria-label="Найти настройку" autocomplete="off" enterkeyhint="search"></div>
+                ${_navHtml()}
+            </nav>
+            <div class="stv-main">
+            <div class="stv-head" id="settings-head">
+                <button type="button" class="stv-back" data-settings-go="home">${settingsIcon('back', 18)}<span data-i18n="nav.settings">Настройки</span></button>
+                <div class="stv-crumb" id="settings-head-crumb"></div>
+                <h2 class="stv-ttl" id="settings-head-title"></h2>
+            </div>
+            <div class="settings-panels">
+            <div id="settings-panel-home" data-settings-panel="home" class="stv-home">
+                <h2 class="stv-ttl" data-i18n="nav.settings">Настройки</h2>
+                <div class="stv-sub" id="settings-home-who"></div>
+                <input type="search" id="settings-home-search" class="stv-search stv-home-search" placeholder="Найти: тема, пароль, роль, проект…" aria-label="Найти настройку" autocomplete="off" enterkeyhint="search">
+                <div id="settings-search-results" hidden></div>
+                <div id="settings-home-body">
+                    <div id="settings-home-attention"></div>
+                    <div class="stv-bar" id="settings-home-actions" hidden>
+                        <button type="button" class="stv-btn stv-btn--p" data-settings-go="company/members">${settingsIcon('plus', 18)}Сотрудник</button>
                     </div>
-                </div>
-                <div class="relative min-w-0">
-                    <!-- P2-0038: две зоны — «Моё» (все) и «Администрирование» (Компания · Модули · Платформа, по правам сервера).
-                         Телефон: переключатель зон + подвкладки активной зоны; ПК: обе группы в левой колонке с заголовками. -->
-                    <div id="settings-subnav" class="settings-nav" data-active-zone="my" role="navigation" aria-label="Разделы настроек">
-                        <div id="settings-zone-switch" class="settings-zone-switch" role="tablist" hidden>
-                            <button type="button" data-settings-zone="my" role="tab" class="settings-zone-btn">Моё</button>
-                            <button type="button" data-settings-zone="admin" role="tab" class="settings-zone-btn">Администрирование</button>
-                        </div>
-                        <div class="settings-zone" data-settings-zone-group="my">
-                            <div class="settings-zone-title">Моё</div>
-                            <div class="settings-zone-tabs no-scrollbar" role="tablist">
-                                <button type="button" data-settings-subsection="my-profile" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Профиль и вход</button>
-                                <button type="button" data-settings-subsection="my-interface" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Интерфейс</button>
-                                <button type="button" data-settings-subsection="my-device" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Устройство и данные</button>
-                                <button type="button" data-settings-subsection="my-notifications" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Уведомления</button>
-                                <button type="button" data-settings-subsection="my-quality" role="tab" id="settings-subnav-my-quality" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Качество</button>
-                                <button type="button" data-settings-subsection="my-help" role="tab" class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Помощь</button>
-                            </div>
-                        </div>
-                        <div class="settings-zone" data-settings-zone-group="admin" id="settings-zone-admin" hidden>
-                            <div class="settings-zone-title">Администрирование</div>
-                            <div class="settings-zone-tabs no-scrollbar" role="tablist">
-                                <button type="button" data-settings-subsection="company" role="tab" id="settings-subnav-company" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Компания</button>
-                                <button type="button" data-settings-subsection="modules" data-settings-level="modules" role="tab" id="settings-subnav-admin" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Модули</button>
-                                <button type="button" data-settings-subsection="platform-admin" role="tab" id="settings-subnav-platform-admin" hidden class="settings-subnav-btn px-2.5 py-2 rounded-lg text-rbi-caption font-black uppercase tracking-widest transition-colors truncate">Платформа</button>
-                            </div>
-                        </div>
-                    </div>
+                    ${_homeGroupsHtml()}
                 </div>
             </div>
-
-            <div class="settings-panels">
             <div id="settings-panel-my-profile" data-settings-panel="my-profile" class="space-y-3">
                 <!-- P2-0013: кто вошёл в Platform 2.0 (почта) и «Выйти»; рисует _syncP2Account по состоянию входа платформы -->
                 <div id="settings-p2-account"
@@ -1426,6 +1432,9 @@ var SettingsRender = {
             </div>
             </div>
             </div>
+            </div>
+            </div>
+            </div>
             <!-- === КОНСТРУКТОР PDF-ШАБЛОНОВ (PRO) === -->
             <div id="pdf-template-modal"
                 class="fixed inset-0 bg-surface z-[7000] hidden items-start justify-center p-2 sm:p-4 backdrop-blur-sm overflow-y-auto"
@@ -1765,45 +1774,55 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         var sh = window.RBI && window.RBI.services && window.RBI.services.shell;
         return sh && typeof sh.legacyModuleAllowed === 'function' ? sh.legacyModuleAllowed('quality') : _legacyAllowed();
     }
-    /** P2-0038: видимость вкладок и зоны «Администрирование» — только по правам сервера; закрытый открытый подраздел → «Моё». */
+    /** P2-0048: вкладки «Компании», которые CompanyApp показал бы по правам (обёртка js/modules/company, без загрузки бандла). */
+    function _companyTabs() {
+        if (!_companyAllowed()) return [];
+        var host = window.RBI && window.RBI.platformPanels && window.RBI.platformPanels.company;
+        if (host && typeof host.tabs === 'function') return host.tabs() || [];
+        return [];
+    }
+    /** P2-0048: пункт левой колонки / главной виден — по тем же правам, что раньше вкладки двух зон. */
+    function _itemVisible(it, coTabs) {
+        if (!it) return false;
+        if (it.tab) return coTabs.indexOf(it.tab) !== -1;
+        return _subsectionAllowed(it.key);
+    }
+    function _visibleNavIds() {
+        var coTabs = _companyTabs();
+        return settingsNavItems().filter(function (it) { return _itemVisible(it, coTabs); }).map(function (it) { return it.id; });
+    }
+    /** Видимость пунктов и групп по правам сервера; закрытый открытый подраздел → главная настроек. */
     function _syncCompanyTab() {
-        var show = function (id, on) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            el.hidden = !on;
-            el.classList.toggle('hidden', !on);
-        };
         if (!_legacyAllowed()) _syncAdminSectionsForEmail();
-        show('settings-subnav-my-quality', _subsectionAllowed('my-quality'));
-        show('settings-subnav-company', _companyAllowed());
+        var vis = _visibleNavIds();
+        document.querySelectorAll('#tab-settings [data-settings-item]').forEach(function (el) {
+            var id = el.getAttribute('data-settings-item');
+            var on = id === 'home' || vis.indexOf(id) !== -1;
+            el.hidden = !on;
+        });
+        document.querySelectorAll('#tab-settings [data-settings-group]').forEach(function (g) {
+            g.hidden = !g.querySelector('[data-settings-item]:not([hidden])');
+        });
+        var actions = document.getElementById('settings-home-actions');
+        if (actions) actions.hidden = vis.indexOf('company/members') === -1;
         var modQ = _subsectionAllowed('admin'), modP = _subsectionAllowed('modules-planfact');
-        show('settings-subnav-admin', modQ || modP);
         document.querySelectorAll('[data-settings-module-tab]').forEach(function (b) {
             var on = b.getAttribute('data-settings-module-tab') === 'quality' ? modQ : modP;
             b.hidden = !on; b.classList.toggle('hidden', !on);
         });
         document.querySelectorAll('[data-settings-module-tabs]').forEach(function (st) { st.hidden = !(modQ && modP); });
-        show('settings-subnav-platform-admin', _platformAdminAllowed());
-        var anyAdmin = ADMIN_KEYS.some(function (k) { return _adminTabVisible(k); });
-        show('settings-zone-admin', anyAdmin);
-        show('settings-zone-switch', anyAdmin);
         var cur = _getSettingsSubsection();
         var curPanel = document.getElementById('settings-panel-' + cur);
         if (curPanel && !curPanel.hidden && !_subsectionAllowed(cur)) {
-            // право пропало, пока подраздел открыт → «Моё», и адрес тоже (без лишней записи в истории)
+            // право пропало, пока подраздел открыт → главная, и адрес тоже (без лишней записи в истории)
             if (window.AppRouter && typeof window.AppRouter.navigate === 'function' && settingsKeyFromHash(window.location.hash || '') === cur) {
                 window.AppRouter.navigate(settingsPathForKey(DEFAULT_KEY), true);
             } else {
                 _setSettingsSubsection(DEFAULT_KEY, { skipGate: true, fromRouter: true });
             }
         }
-    }
-    function _adminTabVisible(key) {
-        if (key === 'company') return _companyAllowed();
-        if (key === 'platform-admin') return _platformAdminAllowed();
-        if (key === 'admin') return _subsectionAllowed('admin');
-        if (key === 'modules-planfact') return _subsectionAllowed('modules-planfact');
-        return false;
+        _syncNav();
+        _syncSearch();
     }
     window.addEventListener('rbi:platform-access', _syncCompanyTab);
     window.addEventListener('rbi:quality-access', _syncCompanyTab);
@@ -2053,24 +2072,18 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             var panel = root.querySelector('[data-settings-panel="' + id + '"]');
             if (panel) panel.hidden = id !== key;
         });
-        root.querySelectorAll('[data-settings-subsection]').forEach(function (btn) {
-            var lvl = btn.getAttribute('data-settings-level');
-            var active = lvl === 'modules' ? MODULE_KEYS.indexOf(key) !== -1 : btn.getAttribute('data-settings-subsection') === key;
+        // вкладки уровня «Модули» внутри панелей (Качество · План/Факт)
+        root.querySelectorAll('[data-settings-module-tab]').forEach(function (btn) {
+            var active = btn.getAttribute('data-settings-subsection') === key;
             btn.setAttribute('aria-selected', active ? 'true' : 'false');
             btn.classList.toggle('bg-brand', active);
             btn.classList.toggle('text-white', active);
             btn.classList.toggle('shadow-sm', active);
             btn.classList.toggle('bg-transparent', !active);
             btn.classList.toggle('text-muted', !active);
-            // телефон: активная вкладка видна в полосе (прокрутка только полосы, не страницы)
-            var strip = active && btn.closest('.settings-zone-tabs');
-            if (strip && strip.scrollWidth > strip.clientWidth) {
-                var l = btn.offsetLeft - strip.offsetLeft;
-                if (l < strip.scrollLeft || l + btn.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = Math.max(0, l - 8);
-            }
         });
-        _syncZone(settingsZoneForKey(key));
-        if (settingsZoneForKey(key) === 'my') _lastMyKey = key;
+        _syncNav(key);
+        if (key === 'home') _syncHome();
         if (key === 'admin') {
             _mountAdminOpsContent();
         }
@@ -2084,24 +2097,95 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         }
     }
 
-    /** P2-0038: активная зона — на телефоне видны подвкладки только её (CSS по data-active-zone). */
-    var _lastMyKey = DEFAULT_KEY;
-    function _syncZone(zone) {
-        var nav = document.getElementById('settings-subnav');
-        if (nav) nav.setAttribute('data-active-zone', zone);
-        document.querySelectorAll('[data-settings-zone]').forEach(function (b) {
-            var on = b.getAttribute('data-settings-zone') === zone;
-            b.setAttribute('aria-selected', on ? 'true' : 'false');
-            b.classList.toggle('is-active', on);
-        });
+    /**
+     * P2-0048: подсветка пункта левой колонки и шапка раздела («‹ Настройки» на телефоне, группа и название).
+     * «Компания» — пункт по вкладке из адреса (Роли — внутри «Сотрудники и доступ»).
+     */
+    function _currentNavId(key) {
+        key = key || _getSettingsSubsection();
+        if (key !== 'company') return key;
+        var hash = window.location.hash || '';
+        return settingsKeyFromHash(hash) === 'company' ? (settingsNavIdFromHash(hash) || 'company') : 'company';
     }
-    function _openZone(zone) {
-        if (zone === 'admin') {
-            var first = ADMIN_KEYS.filter(function (k) { return _adminTabVisible(k); })[0];
-            if (first) _setSettingsSubsection(first);
-            return;
+    function _syncNav(key) {
+        var root = document.getElementById('tab-settings');
+        if (!root) return;
+        key = key || _getSettingsSubsection();
+        var id = _currentNavId(key);
+        var frame = document.getElementById('settings-v');
+        if (frame) frame.setAttribute('data-page', key === 'home' ? 'home' : 'section');
+        root.querySelectorAll('#settings-subnav [data-settings-item]').forEach(function (a) {
+            var on = a.getAttribute('data-settings-item') === id;
+            a.classList.toggle('is-on', on);
+            if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+        });
+        var it = settingsNavItem(id);
+        var crumb = document.getElementById('settings-head-crumb');
+        var title = document.getElementById('settings-head-title');
+        if (crumb) crumb.textContent = it ? it.group : (key === 'company' ? 'Компания' : '');
+        if (title) title.textContent = it ? it.label : (key === 'company' ? 'Компания' : '');
+    }
+    window.addEventListener('rbi:route', function () { _syncNav(); });
+    window.addEventListener('hashchange', function () { _syncNav(); });
+    window.addEventListener('popstate', function () { _syncNav(); });
+
+    /** P2-0048: главная настроек — кто вошёл, «Требует внимания» (администратору компании; данные сервера уже есть). */
+    function _syncHome() {
+        var who = document.getElementById('settings-home-who');
+        if (who) {
+            var p2 = window.RBI && window.RBI.platform2;
+            var st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
+            var cur = st && st.mode === 'email' ? (st.companies || []).filter(function (c) { return c.id === st.companyId; })[0] : null;
+            who.textContent = st && st.mode === 'email' ? st.email + (cur ? ' \u00b7 ' + cur.name : '') : '';
+            who.hidden = !who.textContent;
         }
-        _setSettingsSubsection(_subsectionAllowed(_lastMyKey) ? _lastMyKey : DEFAULT_KEY);
+        var att = document.getElementById('settings-home-attention');
+        var host = window.RBI && window.RBI.platformPanels && window.RBI.platformPanels.company;
+        if (att && host && typeof host.mountHome === 'function' && _companyAllowed()) {
+            host.mountHome(att).catch(function (e) { att.replaceChildren(); console.warn('[settings] «Требует внимания» не загрузилось', e); });
+        } else if (att) {
+            att.replaceChildren();
+        }
+    }
+    window.addEventListener('rbi:platform-access', function () { if (_getSettingsSubsection() === 'home') _syncHome(); });
+
+    /** P2-0048: поиск по настройкам (статический указатель settings.nav.js) — только среди видимых пунктов. */
+    var _searchQ = '';
+    function _syncSearch() {
+        var box = document.getElementById('settings-search-results');
+        var body = document.getElementById('settings-home-body');
+        if (!box) return;
+        ['settings-nav-search', 'settings-home-search'].forEach(function (id) {
+            var inp = document.getElementById(id);
+            if (inp && inp.value !== _searchQ && document.activeElement !== inp) inp.value = _searchQ;
+        });
+        if (!_searchQ.trim()) { box.hidden = true; box.replaceChildren(); if (body) body.hidden = false; return; }
+        var res = searchSettings(_searchQ, _visibleNavIds());
+        var esc = function (t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+        box.innerHTML = '<div class="stv-h">Найдено: ' + res.length + '</div>'
+            + (res.length ? '<div class="stv-list">' + res.map(function (r) {
+                return '<button type="button" class="stv-it" data-settings-go="' + r.id + '"><span class="stv-x"><b>' + esc(r.title) + '</b>'
+                    + '<span class="stv-d">' + esc(r.where) + '</span></span><span class="stv-chev">' + settingsIcon('chev', 18) + '</span></button>';
+            }).join('') + '</div>' : '<div class="stv-sub stv-empty">Ничего не нашлось</div>');
+        box.hidden = false;
+        if (body) body.hidden = true;
+    }
+    function _onSearchInput(inp) {
+        _searchQ = inp.value || '';
+        if (_searchQ.trim() && _getSettingsSubsection() !== 'home') _setSettingsSubsection('home');
+        _syncSearch();
+    }
+
+    /** P2-0048: переход по пункту (главная, панель или вкладка «Компании»). */
+    function _goNav(id) {
+        _searchQ = '';
+        _syncSearch();
+        if (id === 'home') { _setSettingsSubsection('home'); return; }
+        var it = settingsNavItem(id);
+        if (!it) return;
+        if (!it.path) { _setSettingsSubsection(it.key); return; }
+        if (window.AppRouter && typeof window.AppRouter.navigate === 'function') window.AppRouter.navigate(it.path);
+        else { window.location.hash = it.path; }
     }
 
     window.setSettingsSubsection = _setSettingsSubsection;
@@ -2129,6 +2213,10 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         var root = document.getElementById('tab-settings');
         if (!root || root.dataset.subsectionNavBound === '1') return;
         root.dataset.subsectionNavBound = '1';
+        root.addEventListener('input', function (ev) {
+            var t = ev.target;
+            if (t && (t.id === 'settings-nav-search' || t.id === 'settings-home-search')) _onSearchInput(t);
+        });
         root.addEventListener('click', function (ev) {
             var btn = ev.target.closest('[data-settings-subsection]');
             if (btn && root.contains(btn)) {
@@ -2136,10 +2224,10 @@ console.log('[SettingsRender] settings.render.js markup mounted');
                 _setSettingsSubsection(btn.getAttribute('data-settings-subsection'));
                 return;
             }
-            var zoneBtn = ev.target.closest('[data-settings-zone]');
-            if (zoneBtn && root.contains(zoneBtn)) {
+            var goBtn = ev.target.closest('[data-settings-go]');
+            if (goBtn && root.contains(goBtn)) {
                 ev.preventDefault();
-                _openZone(zoneBtn.getAttribute('data-settings-zone'));
+                _goNav(goBtn.getAttribute('data-settings-go'));
                 return;
             }
             var gotoBtn = ev.target.closest('[data-settings-subsection-goto]');
