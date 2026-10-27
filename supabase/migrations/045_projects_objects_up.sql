@@ -116,7 +116,9 @@ returns trigger language plpgsql set search_path = pg_catalog as $$
 begin
   if new.parent_id is null then
     if new.node_type is distinct from 'object' then
-      if new.node_type not in ('building', 'other') then
+      -- перенос из Качества (P2-0045) может поставить наверх секцию или этаж, лежащие прямо под объектом Качества, —
+      -- не теряем такое место: оно становится объектом «прочее»; остальным писателям — отказ
+      if new.node_type not in ('building', 'other') and coalesce(current_setting('quality.place_sync', true), '') <> '1' then
         raise exception 'Верхний уровень — только объект (корпус, паркинг, сети, благоустройство, прочее)' using errcode = '22023';
       end if;
       new.object_kind := case when new.node_type = 'building' then 'building' else coalesce(new.object_kind, 'other') end;
@@ -159,7 +161,7 @@ create function core.require_places_manage(p_project uuid)
 returns uuid language plpgsql stable security definer set search_path = pg_catalog as $$
 declare v_company uuid; v_arch timestamptz;
 begin
-  select company_id, archived_at into v_company, v_arch from core.projects where id = p_project and deleted_at is null;
+  select company_id, archived_at into v_company, v_arch from core.projects where id = p_project and deleted_at is null and not quality_container;
   if v_company is null or auth.uid() is null or not (planfact.is_platform_admin() or exists (
       select 1 from core.role_assignments a
       join core.company_role_permissions rp on rp.role_id = a.role_id and rp.company_id = a.company_id and rp.action = 'planfact.projects.manage'
@@ -260,6 +262,7 @@ begin
   if p_id is null then raise exception 'Нет идентификатора записи' using errcode = '22023'; end if;
   select * into v_old from core.projects where id = p_id;
   if v_old.id is not null and v_old.company_id <> p_company then raise exception 'Проект другой компании' using errcode = '42501'; end if;
+  if v_old.deleted_at is not null then raise exception 'Проект удалён' using errcode = '22023'; end if;
   if v_old.quality_container then raise exception 'Служебная запись — не проект' using errcode = '22023'; end if;
   v_new := v_old;
   if v_old.id is null then
@@ -285,11 +288,25 @@ begin
     v_new.archived_at := case when (c->>'archived')::boolean then coalesce(v_old.archived_at, now()) else null end;
   end if;
   -- проверки с понятным текстом (ограничения базы — вторая линия)
-  if v_new.division_id is not null and not exists (select 1 from core.divisions d where d.id = v_new.division_id and d.company_id = p_company) then
-    raise exception 'Подразделение не найдено' using errcode = '22023';
+  -- новое значение — только действующее; уже стоящее в карточке (архивное подразделение, отключённый сотрудник) не мешает сохранить остальное
+  if v_new.division_id is distinct from v_old.division_id and v_new.division_id is not null and not exists (
+       select 1 from core.divisions d where d.id = v_new.division_id and d.company_id = p_company and d.archived_at is null) then
+    raise exception 'Подразделение не найдено или в архиве' using errcode = '22023';
   end if;
-  if v_new.manager_user_id is not null and not exists (select 1 from core.company_members m where m.company_id = p_company and m.user_id = v_new.manager_user_id) then
-    raise exception 'Руководитель проекта — сотрудник этой компании' using errcode = '22023';
+  if v_new.manager_user_id is distinct from v_old.manager_user_id and v_new.manager_user_id is not null and not exists (
+       select 1 from core.company_members m where m.company_id = p_company and m.user_id = v_new.manager_user_id and m.disabled_at is null) then
+    raise exception 'Руководитель проекта — действующий сотрудник этой компании' using errcode = '22023';
+  end if;
+  -- заказчик и генподрядчик — те же правила, что в pf_project_set_counterparties (017)
+  if v_new.customer_id is distinct from v_old.customer_id and v_new.customer_id is not null and not exists (
+       select 1 from core.counterparties k where k.id = v_new.customer_id and k.company_id = p_company and k.deleted_at is null
+          and k.archived_at is null and 'customer' = any(k.kinds)) then
+    raise exception 'Заказчик не найден, в архиве или не отмечен как заказчик' using errcode = '22023';
+  end if;
+  if v_new.general_contractor_id is distinct from v_old.general_contractor_id and v_new.general_contractor_id is not null and not exists (
+       select 1 from core.counterparties k where k.id = v_new.general_contractor_id and k.company_id = p_company and k.deleted_at is null
+          and k.archived_at is null and 'general_contractor' = any(k.kinds)) then
+    raise exception 'Генподрядчик не найден, в архиве или не отмечен как генподрядчик' using errcode = '22023';
   end if;
   if not exists (select 1 from core.project_stages s where s.code = v_new.stage) then raise exception 'Неизвестная стадия проекта' using errcode = '22023'; end if;
   if v_new.our_role is not null and not exists (select 1 from core.project_roles r where r.code = v_new.our_role) then
@@ -332,7 +349,7 @@ language plpgsql stable security definer set search_path = pg_catalog as $$
 #variable_conflict use_column
 declare v_company uuid; v_prefix text;
 begin
-  select company_id into v_company from core.projects where id = p_project and deleted_at is null;
+  select company_id into v_company from core.projects where id = p_project and deleted_at is null and not quality_container;
   if v_company is null or auth.uid() is null or not (core.can_manage_projects(v_company) or core.is_project_participant(p_project)) then
     raise exception 'Нет доступа к проекту' using errcode = '42501';
   end if;
@@ -433,6 +450,15 @@ returns int language sql stable security definer set search_path = pg_catalog as
    where l.node_type = 'apartment' and l.build_no ~ '^[0-9]{1,9}$'
 $$;
 
+-- Объект (корень), в котором место; номера квартир считаются по объекту. Запись в одном объекте — по очереди (блокировка
+-- на время транзакции), чтобы одновременные «Добавить этажи» / «Копировать» не выдали одинаковые номера.
+create function core.place_object(p_location uuid)
+returns uuid language sql stable security definer set search_path = pg_catalog as $$
+  with recursive up(id, parent_id) as (select id, parent_id from core.locations where id = p_location
+                                       union all select l.id, l.parent_id from core.locations l join up on l.id = up.parent_id)
+  select id from up where parent_id is null
+$$;
+
 -- 9. Заполнить объект одной формой: секции × этажи × квартиры, нумерация, подвал и кровля.
 --    Повтор (у объекта уже есть места) — ничего не делает, возвращает 0.
 create function public.pf_fill_object(p_object uuid, p_sections int, p_floors int, p_apartments_per_floor int,
@@ -445,6 +471,7 @@ begin
   select * into v_o from core.locations where id = p_object and deleted_at is null;
   if v_o.id is null or v_o.node_type <> 'object' then raise exception 'Объект не найден' using errcode = '22023'; end if;
   v_company := core.require_places_manage(v_o.project_id);
+  perform pg_advisory_xact_lock(hashtextextended('p2_0047_object:' || p_object::text, 0));
   if p_sections is null or p_floors is null or p_apartments_per_floor is null or p_sections < 1 or p_floors < 1 or p_apartments_per_floor < 0
      or p_sections > 100 or p_floors > 200 or p_apartments_per_floor > 100 or v_first not between -10 and 200 or v_start not between 1 and 100000 then
     raise exception 'Проверьте числа: секций и этажей — от 1, квартир на этаже — от 0' using errcode = '22023';
@@ -492,7 +519,7 @@ end $$;
 --     Квартиры получают строительные номера дальше по объекту.
 create function public.pf_add_floors(p_sections uuid[], p_from int, p_to int, p_apartments_per_floor int)
 returns int language plpgsql security definer set search_path = pg_catalog as $$
-declare v_proj uuid; v_obj uuid; v_company uuid; v_n int := 0; v_no int; s record; f int; v_fl uuid; v_order int; a int;
+declare v_proj uuid; v_obj uuid; v_company uuid; v_n int := 0; v_no int; s record; f int; v_fl uuid; v_order int; a int; v_seen uuid[] := '{}';
 begin
   if p_sections is null or cardinality(p_sections) = 0 then raise exception 'Выберите секции' using errcode = '22023'; end if;
   if p_from is null or p_to is null or p_from > p_to or p_from < -10 or p_to > 200 or p_apartments_per_floor is null
@@ -509,17 +536,21 @@ begin
     raise exception 'Слишком много мест за раз (максимум 5000)' using errcode = '22023';
   end if;
   v_n := 0;
-  for s in select l.id, l.parent_id from core.locations l where l.id = any(p_sections) order by l.parent_id, l.sort_order loop
-    v_no := core.next_build_no(s.parent_id);
+  if exists (select 1 from core.locations where id = any(p_sections) and depth + (case when p_apartments_per_floor > 0 then 2 else 1 end) > 6) then
+    raise exception 'Слишком глубокая вложенность (максимум 6 уровней)' using errcode = '22023';
+  end if;
+  for s in select l.id, l.depth, core.place_object(l.id) obj from core.locations l where l.id = any(p_sections) order by l.parent_id, l.sort_order loop
+    if not s.obj = any(v_seen) then perform pg_advisory_xact_lock(hashtextextended('p2_0047_object:' || s.obj::text, 0)); v_seen := v_seen || s.obj; end if;
+    v_no := core.next_build_no(s.obj);
     for f in p_from .. p_to loop
       if exists (select 1 from core.locations where parent_id = s.id and canonical_key = planfact.canon_name('эт. ' || f) and deleted_at is null) then continue; end if;
       select coalesce(max(sort_order), 0) + 1 into v_order from core.locations where parent_id = s.id and deleted_at is null;
       insert into core.locations(company_id, project_id, parent_id, node_type, name, sort_order, canonical_key, depth)
-      values (v_company, v_proj, s.id, 'floor', 'эт. ' || f, v_order, planfact.canon_name('эт. ' || f), 3) returning id into v_fl;
+      values (v_company, v_proj, s.id, 'floor', 'эт. ' || f, v_order, planfact.canon_name('эт. ' || f), s.depth + 1) returning id into v_fl;
       v_n := v_n + 1;
       for a in 1 .. p_apartments_per_floor loop
         insert into core.locations(company_id, project_id, parent_id, node_type, name, sort_order, canonical_key, depth, build_no)
-        values (v_company, v_proj, v_fl, 'apartment', 'кв. ' || v_no, a, planfact.canon_name('кв. ' || v_no), 4, v_no::text);
+        values (v_company, v_proj, v_fl, 'apartment', 'кв. ' || v_no, a, planfact.canon_name('кв. ' || v_no), s.depth + 2, v_no::text);
         v_no := v_no + 1; v_n := v_n + 1;
       end loop;
     end loop;
@@ -536,8 +567,15 @@ returns uuid language plpgsql security definer set search_path = pg_catalog as $
 declare v_src core.locations; v_company uuid; v_name text := btrim(coalesce(p_name, '')); v_order int; v_cnt int; v_obj uuid; v_no int;
 begin
   if p_new_id is null then raise exception 'Нет идентификатора записи' using errcode = '22023'; end if;
-  if exists (select 1 from core.locations where id = p_new_id) then return p_new_id; end if;
   select * into v_src from core.locations where id = p_source and deleted_at is null;
+  if exists (select 1 from core.locations where id = p_new_id) then
+    -- повтор того же запроса — та же копия; чужой id — отказ
+    if exists (select 1 from core.locations x where x.id = p_new_id and x.project_id = v_src.project_id and x.parent_id is not distinct from v_src.parent_id) then
+      perform core.require_places_manage(v_src.project_id);
+      return p_new_id;
+    end if;
+    raise exception 'Идентификатор записи уже занят' using errcode = '22023';
+  end if;
   if v_src.id is null or v_src.node_type = 'object' then raise exception 'Копировать можно секцию, этаж или помещение' using errcode = '22023'; end if;
   v_company := core.require_places_manage(v_src.project_id);
   if v_name = '' then raise exception 'Введите название копии' using errcode = '22023'; end if;
@@ -553,6 +591,7 @@ begin
   with recursive up(id, parent_id) as (select id, parent_id from core.locations where id = v_src.id
                                        union all select l.id, l.parent_id from core.locations l join up on l.id = up.parent_id)
   select id into v_obj from up where parent_id is null;
+  perform pg_advisory_xact_lock(hashtextextended('p2_0047_object:' || v_obj::text, 0));
   v_no := core.next_build_no(v_obj);
   select coalesce(max(sort_order), 0) + 1 into v_order from core.locations where parent_id = v_src.parent_id and deleted_at is null;
   create temp table if not exists m045_copy(old_id uuid primary key, new_id uuid, parent_old uuid, rn int, k int) on commit drop;
@@ -587,7 +626,7 @@ end $$;
 
 -- 12. Доступ к функциям: только вошедшим, права проверяет каждая функция.
 revoke all on function core.is_project_participant(uuid), core.can_manage_projects(uuid), core.require_places_manage(uuid),
-  core.next_build_no(uuid), core.locations_root_object() from public, anon, authenticated;
+  core.next_build_no(uuid), core.place_object(uuid), core.locations_root_object() from public, anon, authenticated;
 revoke all on function public.pf_project_dicts(), public.pf_company_divisions(uuid), public.pf_save_division(uuid, uuid, text, uuid, boolean),
   public.pf_project_catalog(uuid), public.pf_save_project(uuid, uuid, jsonb), public.pf_project_places(uuid, uuid),
   public.pf_save_place(uuid, uuid, uuid, text, text, text, text, text), public.pf_remove_place(uuid),

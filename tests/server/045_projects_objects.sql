@@ -231,5 +231,51 @@ begin
   res := res || pg_temp.t(pg_temp.msg(format($q$update core.locations set node_type = 'object' where id = %L$q$, s1)) like '22023%',
                           'объект ниже верхнего уровня — отказ');
 
+  -- 5. Замечания ревью перед сервером (27.10.2026)
+  -- 5а. перенос из Качества ставит наверх этаж (лежал прямо под объектом Качества) — место не теряется: объект «прочее»
+  reset role;
+  perform set_config('quality.place_sync', '1', true);
+  x := gen_random_uuid();
+  insert into core.locations(id, company_id, project_id, node_type, name, canonical_key) values (x, ca, po, 'floor', 'Этаж из Качества', 'этаж из качества');
+  perform set_config('quality.place_sync', '', true);
+  res := res || pg_temp.t((select node_type = 'object' and object_kind = 'other' from core.locations where id = x), 'перенос из Качества: этаж наверху → объект «прочее»');
+  -- 5б. «Добавить этажи» в секцию не на 2-м уровне: глубина по секции, номера — по объекту
+  perform pg_temp.as_user(uadm, ca);
+  x := gen_random_uuid(); perform public.pf_save_place(p1, x, o1, 'other', 'Блок А');
+  s3 := gen_random_uuid(); perform public.pf_save_place(p1, s3, x, 'section', 'Секция Б');
+  n := public.pf_add_floors(array[s3], 1, 1, 1);
+  reset role;
+  select * into r from core.locations l where l.parent_id = (select f.id from core.locations f where f.parent_id = s3) and l.node_type = 'apartment';
+  res := res || pg_temp.t(n = 2 and r.depth = 5 and (select depth from core.locations where id = r.parent_id) = 4 and r.build_no = '21',
+                          'этажи в секции 3-го уровня: этаж 4, квартира 5, номер дальше по объекту (' || coalesce(r.depth::text, '—') || ', ' || coalesce(r.build_no, '—') || ')');
+  -- 5в. карточка: новые заказчик / руководитель / подразделение — только действующие; уже стоящее архивное не мешает
+  insert into core.counterparties(id, company_id, name, inn, kinds, archived_at) values
+    ('00000000-0000-4000-8000-0000000450f1', ca, 'ООО Архивный 045', '7700000045', array['customer'], now()),
+    ('00000000-0000-4000-8000-0000000450f2', ca, 'ООО Поставщик 045', '7700000046', array['supplier'], null);
+  update core.company_members set disabled_at = now() where company_id = ca and user_id = ueng;
+  perform pg_temp.as_user(uadm, ca);
+  res := res || pg_temp.t(pg_temp.msg(format('select public.pf_save_project(%L, %L, %L::jsonb)', ca, p1, '{"customer_id": "00000000-0000-4000-8000-0000000450f1"}')) like '22023%',
+                          'заказчик в архиве — отказ');
+  res := res || pg_temp.t(pg_temp.msg(format('select public.pf_save_project(%L, %L, %L::jsonb)', ca, p1, '{"customer_id": "00000000-0000-4000-8000-0000000450f2"}')) like '22023%',
+                          'поставщик как заказчик — отказ');
+  res := res || pg_temp.t(pg_temp.msg(format('select public.pf_save_project(%L, %L, %L::jsonb)', ca, p1, json_build_object('manager_user_id', ueng))) like '22023%',
+                          'отключённый сотрудник руководителем — отказ');
+  perform public.pf_save_division(ca, d2, 'Дирекция «Юг»', null, true);
+  res := res || pg_temp.t(pg_temp.msg(format('select public.pf_save_project(%L, %L, %L::jsonb)', ca, p1, json_build_object('division_id', d2))) like '22023%',
+                          'подразделение в архиве — отказ');
+  perform public.pf_save_division(ca, d1, 'Дирекция «Север»', null, true);
+  res := res || pg_temp.t(pg_temp.msg(format('select public.pf_save_project(%L, %L, %L::jsonb)', ca, p1, '{"stage": "design"}')) = 'OK',
+                          'уже стоящее архивное подразделение не мешает сохранить карточку');
+  -- 5г. копия с чужим занятым id — отказ (повтор того же запроса проверен выше)
+  res := res || pg_temp.t(pg_temp.msg(format('select public.pf_copy_place(%L, %L, %L)', s1, o2, 'Секция 9')) like '22023%', 'копия с чужим занятым id — отказ');
+  -- 5д. служебный проект-контейнер Качества — ни мест, ни правки
+  reset role;
+  insert into core.projects(id, company_id, name, quality_container) values (gen_random_uuid(), ca, 'Контейнер 045', true) returning id into x;
+  perform pg_temp.as_user(uadm, ca);
+  res := res || pg_temp.t(pg_temp.msg(format('select * from public.pf_project_places(%L)', x)) like '42501%', 'контейнер Качества: места не читаются');
+  res := res || pg_temp.t(pg_temp.msg(format('select public.pf_save_place(%L, %L, null, %L, %L, %L)', x, gen_random_uuid(), 'object', 'Х', 'other')) like '42501%',
+                          'контейнер Качества: места не создаются');
+  reset role;
+
   raise exception E'ОТЧЁТ (откат):\n%FAIL всего: %', res, (select count(*) from regexp_matches(res, 'FAIL', 'g')) using errcode = 'P0001';
 end $$;

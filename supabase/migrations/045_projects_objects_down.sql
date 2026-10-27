@@ -12,6 +12,7 @@ drop function public.pf_copy_place(uuid, uuid, text);
 drop function public.pf_add_floors(uuid[], int, int, int);
 drop function public.pf_fill_object(uuid, int, int, int, int, text, int, boolean, boolean);
 drop function core.next_build_no(uuid);
+drop function core.place_object(uuid);
 drop function public.pf_remove_place(uuid);
 drop function public.pf_save_place(uuid, uuid, uuid, text, text, text, text, text);
 drop function public.pf_project_places(uuid, uuid);
