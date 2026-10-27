@@ -6,12 +6,36 @@
  * валидатор палитры: полоса светлоты, насыщенность, различимость при дальтонизме ΔE ≥ 19, контраст ≥ 3:1 — PASS в обеих темах.
  * Статус (светофор) — всегда слово + иконка + цвет, никогда только цвет.
  * P2-0019: синий статус («ждёт подтверждения»), затемнение и тень всплывающих панелей; стили реестра (registry/styles.ts) — в той же строке.
+ * P2-0051: тема «Стандартная» (std-light / std-dark) — STD_THEME ниже; серии и статусы — из её палитры (контраст в отчёте P2-0051).
  */
 import { P2_REGISTRY_CSS } from './registry/styles.ts';
 
-export const P2_DARK_THEMES = ['dark', 'rbi-dark', 'rbi-dark-v2', 'rbi-dark-v3'] as const;
+export const P2_DARK_THEMES = ['dark', 'rbi-dark', 'rbi-dark-v2', 'rbi-dark-v3', 'std-dark'] as const;
+
+/**
+ * P2-0051: тема «Стандартная» — основа дизайн-системы (палитра макетов 27.10.2026, ai-dev/tasks/P2-0051.md §2).
+ * Те же значения — css/style.css (`html[data-theme="std-light|std-dark"]`); смысл цветов и контраст —
+ * ai-dev/standards/DESIGN_SYSTEM.md «Тема „Стандартная“». Экраны Платформы берут цвета только через
+ * CSS-переменные (--bg-main, --card-bg, --text-main, --p2-*), не из этого объекта; объект — для проверок и документации.
+ */
+export const STD_THEME = {
+  light: {
+    bg: '#f7f4ee', card: '#ffffff', card2: '#fbf9f5', line: 'rgba(28,43,57,.14)', lineStrong: 'rgba(28,43,57,.24)',
+    text: '#172330', muted: '#626e7b', gold: '#c49a5f', goldHover: '#d8bd91', accentText: '#8a6a35', btnText: '#172330',
+    ok: '#5f7f6d', warn: '#b8844a', bad: '#9f4c45', okText: '#52705f', warnText: '#8a6a35', badText: '#9f4c45',
+    blue: '#4c7288', violet: '#7a6aa0', header: 'rgba(247,244,238,.95)', hover: 'rgba(28,43,57,.055)', sel: 'rgba(196,154,95,.10)',
+  },
+  dark: {
+    bg: '#101923', card: '#172330', card2: '#1c2b39', line: 'rgba(255,255,255,.12)', lineStrong: 'rgba(255,255,255,.22)',
+    text: '#f7f4ee', muted: '#a8b2bd', gold: '#c49a5f', goldHover: '#d8bd91', accentText: '#d8bd91', btnText: '#172330',
+    ok: '#7a9a88', warn: '#d9b45a', bad: '#c46b63', okText: '#86a593', warnText: '#d9b45a', badText: '#d4847c',
+    blue: '#7a9bb0', violet: '#a493c4', header: 'rgba(16,25,35,.95)', hover: 'rgba(255,255,255,.07)', sel: 'rgba(196,154,95,.13)',
+  },
+} as const;
 
 const dark = P2_DARK_THEMES.map((t) => `html[data-theme="${t}"]`).join(',');
+const L = STD_THEME.light;
+const D = STD_THEME.dark;
 
 export const P2_UI_CSS = `
 :root{
@@ -29,6 +53,20 @@ ${dark}{
 --p2-status-red-bg:rgba(205,90,62,.24);--p2-status-red-fg:#f3b3a0;--p2-status-grey-bg:rgba(255,255,255,.08);--p2-status-grey-fg:#c2cad3;
 --p2-status-red-line:rgba(205,90,62,.70);--p2-status-yellow-line:rgba(196,154,95,.75);
 --p2-status-blue-bg:rgba(79,147,201,.24);--p2-status-blue-fg:#b3d4ee;--p2-overlay:rgba(0,0,0,.55);--p2-shadow:0 8px 24px rgba(0,0,0,.45);
+}
+html[data-theme="std-light"]{
+--p2-chart-fact:${L.blue};--p2-chart-plan:${L.warn};--p2-chart-track:#ece7de;
+--p2-status-green-bg:rgba(95,127,109,.16);--p2-status-green-fg:#3f5c4c;--p2-status-yellow-bg:rgba(196,154,95,.18);--p2-status-yellow-fg:#6b4f22;
+--p2-status-red-bg:rgba(159,76,69,.14);--p2-status-red-fg:#7f3a34;--p2-status-grey-bg:#ece7de;--p2-status-grey-fg:#4f5a66;
+--p2-status-red-line:rgba(159,76,69,.55);--p2-status-yellow-line:rgba(196,154,95,.65);
+--p2-status-blue-bg:rgba(76,114,136,.16);--p2-status-blue-fg:#2f5266;
+}
+html[data-theme="std-dark"]{
+--p2-chart-fact:${D.blue};--p2-chart-plan:${D.gold};
+--p2-status-green-bg:rgba(122,154,136,.22);--p2-status-green-fg:#b5ccbe;--p2-status-yellow-bg:rgba(217,180,90,.20);--p2-status-yellow-fg:#e6cb8a;
+--p2-status-red-bg:rgba(196,107,99,.24);--p2-status-red-fg:#ecb2ab;
+--p2-status-red-line:rgba(196,107,99,.70);--p2-status-yellow-line:rgba(196,154,95,.75);
+--p2-status-blue-bg:rgba(122,155,176,.24);--p2-status-blue-fg:#bcd0dd;
 }
 .p2-num{font-variant-numeric:tabular-nums}
 .p2-kpi{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--rbi-radius-md,8px);padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}

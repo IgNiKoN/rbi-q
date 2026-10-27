@@ -351,7 +351,7 @@ body.rbi-audit-desktop-wide #btn-quality-plan-pin {
   letter-spacing: 0.04em;
   white-space: nowrap;
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--primary, var(--primary)) 10%, white) !important;
+  background: color-mix(in srgb, var(--primary, var(--primary)) 10%, var(--card-bg, white)) !important; /* P2-0051: было «white» — в тёмных темах светлая плашка с бледным текстом */
   border: 1px solid color-mix(in srgb, var(--primary, var(--primary)) 28%, var(--card-border)) !important;
   color: var(--primary-hover, var(--primary-hover)) !important;
 }

@@ -417,9 +417,13 @@ window.triggerSync = async function (mode = 'silent') {
                         appSettings.settingsUpdatedAt = cloudPrefsTs;
                         // Зеркало темы в localStorage — иначе reload перетирает облачную тему
                         try {
+                            // P2-0051: облачная «rbi-auto-v3» старше переноса на устройстве = прежняя тема по умолчанию → «Стандартная · Авто»
+                            if (typeof window.rbiMigrateTheme === 'function' && appSettings.theme) {
+                                appSettings.theme = window.rbiMigrateTheme(appSettings.theme, cloudPrefsTs);
+                            }
                             const t = appSettings.theme;
                             if (typeof window.rbiSaveThemePreference === 'function') {
-                                window.rbiSaveThemePreference(t || 'rbi-auto-v3');
+                                window.rbiSaveThemePreference(t || 'std-auto');
                             } else if (t) {
                                 localStorage.setItem('rbi_theme_preference', t);
                             }
