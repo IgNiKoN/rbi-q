@@ -69,9 +69,9 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
   // Период графиков — рядом, только когда открыт объект (у списка объектов графиков нет).
   const filters = list.length
     ? h(InHead, { slot: 'picker' },
-        h('select', { className: 'pj-input', 'aria-label': 'Объект', value: sel, 'data-testid': 'sm-project',
+        h('select', { className: 'pj-input', 'aria-label': 'Проект', value: sel, 'data-testid': 'sm-project',
           onChange: (e: { target: EventTarget | null }) => { const id = (e.target as HTMLSelectElement).value; if (id !== 'all') rememberProject(id); pick(id); } },
-          h('option', { value: 'all' }, `Все объекты (${list.length})`),
+          h('option', { value: 'all' }, `Все проекты (${list.length})`),
           sorted.map((p) => h('option', { key: p.project_id, value: p.project_id }, p.name))),
         opened
           ? h('div', { className: 'sm-chips', role: 'group', 'aria-label': 'Период графиков', 'data-testid': 'sm-filters' },
@@ -87,7 +87,7 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
     editing && p.can_manage ? h(DatesForm, { api, p, onSaved: () => { setEditing(false); void load(); } }) : null);
   return h('div', { className: 'pj-tab sm-tab', 'data-testid': 'sm-tab' },
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
-    !error && !list.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'sm-empty' }, 'Нет объектов: сводка видна по проектам, где у вас есть право просмотра факта.') : null,
+    !error && !list.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'sm-empty' }, 'Нет проектов: сводка видна по проектам, где у вас есть право просмотра факта.') : null,
     filters,
     opened
       ? h(ProjectView, { key: opened.project_id, api, p: opened, card: dash(opened), onBack: list.length > 1 ? () => pick('all') : undefined,
@@ -103,11 +103,11 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
 function Objects(props: { list: SummaryProject[]; onOpen: (id: string) => void; all?: boolean }): ReactElement {
   const { list, onOpen } = props;
   const anyMoney = list.some((p) => p.can_money);
-  return h('section', { className: 'p2-chart sm-objects' + (props.all ? ' sm-objects--all' : ''), 'data-testid': 'sm-objects', 'aria-label': 'Объекты' },
-    h('h2', { className: 'p2-chart__title' }, 'Объекты'),
+  return h('section', { className: 'p2-chart sm-objects' + (props.all ? ' sm-objects--all' : ''), 'data-testid': 'sm-objects', 'aria-label': 'Проекты' },
+    h('h2', { className: 'p2-chart__title' }, 'Проекты'),
     anyMoney ? null : h('div', { className: 'pf-muted sm-note', 'data-testid': 'sm-nomoney-list' }, 'Суммы в рублях, общий % и отставание видят РП, ПТО, экономист и руководство.'),
     h('div', { className: 'p2-chart__body' }, h('table', { className: 'p2-chart__table sm-otable' },
-      h('thead', null, h('tr', null, ['Объект', 'Статус', 'Готовность и план на сегодня', 'Отставание', 'Сделано', 'Не выставлено', 'Прогноз'].map((c) => h('th', { key: c, scope: 'col' }, c)))),
+      h('thead', null, h('tr', null, ['Проект', 'Статус', 'Готовность и план на сегодня', 'Отставание', 'Сделано', 'Не выставлено', 'Прогноз'].map((c) => h('th', { key: c, scope: 'col' }, c)))),
       h('tbody', null, list.map((p) => h('tr', { key: p.project_id, 'data-project-id': p.project_id },
         h('td', { className: 'sm-omain' }, h('button', { type: 'button', className: 'sm-olink', 'data-testid': 'sm-open', onClick: () => onOpen(p.project_id) }, p.name)),
         h('td', { 'data-label': 'Статус' }, h(StatusBadge, { status: p.light, label: LIGHT_LABEL[p.light], title: lightText(p), testId: 'sm-olight' })),
@@ -176,7 +176,7 @@ export function ThresholdsForm(props: { api: SummaryApi; p: SummaryProject; onSa
   const field = (name: string, label: string, value: number, step: string) => h('label', { className: 'pf-field' }, label,
     h('input', { name, type: 'number', inputMode: 'decimal', min: 0, max: name === 'days' ? 60 : 100, step, className: 'pj-input', defaultValue: String(value), 'data-testid': `sm-th-${name}` }));
   return h('form', { className: 'pf-card pj-form sm-th', onSubmit: (e: FormEvent) => { void submit(e); }, 'data-testid': 'sm-th-form' },
-    h('b', null, 'Пороги светофора объекта'),
+    h('b', null, 'Пороги светофора проекта'),
     h('div', { className: 'pf-muted sm-note' }, 'Зелёный — отставание не больше жёлтого порога и меньше порога дней; жёлтый — между порогами, или отставание не меньше порога дней, ',
       'или до окончания ≤ 5 рабочих дней при отставании больше жёлтого порога; красный — больше красного порога или срок прошёл, а сделано меньше 100 %.'),
     h('div', { className: 'sm-dates' },

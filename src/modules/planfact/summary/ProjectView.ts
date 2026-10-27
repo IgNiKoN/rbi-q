@@ -44,7 +44,7 @@ export function ProjectView(props: { api: SummaryApi; p: SummaryProject; card: R
 
   return h('div', { className: 'sm-project', 'data-testid': 'sm-project' },
     h('div', { className: 'pj-actions' },
-      onBack ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'sm-back', onClick: onBack }, '← Все объекты') : null,
+      onBack ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'sm-back', onClick: onBack }, '← Все проекты') : null,
       h('button', { type: 'button', className: 'pf-btn', disabled: busy, 'data-testid': 'sm-xlsx', onClick: () => { void download(); } }, busy ? 'Готовлю файл…' : 'Скачать Excel')),
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     card,
@@ -108,7 +108,7 @@ function ForecastCells(props: { x: ForecastNumbers; th: { yellow: number; red: n
     h('span', { className: 'sm-fc-cell' }, h('span', { className: 'sm-fc-label' }, 'Прогноз окончания'),
       h('b', { className: v.noPace ? 'pf-muted' : '', 'data-testid': 'sm-fc-finish' }, v.finish)),
     h('span', { className: 'sm-fc-cell' }, h('span', { className: 'sm-fc-label' }, 'Δ к финишу, дн.'),
-      h('b', { className: 'sm-fc-num' + (v.late ? ' sm-fc-late' : ''), 'data-testid': 'sm-fc-delta', title: v.late ? 'Позже планового окончания объекта' : undefined }, v.delta)),
+      h('b', { className: 'sm-fc-num' + (v.late ? ' sm-fc-late' : ''), 'data-testid': 'sm-fc-delta', title: v.late ? 'Позже планового окончания проекта' : undefined }, v.delta)),
     h('span', { className: 'sm-fc-cell' }, h('span', { className: 'sm-fc-label' }, '% отклонения'),
       v.devTone ? h(StatusBadge, { status: v.devTone, label: v.dev, title: 'План % на сегодня − факт %', testId: 'sm-fc-dev' })
         : h('b', { 'data-testid': 'sm-fc-dev' }, v.dev)));

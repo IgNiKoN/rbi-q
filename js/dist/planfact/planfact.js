@@ -13306,7 +13306,7 @@ function Hk(a) {
         "div",
         { key: Q.place.key, className: "pj-row vor-place-row", "data-place": Q.place.key },
         s.createElement("div", { className: "pj-name" }, s.createElement("b", null, Q.place.label), s.createElement("span", { className: "pf-muted" }, `${Q.rows} строк`)),
-        Q.binding && Q.binding.nodeId ? s.createElement("span", { className: "vor-stat--ok" }, "→ " + Q.binding.path) : Q.place.pendingBlock ? s.createElement("span", { className: "vor-stat--bad" }, "выберите корпус блока") : s.createElement("span", { className: "vor-stat--bad" }, "нет в дереве объекта")
+        Q.binding && Q.binding.nodeId ? s.createElement("span", { className: "vor-stat--ok" }, "→ " + Q.binding.path) : Q.place.pendingBlock ? s.createElement("span", { className: "vor-stat--bad" }, "выберите корпус блока") : s.createElement("span", { className: "vor-stat--bad" }, "нет в дереве проекта")
       ))
     ),
     V.length ? s.createElement(
@@ -13331,7 +13331,7 @@ function Hk(a) {
                 value: ((me = Y.find((Ce) => I[Q.block] && Ce.name === I[Q.block].name)) == null ? void 0 : me.id) || "",
                 onChange: (Ce) => pe(Q.block, Ce.currentTarget.value)
               },
-              s.createElement("option", { value: "" }, "— корпус из дерева объекта —"),
+              s.createElement("option", { value: "" }, "— корпус из дерева проекта —"),
               Y.map((Ce) => s.createElement("option", { key: Ce.id, value: Ce.id }, Ce.name))
             ),
             s.createElement("input", {
@@ -13354,7 +13354,7 @@ function Hk(a) {
     x.length ? s.createElement(
       "div",
       { className: "pf-card vor-missing", "data-testid": "vor-missing" },
-      s.createElement("div", null, s.createElement("b", null, `Не хватает узлов в дереве объекта (${x.length}):`)),
+      s.createElement("div", null, s.createElement("b", null, `Не хватает узлов в дереве проекта (${x.length}):`)),
       s.createElement("ul", null, x.map((Q) => s.createElement("li", { key: Q }, Q))),
       v && m && r ? s.createElement(
         "button",
@@ -13365,7 +13365,7 @@ function Hk(a) {
       ) : s.createElement(
         "div",
         { className: "pf-muted", "data-testid": "vor-no-create" },
-        v ? "Создавать узлы может РП или администратор (право «Проекты и дерево локаций») — «Справочники → Объекты»." : "Просмотр."
+        v ? "Создавать узлы может РП или администратор (право «Проекты и дерево локаций») — «Компания → Проекты → Объекты и места»." : "Просмотр."
       )
     ) : null,
     s.createElement(
@@ -14721,11 +14721,11 @@ function R2(a, t) {
   if (i)
     m = "done", g = "Выполнено";
   else if (!t.plannedFinish)
-    m = "no_finish", g = "Нет срока объекта — «просрочено» не считается";
+    m = "no_finish", g = "Нет срока проекта — «просрочено» не считается";
   else {
     const v = qc(t.today, t.plannedFinish), y = a.fact14 / gy;
     if (v < 0)
-      m = "past", h = !0, g = `Срок объекта прошёл (${Ge(t.plannedFinish)}), позиция не выполнена`;
+      m = "past", h = !0, g = `Срок проекта прошёл (${Ge(t.plannedFinish)}), позиция не выполнена`;
     else if (y > 0) {
       const _ = Math.ceil(r / y - 1e-9);
       h = _ > v, m = h ? "late" : "ok", g = h ? `При темпе 14 дней нужно ещё ${_} дн., до срока ${v} дн.` : `Успевает: нужно ${_} дн., до срока ${v} дн.`;
@@ -14865,9 +14865,9 @@ function L2(a) {
         value: r.finish,
         tone: r.late ? "red" : void 0,
         metric: "forecast",
-        hint: t.deltaDays === null ? t.forecast && r.finish !== "выполнено" ? "нет срока объекта" : void 0 : t.deltaDays > 0 ? `на ${t.deltaDays} дн. позже финиша объекта` : t.deltaDays < 0 ? `на ${-t.deltaDays} дн. раньше финиша объекта` : "точно к финишу объекта"
+        hint: t.deltaDays === null ? t.forecast && r.finish !== "выполнено" ? "нет срока проекта" : void 0 : t.deltaDays > 0 ? `на ${t.deltaDays} дн. позже финиша проекта` : t.deltaDays < 0 ? `на ${-t.deltaDays} дн. раньше финиша проекта` : "точно к финишу проекта"
       }),
-      s.createElement(yt, { label: "План на сегодня", value: t.planPctToday === null ? "—" : Xt(t.planPctToday), metric: "plan_pct", hint: t.planPctToday === null ? "нет дат объекта" : void 0 }),
+      s.createElement(yt, { label: "План на сегодня", value: t.planPctToday === null ? "—" : Xt(t.planPctToday), metric: "plan_pct", hint: t.planPctToday === null ? "нет дат проекта" : void 0 }),
       s.createElement(yt, { label: "Факт", value: t.pct === null ? "—" : Xt(t.pct), metric: "fact_pct" }),
       s.createElement(yt, { label: "Отклонение", value: r.dev, tone: r.devTone || void 0, metric: "dev", hint: "план % − факт %" }),
       s.createElement(yt, { label: "Темп за 14 дней", value: `${Ee(t.fact14)} ${t.unit}`, metric: "pace14", hint: r.noPace ? "нет темпа — прогноз не считается" : "факт за 14 дней" })
@@ -14907,7 +14907,7 @@ function B2(a) {
       state: _,
       onState: I,
       isOverdue: (O) => O.st.overdue,
-      overdueHint: g ? void 0 : "Нет срока объекта: укажите плановое окончание в «Сводке» — тогда «Только просроченные» заработает.",
+      overdueHint: g ? void 0 : "Нет срока проекта: укажите плановое окончание в «Сводке» — тогда «Только просроченные» заработает.",
       groupBy: { label: "Корпус", key: (O) => O.corp },
       toneOf: (O) => O.st.tone,
       toneLabel: M2,
@@ -33685,15 +33685,15 @@ function el(a) {
     { slot: "picker" },
     g.length > 1 || i && g.length ? s.createElement(
       "select",
-      { className: "pj-input pj-company", "aria-label": "Объект", value: c, "data-testid": r, onChange: (_) => u(_.target.value) },
+      { className: "pj-input pj-company", "aria-label": "Проект", value: c, "data-testid": r, onChange: (_) => u(_.target.value) },
       g.map((_) => s.createElement("option", { key: _.id, value: _.id }, v(_)))
-    ) : s.createElement("div", { className: "pf-muted pp-one" }, "Объект: ", s.createElement("b", null, b ? v(b) : "—")),
+    ) : s.createElement("div", { className: "pf-muted pp-one" }, "Проект: ", s.createElement("b", null, b ? v(b) : "—")),
     h ? s.createElement(
       "button",
       { type: "button", className: "pf-btn pf-btn--ghost pj-toggle", "data-testid": "pp-archive", onClick: y },
       d ? "Скрыть архив" : `Показать архив (${h})`
     ) : null,
-    fn(b) ? s.createElement("div", { className: "pf-muted", "data-testid": "pp-archived" }, "Объект в архиве — только просмотр.") : null
+    fn(b) ? s.createElement("div", { className: "pf-muted", "data-testid": "pp-archived" }, "Проект в архиве — только просмотр.") : null
   );
 }
 const g_ = "#/planfact/fact/journal", sp = 2e3, wC = 30;
@@ -34358,7 +34358,7 @@ function XC(a) {
       const re = w_(H);
       d({ idx: re, positions: V.value, pl: E_(V.value, re) });
     } catch (H) {
-      h(H instanceof Error && H.message ? H.message : "Не удалось загрузить места объекта"), d(x);
+      h(H instanceof Error && H.message ? H.message : "Не удалось загрузить места проекта"), d(x);
     }
   }
   async function I() {
@@ -34388,7 +34388,7 @@ function XC(a) {
     return s.createElement(
       "div",
       { className: "pf-card pj-empty pf-muted", "data-testid": "cb-empty" },
-      U ? `Объёмы этого объекта не разнесены по этажам — шахматку построить не из чего (позиций на корпусах и секциях: ${U}). Факт по ним вносится во вкладке «Ввод».` : "Для этого объекта нет работ: позиции появляются после подтверждения ВОР."
+      U ? `Объёмы этого проекта не разнесены по этажам — шахматку построить не из чего (позиций на корпусах и секциях: ${U}). Факт по ним вносится во вкладке «Ввод».` : "Для этого проекта нет работ: позиции появляются после подтверждения ВОР."
     );
   }
   const $ = (U) => {
@@ -34646,7 +34646,7 @@ function eA(a) {
       s.createElement(el, { list: d, value: b, onChange: v }),
       !b || !V ? null : Te ? s.createElement(bC, { key: b, api: t, projectId: b, companyId: V.company_id, user: c, onChanged: () => {
         Q(b, !0);
-      } }) : s.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "ft-noapprove" }, "Подтверждать факт в этом объекте может руководитель проекта (право «Факт: подтверждение»).")
+      } }) : s.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "ft-noapprove" }, "Подтверждать факт в этом проекте может руководитель проекта (право «Факт: подтверждение»).")
     );
   if (u === "journal")
     return s.createElement(
@@ -34692,7 +34692,7 @@ function eA(a) {
     { className: "ft-crumbs", "data-testid": "ft-crumbs" },
     s.createElement("button", { type: "button", className: "ft-crumb" + (y.length ? "" : " ft-crumb--cur"), "data-testid": "ft-root", onClick: () => {
       Ce(b, []);
-    } }, "Объект"),
+    } }, "Проект"),
     y.map((be, ze) => s.createElement(
       "span",
       { key: be.id, className: "ft-crumb-wrap" },
@@ -34701,7 +34701,7 @@ function eA(a) {
         Ce(b, y.slice(0, ze + 1));
       } }, be.name)
     ))
-  ), he = S || [], oe = WC(he), Me = D ? he.filter((be) => uw(be) === D) : he, ae = he.length ? he.reduce((be, ze) => be + Math.min(100, _r(ze.fact_qty, ze.plan_qty)), 0) / he.length : 0, ge = he.reduce((be, ze) => be + (ze.pending_count ? 1 : 0), 0), qe = L.length ? s.createElement("nav", { className: "pf-card ft-tree", "aria-label": "Места объекта", "data-testid": "ft-tree" }, Ve(L, [])) : null;
+  ), he = S || [], oe = WC(he), Me = D ? he.filter((be) => uw(be) === D) : he, ae = he.length ? he.reduce((be, ze) => be + Math.min(100, _r(ze.fact_qty, ze.plan_qty)), 0) / he.length : 0, ge = he.reduce((be, ze) => be + (ze.pending_count ? 1 : 0), 0), qe = L.length ? s.createElement("nav", { className: "pf-card ft-tree", "aria-label": "Места проекта", "data-testid": "ft-tree" }, Ve(L, [])) : null;
   function Ve(be, ze) {
     return be.map((Ie) => {
       const mt = y.length > ze.length && y[ze.length].id === Ie.id, Gt = mt && y.length === ze.length + 1, xr = mt && pe[Ie.id] && pe[Ie.id].length;
@@ -34766,7 +34766,7 @@ function eA(a) {
         Ce(b, [...y, be]);
       }
     }, s.createElement("span", { className: "ft-tile-type" }, ZC[be.node_type] || ""), s.createElement("b", null, be.name)))) : null,
-    Se ? null : s.createElement("div", { className: "pf-muted", "data-testid": "ft-pick" }, E.length ? "Выберите корпус, секцию или этаж." : "В проекте пока нет мест — их создаёт ПТО в «Справочники → Объекты»."),
+    Se ? null : s.createElement("div", { className: "pf-muted", "data-testid": "ft-pick" }, E.length ? "Выберите корпус, секцию или этаж." : "В проекте пока нет мест — их создаёт ПТО в «Компания → Проекты → Объекты и места»."),
     j ? s.createElement("div", { className: "pj-notice", role: "status", "data-testid": "ft-notice" }, j) : null,
     x ? s.createElement("div", { className: "pf-error", role: "alert" }, x) : null,
     W && Se ? s.createElement(hm, {
@@ -35310,7 +35310,7 @@ function hA(a) {
     for (const ae of [oe.kvrRowNo, ...oe.rowNos]) ce.set(ae, ce.has(ae) ? ce.get(ae) + "; " + Me : Me);
   }
   if (r && m === null) return s.createElement("div", { className: "pf-muted" }, "Загрузка…");
-  if (r && m && !m.length) return s.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "vor-no-projects" }, "Нет доступных проектов. Проект создаётся в «Справочники → Объекты».");
+  if (r && m && !m.length) return s.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "vor-no-projects" }, "Нет доступных проектов. Проект создаётся в «Компания → Проекты».");
   if (r && x) {
     const oe = ((fe = (m || []).find((Me) => Me.id === g)) == null ? void 0 : fe.company_id) || "";
     return s.createElement(Hk, {
@@ -35358,7 +35358,7 @@ function hA(a) {
     "div",
     { className: "pj-tab vor-tab", "data-testid": "vor-tab" },
     ve,
-    r ? s.createElement("h3", { className: "vor-sec" }, "Загрузки объекта") : null,
+    r ? s.createElement("h3", { className: "vor-sec" }, "Загрузки проекта") : null,
     r ? s.createElement(pA, { items: _, canManage: j, busy: !!T, onDelete: (oe) => {
       me(oe);
     }, onOpen: (oe) => d(oe.id) }) : null,
@@ -38393,7 +38393,7 @@ async function KO(a) {
       });
     }
     if (c) {
-      const v = g.addRow(["", "", "Итого по объекту: сделано, не выставлено в КС-2, ₽", "", "", "", "", "", "", "", "", i.gap_money]);
+      const v = g.addRow(["", "", "Итого по проекту: сделано, не выставлено в КС-2, ₽", "", "", "", "", "", "", "", "", i.gap_money]);
       v.font = cn, v.getCell(12).numFmt = za;
     }
     g.views = [{ state: "frozen", ySplit: 1 }];
@@ -38415,7 +38415,7 @@ async function KO(a) {
       const C = v.addRow([S, N]);
       C.getCell(2).numFmt = on;
     };
-    E("Строки ВОР с ценой в договорной КП", b.completeness.priced_pct), E("Плановые даты объекта", b.completeness.dates_pct), E("Позиции с местом ниже корпуса", b.completeness.placed_pct);
+    E("Строки ВОР с ценой в договорной КП", b.completeness.priced_pct), E("Плановые даты проекта", b.completeness.dates_pct), E("Позиции с местом ниже корпуса", b.completeness.placed_pct);
     const T = (S, N, C) => {
       C.length && (v.addRow([]), v.addRow([S]).font = cn, v.addRow(N).font = cn, C.forEach((A) => v.addRow(A)));
     };
@@ -38472,7 +38472,7 @@ function YO(a) {
     s.createElement(
       "div",
       { className: "pj-actions" },
-      c ? s.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "sm-back", onClick: c }, "← Все объекты") : null,
+      c ? s.createElement("button", { type: "button", className: "pf-btn pf-btn--ghost", "data-testid": "sm-back", onClick: c }, "← Все проекты") : null,
       s.createElement("button", { type: "button", className: "pf-btn", disabled: g, "data-testid": "sm-xlsx", onClick: () => {
         _();
       } }, g ? "Готовлю файл…" : "Скачать Excel")
@@ -38567,7 +38567,7 @@ function QO(a) {
       "span",
       { className: "sm-fc-cell" },
       s.createElement("span", { className: "sm-fc-label" }, "Δ к финишу, дн."),
-      s.createElement("b", { className: "sm-fc-num" + (t.late ? " sm-fc-late" : ""), "data-testid": "sm-fc-delta", title: t.late ? "Позже планового окончания объекта" : void 0 }, t.delta)
+      s.createElement("b", { className: "sm-fc-num" + (t.late ? " sm-fc-late" : ""), "data-testid": "sm-fc-delta", title: t.late ? "Позже планового окончания проекта" : void 0 }, t.delta)
     ),
     s.createElement(
       "span",
@@ -38764,7 +38764,7 @@ function tj(a) {
       id: "stale",
       status: "yellow",
       title: `Позиций без факта больше ${u.stale_days} дней: ${y.stale_positions}`,
-      detail: "Объект начат, а по этим работам выполнения нет",
+      detail: "Проект начат, а по этим работам выполнения нет",
       action: g("fact", "Открыть факт"),
       total: y.stale_positions,
       rows: u.stale.map((_) => `${_.work_name} · ${_.location_path} — ${Ee(_.fact_qty)} из ${Ee(_.plan_qty)} ${_.unit}, ${_.idle_days} дн. без факта`)
@@ -38814,7 +38814,7 @@ function tj(a) {
         "div",
         { className: "at-full" },
         pp("Строки ВОР с ценой в договорной КП", v.priced_pct, v.rows_total ? `${v.rows_priced} из ${v.rows_total}` : "нет договорной КП", "priced"),
-        pp("Плановые даты объекта", v.dates_pct, v.dates_pct === 100 ? "заданы" : "не заданы", "dates"),
+        pp("Плановые даты проекта", v.dates_pct, v.dates_pct === 100 ? "заданы" : "не заданы", "dates"),
         pp("Позиции с местом ниже корпуса (секция, этаж, квартира)", v.placed_pct, `${v.positions_placed} из ${v.positions_total}`, "placed")
       ) : s.createElement("div", { className: "pf-muted" }, m ? "—" : "Загрузка…")
     )
@@ -39140,11 +39140,11 @@ function pj(a) {
     ) : null,
     s.createElement(
       "section",
-      { className: "pt-kpis", "aria-label": "Итоги по объектам" },
+      { className: "pt-kpis", "aria-label": "Итоги по проектам" },
       u.length ? s.createElement(yt, { label: "Сделано по договорам", value: Yt(m), metric: "pt-done", hint: h > 0 ? `${kw(m / h * 100)} % от ${Yt(h)}` : void 0 }) : null,
-      u.length ? s.createElement(yt, { label: "Не выставлено в КС-2", value: Yt(g), metric: "pt-gap", hint: `объектов: ${u.filter((_) => (_.gap_money || 0) > 0).length}` }) : null,
+      u.length ? s.createElement(yt, { label: "Не выставлено в КС-2", value: Yt(g), metric: "pt-gap", hint: `проектов: ${u.filter((_) => (_.gap_money || 0) > 0).length}` }) : null,
       s.createElement(yt, {
-        label: "Объекты с отставанием",
+        label: "Проекты с отставанием",
         value: `${b} из ${t.length}`,
         metric: "pt-lag",
         tone: v ? "red" : b ? "yellow" : void 0,
@@ -39155,7 +39155,7 @@ function pj(a) {
   );
 }
 function mj(a) {
-  return s.createElement("div", { className: "pt-cards", "data-testid": "pt-cards" }, s.createElement("h2", { className: "pt-sec" }, "Объекты"), a.list.map((t) => s.createElement(
+  return s.createElement("div", { className: "pt-cards", "data-testid": "pt-cards" }, s.createElement("h2", { className: "pt-sec" }, "Проекты"), a.list.map((t) => s.createElement(
     "button",
     {
       key: t.project_id,
@@ -39254,7 +39254,7 @@ function vj(a) {
       "select",
       {
         className: "pj-input",
-        "aria-label": "Объект",
+        "aria-label": "Проект",
         value: b,
         "data-testid": "sm-project",
         onChange: (I) => {
@@ -39262,7 +39262,7 @@ function vj(a) {
           q !== "all" && F_(q), C(q);
         }
       },
-      s.createElement("option", { value: "all" }, `Все объекты (${c.length})`),
+      s.createElement("option", { value: "all" }, `Все проекты (${c.length})`),
       S.map((I) => s.createElement("option", { key: I.project_id, value: I.project_id }, I.name))
     ),
     N ? s.createElement(
@@ -39286,7 +39286,7 @@ function vj(a) {
     "div",
     { className: "pj-tab sm-tab", "data-testid": "sm-tab" },
     d ? s.createElement("div", { className: "pf-error", role: "alert" }, d) : null,
-    !d && !c.length ? s.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "sm-empty" }, "Нет объектов: сводка видна по проектам, где у вас есть право просмотра факта.") : null,
+    !d && !c.length ? s.createElement("div", { className: "pf-card pj-empty pf-muted", "data-testid": "sm-empty" }, "Нет проектов: сводка видна по проектам, где у вас есть право просмотра факта.") : null,
     X,
     N ? s.createElement(YO, {
       key: N.project_id,
@@ -39307,13 +39307,13 @@ function bj(a) {
   const { list: t, onOpen: r } = a, i = t.some((c) => c.can_money);
   return s.createElement(
     "section",
-    { className: "p2-chart sm-objects" + (a.all ? " sm-objects--all" : ""), "data-testid": "sm-objects", "aria-label": "Объекты" },
-    s.createElement("h2", { className: "p2-chart__title" }, "Объекты"),
+    { className: "p2-chart sm-objects" + (a.all ? " sm-objects--all" : ""), "data-testid": "sm-objects", "aria-label": "Проекты" },
+    s.createElement("h2", { className: "p2-chart__title" }, "Проекты"),
     i ? null : s.createElement("div", { className: "pf-muted sm-note", "data-testid": "sm-nomoney-list" }, "Суммы в рублях, общий % и отставание видят РП, ПТО, экономист и руководство."),
     s.createElement("div", { className: "p2-chart__body" }, s.createElement(
       "table",
       { className: "p2-chart__table sm-otable" },
-      s.createElement("thead", null, s.createElement("tr", null, ["Объект", "Статус", "Готовность и план на сегодня", "Отставание", "Сделано", "Не выставлено", "Прогноз"].map((c) => s.createElement("th", { key: c, scope: "col" }, c)))),
+      s.createElement("thead", null, s.createElement("tr", null, ["Проект", "Статус", "Готовность и план на сегодня", "Отставание", "Сделано", "Не выставлено", "Прогноз"].map((c) => s.createElement("th", { key: c, scope: "col" }, c)))),
       s.createElement("tbody", null, t.map((c) => s.createElement(
         "tr",
         { key: c.project_id, "data-project-id": c.project_id },
@@ -39395,7 +39395,7 @@ function Ej(a) {
     { className: "pf-card pj-form sm-th", onSubmit: (b) => {
       h(b);
     }, "data-testid": "sm-th-form" },
-    s.createElement("b", null, "Пороги светофора объекта"),
+    s.createElement("b", null, "Пороги светофора проекта"),
     s.createElement(
       "div",
       { className: "pf-muted sm-note" },
@@ -39559,7 +39559,7 @@ function $j(a) {
     "div",
     { className: "ib-tab", "data-testid": "ib-tab" },
     u ? s.createElement("div", { className: "pf-error", role: "alert" }, u) : null,
-    d.length ? s.createElement("div", { className: "pf-muted ib-total", "data-testid": "ib-total" }, m ? `Дел: ${m} · объектов: ${d.length}` : `Дел нет · объектов со сведениями: ${d.length}`) : s.createElement(
+    d.length ? s.createElement("div", { className: "pf-muted ib-total", "data-testid": "ib-total" }, m ? `Дел: ${m} · проектов: ${d.length}` : `Дел нет · проектов со сведениями: ${d.length}`) : s.createElement(
       "div",
       { className: "pf-card ib-empty", "data-testid": "ib-empty" },
       s.createElement("div", { className: "ib-empty__title" }, "Всё сделано"),
@@ -39743,7 +39743,7 @@ function Lj(a) {
   ), H = b === "authed" && r && X.length > 0 && C.page === "directories", V = (fe) => {
     const he = window.AppRouter;
     he && typeof he.navigate == "function" ? he.navigate(fe) : window.location.hash = fe;
-  }, re = (fe) => V(`${Ya}/directories/${fe}`), ye = C.page === "vor" && (b === "authed" && X.length > 0 || b === "demo"), Te = C.page === "estimate" && b === "authed" && I && c && i, Se = Uj(window.location.hash), Q = I_(window.location.hash), me = C.page === "fact" && b === "authed" && X.length > 0 && u && i && r, Ce = C.page === "ks2" && b === "authed" && B && d && i, $e = C.page === "inbox" && b === "authed" && X.length > 0 && m, je = b === "authed" && X.length > 0 && m && !(Ce || me || Te || ye || H || $e), De = b === "authed" ? "Нет доступных объектов. Обратитесь к администратору компании." : t ? "Войдите, чтобы увидеть сводку, ВОР, факт и акты КС-2. Без входа доступен только разбор файла ВОР." : "Сервер не настроен — вход недоступен. Без входа доступен только разбор файла ВОР.", ce = $e ? s.createElement("div", { className: "pf-root" }, s.createElement($j, { api: m, me: y, go: V })) : je ? s.createElement("div", { className: "pf-root" }, s.createElement(vj, { api: m, links: { go: (fe) => V(`${Ya}/${fe}`), to: (fe) => V(`${Ya}/${fe}`), can: { ks2: !!B, estimate: !!I, fact: !0 } } })) : Ce ? s.createElement("div", { className: "pf-root" }, s.createElement(IO, { api: d, vor: i, me: y })) : me ? s.createElement("div", { className: "pf-root" }, s.createElement(eA, { api: u, vor: i, projects: r, me: y, mode: Q, onApprove: O })) : Te ? s.createElement("div", { className: "pf-root" }, s.createElement(eO, { api: c, vor: i })) : ye ? s.createElement("div", { className: "pf-root" }, s.createElement(hA, {
+  }, re = (fe) => V(`${Ya}/directories/${fe}`), ye = C.page === "vor" && (b === "authed" && X.length > 0 || b === "demo"), Te = C.page === "estimate" && b === "authed" && I && c && i, Se = Uj(window.location.hash), Q = I_(window.location.hash), me = C.page === "fact" && b === "authed" && X.length > 0 && u && i && r, Ce = C.page === "ks2" && b === "authed" && B && d && i, $e = C.page === "inbox" && b === "authed" && X.length > 0 && m, je = b === "authed" && X.length > 0 && m && !(Ce || me || Te || ye || H || $e), De = b === "authed" ? "Нет доступных проектов. Обратитесь к администратору компании." : t ? "Войдите, чтобы увидеть сводку, ВОР, факт и акты КС-2. Без входа доступен только разбор файла ВОР." : "Сервер не настроен — вход недоступен. Без входа доступен только разбор файла ВОР.", ce = $e ? s.createElement("div", { className: "pf-root" }, s.createElement($j, { api: m, me: y, go: V })) : je ? s.createElement("div", { className: "pf-root" }, s.createElement(vj, { api: m, links: { go: (fe) => V(`${Ya}/${fe}`), to: (fe) => V(`${Ya}/${fe}`), can: { ks2: !!B, estimate: !!I, fact: !0 } } })) : Ce ? s.createElement("div", { className: "pf-root" }, s.createElement(IO, { api: d, vor: i, me: y })) : me ? s.createElement("div", { className: "pf-root" }, s.createElement(eA, { api: u, vor: i, projects: r, me: y, mode: Q, onApprove: O })) : Te ? s.createElement("div", { className: "pf-root" }, s.createElement(eO, { api: c, vor: i })) : ye ? s.createElement("div", { className: "pf-root" }, s.createElement(hA, {
     api: b === "authed" && i || null,
     projects: b === "authed" && r || null,
     sub: b === "authed" ? Se : "load",
@@ -39860,10 +39860,10 @@ function Vj(a) {
   }, []), r === null ? s.createElement("div", { className: "pf-muted" }, "Загрузка…") : s.createElement(
     "div",
     { className: "th-settings", "data-testid": "th-settings" },
-    s.createElement("div", { className: "sui-hint" }, "Пороги светофора объекта для «Сводки»: когда объект жёлтый и когда красный. Меняет РП и руководство."),
+    s.createElement("div", { className: "sui-hint" }, "Пороги светофора проекта для «Сводки»: когда проект жёлтый и когда красный. Меняет РП и руководство."),
     c ? s.createElement("div", { className: "pf-error", role: "alert" }, c) : null,
     d ? s.createElement("div", { className: "sui-notice", role: "status", "data-testid": "th-notice" }, d) : null,
-    !c && !r.length ? s.createElement("div", { className: "pf-card pf-muted", "data-testid": "th-empty" }, "Нет объектов, где вы можете менять пороги светофора.") : null,
+    !c && !r.length ? s.createElement("div", { className: "pf-card pf-muted", "data-testid": "th-empty" }, "Нет проектов, где вы можете менять пороги светофора.") : null,
     r.map((v) => s.createElement(
       "div",
       { key: v.project_id, className: "sui-card th-row", "data-project-id": v.project_id },

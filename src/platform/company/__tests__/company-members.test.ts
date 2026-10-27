@@ -372,8 +372,8 @@ test('P2-0033: объекты Качества — только для роли 
     quality_objects: [{ id: 'obj_1', name: 'Большевиков,22 (Гений)' }] }];
   const el = mount(api);
   await tick();
-  assert.match(el.querySelector('[data-assignment-id=a-eng]').textContent, /Объекты: Большевиков,22 \(Гений\)/);
-  assert.doesNotMatch(el.querySelector('[data-assignment-id=a-adm]').textContent, /Объекты:/);
+  assert.match(el.querySelector('[data-assignment-id=a-eng]').textContent, /Проекты Качества: Большевиков,22 \(Гений\)/);
+  assert.doesNotMatch(el.querySelector('[data-assignment-id=a-adm]').textContent, /Проекты Качества:/);
   const form = el.querySelector('[data-testid=co-assign]');
   const role = form.querySelector('select[name=role]');
   role.value = 'r-senior'; role.dispatchEvent(new win.Event('change', { bubbles: true }));

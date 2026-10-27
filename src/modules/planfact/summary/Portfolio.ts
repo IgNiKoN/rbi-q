@@ -60,17 +60,17 @@ export function PortfolioHead(props: { list: SummaryProject[]; links?: SummaryLi
             h('div', { className: 'pt-att-tx' }, h('b', null, it.title), h('span', null, it.detail)),
             it.action ? h('button', { type: 'button', className: 'pt-go', 'data-testid': 'pt-att-go', onClick: it.action.run }, it.action.label) : null))))
       : null,
-    h('section', { className: 'pt-kpis', 'aria-label': 'Итоги по объектам' },
+    h('section', { className: 'pt-kpis', 'aria-label': 'Итоги по проектам' },
       money.length ? h(KpiTile, { label: 'Сделано по договорам', value: compactRub(done), metric: 'pt-done', hint: plan > 0 ? `${n1(done / plan * 100)} % от ${compactRub(plan)}` : undefined }) : null,
-      money.length ? h(KpiTile, { label: 'Не выставлено в КС-2', value: compactRub(gap), metric: 'pt-gap', hint: `объектов: ${money.filter((p) => (p.gap_money || 0) > 0).length}` }) : null,
-      h(KpiTile, { label: 'Объекты с отставанием', value: `${lagging} из ${list.length}`, metric: 'pt-lag', tone: overdue ? 'red' : lagging ? 'yellow' : undefined,
+      money.length ? h(KpiTile, { label: 'Не выставлено в КС-2', value: compactRub(gap), metric: 'pt-gap', hint: `проектов: ${money.filter((p) => (p.gap_money || 0) > 0).length}` }) : null,
+      h(KpiTile, { label: 'Проекты с отставанием', value: `${lagging} из ${list.length}`, metric: 'pt-lag', tone: overdue ? 'red' : lagging ? 'yellow' : undefined,
         hint: overdue ? `срок прошёл: ${overdue}` : undefined }),
       h(KpiTile, { label: 'Ждёт подтверждения', value: records(pending), metric: 'pt-pending', hint: 'факт прорабов' })));
 }
 
 /** Карточки объектов для телефона (на ПК — таблица Objects). */
 export function ObjectCards(props: { list: SummaryProject[]; onOpen: (id: string) => void }): ReactElement {
-  return h('div', { className: 'pt-cards', 'data-testid': 'pt-cards' }, h('h2', { className: 'pt-sec' }, 'Объекты'), props.list.map((p) => h('button', { key: p.project_id, type: 'button', className: 'pf-card pt-card', 'data-card-id': p.project_id,
+  return h('div', { className: 'pt-cards', 'data-testid': 'pt-cards' }, h('h2', { className: 'pt-sec' }, 'Проекты'), props.list.map((p) => h('button', { key: p.project_id, type: 'button', className: 'pf-card pt-card', 'data-card-id': p.project_id,
       onClick: () => props.onOpen(p.project_id) },
     h('span', { className: 'pt-card-hd' }, h('b', null, p.name), h(StatusBadge, { status: p.light, label: LIGHT_LABEL[p.light], title: lightText(p) })),
     p.can_money

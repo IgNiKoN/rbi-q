@@ -58,12 +58,12 @@ export function ProjectPicker(props: { list: PickProject[]; value: string; onCha
   };
   return h(InHead, { slot: 'picker' },
     shown.length > 1 || (alwaysSelect && shown.length)
-      ? h('select', { className: 'pj-input pj-company', 'aria-label': 'Объект', value, 'data-testid': testId, onChange: (e) => onChange((e.target as HTMLSelectElement).value) },
+      ? h('select', { className: 'pj-input pj-company', 'aria-label': 'Проект', value, 'data-testid': testId, onChange: (e) => onChange((e.target as HTMLSelectElement).value) },
           shown.map((p) => h('option', { key: p.id, value: p.id }, label(p))))
-      : h('div', { className: 'pf-muted pp-one' }, 'Объект: ', h('b', null, current ? label(current) : '—')),
+      : h('div', { className: 'pf-muted pp-one' }, 'Проект: ', h('b', null, current ? label(current) : '—')),
     archivedN
       ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost pj-toggle', 'data-testid': 'pp-archive', onClick: toggle },
           showArchive ? 'Скрыть архив' : `Показать архив (${archivedN})`)
       : null,
-    isArchived(current) ? h('div', { className: 'pf-muted', 'data-testid': 'pp-archived' }, 'Объект в архиве — только просмотр.') : null);
+    isArchived(current) ? h('div', { className: 'pf-muted', 'data-testid': 'pp-archived' }, 'Проект в архиве — только просмотр.') : null);
 }

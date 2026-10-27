@@ -124,7 +124,7 @@ test('несколько объектов: таблица по отставан�
   assert.equal(el.querySelector('[data-project-id="b"] [data-testid="sm-olag"]').textContent, '46 дн.');
   assert.equal(el.querySelector('[data-project-id="b"] [data-testid="sm-olight"]').textContent, 'Отставание');
   const pick = el.querySelector('[data-testid="sm-project"]');
-  assert.deepEqual([...pick.options].map((o: N) => o.textContent), ['Все объекты (3)', 'ЖК Б', 'ЖК А', 'ЖК В']);
+  assert.deepEqual([...pick.options].map((o: N) => o.textContent), ['Все проекты (3)', 'ЖК Б', 'ЖК А', 'ЖК В']);
   el.querySelector('[data-project-id="b"] [data-testid="sm-open"]').click(); await tick();
   assert.equal(el.querySelector('[data-testid="sm-dashboard"]').getAttribute('data-project-id'), 'b');
   assert.ok(f.calls.includes('weekly:b:8'));

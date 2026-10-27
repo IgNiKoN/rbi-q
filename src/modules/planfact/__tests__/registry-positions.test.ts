@@ -61,7 +61,7 @@ test('positionStatus: «просрочено» по темпу 14 дней к с
   // срок прошёл, не выполнено
   const past = positionStatus(P({ fact_qty: 99, fact14: 50 }), ctx('2026-10-23'));
   assert.deepEqual([past.overdue, past.pace], [true, 'past']);
-  assert.match(past.paceText, /Срок объекта прошёл \(23\.10\.2026\)/);
+  assert.match(past.paceText, /Срок проекта прошёл \(23\.10\.2026\)/);
   // срок прошёл, выполнено — не просрочено
   assert.equal(positionStatus(P({ fact_qty: 100 }), ctx('2026-10-01')).overdue, false);
   // срок сегодня: остаток есть, темп есть → нужно > 0 дн. → просрочено
@@ -176,7 +176,7 @@ test('нет срока объекта: «Только просроченные�
   const box = await mount(h(PositionsRegistry, { fact: stand.fact, summary: stand.summary, projectId: 'pr1', companyId: 'c1', user: 'pto@x', today: T }));
   click(box.querySelector('[data-testid=\"p2-reg-filter\"]'));   // P2-0041: «Только просроченные» — в «Фильтре»
   assert.equal(box.querySelector('[data-testid="p2-reg-overdue"]').disabled, true);
-  assert.match(box.querySelector('[data-testid="p2-reg-overdue-hint"]').textContent, /Нет срока объекта/);
+  assert.match(box.querySelector('[data-testid="p2-reg-overdue-hint"]').textContent, /Нет срока проекта/);
   const empty = await mount(h(PositionsRegistry, { fact: makeStand([]).fact, summary: makeStand([]).summary, projectId: 'pr1', companyId: 'c1', user: 'pto@x', today: T }));
   assert.match(empty.querySelector('[data-testid="p2-reg-empty"]').textContent, /Позиций пока нет/);
 });

@@ -213,7 +213,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
       h('div', { className: 'sui-sub-main' },
         h('div', { className: 'co-role-name' }, r.role_name, r.counterparty_name ? h('span', { className: 'pf-muted' }, ` · ${r.counterparty_name}`) : null),
         h('div', { className: 'sui-sub-meta' }, (r.project_name || 'Все проекты') + ' · ' + status(r)),
-        objectsText(r.quality_objects) ? h('div', { className: 'sui-sub-meta', 'data-testid': 'co-row-objects' }, `Объекты: ${objectsText(r.quality_objects)}`) : null),
+        objectsText(r.quality_objects) ? h('div', { className: 'sui-sub-meta', 'data-testid': 'co-row-objects' }, `Проекты Качества: ${objectsText(r.quality_objects)}`) : null),
       p.disabled ? null : h('button', { type: 'button', className: 'pf-btn pf-btn--ghost co-btn-sm', 'data-testid': 'co-revoke', disabled: busy,
         onClick: () => setConfirm({ kind: 'revoke', userId: p.user_id, assignmentId: r.assignment_id! }) }, 'Отозвать'));
   }
@@ -278,8 +278,8 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
           contractors.map((c) => h('option', { key: c.id, value: c.id }, c.draft ? `${c.name} (нужен ИНН)` : c.name)))) : null,
       h('label', { className: 'pf-field' }, 'Срок до (необязательно)', h('input', { name: 'until', type: 'date', className: 'co-input' })),
       showObjects ? h('fieldset', { className: 'co-objects', 'data-testid': 'co-objects' },
-        h('legend', null, 'Объекты Качества'),
-        h('div', { className: 'pf-muted sui-hint' }, 'Ничего не отмечено — все объекты. Отмеченные — сотрудник видит записи только этих объектов и свои без объекта.'),
+        h('legend', null, 'Проекты Качества'),
+        h('div', { className: 'pf-muted sui-hint' }, 'Ничего не отмечено — все проекты. Отмеченные — сотрудник видит записи только этих проектов и свои без проекта.'),
         h('div', { className: 'co-objects-list' }, qObjects.map((o) =>
           h('label', { key: o.id, className: 'co-check' }, h('input', { type: 'checkbox', name: 'qobj', value: o.id }), o.name)))) : null,
       h('button', { type: 'submit', className: 'pf-btn', disabled: busy }, 'Назначить роль')),

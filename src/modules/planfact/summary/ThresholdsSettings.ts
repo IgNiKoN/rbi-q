@@ -26,10 +26,10 @@ export function ThresholdsSettings(props: { api: SummaryApi }): ReactElement {
 
   if (list === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
   return h('div', { className: 'th-settings', 'data-testid': 'th-settings' },
-    h('div', { className: 'sui-hint' }, 'Пороги светофора объекта для «Сводки»: когда объект жёлтый и когда красный. Меняет РП и руководство.'),
+    h('div', { className: 'sui-hint' }, 'Пороги светофора проекта для «Сводки»: когда проект жёлтый и когда красный. Меняет РП и руководство.'),
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     notice ? h('div', { className: 'sui-notice', role: 'status', 'data-testid': 'th-notice' }, notice) : null,
-    !error && !list.length ? h('div', { className: 'pf-card pf-muted', 'data-testid': 'th-empty' }, 'Нет объектов, где вы можете менять пороги светофора.') : null,
+    !error && !list.length ? h('div', { className: 'pf-card pf-muted', 'data-testid': 'th-empty' }, 'Нет проектов, где вы можете менять пороги светофора.') : null,
     list.map((p) => h('div', { key: p.project_id, className: 'sui-card th-row', 'data-project-id': p.project_id },
       h('div', { className: 'sui-card-head' },
         h('div', { className: 'sui-card-main' },

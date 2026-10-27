@@ -116,7 +116,7 @@ export async function buildSummaryXlsx(x: SummaryExport): Promise<Uint8Array> {
       if (m) [9, 10, 11, 12].forEach((c) => { r.getCell(c).numFmt = MONEY; });
     }
     if (m) {
-      const t = ks.addRow(['', '', 'Итого по объекту: сделано, не выставлено в КС-2, ₽', '', '', '', '', '', '', '', '', p.gap_money]);
+      const t = ks.addRow(['', '', 'Итого по проекту: сделано, не выставлено в КС-2, ₽', '', '', '', '', '', '', '', '', p.gap_money]);
       t.font = bold; t.getCell(12).numFmt = MONEY;
     }
     ks.views = [{ state: 'frozen', ySplit: 1 }];
@@ -144,7 +144,7 @@ export async function buildSummaryXlsx(x: SummaryExport): Promise<Uint8Array> {
     at.addRow(['Полнота данных', '%']).font = bold;
     const pr = (label: string, v: number | null) => { const r = at.addRow([label, v]); r.getCell(2).numFmt = PCT; };
     pr('Строки ВОР с ценой в договорной КП', a.completeness.priced_pct);
-    pr('Плановые даты объекта', a.completeness.dates_pct);
+    pr('Плановые даты проекта', a.completeness.dates_pct);
     pr('Позиции с местом ниже корпуса', a.completeness.placed_pct);
     const block = (title: string, head: string[], rows: (string | number | null)[][]) => {
       if (!rows.length) return;

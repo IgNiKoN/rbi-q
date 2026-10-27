@@ -180,7 +180,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
 
   if (mode === 'noaccess') {
     return h('div', null, bar,
-      h('div', { className: 'pf-root pf-muted', 'data-testid': 'co-noaccess' }, 'Нет права управлять компанией. Раздел доступен администратору компании (объекты и единицы — тем, кто их ведёт).'));
+      h('div', { className: 'pf-root pf-muted', 'data-testid': 'co-noaccess' }, 'Нет права управлять компанией. Раздел доступен администратору компании (проекты и единицы — тем, кто их ведёт).'));
   }
 
   const tabs = visibleTabs(rights);

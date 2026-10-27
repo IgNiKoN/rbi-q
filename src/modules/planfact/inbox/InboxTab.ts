@@ -53,7 +53,7 @@ export function InboxTab(props: { api: SummaryApi; me: string; go: (path: string
   return h('div', { className: 'ib-tab', 'data-testid': 'ib-tab' },
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     groups.length
-      ? h('div', { className: 'pf-muted ib-total', 'data-testid': 'ib-total' }, tasks ? `Дел: ${tasks} · объектов: ${groups.length}` : `Дел нет · объектов со сведениями: ${groups.length}`)
+      ? h('div', { className: 'pf-muted ib-total', 'data-testid': 'ib-total' }, tasks ? `Дел: ${tasks} · проектов: ${groups.length}` : `Дел нет · проектов со сведениями: ${groups.length}`)
       : h('div', { className: 'pf-card ib-empty', 'data-testid': 'ib-empty' },
           h('div', { className: 'ib-empty__title' }, 'Всё сделано'),
           h('div', { className: 'pf-muted' }, 'Ничего не ждёт вашего участия. Новое появится здесь и красной точкой в меню.')),

@@ -12576,7 +12576,7 @@ function q_(i) {
         { className: "sui-sub-main" },
         h.createElement("div", { className: "co-role-name" }, ne.role_name, ne.counterparty_name ? h.createElement("span", { className: "pf-muted" }, ` · ${ne.counterparty_name}`) : null),
         h.createElement("div", { className: "sui-sub-meta" }, (ne.project_name || "Все проекты") + " · " + B_(ne)),
-        Ug(ne.quality_objects) ? h.createElement("div", { className: "sui-sub-meta", "data-testid": "co-row-objects" }, `Объекты: ${Ug(ne.quality_objects)}`) : null
+        Ug(ne.quality_objects) ? h.createElement("div", { className: "sui-sub-meta", "data-testid": "co-row-objects" }, `Проекты Качества: ${Ug(ne.quality_objects)}`) : null
       ),
       H.disabled ? null : h.createElement("button", {
         type: "button",
@@ -12723,8 +12723,8 @@ function q_(i) {
       ie ? h.createElement(
         "fieldset",
         { className: "co-objects", "data-testid": "co-objects" },
-        h.createElement("legend", null, "Объекты Качества"),
-        h.createElement("div", { className: "pf-muted sui-hint" }, "Ничего не отмечено — все объекты. Отмеченные — сотрудник видит записи только этих объектов и свои без объекта."),
+        h.createElement("legend", null, "Проекты Качества"),
+        h.createElement("div", { className: "pf-muted sui-hint" }, "Ничего не отмечено — все проекты. Отмеченные — сотрудник видит записи только этих проектов и свои без проекта."),
         h.createElement("div", { className: "co-objects-list" }, ye.map((H) => h.createElement("label", { key: H.id, className: "co-check" }, h.createElement("input", { type: "checkbox", name: "qobj", value: H.id }), H.name)))
       ) : null,
       h.createElement("button", { type: "submit", className: "pf-btn", disabled: S }, "Назначить роль")
@@ -13139,7 +13139,7 @@ function W_(i) {
       )) : h.createElement(
         "div",
         { className: "pj-empty pf-muted cp-empty", "data-testid": "cp-empty" },
-        s.length ? "Ничего не найдено." : "Контрагентов пока нет. Добавьте заказчика — потом его можно выбрать в карточке объекта."
+        s.length ? "Ничего не найдено." : "Контрагентов пока нет. Добавьте заказчика — потом его можно выбрать в карточке проекта."
       )
     )
   );
@@ -33467,7 +33467,7 @@ function h1(i) {
       "div",
       null,
       xe,
-      h.createElement("div", { className: "pf-root pf-muted", "data-testid": "co-noaccess" }, "Нет права управлять компанией. Раздел доступен администратору компании (объекты и единицы — тем, кто их ведёт).")
+      h.createElement("div", { className: "pf-root pf-muted", "data-testid": "co-noaccess" }, "Нет права управлять компанией. Раздел доступен администратору компании (проекты и единицы — тем, кто их ведёт).")
     );
   const re = jd(C), Y = x && re.includes(x) ? x : re[0], ae = Y === "members" ? h.createElement(q_, { api: r, companyId: y, me: m, key: y }) : Y === "roles" ? h.createElement(D_, { api: r, companyId: y, key: y }) : Y === "objects" && u ? h.createElement(Dg, { api: u, render: (X) => h.createElement(Fx, { api: u, company: X, core: s || null, people: () => f1(r, X.company_id) }) }) : Y === "counterparties" && s ? h.createElement(W_, { core: s, companyId: y, key: y }) : Y === "directories" && u ? h.createElement(Dg, { api: u, render: (X) => h.createElement(r1, { api: u, company: X }) }) : Y === "branding" ? h.createElement("div", { className: "sui-hint", "data-testid": "co-branding" }, "Логотип и фирменный цвет — для отчётов и шапки у всех сотрудников компании.") : Y === "modules" ? h.createElement(d1, { companyId: y, key: y }) : Y === "audit" ? h.createElement(K_, { api: r, companyId: y, key: y }) : Y === "patterns" ? h.createElement(a1) : null;
   return h.createElement(
