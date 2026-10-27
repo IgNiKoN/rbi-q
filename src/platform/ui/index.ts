@@ -17,3 +17,5 @@ export { listViews, saveView, deleteView, viewState, syncRegistryAddress } from 
 export type { SavedView, ViewScope } from './registry/views.ts';
 export { buildRegistryXlsx, registryFileName, saveXlsx } from './registry/export.ts';
 export { P2_REGISTRY_CSS } from './registry/styles.ts';
+export { PageTabs, Sheet, MoreMenu, RecordFields, StageBadge, StageStrip, P2_PAGE_CSS } from './page.ts';
+export type { MoreItem } from './page.ts';

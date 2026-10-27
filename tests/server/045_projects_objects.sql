@@ -42,6 +42,8 @@ begin
 
   -- 1. Подразделения
   perform pg_temp.as_user(uadm, ca);
+  res := res || pg_temp.t(jsonb_array_length(public.pf_project_dicts()->'stages') = 6 and jsonb_array_length(public.pf_project_dicts()->'roles') = 5,
+                          'справочники одним вызовом (pf_project_dicts)');
   m := pg_temp.msg(format('select public.pf_save_division(%L, %L, %L, %L)', ca, d1, 'Дирекция «Север»', uman));
   res := res || pg_temp.t(m = 'OK', 'админ создаёт подразделение без модулей (' || m || ')');
   m := pg_temp.msg(format('select public.pf_save_division(%L, %L, %L, %L)', ca, d1, 'Дирекция «Север»', uman));

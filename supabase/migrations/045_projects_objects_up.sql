@@ -171,6 +171,15 @@ begin
   return v_company;
 end $$;
 
+-- Справочники для экранов одним вызовом (таблицы core не открыты REST-клиенту напрямую).
+create function public.pf_project_dicts()
+returns jsonb language sql stable security definer set search_path = pg_catalog as $$
+  select case when auth.uid() is null then null else jsonb_build_object(
+    'stages', (select coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'sort_order', sort_order) order by sort_order), '[]') from core.project_stages),
+    'object_kinds', (select coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'sort_order', sort_order) order by sort_order), '[]') from core.object_kinds),
+    'roles', (select coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'sort_order', sort_order) order by sort_order), '[]') from core.project_roles)) end
+$$;
+
 -- 6. Подразделения.
 create function public.pf_company_divisions(p_company uuid)
 returns table(id uuid, name text, head_user_id uuid, head_name text, archived_at timestamptz, project_count int, can_manage boolean)
@@ -579,12 +588,12 @@ end $$;
 -- 12. Доступ к функциям: только вошедшим, права проверяет каждая функция.
 revoke all on function core.is_project_participant(uuid), core.can_manage_projects(uuid), core.require_places_manage(uuid),
   core.next_build_no(uuid), core.locations_root_object() from public, anon, authenticated;
-revoke all on function public.pf_company_divisions(uuid), public.pf_save_division(uuid, uuid, text, uuid, boolean),
+revoke all on function public.pf_project_dicts(), public.pf_company_divisions(uuid), public.pf_save_division(uuid, uuid, text, uuid, boolean),
   public.pf_project_catalog(uuid), public.pf_save_project(uuid, uuid, jsonb), public.pf_project_places(uuid, uuid),
   public.pf_save_place(uuid, uuid, uuid, text, text, text, text, text), public.pf_remove_place(uuid),
   public.pf_fill_object(uuid, int, int, int, int, text, int, boolean, boolean), public.pf_add_floors(uuid[], int, int, int),
   public.pf_copy_place(uuid, uuid, text) from public, anon;
-grant execute on function public.pf_company_divisions(uuid), public.pf_save_division(uuid, uuid, text, uuid, boolean),
+grant execute on function public.pf_project_dicts(), public.pf_company_divisions(uuid), public.pf_save_division(uuid, uuid, text, uuid, boolean),
   public.pf_project_catalog(uuid), public.pf_save_project(uuid, uuid, jsonb), public.pf_project_places(uuid, uuid),
   public.pf_save_place(uuid, uuid, uuid, text, text, text, text, text), public.pf_remove_place(uuid),
   public.pf_fill_object(uuid, int, int, int, int, text, int, boolean, boolean), public.pf_add_floors(uuid[], int, int, int),

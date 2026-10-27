@@ -21,6 +21,7 @@ import type { CompanyApi } from './company.service.ts';
 import { createAuthService, readAuthConfig } from '../auth/auth.service.ts';
 import type { AuthApi } from '../auth/auth.service.ts';
 import { PLATFORM_AUTH_CSS } from '../auth/LoginForm.ts';
+import { P2_PAGE_CSS, P2_REGISTRY_CSS, P2_UI_CSS } from '../ui/index.ts';
 
 const STYLE_ID = 'company-style';
 
@@ -46,7 +47,7 @@ function ensureStyle(doc: Document): void {
   if (doc.getElementById(STYLE_ID)) return;
   const style = doc.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = PLATFORM_AUTH_CSS + COMPANY_CSS + SCOPE_CSS + PROJECTS_CSS + LOCATIONS_CSS + UNITS_CSS;
+  style.textContent = PLATFORM_AUTH_CSS + P2_UI_CSS + P2_REGISTRY_CSS + P2_PAGE_CSS + COMPANY_CSS + SCOPE_CSS + PROJECTS_CSS + LOCATIONS_CSS + UNITS_CSS;
   doc.head.appendChild(style);
 }
 

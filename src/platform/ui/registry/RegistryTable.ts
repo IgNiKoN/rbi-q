@@ -64,6 +64,8 @@ export interface RegistryProps<T> {
   compact?: (r: T) => ReactNode;
   /** P2-0046: галочки выбора скрыты, пока не нажали «Выбрать» (или пока что-то выбрано). */
   selectMode?: boolean;
+  /** P2-0047: без выбора строк (справочник без массовых действий) — ни галочек, ни «Выбрать». */
+  noSelect?: boolean;
   /** P2-0046: действия строки в последней колонке (например, «Принять / Отклонить»); на телефоне — в compact. */
   rowActions?: (r: T) => ReactNode;
 }
@@ -103,7 +105,7 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
   const [link, setLink] = useState('');
   const [, bump] = useState(0);
   const [picking, setPicking] = useState(false);
-  const checks = !p.selectMode || picking || selected.size > 0;
+  const checks = !p.noSelect && (!p.selectMode || picking || selected.size > 0);
 
   const visible = visibleColumns(columns, state);
   const list = useMemo(() => sortRows(filterRows(rows, filters, state, p.isOverdue), columns, state.sort), [rows, filters, state, p.isOverdue, columns]);
@@ -250,7 +252,7 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
       h('span', { className: 'p2-reg__muted p2-num p2-reg__shown', 'data-testid': 'p2-reg-shown' }, h('span', { className: 'p2-reg__long' }, 'Показано: '), `${list.length} из ${rows.length}`),
       h('span', { className: 'p2-reg__right' },
         p.tools || null,
-        p.selectMode
+        p.selectMode && !p.noSelect
           ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'aria-pressed': checks, 'data-testid': 'p2-reg-pick',
               onClick: () => { if (checks) { setPicking(false); onSelect(new Set()); } else setPicking(true); } }, checks ? 'Готово' : 'Выбрать')
           : null,

@@ -19,6 +19,24 @@ export interface LocationNode {
   id: string; parent_id: string | null; node_type: PlanNodeType; name: string; sort_order: number;
   area: number | null; depth: number; path: string; child_count: number;
 }
+/** P2-0047: проект с карточкой («Компания → Проекты», pf_project_catalog) — права ядра, модуль не нужен. */
+export interface ProjectCard extends ProjectItem {
+  division_id: string | null; division_name: string | null; address: string | null;
+  planned_start: string | null; planned_finish: string | null; manager_user_id: string | null; manager_name: string | null;
+  stage: string; our_role: string | null; timezone: string; country: string;
+  object_count: number; place_count: number; places_led_by_quality: boolean;
+}
+/** P2-0047: поля карточки для pf_save_project; ключ без значения — не меняется, null — очистить. */
+export type ProjectCardInput = Partial<{
+  name: string; code: string | null; division_id: string | null; address: string | null; planned_start: string | null; planned_finish: string | null;
+  manager_user_id: string | null; customer_id: string | null; general_contractor_id: string | null; stage: string; our_role: string | null;
+  timezone: string; country: string; archived: boolean;
+}>;
+export interface Division { id: string; name: string; head_user_id: string | null; head_name: string | null; archived_at: string | null; project_count: number; can_manage: boolean }
+/** P2-0047: справочники платформы (стадии, виды объектов, роли в проекте) — данные, а не код (правило 9). */
+export interface DictItem { code: string; name: string; sort_order: number }
+export interface ProjectDicts { stages: DictItem[]; objectKinds: DictItem[]; roles: DictItem[] }
+
 export interface UnitItem { id: string; company_id: string | null; code: string; name: string; is_common: boolean }
 export interface GenerateParams {
   projectId: string; parentId: string | null; name: string;
@@ -38,6 +56,12 @@ export interface ProjectsApi {
   locationsFromQuality?(projectId: string): Promise<boolean>;
   generateBuilding(p: GenerateParams): Promise<Result<string>>;
   listUnits(companyId: string): Promise<UnitItem[]>;
+  /** P2-0047: «Компания → Проекты» — каталог с карточкой, подразделения, справочники; id новой записи даёт приложение (newId). */
+  projectCatalog?(companyId: string): Promise<ProjectCard[]>;
+  saveProject?(companyId: string, id: string, card: ProjectCardInput): Promise<Result<string>>;
+  listDivisions?(companyId: string): Promise<Division[]>;
+  saveDivision?(companyId: string, id: string, name: string, headUserId: string | null, archived: boolean | null): Promise<Result<string>>;
+  dicts?(): Promise<ProjectDicts>;
   addUnit(companyId: string, code: string, name: string): Promise<Result<string>>;
   deleteUnit(unitId: string): Promise<Result>;
 }
@@ -58,6 +82,12 @@ export function generatedNodeCount(sections: number, floors: number, apartmentsP
   return 1 + sections * (1 + floors * (1 + apartmentsPerFloor));
 }
 export const GENERATE_LIMIT = 5000;
+/** P2-0047: id новой записи создаёт приложение — повтор запроса после обрыва связи не создаёт дубль (правило 1). */
+export function newId(): string {
+  const cr = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (cr && cr.randomUUID) return cr.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => { const r = Math.random() * 16 | 0; return (ch === 'x' ? r : (r & 3) | 8).toString(16); });
+}
 
 export function createProjectsService(): ProjectsApi | null {
   const c = getClient();
@@ -90,6 +120,15 @@ export function createProjectsService(): ProjectsApi | null {
       p_apartments_per_floor: p.apartmentsPerFloor, p_first_floor: p.firstFloor
     }),
     listUnits: (company) => rows<UnitItem>('pf_list_units', { p_company: company }),
+    projectCatalog: (company) => rows<ProjectCard>('pf_project_catalog', { p_company: company }),
+    saveProject: (company, id, card) => call<string>('pf_save_project', { p_company: company, p_id: id, p_card: card }),
+    listDivisions: (company) => rows<Division>('pf_company_divisions', { p_company: company }),
+    saveDivision: (company, id, name, head, archived) => call<string>('pf_save_division', { p_company: company, p_id: id, p_name: name, p_head_user: head, p_archived: archived }),
+    dicts: async () => {
+      const r = await call<{ stages?: DictItem[]; object_kinds?: DictItem[]; roles?: DictItem[] } | null>('pf_project_dicts', {});
+      const v = r.ok && r.value ? r.value : {};
+      return { stages: v.stages || [], objectKinds: v.object_kinds || [], roles: v.roles || [] };
+    },
     addUnit: (company, code, name) => call<string>('pf_add_unit', { p_company: company, p_code: code, p_name: name }),
     deleteUnit: (id) => call('pf_delete_unit', { p_unit: id })
   };

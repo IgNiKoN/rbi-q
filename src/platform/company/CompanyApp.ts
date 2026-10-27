@@ -17,16 +17,17 @@ import { CompanyRoles } from './CompanyRoles.ts';
 import { CompanyMembers, COMPANY_MEMBERS_CSS } from './CompanyMembers.ts';
 import { CompanyAudit, COMPANY_AUDIT_CSS } from './CompanyAudit.ts';
 import { SETTINGS_UI_CSS } from '../ui/settings.ts';
-import type { CompanyApi, CompanyRef } from './company.service.ts';
+import type { CompanyApi, CompanyRef, MemberRow } from './company.service.ts';
 import { CounterpartiesTab, COUNTERPARTIES_CSS } from './CounterpartiesTab.ts';
 import type { CoreApi } from '../core/core.service.ts';
 import type { CompanyAccess, ProjectsApi } from '../core/projects.service.ts';
 import { CompanyScope } from './CompanyScope.ts';
 import { ProjectsTab } from './ProjectsTab.ts';
+import { Patterns, PATTERNS_CSS } from './Patterns.ts';
 import { UnitsTab } from './UnitsTab.ts';
 
 type Mode = 'loading' | 'login' | 'noaccess' | 'ready';
-type Tab = 'members' | 'roles' | 'objects' | 'counterparties' | 'directories' | 'branding' | 'modules' | 'audit';
+type Tab = 'members' | 'roles' | 'objects' | 'counterparties' | 'directories' | 'branding' | 'modules' | 'audit' | 'patterns';
 
 const BASE = '#/settings/company';
 /** Событие раздела: адрес #/settings/company… показан снова (index.ts — при повторном монтировании в тот же контейнер). */
@@ -38,24 +39,25 @@ export function tabFromHash(hash: string): Tab | null {
 }
 
 /** admin — управление ролями компании; dirs — объекты/единицы (planfact.projects.manage / units.manage). */
-const TABS: { id: Tab; label: string; need: 'admin' | 'projects' | 'units' }[] = [
+const TABS: { id: Tab; label: string; need: 'admin' | 'projects' | 'units' | 'platform' }[] = [
   { id: 'members', label: 'Сотрудники', need: 'admin' },
   { id: 'roles', label: 'Роли', need: 'admin' },
-  { id: 'objects', label: 'Объекты', need: 'projects' },
+  { id: 'objects', label: 'Проекты', need: 'projects' },
   { id: 'counterparties', label: 'Контрагенты', need: 'admin' },
   { id: 'directories', label: 'Справочники', need: 'units' },
   { id: 'branding', label: 'Оформление', need: 'admin' },
   { id: 'modules', label: 'Модули компании', need: 'admin' },
-  { id: 'audit', label: 'Журнал', need: 'admin' }
+  { id: 'audit', label: 'Журнал', need: 'admin' },
+  { id: 'patterns', label: 'Образцы', need: 'platform' }   // P2-0047: детали дизайн-системы — администратору платформы
 ];
 
-export interface CompanyRights { admin: boolean; projects: boolean; units: boolean }
+export interface CompanyRights { admin: boolean; projects: boolean; units: boolean; platform?: boolean }
 /** Какие вкладки видны: по правам сервера (без права вкладки нет, прямой адрес → первая доступная). */
 export function visibleTabs(r: CompanyRights): Tab[] {
-  return TABS.filter((t) => r[t.need]).map((t) => t.id);
+  return TABS.filter((t) => !!r[t.need]).map((t) => t.id);
 }
 export function rightsFrom(admin: CompanyRef[], access: CompanyAccess[]): CompanyRights {
-  return { admin: admin.length > 0, projects: access.some((c) => c.can_manage_projects), units: access.some((c) => c.can_manage_units) };
+  return { admin: admin.length > 0, projects: access.some((c) => c.can_manage_projects), units: access.some((c) => c.can_manage_units), platform: isPlatformAdmin() };
 }
 
 /** Модули платформы (просмотр «что включено у компании»; включает администратор платформы). */
@@ -64,6 +66,10 @@ const MODULES: { code: string; name: string }[] = [
   { code: 'knowledge', name: 'База знаний' }, { code: 'ai', name: 'ИИ-помощник' }
 ];
 interface P2Company { id: string; name: string; modules: string[] }
+function isPlatformAdmin(): boolean {
+  const p2 = (window as unknown as { RBI?: { platform2?: { getState?: () => { isPlatformAdmin?: boolean } } } }).RBI?.platform2;
+  return !!(p2 && typeof p2.getState === 'function' && p2.getState().isPlatformAdmin);
+}
 function platformCompanies(): P2Company[] {
   const p2 = (window as unknown as { RBI?: { platform2?: { getState?: () => { companies?: P2Company[] } } } }).RBI?.platform2;
   const st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
@@ -77,6 +83,14 @@ function ModulesView(props: { companyId: string }): ReactElement {
     h('div', { className: 'sui-card sui-list' }, MODULES.map((m) => h('div', { key: m.code, className: 'sui-list-row', 'data-module': m.code },
       h('span', { className: 'sui-title' }, m.name),
       h('span', { className: 'sui-badge' + (on.has(m.code) ? ' sui-badge--on' : '') }, on.has(m.code) ? 'включён' : 'выключен')))));
+}
+
+/** P2-0047: сотрудники компании для выбора руководителя проекта (по одному на человека, без отключённых). */
+async function peopleOf(api: CompanyApi, companyId: string): Promise<{ user_id: string; name: string }[]> {
+  const rows = await api.listMembers(companyId).catch(() => [] as MemberRow[]);
+  const seen = new Map<string, string>();
+  for (const m of rows) if (!m.disabled_at && !seen.has(m.user_id)) seen.set(m.user_id, m.full_name || m.email || 'Сотрудник');
+  return Array.from(seen, ([user_id, name]) => ({ user_id, name })).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 }
 
 export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null; core?: CoreApi | null; projects?: ProjectsApi | null }): ReactElement {
@@ -173,12 +187,13 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
   const cur: Tab = tab && tabs.includes(tab) ? tab : tabs[0];
   const body = cur === 'members' ? h(CompanyMembers, { api, companyId, me: who, key: companyId })
     : cur === 'roles' ? h(CompanyRoles, { api, companyId, key: companyId })
-    : cur === 'objects' && projects ? h(CompanyScope, { api: projects, render: (c) => h(ProjectsTab, { api: projects, company: c, core: core || null }) })
+    : cur === 'objects' && projects ? h(CompanyScope, { api: projects, render: (c) => h(ProjectsTab, { api: projects, company: c, core: core || null, people: () => peopleOf(api, c.company_id) }) })
     : cur === 'counterparties' && core ? h(CounterpartiesTab, { core, companyId, key: companyId })
     : cur === 'directories' && projects ? h(CompanyScope, { api: projects, render: (c) => h(UnitsTab, { api: projects, company: c }) })
     : cur === 'branding' ? h('div', { className: 'sui-hint', 'data-testid': 'co-branding' }, 'Логотип и фирменный цвет — для отчётов и шапки у всех сотрудников компании.')
     : cur === 'modules' ? h(ModulesView, { companyId, key: companyId })
     : cur === 'audit' ? h(CompanyAudit, { api, companyId, key: companyId })
+    : cur === 'patterns' ? h(Patterns)
     : null;
   return h('div', null, bar,
     h('div', { className: 'pf-root co-root', 'data-company-tab': cur },
@@ -189,7 +204,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
       body));
 }
 
-export const COMPANY_CSS = SETTINGS_UI_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT_CSS + COUNTERPARTIES_CSS + `
+export const COMPANY_CSS = SETTINGS_UI_CSS + PATTERNS_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT_CSS + COUNTERPARTIES_CSS + `
 .co-root{max-width:1200px}
 .co-head{margin-bottom:16px}
 .co-tabs{display:flex;flex-wrap:nowrap;gap:var(--rbi-subtab-gap,6px);padding:4px;border:1px solid var(--card-border);border-radius:12px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch}

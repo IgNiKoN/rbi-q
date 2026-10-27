@@ -19,6 +19,7 @@ drop function public.pf_save_project(uuid, uuid, jsonb);
 drop function public.pf_project_catalog(uuid);
 drop function public.pf_save_division(uuid, uuid, text, uuid, boolean);
 drop function public.pf_company_divisions(uuid);
+drop function public.pf_project_dicts();
 drop function core.require_places_manage(uuid);
 drop function core.can_manage_projects(uuid);
 drop function core.is_project_participant(uuid);

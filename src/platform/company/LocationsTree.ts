@@ -18,7 +18,7 @@ function num(v: string, fallback: number): number {
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
-export function LocationsTree(props: { api: ProjectsApi; project: ProjectItem; canManage: boolean; onBack: () => void }): ReactElement {
+export function LocationsTree(props: { api: ProjectsApi; project: ProjectItem; canManage: boolean; onBack?: () => void }): ReactElement {
   const { api, project, canManage, onBack } = props;
   const [fromQuality, setFromQuality] = useState<boolean | null>(api.locationsFromQuality ? null : false);
   const manage = canManage && project.can_manage && !project.archived_at && fromQuality === false;
@@ -151,9 +151,10 @@ export function LocationsTree(props: { api: ProjectsApi; project: ProjectItem; c
 
   const roots = kids[''];
   return h('div', { className: 'lt-root', 'data-testid': 'lt-root' },
-    h('div', { className: 'lt-head' },
+    // P2-0047: внутри карточки проекта своя шапка не нужна (назад и название — в карточке).
+    onBack ? h('div', { className: 'lt-head' },
       h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: onBack }, '← К проектам'),
-      h('h3', { className: 'pf-title lt-title' }, project.name)),
+      h('h3', { className: 'pf-title lt-title' }, project.name)) : null,
     project.archived_at ? h('div', { className: 'pf-muted' }, 'Проект в архиве — структура доступна только для просмотра.') : null,
     fromQuality ? h('div', { className: 'pj-notice lt-quality', 'data-testid': 'lt-from-quality', role: 'note' },
       'Места этого объекта ведутся в Качестве — здесь только просмотр. Добавить, переименовать или удалить корпус, этаж, квартиру можно в Качестве.') : null,
