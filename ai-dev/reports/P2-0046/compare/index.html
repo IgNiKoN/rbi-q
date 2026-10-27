@@ -1,0 +1,566 @@
+<title>План/Факт: сейчас и предлагаю</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Раскладка: шапка с переключателями → пара «сейчас / предлагаю» (телефон — две колонки, планшет и ПК — друг под другом) → что меняется. */
+:root {
+  --bg: #eef0f2;
+  --surface: #ffffff;
+  --ink: #17212b;
+  --muted: #5f6b76;
+  --line: rgba(28, 43, 57, 0.14);
+  --accent: #1c2b39;
+  --accent-ink: #ffffff;
+  --gold: #a87c3e;
+  --now: #8a5a2b;
+  --new: #23704a;
+  --font: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Arial Narrow', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11181f; --surface: #1a242e; --ink: #e8edf1; --muted: #9aa7b2; --line: rgba(232, 237, 241, 0.14);
+    --accent: #d8bd91; --accent-ink: #11181f; --gold: #d8bd91; --now: #e0a46a; --new: #6fcf97; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11181f; --surface: #1a242e; --ink: #e8edf1; --muted: #9aa7b2; --line: rgba(232, 237, 241, 0.14);
+  --accent: #d8bd91; --accent-ink: #11181f; --gold: #d8bd91; --now: #e0a46a; --new: #6fcf97; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 4vw, 32px); line-height: 1.15; margin: 0; text-wrap: balance; }
+.lead { margin: 6px 0 0; color: var(--muted); max-width: 65ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button {
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--muted); background: none; border: 0; border-radius: 7px;
+  padding: 8px 14px; min-height: 40px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.seg-label { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin-right: 6px; }
+.ctl { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+.pair { display: grid; gap: 20px; }
+.pair.phone { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.pair.wide { grid-template-columns: 1fr; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.col-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tag { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.tag.now { color: var(--now); }
+.tag.new { color: var(--new); }
+.col-head b { font-weight: 600; }
+.frames { display: flex; flex-direction: column; gap: 14px; }
+.pair.phone .frames { max-width: 400px; }
+.frame-cap { font-size: 13px; color: var(--muted); margin-top: -4px; }
+.shot { position: relative; width: 100%; max-width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #f4f4f4; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); }
+.shot img { display: block; width: 100%; height: auto; }
+.device { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+.notes { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; }
+.notes h2 { font-size: 17px; font-weight: 600; margin: 0 0 8px; }
+.notes ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 75ch; }
+.foot { color: var(--muted); font-size: 13px; max-width: 75ch; }
+
+/* ===== Макет приложения (светлая тема RBI v3, одна картинка — без переключения темы) ===== */
+.m {
+  --g: #1c2b39; --g2: #273949; --gold: #c49a5f; --paper: #f4f4f4; --card: #ffffff; --ink: #161616; --mut: #6f6f6f;
+  --ln: rgba(28, 43, 57, 0.12); --ok: #24a148; --okbg: #e3f4e8; --warn: #9a6b1f; --warnbg: #f7ecd9; --bad: #b5452b; --badbg: #f8e1da;
+  --info: #2a6f9e; --infobg: #e1edf6; --fact: #2a6f9e;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; color: var(--ink); background: var(--paper);
+  font-size: 14px; line-height: 1.35; position: relative; overflow: hidden; display: flex;
+}
+.m * { box-sizing: border-box; }
+.m .tnum, .m td.n, .m .num { font-variant-numeric: tabular-nums; }
+.m .main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.m .content { flex: 1 1 auto; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.m .content > * { flex-shrink: 0; }
+.m .top { height: 56px; flex: 0 0 auto; background: var(--card); border-bottom: 1px solid var(--ln); display: flex; align-items: center; gap: 10px; padding: 0 16px; }
+.m .burger { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--ln); display: grid; place-items: center; }
+.m .burger i { width: 16px; height: 2px; background: var(--g); box-shadow: 0 -5px 0 var(--g), 0 5px 0 var(--g); display: block; }
+.m .proj { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--ln); font-weight: 600; font-size: 14px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.m .proj small { color: var(--mut); font-weight: 500; }
+.m .proj::after { content: ''; width: 7px; height: 7px; border-right: 2px solid var(--mut); border-bottom: 2px solid var(--mut); transform: rotate(45deg) translateY(-2px); margin-left: 2px; }
+.m .crumbs { color: var(--mut); font-size: 13px; }
+.m .crumbs b { color: var(--ink); font-weight: 600; }
+.m .grow { flex: 1 1 auto; }
+.m .ava { width: 32px; height: 32px; border-radius: 50%; background: var(--g); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.m .ph { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.m .ph h3 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.m .ph p { margin: 2px 0 0; color: var(--mut); font-size: 13px; }
+.m .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 1px solid var(--ln); background: var(--card); color: var(--g); white-space: nowrap; }
+.m .btn.pri { background: var(--g); color: #fff; border-color: var(--g); }
+.m .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.m .btn.ghost { background: none; border-color: transparent; color: var(--info); padding: 0 6px; }
+.m .tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--ln); padding: 0 16px; background: var(--card); flex: 0 0 auto; }
+.m .tabs.in { background: none; padding: 0; }
+.m .tabs span { padding: 12px 0 10px; font-size: 14px; font-weight: 500; color: var(--mut); border-bottom: 2px solid transparent; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.m .tabs span.on { color: var(--g); font-weight: 600; border-bottom-color: var(--gold); }
+.m .cnt { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+.m .cnt.mut { background: var(--ln); color: var(--g); }
+.m .card { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; }
+.m .sec { font-size: 13px; font-weight: 600; color: var(--mut); margin: 0; }
+.m .pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.m .pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.m .pill.bad { color: var(--bad); background: var(--badbg); }
+.m .pill.warn { color: var(--warn); background: var(--warnbg); }
+.m .pill.ok { color: #1c7c3a; background: var(--okbg); }
+.m .pill.grey { color: #5c6670; background: #eceef0; }
+.m .pill.info { color: var(--info); background: var(--infobg); }
+.m .bar { position: relative; height: 8px; border-radius: 4px; background: #e7e9ec; overflow: visible; }
+.m .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--fact); }
+.m .bar i.ok { background: var(--ok); }
+.m .bar b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--g); border-radius: 1px; }
+.m .legend { display: flex; gap: 14px; font-size: 12px; color: var(--mut); }
+.m .legend span { display: inline-flex; align-items: center; gap: 5px; }
+.m .legend .lf { width: 12px; height: 6px; border-radius: 3px; background: var(--fact); }
+.m .legend .lp { width: 2px; height: 12px; background: var(--g); }
+
+/* внимание */
+.m .att { display: flex; flex-direction: column; }
+.m .att .it { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .att .it:first-child { border-top: 0; }
+.m .att .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.m .att .dot.bad { background: var(--bad); }
+.m .att .dot.warn { background: var(--gold); }
+.m .att .tx { flex: 1 1 auto; min-width: 0; }
+.m .att .tx b { display: block; font-weight: 600; font-size: 14px; }
+.m .att .tx span { color: var(--mut); font-size: 12.5px; }
+.m .att .go { color: var(--info); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.m .chev { width: 8px; height: 8px; border-right: 2px solid #9aa3ab; border-bottom: 2px solid #9aa3ab; transform: rotate(-45deg); flex: 0 0 auto; }
+.m .attg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.m .attg .it { border: 1px solid var(--ln); border-radius: 14px; background: var(--card); align-items: flex-start; }
+.m .attg .it .go { margin-top: 6px; display: inline-block; }
+
+/* плитки */
+.m .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.m .kpis.four { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.m .kpi { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; padding: 12px 14px; }
+.m .kpi span { color: var(--mut); font-size: 12.5px; display: block; }
+.m .kpi b { font-size: 20px; font-weight: 600; display: block; margin-top: 2px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.m .kpi small { color: var(--mut); font-size: 12px; }
+.m .kpi small.bad { color: var(--bad); font-weight: 600; }
+
+/* объект — карточка (телефон) */
+.m .obj { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.m .obj .hd { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.m .obj .hd b { font-weight: 600; font-size: 15px; }
+.m .obj .pct { display: flex; justify-content: space-between; font-size: 13px; color: var(--mut); }
+.m .obj .pct b { color: var(--ink); font-size: 15px; }
+.m .kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+.m .kv span { color: var(--mut); }
+.m .kv b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* таблица */
+.m table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.m th { text-align: left; font-size: 12px; font-weight: 600; color: var(--mut); padding: 10px 12px; border-bottom: 1px solid var(--ln); white-space: nowrap; }
+.m td { padding: 11px 12px; border-bottom: 1px solid var(--ln); vertical-align: middle; }
+.m tr:last-child td { border-bottom: 0; }
+.m th.n, .m td.n { text-align: right; white-space: nowrap; }
+.m td .sub { display: block; font-size: 12px; color: var(--mut); }
+.m td b { font-weight: 600; }
+.m tr.sel td { background: #eef4f9; }
+.m .barc { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.m .barc .bar { flex: 1 1 auto; }
+.m .barc em { font-style: normal; font-weight: 600; width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* нижняя панель телефона */
+.m .bnav { height: 65px; flex: 0 0 auto; background: var(--card); border-top: 1px solid var(--ln); display: flex; }
+.m .bnav span { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--mut); position: relative; }
+.m .bnav span i { width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 6px; display: block; opacity: 0.85; }
+.m .bnav span.on { color: var(--g); }
+.m .bnav span.on::after { content: ''; position: absolute; bottom: 6px; width: 18px; height: 2px; border-radius: 1px; background: var(--gold); }
+.m .bnav .cnt { position: absolute; top: 6px; left: calc(50% + 4px); }
+.m .bnav .dots { border: 0 !important; display: grid !important; place-items: center; font-size: 18px; line-height: 1; letter-spacing: 1px; font-style: normal; }
+
+/* узкая панель модулей (планшет, ПК) */
+.m .rail { width: 88px; flex: 0 0 auto; background: var(--card); border-right: 1px solid var(--ln); display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 12px 6px; }
+.m .rail span { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px; border-radius: 12px; font-size: 10px; font-weight: 600; color: var(--mut); text-align: center; line-height: 1.15; }
+.m .rail span i { width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 6px; display: block; opacity: 0.8; }
+.m .rail span.on { background: rgba(28, 43, 57, 0.06); color: var(--g); }
+.m .rail .sp { flex: 1 1 auto; }
+.m .nav2 { width: 220px; flex: 0 0 auto; background: var(--card); border-right: 1px solid var(--ln); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; }
+.m .nav2 .lb { font-size: 12px; font-weight: 600; color: var(--mut); padding: 0 10px 8px; }
+.m .nav2 span { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #3c4650; }
+.m .nav2 span i { width: 18px; height: 18px; border: 1.8px solid currentColor; border-radius: 5px; opacity: 0.7; }
+.m .nav2 span.on { background: rgba(28, 43, 57, 0.07); color: var(--g); font-weight: 600; }
+.m .nav2 span .cnt { margin-left: auto; }
+
+/* факт */
+.m .loc { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.m .loc .r1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.m .loc .r1 b { font-size: 16px; font-weight: 600; }
+.m .loc .r1 .lk { color: var(--info); font-weight: 600; font-size: 13px; }
+.m .loc .r2 { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--mut); }
+.m .loc .r2 .bar { flex: 1 1 auto; }
+.m .chips { display: flex; gap: 8px; flex-wrap: nowrap; overflow: hidden; }
+.m .chips span { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ln); background: var(--card); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; white-space: nowrap; color: #3c4650; }
+.m .chips span.on { background: var(--g); color: #fff; border-color: var(--g); }
+.m .chips span em { font-style: normal; color: inherit; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.m .rows .rw { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .rows .rw:first-child { border-top: 0; }
+.m .rows .rw .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.m .rows .rw .t b { font-weight: 600; font-size: 14.5px; }
+.m .rows .rw .t .ln { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--mut); }
+.m .rows .rw .t .ln .bar { flex: 1 1 auto; height: 6px; }
+.m .rows .rw .p { font-weight: 600; font-size: 15px; width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+.m .tree { width: 240px; flex: 0 0 auto; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--ln); background: var(--card); }
+.m .tree .b { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; font-weight: 600; font-size: 14px; }
+.m .tree .b em { margin-left: auto; font-style: normal; color: var(--mut); font-weight: 500; font-size: 12.5px; }
+.m .tree .f { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 26px; border-radius: 9px; font-size: 13.5px; color: #3c4650; }
+.m .tree .f.on { background: #eef4f9; color: var(--g); font-weight: 600; }
+.m .tree .f em { margin-left: auto; font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--mut); }
+.m .tree .f .d { width: 8px; height: 8px; border-radius: 50%; }
+.m .tree .tw { width: 8px; height: 8px; border-right: 2px solid #9aa3ab; border-bottom: 2px solid #9aa3ab; transform: rotate(45deg); margin: 0 2px; }
+.m .tree .tw.c { transform: rotate(-45deg); }
+
+/* лист снизу и панель справа */
+.m .dim { position: absolute; inset: 0; background: rgba(15, 22, 30, 0.42); }
+.m .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 18px 18px 0 0; padding: 10px 16px 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18); }
+.m .sheet .hdl { width: 40px; height: 4px; border-radius: 2px; background: #cfd4d9; align-self: center; }
+.m .sheet h4, .m .drawer h4 { margin: 0; font-size: 18px; font-weight: 600; }
+.m .sheet .sub, .m .drawer .sub { color: var(--mut); font-size: 13px; margin-top: 2px; }
+.m .fld { display: flex; flex-direction: column; gap: 6px; }
+.m .fld label { font-size: 13px; font-weight: 600; color: #3c4650; }
+.m .inp { height: 48px; border: 1.5px solid var(--ln); border-radius: 12px; padding: 0 14px; display: flex; align-items: center; font-size: 16px; background: #fff; }
+.m .inp.big { height: 56px; font-size: 22px; font-weight: 600; border-color: var(--g); }
+.m .inp.big small { margin-left: auto; font-size: 15px; font-weight: 500; color: var(--mut); }
+.m .inp.sel::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--mut); border-bottom: 2px solid var(--mut); transform: rotate(45deg) translateY(-3px); }
+.m .quick { display: flex; gap: 8px; }
+.m .quick span { height: 34px; padding: 0 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--ln); display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--g); }
+.m .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.m .btn.full { width: 100%; height: 50px; font-size: 16px; }
+.m .drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; background: var(--card); border-left: 1px solid var(--ln); box-shadow: -12px 0 30px rgba(0, 0, 0, 0.12); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.m .drawer .x { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--ln); display: grid; place-items: center; color: var(--mut); font-size: 18px; }
+.m .drawer .foot { margin-top: auto; display: flex; gap: 10px; }
+
+/* кс-2 */
+.m .ctx { display: flex; flex-direction: column; }
+.m .ctx .r { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--ln); font-size: 13.5px; }
+.m .ctx .r:first-child { border-top: 0; }
+.m .ctx .r > span:first-child { color: var(--mut); width: 64px; flex: 0 0 auto; }
+.m .ctx .r b { flex: 1 1 auto; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m .ctx.line { flex-direction: row; flex-wrap: wrap; gap: 6px 22px; padding: 12px 16px; font-size: 13.5px; }
+.m .ctx.line div span { color: var(--mut); }
+.m .ctx.line div b { font-weight: 600; }
+.m .ctx.line .lk { color: var(--info); font-weight: 600; }
+.m .acts .ac { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .acts .ac:first-child { border-top: 0; }
+.m .acts .ac .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .acts .ac .t b { font-weight: 600; font-size: 14.5px; }
+.m .acts .ac .t span { font-size: 12.5px; color: var(--mut); }
+.m .acts .ac .s { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.m .acts .ac .s b { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
+.m .toolbar { display: flex; align-items: center; gap: 10px; }
+.m .search { height: 40px; border: 1px solid var(--ln); border-radius: 10px; background: var(--card); display: flex; align-items: center; padding: 0 12px; color: var(--mut); font-size: 14px; width: 240px; }
+.m .pin { position: absolute; left: 16px; right: 16px; bottom: 77px; }
+.m .pin .btn { width: 100%; height: 50px; font-size: 16px; box-shadow: 0 6px 18px rgba(28, 43, 57, 0.25); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>План/Факт: как сейчас и как предлагаю</h1>
+    <p class="lead">Те же данные стенда, слева — снимок нынешнего экрана, справа — макет. Выберите экран и размер. Макеты — картинки, не рабочие экраны: после вашего решения переделаю сами экраны.</p>
+  </header>
+
+  <div class="controls">
+    <div class="ctl"><span class="seg-label">Экран</span>
+      <div class="seg" id="seg-screen">
+        <button type="button" id="s-summary" data-v="summary">Сводка</button>
+        <button type="button" id="s-fact" data-v="fact">Факт</button>
+        <button type="button" id="s-ks2" data-v="ks2">КС-2</button>
+      </div>
+    </div>
+    <div class="ctl"><span class="seg-label">Размер</span>
+      <div class="seg" id="seg-size">
+        <button type="button" id="z-phone" data-v="phone">Телефон</button>
+        <button type="button" id="z-tablet" data-v="tablet">Планшет</button>
+        <button type="button" id="z-pc" data-v="pc">ПК</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="pair" id="pair" aria-live="polite"></section>
+  <section class="notes" id="notes"></section>
+  <p class="foot">Данные подставные (стенд), одинаковые слева и справа. Телефон — 375 × 667 (iPhone 7/SE), планшет — 1024 × 768, ПК — 1280 × 800. Меню телефона на макете — то, что уже сделано на этапе 1 (5 пунктов с подписями и «Ещё»). Качество не меняется.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var SIZES = { phone: [375, 667], tablet: [1024, 768], pc: [1280, 800] };
+  var SIZE_NAME = { phone: 'телефон 375 × 667', tablet: 'планшет 1024 × 768', pc: 'ПК 1280 × 800' };
+
+  /* ---------- общие куски макета ---------- */
+  function bnav(active, ks) {
+    var it = [['Сводка'], ['Входящие', 9], ['ВОР'], ['Факт', 8], ['Ещё', 1]];
+    return '<div class="bnav">' + it.map(function (x) {
+      var on = x[0] === active ? ' class="on"' : '';
+      var icon = x[0] === 'Ещё' ? '<i class="dots">···</i>' : '<i></i>';
+      return '<span' + on + '>' + icon + (x[1] ? '<em class="cnt">' + x[1] + '</em>' : '') + x[0] + '</span>';
+    }).join('') + '</div>';
+  }
+  function phoneTop(proj) {
+    return '<div class="top"><div class="burger"><i></i></div><div class="proj">' + proj + '</div><div class="grow"></div><div class="ava">ИК</div></div>';
+  }
+  function rail() {
+    return '<div class="rail"><span><i></i>Качество</span><span><i></i>Стройконтроль</span><span class="on"><i></i>План/Факт</span><div class="sp"></div><span><i></i>Настройки</span></div>';
+  }
+  function deskTop(crumb, proj) {
+    return '<div class="top"><div class="crumbs">План/Факт › <b>' + crumb + '</b></div><div class="proj">' + proj + '</div><div class="grow"></div><div class="ava">ИК</div></div>';
+  }
+  var TABS = [['Сводка'], ['Входящие', 9], ['ВОР'], ['Факт', 8], ['Смета'], ['КС-2', 1], ['Справочники']];
+  function tabletTabs(active) {
+    return '<div class="tabs">' + TABS.map(function (t) {
+      return '<span' + (t[0] === active ? ' class="on"' : '') + '>' + t[0] + (t[1] ? '<em class="cnt">' + t[1] + '</em>' : '') + '</span>';
+    }).join('') + '</div>';
+  }
+  function nav2(active) {
+    return '<div class="nav2"><div class="lb">План/Факт</div>' + TABS.map(function (t) {
+      return '<span' + (t[0] === active ? ' class="on"' : '') + '><i></i>' + t[0] + (t[1] ? '<em class="cnt">' + t[1] + '</em>' : '') + '</span>';
+    }).join('') + '</div>';
+  }
+  function bar(pct, plan, ok) {
+    return '<div class="bar"><i class="' + (ok ? 'ok' : '') + '" style="width:' + pct + '%"></i>' + (plan != null ? '<b style="left:calc(' + plan + '% - 1px)"></b>' : '') + '</div>';
+  }
+  function shellPhone(inner, active, proj, extra) {
+    return '<div class="m" style="flex-direction:column;width:375px;height:667px">' + phoneTop(proj) + '<div class="content">' + inner + '</div>' + bnav(active) + (extra || '') + '</div>';
+  }
+  function shellTablet(inner, active, proj, extra) {
+    return '<div class="m" style="width:1024px;height:768px">' + rail() + '<div class="main">' + deskTop(active, proj) + tabletTabs(active) + '<div class="content" style="padding:20px 24px">' + inner + '</div></div>' + (extra || '') + '</div>';
+  }
+  function shellPc(inner, active, proj, extra, noPad) {
+    return '<div class="m" style="width:1280px;height:800px">' + rail() + nav2(active) + '<div class="main">' + deskTop(active, proj) + (noPad ? inner : '<div class="content" style="padding:24px 28px;gap:18px">' + inner + '</div>') + '</div>' + (extra || '') + '</div>';
+  }
+
+  /* ---------- данные стенда ---------- */
+  var OBJ = [
+    { name: 'ЖК «Стенд-реестр»', st: ['warn', 'Риск'], pct: 38.3, plan: 44.5, lag: '9 дн. · 6,2 п.п.', done: '18 450 300 ₽', gap: '5 550 300 ₽', fc: '31.01.2027', pace: 'ускоряемся' },
+    { name: 'ЖК «Срок прошёл»', st: ['bad', 'Отставание'], pct: 73.5, plan: 100, lag: '21 дн. · срок прошёл 4 дн. назад', done: '15 980 000 ₽', gap: '0 ₽', fc: '—', pace: 'замедляемся' }];
+  var ATT = [
+    ['bad', 'ЖК «Срок прошёл»: срок окончания прошёл', 'Выполнено 73,5 % · темп замедляется', 'Открыть'],
+    ['warn', 'Сделано, но не выставлено в КС-2', 'ЖК «Стенд-реестр» · 5 550 300 ₽ · 12 строк', 'К КС-2'],
+    ['warn', 'Факт ждёт подтверждения РП', '8 записей на 2 объектах', 'Проверить']];
+
+  /* ---------- Сводка ---------- */
+  function attList() {
+    return '<div class="card att">' + ATT.map(function (a) {
+      return '<div class="it"><span class="dot ' + a[0] + '"></span><div class="tx"><b>' + a[1] + '</b><span>' + a[2] + '</span></div><span class="go">' + a[3] + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function attGrid() {
+    return '<div class="attg att">' + ATT.map(function (a) {
+      return '<div class="it"><span class="dot ' + a[0] + '" style="margin-top:5px"></span><div class="tx"><b>' + a[1] + '</b><span>' + a[2] + '</span><br><span class="go">' + a[3] + ' ›</span></div></div>';
+    }).join('') + '</div>';
+  }
+  function kpis(cls) {
+    return '<div class="kpis ' + (cls || '') + '">' +
+      '<div class="kpi"><span>Сделано по договорам</span><b>34,43 млн ₽</b><small>49 % от 69,95 млн ₽</small></div>' +
+      '<div class="kpi"><span>Не выставлено в КС-2</span><b>5,55 млн ₽</b><small>1 объект</small></div>' +
+      '<div class="kpi"><span>Объекты с отставанием</span><b>2 из 2</b><small class="bad">1 — срок прошёл</small></div>' +
+      '<div class="kpi"><span>Ждёт подтверждения</span><b>8 записей</b><small>факт прорабов</small></div></div>';
+  }
+  function objCards() {
+    return OBJ.map(function (o) {
+      return '<div class="card obj"><div class="hd"><b>' + o.name + '</b><span class="pill ' + o.st[0] + '">' + o.st[1] + '</span></div>' +
+        '<div class="pct"><span>Готовность <b class="tnum">' + String(o.pct).replace('.', ',') + ' %</b></span><span>план на сегодня ' + String(o.plan).replace('.', ',') + ' %</span></div>' + bar(o.pct, o.plan) +
+        '<div class="kv"><span>Отставание</span><b>' + o.lag + '</b><span>Сделано</span><b>' + o.done + '</b><span>Не выставлено</span><b>' + o.gap + '</b><span>Прогноз окончания</span><b>' + o.fc + '</b></div></div>';
+    }).join('');
+  }
+  function objTable() {
+    return '<div class="card"><table><thead><tr><th>Объект</th><th>Статус</th><th>Готовность и план на сегодня</th><th class="n">Отставание</th><th class="n">Сделано</th><th class="n">Не выставлено</th><th class="n">Прогноз</th></tr></thead><tbody>' +
+      OBJ.map(function (o) {
+        return '<tr><td><b>' + o.name + '</b><span class="sub">темп ' + o.pace + '</span></td><td><span class="pill ' + o.st[0] + '">' + o.st[1] + '</span></td>' +
+          '<td><div class="barc">' + bar(o.pct, o.plan) + '<em>' + String(o.pct).replace('.', ',') + ' %</em></div></td>' +
+          '<td class="n">' + o.lag.split(' · ')[0] + '</td><td class="n">' + o.done + '</td><td class="n">' + o.gap + '</td><td class="n">' + o.fc + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  var legend = '<div class="legend"><span><i class="lf"></i>сделано</span><span><i class="lp"></i>план на сегодня</span></div>';
+  function summaryPhone() {
+    return shellPhone('<div class="ph"><div><h3>Сводка</h3><p>2 объекта · на 27.10.2026</p></div></div>' +
+      '<p class="sec">Требует внимания</p>' + attList() + kpis() + '<p class="sec">Объекты</p>' + objCards(), 'Сводка', 'Все объекты <small>· 2</small>');
+  }
+  function summaryTablet() {
+    return shellTablet('<div class="ph"><div><h3>Сводка</h3><p>2 объекта · данные на 27.10.2026</p></div></div>' + attGrid() + kpis('four') +
+      '<div style="display:flex;justify-content:space-between;align-items:center"><p class="sec">Объекты</p>' + legend + '</div>' + objTable(), 'Сводка', 'Все объекты <small>· 2</small>');
+  }
+  function summaryPc() {
+    return shellPc('<div class="ph"><div><h3>Сводка</h3><p>2 объекта · данные на 27.10.2026</p></div><span class="btn">Выгрузить в Excel</span></div>' + attGrid() + kpis('four') +
+      '<div style="display:flex;justify-content:space-between;align-items:center"><p class="sec">Объекты</p>' + legend + '</div>' + objTable(), 'Сводка', 'Все объекты <small>· 2</small>');
+  }
+
+  /* ---------- Факт ---------- */
+  var WORKS = [['Штукатурка стен', 50, 100, 'м²'], ['Окраска стен', 35, 100, 'м²'], ['Стяжка пола', 2, 4, 'шт.'], ['Двери входные', 35, 100, 'м²'], ['Электромонтаж', 50, 100, 'м²'],
+    ['Плитка санузлов', 1.4, 4, 'шт.'], ['Грунтовка', 50, 100, 'м²'], ['Шпаклёвка', 35, 100, 'м²'], ['Ламинат', 2, 4, 'шт.'], ['Потолки', 35, 100, 'м²'], ['Окна', 50, 100, 'м²']];
+  var nf = function (v) { return String(v).replace('.', ','); };
+  function factTabs(cls) {
+    return '<div class="tabs ' + (cls || '') + '"><span class="on">Ввод</span><span>Шахматка</span><span>Ждёт РП<em class="cnt mut">8</em></span><span>Журнал</span></div>';
+  }
+  function locCard(menu) {
+    return '<div class="card loc"><div class="r1"><b>Корпус 1 › 3 этаж</b><span class="lk">' + (menu ? 'Сменить · ⋯' : 'Сменить') + '</span></div>' +
+      '<div class="r2"><span>Выполнено <b style="color:#161616">42 %</b> · 20 работ</span>' + bar(42, null) + '</div></div>';
+  }
+  function chips() {
+    return '<div class="chips"><span class="on">Все <em>20</em></span><span>В работе <em>20</em></span><span>Готово <em>0</em></span><span>Не начато <em>0</em></span></div>';
+  }
+  function rows(n) {
+    return '<div class="card rows">' + WORKS.slice(0, n).map(function (w) {
+      var p = Math.round(w[1] / w[2] * 100);
+      return '<div class="rw"><div class="t"><b>' + w[0] + '</b><div class="ln"><span class="tnum">' + nf(w[1]) + ' из ' + w[2] + ' ' + w[3] + '</span>' + bar(p, null) + '</div></div><span class="p">' + p + ' %</span><span class="chev"></span></div>';
+    }).join('') + '</div>';
+  }
+  function factPhoneList() {
+    return shellPhone('<div class="ph"><h3>Факт</h3></div>' + factTabs('in') + locCard(true) + chips() + rows(7), 'Факт', 'ЖК «Стенд-реестр»');
+  }
+  function factPhoneSheet() {
+    var sheet = '<div class="dim"></div><div class="sheet"><div class="hdl"></div><div><h4>Штукатурка стен</h4><div class="sub">Корпус 1 · 3 этаж · сделано 50 из 100 м², остаток 50</div></div>' +
+      '<div class="fld"><label>Сделано сегодня, м²</label><div class="inp big">25<small>м²</small></div><div class="quick"><span>Весь остаток · 50</span><span>+10</span><span>+25</span></div></div>' +
+      '<div class="two"><div class="fld"><label>Дата</label><div class="inp sel">Сегодня, 27.10</div></div><div class="fld"><label>Бригада</label><div class="inp sel">Иванова</div></div></div>' +
+      '<div class="fld"><label>Фото и примечание</label><div class="inp" style="color:#6f6f6f">Необязательно — добавить</div></div>' +
+      '<span class="btn pri full">Сохранить факт</span></div>';
+    return shellPhone('<div class="ph"><h3>Факт</h3></div>' + factTabs('in') + locCard(true) + chips() + rows(7), 'Факт', 'ЖК «Стенд-реестр»', sheet);
+  }
+  function factTable(withBtn, selFirst) {
+    return '<div class="card"><table><thead><tr><th>Работа</th><th class="n">План</th><th class="n">Сделано</th><th>Готовность</th><th class="n">Остаток</th>' + (withBtn ? '<th></th>' : '') + '</tr></thead><tbody>' +
+      WORKS.slice(0, withBtn ? 10 : 9).map(function (w, i) {
+        var p = Math.round(w[1] / w[2] * 100);
+        return '<tr' + (selFirst && i === 0 ? ' class="sel"' : '') + '><td><b>' + w[0] + '</b></td><td class="n">' + w[2] + ' ' + w[3] + '</td><td class="n">' + nf(w[1]) + '</td><td><div class="barc">' + bar(p, null) + '<em>' + p + ' %</em></div></td><td class="n">' + nf(Math.round((w[2] - w[1]) * 10) / 10) + '</td>' +
+          (withBtn ? '<td class="n"><span class="btn sm">Внести</span></td>' : '') + '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  function factTablet() {
+    return shellTablet(factTabs('in') + '<div style="display:flex;gap:14px;align-items:stretch"><div style="flex:1">' + locCard(false) + '</div><span class="btn" style="height:auto">Закрыть этаж целиком</span></div>' + factTable(true), 'Факт', 'ЖК «Стенд-реестр»');
+  }
+  function tree() {
+    var fl = [['1 этаж', '100 %', '#24a148'], ['2 этаж', '100 %', '#24a148'], ['3 этаж', '42 %', '#2a6f9e', 1], ['4 этаж', '42 %', '#2a6f9e'], ['5 этаж', '42 %', '#2a6f9e'], ['6 этаж', '2 %', '#2a6f9e'], ['7 этаж', 'ждёт РП', '#c49a5f'], ['8 этаж', '0 %', '#c5cbd1'], ['9 этаж', '0 %', '#c5cbd1'], ['10 этаж', '0 %', '#c5cbd1']];
+    return '<div class="tree"><div class="b"><span class="tw"></span>Корпус 1<em>47 %</em></div>' + fl.map(function (f) {
+      return '<div class="f' + (f[3] ? ' on' : '') + '"><span class="d" style="background:' + f[2] + '"></span>' + f[0] + '<em>' + f[1] + '</em></div>';
+    }).join('') + '<div class="b"><span class="tw c"></span>Корпус 2<em>0 %</em></div><div class="b"><span class="tw c"></span>Корпус 3<em>0 %</em></div></div>';
+  }
+  function factPcBody(drawer) {
+    return '<div style="padding:0 28px;background:#fff;border-bottom:1px solid rgba(28,43,57,.12)">' + factTabs('in').replace('class="tabs in"', 'class="tabs in" style="border-bottom:0"') + '</div>' +
+      '<div style="display:flex;flex:1;min-height:0">' + tree() + '<div class="content" style="padding:20px 24px;gap:14px">' +
+      '<div class="ph"><div><h3 style="font-size:20px">Корпус 1 · 3 этаж</h3><p>Выполнено 42 % · 20 работ · ждут подтверждения 0</p></div><span class="btn">Закрыть этаж целиком</span></div>' + factTable(!drawer, drawer) + '</div></div>';
+  }
+  function factPcList() { return shellPc(factPcBody(false), 'Факт', 'ЖК «Стенд-реестр»', '', true); }
+  function factPcDrawer() {
+    var dr = '<div class="drawer"><span class="x">×</span><div><h4>Штукатурка стен</h4><div class="sub">Корпус 1 · 3 этаж · сделано 50 из 100 м², остаток 50</div></div>' +
+      '<div class="fld"><label>Сделано, м²</label><div class="inp big">25<small>м²</small></div><div class="quick"><span>Весь остаток · 50</span></div></div>' +
+      '<div class="two"><div class="fld"><label>Дата</label><div class="inp sel">27.10.2026</div></div><div class="fld"><label>Бригада</label><div class="inp sel">Иванова</div></div></div>' +
+      '<div class="fld"><label>Примечание</label><div class="inp" style="color:#6f6f6f">Необязательно</div></div>' +
+      '<div class="fld"><label>Последние записи</label><div style="font-size:13px;color:#6f6f6f;line-height:1.6">20.10 · 30 м² · Бригада Иванова · принято<br>13.10 · 20 м² · Бригада Петрова · принято</div></div>' +
+      '<div class="foot"><span class="btn pri" style="flex:1;height:46px">Сохранить факт</span><span class="btn" style="height:46px">Отмена</span></div></div>';
+    return shellPc(factPcBody(true), 'Факт', 'ЖК «Стенд-реестр»', dr, true);
+  }
+
+  /* ---------- КС-2 ---------- */
+  var ACTS = [['№ 6', 'Октябрь 2026', 'акт от 31.10.2026', ['warn', 'Черновик'], '18 450 300,50', '—', 2],
+    ['№ 5', 'Сентябрь 2026', 'акт от 30.09.2026', ['ok', 'Выдан'], '21 300 000,00', 'ПТО · 03.10.2026', 2],
+    ['№ 4', 'Август 2026', 'ошибка в объёмах корпуса 2', ['grey', 'Аннулирован'], '9 000 000,00', '—', 2],
+    ['№ 3', 'Август 2026', 'акт от 31.08.2026', ['ok', 'Выдан'], '9 100 000,00', 'ПТО · 04.09.2026', 2],
+    ['№ 2', 'Июль 2026', 'акт от 31.07.2026', ['ok', 'Выдан'], '15 000 000,00', 'РП · 02.08.2026', 2],
+    ['№ 1', 'Декабрь 2025', 'акт от 31.12.2025', ['ok', 'Выдан'], '4 200 000,00', 'РП · 12.01.2026', 2]];
+  function ksKpis(cls) {
+    return '<div class="kpis ' + (cls || '') + '"><div class="kpi"><span>Выдано по актам</span><b>49,6 млн ₽</b><small>4 акта</small></div>' +
+      '<div class="kpi"><span>Сделано, не выставлено</span><b>5,55 млн ₽</b><small style="color:#2a6f9e;font-weight:600">Создать акт на остаток ›</small></div>' +
+      (cls ? '<div class="kpi"><span>Черновики</span><b>1</b><small>№ 6 · 18,45 млн ₽</small></div><div class="kpi"><span>Договор (КП, ред. 2)</span><b>125 млн ₽</b><small>выставлено 39,7 %</small></div>' : '') + '</div>';
+  }
+  function ksChips() {
+    return '<div class="chips"><span class="on">Все <em>6</em></span><span>Черновики <em>1</em></span><span>Выданы <em>4</em></span><span>Аннулированы <em>1</em></span></div>';
+  }
+  function ksPhone() {
+    var list = '<div class="card acts">' + ACTS.slice(0, 4).map(function (a) {
+      return '<div class="ac"><div class="t"><b>' + a[0] + ' · ' + a[1] + '</b><span>' + a[2] + '</span></div><div class="s"><b>' + a[4] + ' ₽</b><span class="pill ' + a[3][0] + '">' + a[3][1] + '</span></div></div>';
+    }).join('') + '</div>';
+    var ctx = '<div class="card ctx"><div class="r"><span>Цены</span><b>Смета «Стенд» · ред. 2 · 125 млн ₽</b><span class="chev"></span></div><div class="r"><span>Бланк</span><b style="font-weight:500">Унифицированная форма</b><span class="chev"></span></div></div>';
+    return shellPhone('<div class="ph"><h3>КС-2</h3></div>' + ctx + ksKpis() + ksChips() + list, 'Ещё', 'ЖК «Стенд-реестр»', '<div class="pin"><span class="btn pri">Новый акт</span></div>');
+  }
+  function ksTable(full) {
+    return '<div class="card"><table><thead><tr><th>Акт</th><th>Период</th><th>Статус</th><th class="n">Сумма, ₽</th><th>Выдал</th>' + (full ? '<th class="n">Редакций</th>' : '') + '</tr></thead><tbody>' +
+      ACTS.map(function (a) {
+        return '<tr><td><b>' + a[0] + '</b></td><td>' + a[1] + '<span class="sub">' + a[2] + '</span></td><td><span class="pill ' + a[3][0] + '">' + a[3][1] + '</span></td><td class="n"><b>' + a[4] + '</b></td><td>' + a[5] + '</td>' + (full ? '<td class="n">' + a[6] + '</td>' : '') + '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  var ksCtxLine = '<div class="card ctx line"><div><span>Цены акта: </span><b>Смета «Стенд», ред. 2 · 125 000 000 ₽</b> <span class="lk">изменить</span></div><div><span>Бланк: </span><b>унифицированная форма</b> <span class="lk">загрузить свой</span></div></div>';
+  var ksTool = '<div class="toolbar"><div class="search">Найти акт</div>' + ksChips() + '<div class="grow" style="flex:1"></div><span class="btn">Excel</span><span class="btn">Выбрать</span></div>';
+  function ksTablet() {
+    return shellTablet('<div class="ph"><div><h3>КС-2</h3><p>Акты о приёмке выполненных работ</p></div><span class="btn pri">Новый акт</span></div>' + ksCtxLine + ksKpis('four') + '<div class="toolbar">' + ksChips() + '<div style="flex:1"></div><span class="btn">Excel</span></div>' + ksTable(false), 'КС-2', 'ЖК «Стенд-реестр»');
+  }
+  function ksPc() {
+    return shellPc('<div class="ph"><div><h3>КС-2</h3><p>Акты о приёмке выполненных работ</p></div><span class="btn pri">Новый акт</span></div>' + ksCtxLine + ksKpis('four') + ksTool + ksTable(true), 'КС-2', 'ЖК «Стенд-реестр»');
+  }
+
+  /* ---------- экраны ---------- */
+  var SCREENS = {
+    summary: {
+      name: 'Сводка',
+      now: 'now/summary-',
+      make: { phone: [[summaryPhone, '']], tablet: [[summaryTablet, '']], pc: [[summaryPc, '']] },
+      notes: ['Сначала — что требует внимания, и у каждого пункта кнопка, куда идти («К КС-2», «Проверить»).',
+        'Итоги по всем объектам — четыре цифры: сделано, не выставлено, отстают, ждёт подтверждения.',
+        'Готовность — полоса с отметкой «план на сегодня»: отставание видно без чтения цифр.',
+        'Статус — цвет и слово; на телефоне объект — короткая карточка, на ПК — таблица.',
+        'Объект выбирается один раз в шапке и помнится для всех разделов; заголовки — обычными буквами.']
+    },
+    fact: {
+      name: 'Факт',
+      now: 'now/fact-',
+      make: { phone: [[factPhoneList, 'Список работ этажа'], [factPhoneSheet, 'Нажали на работу — ввод снизу']], tablet: [[factTablet, '']], pc: [[factPcList, 'Этажи слева, работы справа'], [factPcDrawer, 'Нажали «Внести» — панель справа']] },
+      notes: ['Работы — компактный список: на телефоне 7 строк на экране вместо двух больших карточек.',
+        'Нажали на работу — ввод снизу (телефон) или панель справа (ПК): крупное поле, «весь остаток» одной кнопкой, бригада и дата уже выбраны.',
+        'Вкладки «Ввод · Шахматка · Ждёт РП · Журнал» обычными буквами, «Журнал» теперь виден и на телефоне.',
+        'Фильтр «В работе / Готово / Не начато» — чтобы быстро найти недоделанное.',
+        '«Закрыть этаж целиком» — в меню этажа, а не главная кнопка экрана; на ПК слева — корпуса и этажи с процентами.']
+    },
+    ks2: {
+      name: 'КС-2',
+      now: 'now/ks2-',
+      make: { phone: [[ksPhone, '']], tablet: [[ksTablet, '']], pc: [[ksPc, '']] },
+      notes: ['Одна главная кнопка «Новый акт»: на телефоне — внизу под пальцем, на ПК — в шапке справа.',
+        'Цены и бланк — одна строка с «изменить», вместо двух больших блоков с выпадающим списком.',
+        'Итоги: сколько выдано, сколько сделано, но не выставлено (с кнопкой «Создать акт на остаток»), черновики.',
+        'Фильтр по статусу — кнопки «Черновики / Выданы / Аннулированы»; период — месяцем, а не двумя датами.',
+        'Галочки у строк — только после «Выбрать»; на телефоне акт — строка: номер, месяц, сумма, статус.']
+    }
+  };
+
+  var state = { screen: 'summary', size: 'phone' };
+  try { var saved = JSON.parse(localStorage.getItem('pf-compare') || 'null'); if (saved && SCREENS[saved.screen] && SIZES[saved.size]) state = saved; } catch (e) { /* без памяти */ }
+
+  function frameBox(html, w, h) {
+    return '<div class="shot" style="aspect-ratio:' + w + ' / ' + h + '"><div class="device" style="width:' + w + 'px;height:' + h + 'px">' + html + '</div></div>';
+  }
+  function fit() {
+    document.querySelectorAll('.shot .device').forEach(function (d) {
+      var box = d.parentNode, w = parseFloat(d.style.width);
+      d.style.transform = 'scale(' + (box.clientWidth / w) + ')';
+    });
+  }
+  function render() {
+    var s = SCREENS[state.screen], wh = SIZES[state.size];
+    var pair = document.getElementById('pair');
+    pair.className = 'pair ' + (state.size === 'phone' ? 'phone' : 'wide');
+    var nowCol = '<div class="col"><div class="col-head"><span class="tag now">Как сейчас</span><b>' + s.name + '</b><span style="color:var(--muted);font-size:13px">' + SIZE_NAME[state.size] + '</span></div><div class="frames">' +
+      '<div class="shot"><img src="' + s.now + state.size + '.jpg" alt="' + s.name + ' сейчас, ' + SIZE_NAME[state.size] + '" width="' + wh[0] + '" height="' + wh[1] + '"></div></div></div>';
+    var newCol = '<div class="col"><div class="col-head"><span class="tag new">Как предлагаю</span><b>' + s.name + '</b><span style="color:var(--muted);font-size:13px">макет</span></div><div class="frames">' +
+      s.make[state.size].map(function (f) { return frameBox(f[0](), wh[0], wh[1]) + (f[1] ? '<div class="frame-cap">' + f[1] + '</div>' : ''); }).join('') + '</div></div>';
+    pair.innerHTML = nowCol + newCol;
+    document.getElementById('notes').innerHTML = '<h2>Что меняется на экране «' + s.name + '»</h2><ul>' + s.notes.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ul>';
+    document.querySelectorAll('#seg-screen button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.screen)); });
+    document.querySelectorAll('#seg-size button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state.size)); });
+    fit();
+    try { localStorage.setItem('pf-compare', JSON.stringify(state)); } catch (e) { /* без памяти */ }
+  }
+  document.getElementById('seg-screen').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { state.screen = b.dataset.v; render(); } });
+  document.getElementById('seg-size').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { state.size = b.dataset.v; render(); } });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(document.getElementById('pair'));
+  window.addEventListener('resize', fit);
+  render();
+})();
+</script>
