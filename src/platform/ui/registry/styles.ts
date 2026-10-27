@@ -98,6 +98,7 @@ export const P2_REGISTRY_CSS = `
 .p2-reg--compact .p2-reg__group td{padding:4px 10px}
 .p2-reg--compact tbody:first-child .p2-reg__group,.p2-reg--compact tbody:first-child .p2-reg__row:first-child{border-top:0}
 .p2-reg--nocheck .p2-reg__row{padding-left:12px}
+.p2-reg:has(.p2-reg__quick) .p2-reg__shown{display:none}
 .p2-reg__table,.p2-reg__table tbody,.p2-reg__table tr,.p2-reg__table td{display:block;width:100%;box-sizing:border-box}
 .p2-reg__table thead{display:none}
 .p2-reg__row{position:relative;background:var(--card-bg);border:1px solid var(--card-border);border-radius:10px;margin-bottom:8px;padding:8px 8px 8px 44px}

@@ -126,6 +126,7 @@ test('выгрузка в Excel: видимые колонки, отфильтр
   assert.deepEqual(vals(2).slice(0, 6), ['Штукатурка стен', 'Корпус 1 · 5 этаж', '2026-10-23', 120, 'Ждёт РП', 'Петров']);
   assert.equal(wb.worksheets[0].rowCount, 2);
   click(box.querySelector('[data-testid="p2-reg-reset"]')); await tick();
+  click(box.querySelector('[data-testid="p2-reg-pick"]'));   // P2-0046: галочки — после «Выбрать»
   click(box.querySelector('tr[data-row="j1"] [data-testid="p2-reg-select"]'));
   click(box.querySelector('tr[data-row="j3"] [data-testid="p2-reg-select"]'));
   click(box.querySelector('[data-testid="fj-export-selected"]')); await tick();

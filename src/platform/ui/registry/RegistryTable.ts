@@ -234,7 +234,7 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
     ? h('div', { className: 'p2-reg__quick', role: 'group', 'aria-label': qd.label, 'data-testid': 'p2-reg-quick' },
         h('button', { type: 'button', className: 'p2-reg__q' + (!qVal.length ? ' p2-reg__q--on' : ''), 'aria-pressed': !qVal.length, 'data-value': '',
           onClick: () => { const f = { ...state.f }; delete f[qd.id]; onState({ ...state, f }); } }, p.quick!.all || 'Все', h('span', { className: 'p2-reg__qn' }, String(rows.length))),
-        filterOptions(rows, qd).map((o) => {
+        filterOptions(rows, qd).filter((o) => o.count > 0 || qVal.includes(o.value)).map((o) => {
           const on = qVal.length === 1 && qVal[0] === o.value;
           return h('button', { key: o.value, type: 'button', className: 'p2-reg__q' + (on ? ' p2-reg__q--on' : ''), 'aria-pressed': on, 'data-value': o.value, 'data-testid': 'p2-reg-q',
             onClick: () => onState({ ...state, f: { ...state.f, [qd.id]: on ? [] : [o.value] } }) }, o.label, h('span', { className: 'p2-reg__qn' }, String(o.count)));

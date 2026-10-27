@@ -54,11 +54,11 @@ export const JOURNAL_COLUMNS: RegistryColumn<JournalRow>[] = [
   { id: 'unit', label: 'ЕИ', value: (r) => r.unit, hidden: true },
   { id: 'status', label: 'Статус', value: (r) => FACT_LABEL[r.status].label, render: (r) => h(StatusBadge, { status: FACT_LABEL[r.status].tone, label: FACT_LABEL[r.status].label, testId: 'fj-status' }) },
   { id: 'brigade', label: 'Бригада', value: (r) => r.brigade },
-  { id: 'author', label: 'Внёс', value: (r) => r.author },
+  { id: 'author', label: 'Внёс', value: (r) => r.author, hidden: true },
   { id: 'workers', label: 'Люди', value: (r) => r.workers, align: 'right', hidden: true },
   { id: 'manHours', label: 'Чел.-ч', value: (r) => r.manHours, align: 'right', hidden: true, numFmt: QTY },
   { id: 'decision', label: 'Решение РП', value: (r) => (r.decidedBy ? `${r.decidedBy}${r.decision ? ': ' + r.decision : ''}` : null) },
-  { id: 'note', label: 'Пометка', value: (r) => r.note || null },
+  { id: 'note', label: 'Пометка', value: (r) => r.note || null, hidden: true },
   { id: 'correction', label: 'Исправление', value: (r) => r.correction || null, hidden: true },
   { id: 'created', label: 'Внесено', value: (r) => r.createdAt.slice(0, 16).replace('T', ' '), render: (r) => fmtWhen(r.createdAt), hidden: true },
   { id: 'corp', label: 'Корпус', value: (r) => r.corp, hidden: true },
@@ -118,6 +118,7 @@ export function FactJournal(props: FactJournalProps): ReactElement {
   const [state, setState] = useState<RegistryState>(() => queryToState(queryOf(window.location.hash)));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState('');
+  const [custom, setCustom] = useState(false);
 
   async function load(f: string, t: string): Promise<void> {
     if (f && t && f > t) { setError('Начало периода позже конца'); return; }
@@ -135,22 +136,35 @@ export function FactJournal(props: FactJournalProps): ReactElement {
   const visibleCols = JOURNAL_COLUMNS.filter((c) => c.fixed || (state.cols ? state.cols.includes(c.id) : !c.hidden));
   const idx = openId ? ordered.findIndex((r) => r.id === openId) : -1;
   const open = idx >= 0 ? ordered[idx] : null;
-  const preset = (days: number): void => { const f = shiftDate(today, -(days - 1)); setFrom(f); setTo(today); void load(f, today); };
+  const preset = (days: number): void => { const f = shiftDate(today, -(days - 1)); setFrom(f); setTo(today); setCustom(false); void load(f, today); };
+  // P2-0046: период — кнопками («7 дней», «30 дней», «Этот месяц»); свои даты — по «Свой период»
+  const monthStart = today.slice(0, 8) + '01';
+  const which = custom ? 'custom' : to !== today ? 'custom' : from === shiftDate(today, -6) ? '7' : from === shiftDate(today, -(JOURNAL_DAYS - 1)) ? '30' : from === monthStart ? 'month' : 'custom';
+  const pchip = (id: string, label: string, onClick: () => void, testId: string): ReactElement =>
+    h('button', { key: id, type: 'button', className: 'p2-reg__q' + (which === id ? ' p2-reg__q--on' : ''), 'aria-pressed': which === id, 'data-testid': testId, onClick }, label);
+  const compact = (r: JournalRow): ReactElement => h('span', { className: 'fj-c' },
+    h('span', { className: 'fj-c-name' }, h('b', null, r.work),
+      h('span', { className: 'fp-sub' }, `${ruDate(r.date)} · ${r.place} · ${r.brigade}`),
+      r.decision && r.status === 'rejected' ? h('span', { className: 'fp-sub' }, `«${r.decision}»`) : null),
+    h('span', { className: 'fj-c-q' }, h('b', null, `${fmtQty(r.qty)} ${r.unit}`), h(StatusBadge, { status: FACT_LABEL[r.status].tone, label: FACT_LABEL[r.status].label })));
 
   return h('div', { className: 'pj-tab vr-tab fp-registry', 'data-testid': 'fj-journal' },
     h('div', { className: 'fj-period', role: 'group', 'aria-label': 'Период по дате работ', 'data-testid': 'fj-period' },
-      // P2-0041: период применяется сразу (кнопки «Показать» нет)
-      h('label', { className: 'pf-field' }, 'С', h('input', { type: 'date', className: 'pj-input', value: from, max: to || undefined, 'data-testid': 'fj-from', onChange: (e) => { const v = (e.target as HTMLInputElement).value; setFrom(v); void load(v, to); } })),
-      h('label', { className: 'pf-field' }, 'По', h('input', { type: 'date', className: 'pj-input', value: to, min: from || undefined, 'data-testid': 'fj-to', onChange: (e) => { const v = (e.target as HTMLInputElement).value; setTo(v); void load(from, v); } })),
-      h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'fj-7', onClick: () => preset(7) }, '7 дней'),
-      h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'fj-30', onClick: () => preset(JOURNAL_DAYS) }, '30 дней')),
+      h('div', { className: 'p2-reg__quick' },
+        pchip('7', '7 дней', () => preset(7), 'fj-7'), pchip('30', '30 дней', () => preset(JOURNAL_DAYS), 'fj-30'),
+        pchip('month', 'Этот месяц', () => { setFrom(monthStart); setTo(today); setCustom(false); void load(monthStart, today); }, 'fj-month'),
+        pchip('custom', 'Свой период', () => setCustom(true), 'fj-custom')),
+      // P2-0041: период применяется сразу (кнопки «Показать» нет); поля — при «Свой период»
+      h('div', { className: 'fj-dates' + (which === 'custom' ? '' : ' fj-dates--off') },
+        h('label', { className: 'pf-field' }, 'С', h('input', { type: 'date', className: 'pj-input', value: from, max: to || undefined, 'data-testid': 'fj-from', onChange: (e) => { const v = (e.target as HTMLInputElement).value; setFrom(v); setCustom(true); void load(v, to); } })),
+        h('label', { className: 'pf-field' }, 'По', h('input', { type: 'date', className: 'pj-input', value: to, min: from || undefined, 'data-testid': 'fj-to', onChange: (e) => { const v = (e.target as HTMLInputElement).value; setTo(v); setCustom(true); void load(from, v); } })))),
     error ? h('div', { className: 'pf-error', role: 'alert', 'data-testid': 'fj-error' }, error) : null,
     rows && rows.length >= JOURNAL_LIMIT ? h('div', { className: 'pj-notice', role: 'status', 'data-testid': 'fj-limit' }, `Показаны последние ${JOURNAL_LIMIT.toLocaleString('ru-RU')} записей периода — сузьте период, чтобы увидеть остальные.`) : null,
     rows === null ? h('div', { className: 'pf-muted' }, 'Загрузка журнала…') : h(RegistryTable<JournalRow>, {
       tools: h(RegistryExport, { testId: 'fj-export-all', count: ordered.length, onClick: () => { void exportRows(visibleCols, ordered, save); } }),
       testId: 'fj-table', rows, rowKey: (r) => r.id, columns: JOURNAL_COLUMNS, filters: JOURNAL_FILTERS, state, onState, groupBy: GROUP,
       toneOf: (r) => FACT_LABEL[r.status].tone, toneLabel: TONE_LABEL,
-      selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId,
+      selected, onSelect: setSelected, onOpen: (r) => setOpenId(r.id), openKey: openId, quick: { filter: 'status' }, compact, selectMode: true,
       actions: (sel) => h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'fj-export-selected', onClick: () => { void exportRows(visibleCols, sel, save); } }, 'Выгрузить в Excel'),
       empty: 'За выбранный период записей факта нет.',
       views: { registry: 'fact-journal', company: props.companyId, user: props.user }, linkBase: JOURNAL_LINK,
@@ -160,8 +174,13 @@ export function FactJournal(props: FactJournalProps): ReactElement {
 }
 
 export const FACT_JOURNAL_CSS = `
-.fj-period{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
+.fj-period{display:flex;flex-direction:column;gap:8px}
+.fj-dates{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
+.fj-dates--off{display:none}
 .fj-period .pf-field{min-width:150px}
-.fj-period .pf-btn{min-height:40px}
-@media (max-width:760px){.fj-period .pf-field{flex:1 1 calc(50% - 8px);min-width:0}.fj-period .pf-btn{flex:1 1 auto}}
+.fj-c{display:flex;justify-content:space-between;gap:10px}
+.fj-c-name{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fj-c-name b{font-size:14.5px;font-weight:600}
+.fj-c-q{display:flex;flex-direction:column;align-items:flex-end;gap:4px;white-space:nowrap}
+@media (max-width:760px){.fj-period .pf-field{flex:1 1 calc(50% - 8px);min-width:0}}
 `;
