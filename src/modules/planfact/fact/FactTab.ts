@@ -20,6 +20,7 @@ import { FloorClose } from './FloorClose.ts';
 import { ChessboardTab } from './ChessboardTab.ts';
 import { FactWindow, FACT_WINDOW_CSS } from './FactWindow.ts';
 import { initialProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
+import { emptyText, useMyArea } from '../area.ts';
 import { isTopPlace } from '../../../services/locations/types.ts';
 
 const PAGE = 100;
@@ -72,6 +73,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   const canCreate = myPerms.includes(FACT_CREATE) && !isArchived(project);   // архивный объект — только просмотр
   const canApprove = myPerms.includes(FACT_APPROVE);
   const place = path.length ? path[path.length - 1] : null;
+  const area = useMyArea(projectId);
 
   useEffect(() => {
     void (async () => {
@@ -156,7 +158,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
 
   /** P2-0022: «Внести факт» открывает то же окно, что в «Шахматке» (на телефоне — шторка). */
   function entryWindow(pos: FactPosition): ReactElement {
-    return h(FactWindow, { key: pos.position_id, api, pos, place: pos.location_path, brigades, lastBrigade, onBrigade: rememberBrigade, me, canCreate, canApprove,
+    return h(FactWindow, { key: pos.position_id, api, pos, place: pos.location_path, brigades, lastBrigade, onBrigade: rememberBrigade, me, canCreate, canApprove, projectId,
       onClose: () => setOpenId(''), onSaved: (msg) => { setOpenId(''); setNotice(msg); void refresh(); }, onChanged: () => { void refresh(); } });
   }
 
@@ -211,14 +213,14 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
         notice ? h('div', { className: 'pj-notice', role: 'status', 'data-testid': 'ft-notice' }, notice) : null,
         error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
         closing && place
-          ? h(FloorClose, { api, projectId, place: { id: place.id, name: place.name }, positions: rows, brigades, lastBrigade, onBrigade: rememberBrigade, onClose: () => setClosing(false),
+          ? h(FloorClose, { api, projectId, place: { id: place.id, name: place.name }, positions: rows, brigades, lastBrigade, onBrigade: rememberBrigade, me, onClose: () => setClosing(false),
               onDone: (msg) => { setClosing(false); setNotice(msg); void refresh(); } })
           : null,
         historyId && rows.find((p) => p.position_id === historyId)
           ? h(FactHistory, { api, pos: rows.find((p) => p.position_id === historyId)!, me, canApprove, canCreate, onClose: () => setHistoryId(''), onChanged: () => { void refresh(); } })
           : null,
         place && positions === null ? h('div', { className: 'pf-muted' }, 'Загрузка…') : null,
-        place && positions && !rows.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'ft-empty' }, 'Для этого места нет работ: позиции появляются после подтверждения ВОР.') : null,
+        place && positions && !rows.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'ft-empty' }, emptyText(area, 'Для этого места нет работ: позиции появляются после подтверждения ВОР.')) : null,
         rows.length > 1
           ? h('div', { className: 'p2-reg__quick', role: 'group', 'aria-label': 'Состояние работ', 'data-testid': 'ft-chips' },
               chip('', 'Все', rows.length), chip('work', 'В работе', counts.work), chip('pending', 'Ждёт РП', counts.pending), chip('rejected', 'Отклонено', counts.rejected),

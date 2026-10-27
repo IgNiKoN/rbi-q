@@ -8,6 +8,7 @@
 import { createElement as h, useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { Brigade, FactApi, FactPosition } from './fact.service.ts';
+import { useOnBehalf } from '../area.ts';
 import { fmtQty, parseQty, remainder, splitFloor, sumByUnit, todayMoscow } from './fact.ts';
 
 /** Предел строк одной пачки на сервере (pf_fact_add_batch). */
@@ -17,6 +18,8 @@ export function FloorClose(props: {
   api: FactApi; projectId: string; place: { id: string; name: string }; positions: FactPosition[]; brigades: Brigade[]; lastBrigade: string;
   onBrigade: (id: string) => void; onClose: () => void; onDone: (msg: string, partial?: boolean) => void;
   title?: string; requireApproval?: boolean;
+  /** P2-0048: почта вошедшего — для «За кого» (РП, места с ответственным за факт); «через РП» — без «за кого». */
+  me?: string;
 }): ReactElement {
   const { api, projectId, place, positions, brigades, lastBrigade, onBrigade, onClose, onDone, requireApproval } = props;
   const [mode, setMode] = useState<'remainder' | 'percent'>('remainder');
@@ -47,6 +50,7 @@ export function FloorClose(props: {
     return { p, raw, qty, on: !off[p.position_id], rem: remainder(p.plan_qty, p.fact_qty) };
   });
   const send = rows.filter((r) => r.on && r.qty !== null && r.qty > 0);
+  const behalf = useOnBehalf(projectId, send.map((r) => r.p.location_id), props.me || '', requireApproval);
   const totals = sumByUnit(send.map((r) => ({ unit: r.p.unit_code, qty: r.qty as number })));
 
   async function submit(): Promise<void> {
@@ -58,12 +62,15 @@ export function FloorClose(props: {
     if (!send.length) { setError('Нет строк для отправки: все объёмы нулевые или сняты'); return; }
     const w = workers.trim() === '' ? null : Number(workers);
     if (w !== null && (!Number.isInteger(w) || w < 0)) { setError('Людей — целое число'); return; }
+    const bh = behalf.check();
+    if (bh) { setError(bh); return; }
     setBusy(true); setError('');
     onBrigade(brigade);
     const items = send.map((x) => ({ position_id: x.p.position_id, qty: x.qty as number }));
     let acc = 0, pen = 0;
     for (let i = 0; i < items.length; i += BATCH_MAX) {
-      const r = await api.addBatch({ projectId, brigadeId: brigade, date, workers: w, note: note.trim(), items: items.slice(i, i + BATCH_MAX), ...(requireApproval ? { requireApproval: true } : {}) });
+      const r = await api.addBatch({ projectId, brigadeId: brigade, date, workers: w, note: note.trim(), items: items.slice(i, i + BATCH_MAX), ...(requireApproval ? { requireApproval: true } : {}),
+        ...(behalf.value ? { onBehalf: behalf.value } : {}) });
       if (!r.ok) {
         setBusy(false);
         setError(i ? `Записано строк: ${acc + pen} из ${items.length}; остальные не записаны: ${r.message}` : r.message);
@@ -93,7 +100,8 @@ export function FloorClose(props: {
           h('option', { value: '' }, '— выберите —'), brigades.map((b) => h('option', { key: b.id, value: b.id }, b.name)))),
       h('label', { className: 'pf-field' }, 'Дата', h('input', { type: 'date', className: 'pj-input', value: date, max: todayMoscow(), 'data-testid': 'ft-close-date', onChange: (e) => setDate((e.target as HTMLInputElement).value) })),
       h('label', { className: 'pf-field' }, 'Людей', h('input', { type: 'number', min: 0, className: 'pj-input pf-num', value: workers, onChange: (e) => setWorkers((e.target as HTMLInputElement).value) })),
-      h('label', { className: 'pf-field pj-grow' }, 'Примечание', h('input', { type: 'text', className: 'pj-input', maxLength: 300, value: note, onChange: (e) => setNote((e.target as HTMLInputElement).value) }))),
+      h('label', { className: 'pf-field pj-grow' }, 'Примечание', h('input', { type: 'text', className: 'pj-input', maxLength: 300, value: note, onChange: (e) => setNote((e.target as HTMLInputElement).value) })),
+      behalf.field),
     h('div', { className: 'ft-close-list', 'data-testid': 'ft-close-rows' },
       rows.map((r) => h('div', { key: r.p.position_id, className: 'ft-close-row' + (r.on ? '' : ' ft-close-row--off'), 'data-position-id': r.p.position_id },
         h('label', { className: 'pr-check ft-close-name' },

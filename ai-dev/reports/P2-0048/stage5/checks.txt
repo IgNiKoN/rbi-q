@@ -1,0 +1,123 @@
+P2-0048 этап 5 — План/Факт по области. Проверки 27.10.2026.
+
+Команды:
+  npm test → tests 746, pass 746, fail 0 (новые: src/modules/planfact/__tests__/area.test.ts — 7; company-home.test.ts — +1)
+  npx tsc --noEmit -p tsconfig.json → 0 строк вывода (ошибок нет)
+  npm run build:planfact → js/dist/planfact/planfact.js 1 624,50 kB (+ .map), built
+  npm run build:company → js/dist/company/company.js 1 246,73 kB (+ .map), built
+  SW_VERSION 18.96.0 → 18.97.0
+  Сервер (047) не менялся; test:server не запускался (боевой сервер не трогаем, серверных изменений нет).
+
+Стенд: localhost:8870 (scratchpad/stand48 + pf5.js, копия — stand-pf5.js здесь): ЖК Альфа, Корпус 1 → Секции 1–3 → этажи 1–5 (по 4 позиции ВОР), Паркинг.
+  ?as=ivanov@stand.invalid — прораб, секции 1–2, ответственный за факт; ?as=petrov@stand.invalid — прораб, секция 3, не ответственный;
+  ?as=rp@stand.invalid — РП, весь проект. Списки — только область; отказы — текстом 047. Запросов к api.rbi-q.ru нет (guard.js + stand.js).
+  headless Chrome через DevTools-протокол (cdp5.mjs).
+
+Сценарий владельца (1280, светлая; снимки s1…s10):
+s1-ivanov-fact: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act={"sections":"Корпус 1 | Секция 1 | Секция 2","rows":4,"places":"pa-s1","behalfField":false,"notice":"Записано: 10 м²","directS3":"400 Это место вне вашей области в проекте — факт не принят","histS3":"400 Нет права видеть факт"}
+s2-ivanov-vor-positions: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_vor_list_profiles":1}
+   act={"rows":41,"text":"ivanov@stand.invalid · Прораб\nВОР\nЖК Альфа\nВаша область: Корпус 1 · Секция 1, Секция 2\nвы отвечаете за факт\nЗагрузки\nПозиции\n40\nВсе\n40\nВ работе\n2\nЖдёт РП\n1\nВыполнено\n2\nНе начато\n35\nФильтр\nПоказано: 40 из 40\nExcel (40)\nВыбрать\n⋯\nРабота\tМесто\tПлан\tФакт\tГотовность\tОстаток\tСтатус\n\n▾\nКорпус 1\nВсего: 40\n2\n1\n2\n35\n\nШтукатурка стен\tКорпус 1 · Секция 1 · 1 этаж\t120 м²\t120\t\n100 %\n\t0\t\nВыполнено\n\nСтяжка пола\tК","sec3":false}
+s3-ivanov-summary: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_summary_weekly":1}
+   act={"text":"ivanov@stand.invalid · Прораб\nСводка\nВсе проекты (1)\nЖК Альфа\n4 недель\n8 недель\n12 недель\nВаша область: Корпус 1 · Секция 1, Секция 2\nвы отвечаете за факт\nСкачать Excel\nЖК Альфа · ALFA\nНет данных\nНет договорной КП — выберите её в разделе «КС-2»\nСуммы в рублях, общий % и отставание видят РП, ПТО, экономист и руководство. Объёмы — в «Видах работ» ниже.\nПо плану на сегодня\n—\nравномерно от начала до окончания\nПлановые сроки\n01.09.2026 — 25.01.2027\nдо окончания 90 дн.\nТемп\nЗа 14 дней нет выполнения\nза 7 дней против 14 дней\nПозиций ВОР\n40\nждут подтверждения: 1\nГотовность по местам\nКорпус 1\n40 поз.\nп","sec3":false}
+s4-ivanov-journal: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act={"text":"ivanov@stand.invalid · Прораб\nФакт\nПроект: ЖК Альфа\nВаша область: Корпус 1 · Секция 1, Секция 2\nвы отвечаете за факт\nВвод\nШахматка\nЖурнал\n7 дней\n30 дней\nЭтот месяц\nСвой период\nВсе\n5\nЖдёт РП\n1\nПринято\n4\nФильтр\nПоказано: 5 из 5\nExcel (5)\nВыбрать\n⋯\nРабота\tМесто\tДата работ\tОбъём\tСтатус\tБригада\tРешение РП\n\n▾\nКорпус 1\nВсего: 5\n1\n4\n\nШтукатурка стен\tКорпус 1 · Секция 1 · 3 этаж\t26.10.2026\t140 м²\t\nЖдёт РП\tБригада Иванова\t—\nШтукатурка стен\tКорпус 1 · Секция 2 · 1 этаж\t24.10.2026\t40 м²\t\nПринято\tБригада Иванова\t—\nШтукатурка стен\tКорпус 1 · Секция 1 · 2 этаж\t22.10.2026\t60 м²\t\nПринято\tБригада Иванова\t—\nСтяжка пола\tКорпус 1 · Секция 1 · 1 этаж\t17.10.2026\t80 м²\t\nПринято\tБригада Иванова\t—\nШтукатурка стен\tКор","sec3":false}
+s5-ivanov-chessboard: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act={"cols":"Этаж|Секция 1|Секция 2|5 этаж|4 этаж|3 этаж|2 этаж|1 этаж","sec3":false}
+s6-petrov-fact-s3: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 3» unknown={"my_access":6}
+   act={"area":"Ваша область: Корпус 1 · Секция 3","sections":"Корпус 1 | Секция 3","behalfField":false,"notice":"Записано: 7 м²","directS1":"400 Это место вне вашей области в проекте — факт не принят","ownersAsk":"400 Нет права вносить факт «за кого»"}
+s7-rp-behalf-hint: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act={"area":"(нет плашки)","sections":"Корпус 1 | Секция 1 | Секция 2 | Секция 3 | Паркинг","options":"— укажите ответственного — | Иванов А. И.","hint":"Укажите, за кого вносите","directNoBehalf":"400 Факт по этому месту вносит ответственный: Иванов А. И.. РП может внести за него — с отметкой «за кого»","directWrongOwner":"400 Этот сотрудник не отвечает за факт по этому месту"}
+s8-rp-behalf-saved: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act={"notice":"Записано: 12 м²","call":"[\"pf_fact_add_for u-iv\"]","history":"внёс rp@stand.invalid за Иванов А. И., 27.10.2026, 21:32 || Иванов А. И., 22.10.2026, 12:13"}
+s9-rp-floor-close: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act={"btn":false,"field":true,"hint":"Укажите, за кого вносите","notice":"Записано строк: 4","call":"[\"pf_fact_add_batch_for u-iv items=4\"]","s3field":false}
+s10-rp-journal: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act={"sec3":true,"text":"rp@stand.invalid · Руководитель проекта\nФакт\nПроект: ЖК Альфа\nВвод\nШахматка\nЖдёт подтверждения\n1\nЖурнал\n7 дней\n30 дней\nЭтот месяц\nСвой период\nВсе\n7\nЖдёт РП\n1\nПринято\n6\nФильтр\nПоказано: 7 из 7\nExcel (7)\nВыбрать\n⋯\nРабота\tМесто\tДата работ\tОбъём\tСтатус\tБригада\tРешение РП\n\n▾\nКорпус 1\nВсего: 7\n1\n6\n\nШтукат"}
+
+Ширины × темы (scrollWidth ≤ ширины окна = OK, нет прокрутки вбок):
+   act=4
+rp-behalf-375-light: iw=375 scrollWidth=375 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act="Укажите, за кого вносите"
+   act=4
+rp-behalf-375-dark: iw=375 scrollWidth=375 OK theme=rbi-dark-v3 area=«» unknown={"my_access":6}
+   act="Укажите, за кого вносите"
+   act=4
+rp-behalf-768-light: iw=768 scrollWidth=768 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act="Укажите, за кого вносите"
+   act=4
+rp-behalf-768-dark: iw=768 scrollWidth=768 OK theme=rbi-dark-v3 area=«» unknown={"my_access":6}
+   act="Укажите, за кого вносите"
+   act=4
+rp-behalf-1280-light: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act="Укажите, за кого вносите"
+   act=4
+rp-behalf-1280-dark: iw=1280 scrollWidth=1280 OK theme=rbi-dark-v3 area=«» unknown={"my_access":6}
+   act="Укажите, за кого вносите"
+   act=4
+rp-behalf-1920-light: iw=1920 scrollWidth=1920 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act="Укажите, за кого вносите"
+   act=4
+rp-behalf-1920-dark: iw=1920 scrollWidth=1920 OK theme=rbi-dark-v3 area=«» unknown={"my_access":6}
+   act="Укажите, за кого вносите"
+iv-summary-375-light: iw=375 scrollWidth=375 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_summary_weekly":1}
+   act=true
+iv-vor-load-375-light: iw=375 scrollWidth=375 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_vor_list_profiles":1}
+   act="Загрузки ВОР ведут ПТО и РП по всему проекту. Позиции вашей области — на вкладке «Позиции»."
+rp-history-375-light: iw=375 scrollWidth=375 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act="внёс rp@stand.invalid за Иванов А. И., 27.10.2026, 21:28"
+settings-home-375-light: iw=375 scrollWidth=375 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act="2 сотрудника без ролей1 не сменил временный пароль1 сотрудник отключёнМеста без ответственного за факт: ЖК Альфа — Секция 3, ЖК Альфа — Паркинг"
+iv-summary-1280-light: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_summary_weekly":1}
+   act=true
+iv-vor-load-1280-light: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_vor_list_profiles":1}
+   act="Загрузки ВОР ведут ПТО и РП по всему проекту. Позиции вашей области — на вкладке «Позиции»."
+rp-history-1280-light: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act="внёс rp@stand.invalid за Иванов А. И., 27.10.2026, 21:29"
+settings-home-1280-light: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«» unknown={"my_access":6}
+   act="2 сотрудника без ролей1 не сменил временный пароль1 сотрудник отключёнМеста без ответственного за факт: ЖК Альфа — Секция 3, ЖК Альфа — Паркинг"
+iv-summary-375-dark: iw=375 scrollWidth=375 OK theme=rbi-dark-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_summary_weekly":1}
+   act=true
+iv-vor-load-375-dark: iw=375 scrollWidth=375 OK theme=rbi-dark-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_vor_list_profiles":1}
+   act="Загрузки ВОР ведут ПТО и РП по всему проекту. Позиции вашей области — на вкладке «Позиции»."
+rp-history-375-dark: iw=375 scrollWidth=375 OK theme=rbi-dark-v3 area=«» unknown={"my_access":6}
+   act="внёс rp@stand.invalid за Иванов А. И., 27.10.2026, 21:29"
+settings-home-375-dark: iw=375 scrollWidth=375 OK theme=rbi-dark-v3 area=«» unknown={"my_access":6}
+   act="2 сотрудника без ролей1 не сменил временный пароль1 сотрудник отключёнМеста без ответственного за факт: ЖК Альфа — Секция 3, ЖК Альфа — Паркинг"
+iv-summary-1280-dark: iw=1280 scrollWidth=1280 OK theme=rbi-dark-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_summary_weekly":1}
+   act=true
+iv-vor-load-1280-dark: iw=1280 scrollWidth=1280 OK theme=rbi-dark-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6,"pf_vor_list_profiles":1}
+   act="Загрузки ВОР ведут ПТО и РП по всему проекту. Позиции вашей области — на вкладке «Позиции»."
+rp-history-1280-dark: iw=1280 scrollWidth=1280 OK theme=rbi-dark-v3 area=«» unknown={"my_access":6}
+   act="внёс rp@stand.invalid за Иванов А. И., 27.10.2026, 21:30"
+settings-home-1280-dark: iw=1280 scrollWidth=1280 OK theme=rbi-dark-v3 area=«» unknown={"my_access":6}
+   act="2 сотрудника без ролей1 не сменил временный пароль1 сотрудник отключёнМеста без ответственного за факт: ЖК Альфа — Секция 3, ЖК Альфа — Паркинг"
+iv-fact-375-light: iw=375 scrollWidth=375 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act=4
+iv-fact-375-dark: iw=375 scrollWidth=375 OK theme=rbi-dark-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act=4
+iv-fact-768-light: iw=768 scrollWidth=768 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act=4
+iv-fact-768-dark: iw=768 scrollWidth=768 OK theme=rbi-dark-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act=4
+iv-fact-1280-light: iw=1280 scrollWidth=1280 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act=4
+iv-fact-1280-dark: iw=1280 scrollWidth=1280 OK theme=rbi-dark-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act=4
+iv-fact-1920-light: iw=1920 scrollWidth=1920 OK theme=rbi-light-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act=4
+iv-fact-1920-dark: iw=1920 scrollWidth=1920 OK theme=rbi-dark-v3 area=«Ваша область: Корпус 1 · Секция 1, Секция 2вы отвечаете за факт» unknown={"my_access":6}
+   act=4
+
+Итог сценария:
+  Иванов — в Вводе/Шахматке/Журнале/Позициях ВОР/Сводке только секции 1–2 (секции 3 и Паркинга нет), плашка «Ваша область: Корпус 1 · Секция 1, Секция 2 · вы отвечаете за факт»;
+    вносит факт без «за кого»; прямой вызов pf_fact_add по секции 3 → «Это место вне вашей области в проекте — факт не принят»; pf_fact_history по секции 3 → «Нет права видеть факт».
+  Петров — только секция 3, плашка без «отвечаете»; вносит (у места нет ответственного); прямой вызов по секции 1 → отказ «вне вашей области».
+  РП — весь проект, плашки нет; место Иванова: поле «За кого» (Иванов А. И.), без выбора — «Укажите, за кого вносите» (на сервер не уходит);
+    с выбором → pf_fact_add_for, в истории «внёс rp@stand.invalid за Иванов А. И.»; «Закрыть этаж» секции 2 → подсказка, затем pf_fact_add_batch_for (4 строки);
+    секция 3 — поля нет; прямой pf_fact_add без «за кого» → «Факт по этому месту вносит ответственный: Иванов А. И.. РП может внести за него — с отметкой «за кого»».
+  Главная настроек (админ): «Места без ответственного за факт: ЖК Альфа — Секция 3, ЖК Альфа — Паркинг».
+
+Не проверено: живой сервер с 047 (стенд — подставной по тексту 047); «за вас» у Иванова на записи РП — только unit-тестом (стенд не хранит данные между входами);
+  «Закрыть выбранные» из реестра позиций с «за кого» — только unit-тестом FloorClose.
+Замечания к серверу: 1) pf_vor_list_imports / pf_vor_import_rows по области не делятся — в клиенте вкладка «Загрузки» при области скрыта; 2) текст 047 даёт «А. И.. РП» (точка после инициалов + точка шаблона).

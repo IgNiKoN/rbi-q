@@ -16,6 +16,7 @@ import { ProgressBar, StatusBadge } from '../../../platform/ui/index.ts';
 import { ObjectCards, PortfolioHead } from './Portfolio.ts';
 import type { SummaryLinks } from './Attention.ts';
 import { hashParam } from '../ProjectPicker.ts';
+import { AreaBadge } from '../area.ts';
 import { InHead, rememberProject } from '../PageHead.ts';
 
 /** Порядок объектов: сначала самые отстающие (дни отставания с сервера), без данных — в конце. */
@@ -76,7 +77,8 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
         opened
           ? h('div', { className: 'sm-chips', role: 'group', 'aria-label': 'Период графиков', 'data-testid': 'sm-filters' },
               PERIODS.map((w) => chip(period === w, `${w} недель`, () => setPeriod(w), String(w), 'sm-chip-period')))
-          : null)
+          : null,
+        opened ? h(AreaBadge, { key: opened.project_id, projectId: opened.project_id }) : null)   // P2-0048: «Ваша область: …»
     : null;
   const dash = (p: SummaryProject): ReactElement => h('div', { className: 'sm-dash' },
     h(Dashboard, { api, p, period, links, onDates: p.can_manage ? () => setEditing(true) : undefined, actions: p.can_manage || p.can_thresholds

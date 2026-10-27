@@ -75,7 +75,7 @@ export function unmount(): void {
 /** P2-0048: «Требует внимания» на главной «Настроек» (сотрудники без ролей, не сменили временный пароль, отключены). */
 export function mountHome(el: HTMLElement): Promise<void> {
   getAuth();
-  return renderAttention(el, api);
+  return renderAttention(el, api, projects);
 }
 
 export function isMounted(): boolean {

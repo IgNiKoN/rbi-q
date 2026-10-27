@@ -9,6 +9,7 @@ import type { ReactElement } from 'react';
 import type { ProjectsApi } from '../../../platform/core/projects.service.ts';
 import type { Brigade, FactApi, FactPosition } from './fact.service.ts';
 import { FactEntryForm } from './FactEntryForm.ts';
+import { emptyText, useMyArea } from '../area.ts';
 import { FactHistory } from './FactHistory.ts';
 import { FloorClose } from './FloorClose.ts';
 import { ChessCell, ChessScale, CHESS_STATE_LABEL } from '../../../platform/ui/index.ts';
@@ -100,7 +101,7 @@ function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: Fac
         ? h('div', { className: 'pj-actions' }, h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'cb-floor-close', onClick: () => { setClosing(true); setOpenId(''); setHistoryId(''); } }, 'Закрыть этаж'))
         : null,
       closing ? h(FloorClose, { api: ctx.api, projectId: ctx.projectId, place: { id: '', name: title }, positions: list, brigades: ctx.brigades, lastBrigade: ctx.lastBrigade, onBrigade: ctx.onBrigade,
-        onClose: () => setClosing(false), onDone: done }) : null,
+        me: ctx.me, onClose: () => setClosing(false), onDone: done }) : null,
       histPos ? h(FactHistory, { api: ctx.api, pos: histPos, me: ctx.me, canApprove: ctx.canApprove, canCreate: ctx.canCreate, onClose: () => setHistoryId(''), onChanged: () => onChanged('') }) : null,
       h('div', { className: 'cb-list', 'data-testid': 'cb-list' }, list.map((p) => {
         const pct = percent(p.fact_qty, p.plan_qty);
@@ -111,7 +112,7 @@ function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: Fac
           p.pending_count ? h('div', { className: 'ft-pending' }, `Ждёт подтверждения РП: ${fmtQty(p.pending_qty)} ${p.unit_code}`) : null,
           p.last_rejected_note ? h('div', { className: 'ft-bad' }, `Отклонено РП: ${p.last_rejected_note}`) : null,
           openId === p.position_id
-            ? h(FactEntryForm, { api: ctx.api, pos: p, brigades: ctx.brigades, lastBrigade: ctx.lastBrigade, onBrigade: ctx.onBrigade, onCancel: () => setOpenId(''), onSaved: done,
+            ? h(FactEntryForm, { api: ctx.api, pos: p, brigades: ctx.brigades, lastBrigade: ctx.lastBrigade, onBrigade: ctx.onBrigade, onCancel: () => setOpenId(''), onSaved: done, projectId: ctx.projectId, me: ctx.me,
                 quick: { historyCount: count, onHistory: () => { setHistoryId(p.position_id); setOpenId(''); } } })
             : h('div', { className: 'pj-actions' },
                 ctx.canCreate ? h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'cb-enter', onClick: () => openForm(p.position_id) }, 'Внести факт') : null,
@@ -122,6 +123,7 @@ function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: Fac
 export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): ReactElement {
   const { projects, ctx } = props;
   const { api, projectId } = ctx;
+  const area = useMyArea(projectId);
   const [data, setData] = useState<{ idx: PlaceIndex; positions: FactPosition[]; pl: Placement } | null>(null);
   const [error, setError] = useState('');
   const [building, setBuilding] = useState<string | null>(null);
@@ -179,7 +181,7 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
   if (!grid || !grid.rows.length || !data.pl.placed.length) {
     const n = data.positions.length;
     return h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'cb-empty' },
-      !n ? 'Для этого проекта нет работ: позиции появляются после подтверждения ВОР.'
+      !n ? emptyText(area, 'Для этого проекта нет работ: позиции появляются после подтверждения ВОР.')
         : `Объёмы этого проекта не разнесены по этажам — шахматку построить не из чего (позиций на корпусах и секциях: ${n}). Факт по ним вносится во вкладке «Ввод».`);
   }
   const rowLabel = (key: string): string => grid.rows.find((r) => r.key === key)?.label || '';

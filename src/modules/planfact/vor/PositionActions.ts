@@ -21,7 +21,7 @@ type Save = (bytes: Uint8Array, name: string) => void;
 
 /** Строка реестра → позиция формы закрытия (план и накопленный факт — те же числа сервера). */
 export const toFactPosition = (r: PositionRow): FactPosition => ({
-  position_id: r.id, location_id: '', location_path: r.place, location_type: r.placeType, work_type_id: '', work_name: r.work, unit_code: r.unit,
+  position_id: r.id, location_id: r.locationId || '', location_path: r.place, location_type: r.placeType, work_type_id: '', work_name: r.work, unit_code: r.unit,
   plan_qty: r.plan, fact_qty: r.fact, pending_qty: r.pendingQty, pending_count: r.pendingCount, last_rejected_note: r.rejectedNote,
 });
 
@@ -30,7 +30,7 @@ async function exportRows(columns: RegistryColumn<PositionRow>[], rows: Position
   save(bytes, registryFileName('Позиции ВОР', ruDate(todayMoscow())));
 }
 
-function SelectedActions(props: { fact: FactApi; rows: PositionRow[]; columns: RegistryColumn<PositionRow>[]; canClose: boolean; projectId: string; companyId: string;
+function SelectedActions(props: { fact: FactApi; rows: PositionRow[]; columns: RegistryColumn<PositionRow>[]; canClose: boolean; projectId: string; companyId: string; me?: string;
   reload: () => Promise<void>; clear: () => void; notify: (msg: string) => void; save: Save }): ReactElement {
   const { fact, rows, columns, canClose, projectId, companyId } = props;
   const [mode, setMode] = useState<'' | 'close' | 'pm'>('');
@@ -47,7 +47,7 @@ function SelectedActions(props: { fact: FactApi; rows: PositionRow[]; columns: R
           brigades === null ? h('div', { className: 'pf-muted' }, 'Загрузка бригад…')
             : !brigades.length ? h('div', { className: 'pf-card pf-muted' }, 'Нет бригад — их добавляет ПТО в «Справочники → Бригады».',
                 h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: () => setMode('') }, 'Закрыть'))
-            : h(FloorClose, { api: fact, projectId, place: { id: '', name: '' }, positions: open.map(toFactPosition), brigades, lastBrigade: last,
+            : h(FloorClose, { api: fact, projectId, place: { id: '', name: '' }, positions: open.map(toFactPosition), brigades, lastBrigade: last, me: props.me,
                 title: `${mode === 'pm' ? 'Закрыть через РП' : 'Закрыть выбранные'}: ${open.length} поз.`, requireApproval: mode === 'pm',
                 onBrigade: (id) => { setLast(id); writeLast(companyId, id); }, onClose: () => setMode(''),
                 onDone: (m, partial) => { if (partial) setMsg(m); else { props.notify(m); setMode(''); props.clear(); } void props.reload(); } }))), document.body)
@@ -65,12 +65,12 @@ function SelectedActions(props: { fact: FactApi; rows: PositionRow[]; columns: R
 }
 
 /** Действия и кнопка «Выгрузить список» для PositionsRegistry. perms — права проекта с сервера (pf_my_permissions). */
-export function positionRegistryActions(fact: FactApi, perms: string[], projectId: string, companyId: string, archived: boolean, save: Save = saveXlsx): {
+export function positionRegistryActions(fact: FactApi, perms: string[], projectId: string, companyId: string, archived: boolean, save: Save = saveXlsx, me = ''): {
   actions: NonNullable<PositionsRegistryProps['actions']>; tools: NonNullable<PositionsRegistryProps['tools']>;
 } {
   const canClose = perms.includes(FACT_CREATE) && !archived;
   return {
-    actions: (rows, ctx): ReactNode => h(SelectedActions, { fact, rows, columns: ctx.columns, canClose, projectId, companyId, reload: ctx.reload, clear: ctx.clear, notify: ctx.notify, save }),
+    actions: (rows, ctx): ReactNode => h(SelectedActions, { fact, rows, columns: ctx.columns, canClose, projectId, companyId, me, reload: ctx.reload, clear: ctx.clear, notify: ctx.notify, save }),
     tools: (ctx): ReactNode => h(RegistryExport, { testId: 'vr-export-all', count: ctx.rows.length, onClick: () => { void exportRows(ctx.columns, ctx.rows, save); } }),
   };
 }

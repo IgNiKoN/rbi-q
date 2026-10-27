@@ -23,3 +23,22 @@ test('счётчики по людям', () => {
 test('склонение', () => {
   assert.deepEqual([1, 2, 5, 11, 12, 21, 22, 25].map((n) => plural(n, 'о', 'н', 'м')), ['о', 'н', 'м', 'м', 'м', 'о', 'н', 'м']);
 });
+
+test('этап 5: места без ответственного за факт — только в проектах, где ответственные уже назначаются; секции и объекты без секций', async () => {
+  const { placesWithoutOwner, gapLine } = await import('../CompanyHome.ts');
+  const rows = [
+    row('iv', { assignment_id: 'a1', role_id: 'f', is_active: true, project_id: 'pa', project_name: 'ЖК Альфа', location_id: 'pa-s1', fact_owner: true }),
+    row('iv', { assignment_id: 'a2', role_id: 'f', is_active: true, project_id: 'pa', project_name: 'ЖК Альфа', location_id: 'pa-s2', fact_owner: true }),
+    row('pe', { assignment_id: 'a3', role_id: 'f', is_active: true, project_id: 'pa', project_name: 'ЖК Альфа', location_id: 'pa-s3', fact_owner: false }),
+    row('pe', { assignment_id: 'a4', role_id: 'f', is_active: true, project_id: 'pb', project_name: 'ЖК Бета', location_id: null, fact_owner: false })];
+  const tree: Record<string, { id: string; parent_id: string | null; name: string; node_type: string; path: string; hasKids: boolean }[]> = {
+    'pa|': [{ id: 'pa-k1', parent_id: null, name: 'Корпус 1', node_type: 'object', path: 'Корпус 1', hasKids: true },
+      { id: 'pa-park', parent_id: null, name: 'Паркинг', node_type: 'object', path: 'Паркинг', hasKids: false }],
+    'pa|pa-k1': [1, 2, 3].map((i) => ({ id: 'pa-s' + i, parent_id: 'pa-k1', name: 'Секция ' + i, node_type: 'section', path: 'Корпус 1 · Секция ' + i, hasKids: true })) };
+  const asked: string[] = [];
+  const gaps = await placesWithoutOwner(rows, async (p, parent) => { asked.push(p + '|' + (parent || '')); return tree[p + '|' + (parent || '')] || []; });
+  assert.deepEqual(gaps, [{ project: 'ЖК Альфа', place: 'Секция 3' }, { project: 'ЖК Альфа', place: 'Паркинг' }]);
+  assert.ok(!asked.some((x) => x.startsWith('pb|')), 'ЖК Бета без ответственных — дерево не грузится, пункт не шумит');
+  assert.equal(gapLine(gaps)!.text, 'Места без ответственного за факт: ЖК Альфа — Секция 3, ЖК Альфа — Паркинг');
+  assert.equal(gapLine([]), null);
+});

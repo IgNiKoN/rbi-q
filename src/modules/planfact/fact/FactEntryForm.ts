@@ -7,6 +7,7 @@
 import { createElement as h, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import type { Brigade, FactApi, FactPosition } from './fact.service.ts';
+import { useOnBehalf } from '../area.ts';
 import { fmtPeriod, fmtPct, fmtQty, parseQty, percent, periodError, remainder, round3, todayMoscow } from './fact.ts';
 
 export const QUICK_STEPS = [25, 50, 75, 100];
@@ -20,8 +21,11 @@ export const qtyStep = (plan: number): number => (plan > 0 && plan < 10 ? 0.1 : 
 export function FactEntryForm(props: {
   api: FactApi; pos: FactPosition; brigades: Brigade[]; lastBrigade: string; onBrigade: (id: string) => void; onCancel: () => void; onSaved: (msg: string) => void;
   quick?: { onHistory: () => void; historyCount: number | null };
+  /** P2-0048: проект и почта вошедшего — для поля «За кого» (РП, место с ответственным за факт). */
+  projectId?: string; me?: string;
 }): ReactElement {
   const { api, pos, brigades, lastBrigade, onBrigade, onCancel, onSaved, quick } = props;
+  const behalf = useOnBehalf(props.projectId, [pos.location_id], props.me || '');
   const [qty, setQty] = useState('');
   const [brigade, setBrigade] = useState(brigades.some((b) => b.id === lastBrigade) ? lastBrigade : '');
   const [error, setError] = useState('');
@@ -48,9 +52,12 @@ export function FactEntryForm(props: {
     const mh = val('man_hours') === '' ? null : parseQty(val('man_hours'));
     if (workers !== null && (!Number.isInteger(workers) || workers < 0)) { setError('Людей — целое число'); return; }
     if (val('man_hours') !== '' && mh === null) { setError('Чел.-ч — число'); return; }
+    const bh = behalf.check();
+    if (bh) { setError(bh); return; }
     setBusy(true); setError('');
     onBrigade(brigade);
-    const r = await api.add(pos.position_id, { brigadeId: brigade, date, qty: q, workers, manHours: mh, note: val('note'), ...(period ? { periodFrom: from } : {}) });
+    const r = await api.add(pos.position_id, { brigadeId: brigade, date, qty: q, workers, manHours: mh, note: val('note'), ...(period ? { periodFrom: from } : {}),
+      ...(behalf.value ? { onBehalf: behalf.value } : {}) });
     setBusy(false);
     if (!r.ok) { setError(r.message); return; }
     onSaved(r.value.status === 'pending_approval'
@@ -89,7 +96,8 @@ export function FactEntryForm(props: {
           h('option', { value: '' }, '— выберите —'), brigades.map((b) => h('option', { key: b.id, value: b.id }, b.name)))),
       h('label', { className: 'pf-field' }, 'Людей', h('input', { name: 'workers', type: 'number', min: 0, inputMode: 'numeric', className: 'pj-input pf-num' })),
       h('label', { className: 'pf-field' }, 'Чел.-ч', h('input', { name: 'man_hours', type: 'text', inputMode: 'decimal', className: 'pj-input pf-num' })),
-      h('label', { className: 'pf-field pj-grow' }, 'Примечание', h('input', { name: 'note', type: 'text', className: 'pj-input', maxLength: 300 }))),
+      h('label', { className: 'pf-field pj-grow' }, 'Примечание', h('input', { name: 'note', type: 'text', className: 'pj-input', maxLength: 300 })),
+      behalf.field),
     !brigades.length ? h('div', { className: 'pf-error' }, 'Нет бригад. Попросите ПТО или руководителя добавить их в «Справочники → Бригады».') : null,
     after !== null ? h('div', { className: over ? 'ft-warn' : 'pf-muted', 'data-testid': 'ft-after' }, over ? `После записи: ${fmtPct(after)} — больше плана; если выше допуска, потребуется подтверждение РП` : `После записи: ${fmtPct(after)}`) : null,
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
