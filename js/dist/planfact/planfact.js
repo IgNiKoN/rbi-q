@@ -40384,6 +40384,10 @@ const pR = `
 .pf-dirhead{padding-bottom:0;display:flex;flex-direction:column;gap:12px}
 /* P2-0041: страница План/Факта — во всю ширину рабочей области; общий список компании (CompanyScope) здесь тоже без предела */
 .pf-page .pj-root{max-width:none}
+/* Поля страницы — по диапазонам ширины (телефон < 600 · планшет 600–1023 · ПК); на очень широком — по центру, не шире 1440 */
+.pf-page{max-width:1440px;margin-inline:auto}
+@media (max-width:1023.98px){.pf-page .pf-root{padding-left:16px;padding-right:16px}}
+@media (max-width:599.98px){.pf-page .pf-root{padding:16px 8px}}
 .pf-hint{padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:12px;font-size:14px}
 /* P2-0046: переключатель внутри формы («День / Период», «Этажи × секции») — спокойный: обычные буквы, активный — графит */
 .pf-seg{display:flex;flex-wrap:nowrap;gap:2px;padding:3px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
