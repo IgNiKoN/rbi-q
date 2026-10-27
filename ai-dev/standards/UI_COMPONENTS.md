@@ -65,9 +65,24 @@
 | `ShellService.fitBottomNav(nav)` (`js/core/app-shell.js`) | вызывается после отрисовки нижней панели | `.bottom-nav--platform`, `.nav-item--overflow`, `.nav-item--more`, `#shell-more-sheet` | только модули Платформы (`window.RBI.platformNav`): подписи у всех пунктов, ≤ 5 на телефоне + «Ещё»; Качество и Стройконтроль — как были |
 | `PortfolioHead`, `ObjectCards`, `portfolioAttention` (`summary/Portfolio.ts`) | `list`, `links`, `open` | `.pt-*` | «Требует внимания» с переходами, итоги, карточки объектов (телефон, планшет) |
 
+### Реализовано: детали «Проектов» и «Объектов и мест» (P2-0047)
+
+Все детали — в `src/platform/ui/` (`page.ts`, `tree.ts`), экспорт из `src/platform/ui/index.ts`; каждая показана на странице «Образцы» (`Компания → Образцы`, только администратору платформы, `src/platform/company/Patterns.ts`).
+
+| Компонент | API (props) | Классы | Примечания |
+| --- | --- | --- | --- |
+| `PageTabs` (перенесён из `PlanfactApp` в `ui/page.ts`) | `items`, `active`, `onPick`, `testId` | `.pf-tabs`, `.pf-tab`, `.pf-tab--active`, `.pf-tab-n` | общий для Компании и План/Факта, CSS — `P2_PAGE_CSS` |
+| `Sheet` — лист / панель | `title`, `sub?`, `testId`, `onClose`, `footer?` | `.p2-sheet*` | телефон и планшет — снизу, ПК от 900 px — справа; Esc и нажатие мимо закрывают |
+| `MoreMenu` — меню «⋯» | `items: MoreItem[]` (`id`, `label`, `hint?`, `danger?`, `onClick`), `testId`, `label?` | `.p2-more*` | редкие действия экрана или строки; пустой список — кнопки нет |
+| `RecordFields` — карточка записи | `fields: { id, label, value }[]`, `cols?` | `.p2-rec*` | «подпись — значение»: ПК — `cols` (4), планшет — 2, телефон — 1; пустое — «—» |
+| `StageBadge` | `label`, `tone`, `testId?` | `StatusBadge` | метка стадии или вида: цвет и слово вместе |
+| `StageStrip` | `items: { code, name }[]`, `current` | `.p2-stages*` | пройденные / текущая / будущие стадии; подписи — из справочника сервера |
+| `PlaceTree` — дерево мест | `roots`, `kids`, `open`, `onToggle`, `selected?`, `onSelect?`, `kind`, `meta?`, `menu?`, `limit?`, `more?`, `onMore?` | `.p2-tree*`, `P2_TREE_CSS` | строка: ▸/▾, название, вид · сводка, «⋯»; дети грузит экран при раскрытии; длинный список — «ещё N» |
+| `RegistryTable` (доп.) | `noSelect?: boolean` | — | справочник без массовых действий: ни галочек, ни «Выбрать» |
+
 ### По мере появления спроса
 
-`DatePicker`, `FileUpload`, `Tree/LocationPicker`, `Breadcrumbs`, `Toolbar`, `FilterPanel`, `Pagination`, `Chart`, `Progress`, `Drawer`, `DataGrid` для больших объёмов, `MobileActionBar`, `DocumentPreview`, `TableColumnSettings`, `ThemePreview` и др. Добавляются только под конкретное утверждённое применение.
+`DatePicker`, `FileUpload`, `LocationPicker` (выбор места на основе `PlaceTree`), `Breadcrumbs`, `Toolbar`, `FilterPanel`, `Pagination`, `Chart`, `Progress`, `Drawer`, `DataGrid` для больших объёмов, `MobileActionBar`, `DocumentPreview`, `TableColumnSettings`, `ThemePreview` и др. Добавляются только под конкретное утверждённое применение.
 
 ## 3. Обязательные требования к публичному компоненту
 
