@@ -4,6 +4,8 @@
  * Mobile sk.render / sk.actions stay untouched.
  */
 
+import { isIssueOpen } from './sk.issue-rules.js';
+
 const PANEL_ID = 'ana-desk-sk-panel';
 const RU_COLLATOR = new Intl.Collator('ru', { sensitivity: 'base', numeric: true });
 
@@ -84,14 +86,6 @@ function analyticsFilters() {
     return activeMultiFilters.analytics;
   }
   return { project: [], contractor: [], inspector: [], template: [] };
-}
-
-function isIssueOpen(record) {
-  if (!record) return false;
-  if (record.is_verified_closed === true) return false;
-  if (record.status_normalized === 'verified') return false;
-  const s = String(record.status || record.status_raw || '').toLowerCase().trim();
-  return s !== 'проверено';
 }
 
 function getFilteredSkRecords(opts) {
@@ -902,6 +896,10 @@ function bindSkDeskEvents() {
 }
 
 export {
+  // P2-0049: «Динамика за месяц» берёт замечания и ИДЗ отсюда же — те же фильтры и та же формула.
+  getFilteredSkRecords,
+  buildContrMap,
+  contractorMetrics as skDisciplineMetrics,
   paintSkContent,
   ensureSkDeskContainers,
   clearSkDeskPanels,

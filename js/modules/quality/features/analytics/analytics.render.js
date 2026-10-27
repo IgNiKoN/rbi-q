@@ -11,6 +11,7 @@
 
 import { AnalyticsState } from './analytics.state.js';
 import { syncMonthDynamics } from './month-dynamics.view.js';
+import { isIssueOpen, isIssueOverdueNow } from './sk.issue-rules.js';
 import {
     shouldFullRebuildAnalyticsLive,
     shouldSkipAnalyticsLivePaint,
@@ -2906,12 +2907,12 @@ export const AnalyticsRender = {
                 if (!engMap[baseName]) engMap[baseName] = { total: 0, open: 0, overdue: 0, withCategory: 0 };
 
                 engMap[baseName].total++;
-                const isOpen = r.status && r.status.toLowerCase().includes('не устран');
+                // P2-0049: одно правило для всей Аналитики — открыто, пока инженер не поставил «Проверено».
+                const isOpen = isIssueOpen(r);
                 if (isOpen) engMap[baseName].open++;
                 if (r.category && r.category !== 'Без категории') engMap[baseName].withCategory++;
 
-                const deadline = r.deadline ? new Date(r.deadline) : null;
-                if (deadline && isOpen && new Date() > deadline) engMap[baseName].overdue++;
+                if (isIssueOverdueNow(r)) engMap[baseName].overdue++;
             });
 
             const skEngArray = Object.keys(engMap).map(name => {

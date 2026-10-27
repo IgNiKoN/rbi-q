@@ -5,7 +5,8 @@
  * Обычная Сводка (#onepager-content-container) не меняется: в режиме «Динамика» она просто скрыта.
  * Макет: ai-dev/specs/quality-month-mockup/index.html.
  */
-import { computeMonthDynamics, availableMonths, monthKeyOf, FEW_DATA_N } from './month-dynamics.calc.js';
+import { computeMonthDynamics, computeSkMonth, availableMonths, monthKeyOf, FEW_DATA_N } from './month-dynamics.calc.js';
+import { getFilteredSkRecords, skDisciplineMetrics } from './sk.desktop.content.js';
 
 const MODE_KEY = 'rbi_onepager_view';
 const SWITCH_ID = 'md-view-switch';
@@ -51,6 +52,9 @@ const HINTS = {
   pareto: '<b>Причины дефектов (Парето)</b> — какие причины дают 80 % дефектов. Причину инженер указывает по желанию; дефекты без причины показаны отдельно.',
   iko: '<b>ИКО — индекс критичности объекта</b> (как в «Сводке»): 0 — нет риска, 1 — максимальный; до 0,3 — низкий риск, 0,3–0,6 — повышенный, от 0,6 — высокий. Считается за 3 месяца по связкам «подрядчик × вид работ» от 7 проверок.',
   cobj: '<b>Объекты компании</b> — как «Компания» в обычной Сводке, но за календарный месяц: у каждого объекта базовый УрК, ИУрК (надёжность), ИКО за 3 месяца, доля проверок с B3 и красной зоны; изменение к прошлому месяцу — «заметно», только если больше разброса.',
+  sk: '<b>Замечания стройконтроля по месяцам</b> — одно правило для всей Аналитики: замечание открыто, пока инженер не поставил «Проверено»; «Устранено» подрядчиком — тоже открыто (ждёт проверки). Закрыто в месяце — проверено и устранено в этом месяце.',
+  skov: '<b>Просрочено — два числа.</b> «Просрочено сейчас» — открыто на конец месяца, срок прошёл. «Закрыто с опозданием» — закрыто в месяце позже срока.',
+  idz: '<b>ИДЗ — индекс дисциплины закрытия</b>, та же формула, что на экране Стройконтроля: в срок × 0,6 + (100 − просрочка) × 0,4 − средняя просрочка (дней, не больше 30). Считается по замечаниям, закрытым в этом месяце или открытым на его конец (те же, что в строке).',
   concl: '<b>Выводы месяца</b> собираются автоматически. «Заметно изменилось» — только то, что больше разброса; остальное — «в пределах разброса».'
 };
 
@@ -314,6 +318,15 @@ function ensureStyle() {
 .md-concl li{font-size:12.5px}
 .md-concl .within li{color:var(--md-muted)}
 .md-split{display:grid;gap:12px}
+.md-mini.md-mini4{grid-template-columns:repeat(2,minmax(0,1fr))}
+@container md (min-width:600px){.md-mini.md-mini4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.md-aging{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.md-aging>div{border-radius:8px;padding:7px 9px;background:var(--md-card2);border:1px solid var(--md-line)}
+.md-aging .k{font-size:10.5px;color:var(--md-muted);font-weight:700}
+.md-aging .v{font-size:17px;font-weight:850;font-variant-numeric:tabular-nums}
+.md-svg .sk-iss{fill:var(--md-blue)} .md-svg .sk-cls{fill:var(--md-ok)}
+.md-svg .ln-open{fill:none;stroke:var(--md-bad);stroke-width:2}
+.md-svg .dot-open{fill:var(--md-bad);stroke:var(--md-card);stroke-width:1.2}
 .md-svg .b-1{fill:var(--md-blue)} .md-svg .b-2{fill:var(--md-warn)} .md-svg .b-3{fill:var(--md-bad)}
 .md-svg .zone-bg-ok{fill:var(--md-ok);opacity:.08} .md-svg .zone-bg-warn{fill:var(--md-warn);opacity:.08} .md-svg .zone-bg-bad{fill:var(--md-bad);opacity:.09}
 .md-svg .ln.s-0{stroke:var(--md-gold)} .md-svg .ln.s-1{stroke:var(--md-blue)} .md-svg .ln.s-2{stroke:var(--color-violet,var(--md-blue))} .md-svg .ln.s-3{stroke:var(--md-ok)} .md-svg .ln.s-4{stroke:var(--md-warn)}
@@ -542,7 +555,31 @@ function chartIko(w, r) {
   return s + '</svg>';
 }
 
-const CHARTS = { trend: chartTrend, zones: chartZones, bclass: chartBclass, iko: chartIko };
+function chartSk(w, r) {
+  const ss = r.sk.series, sel = ss.length - 1, narrow = w < 520;
+  const pl = 30, pr = 8, pt = 14, h1 = narrow ? 160 : 180, h = pt + h1 + 22;
+  let mx = 0;
+  ss.forEach((m) => { mx = Math.max(mx, m.issued, m.closed, m.open); });
+  mx = Math.ceil(mx / 20) * 20 || 20;
+  const { bw, x } = band(ss.length, w, pl, pr);
+  const y = lin(0, mx, pt + h1, pt);
+  let s = svgOpen(w, h, 'Стройконтроль: выдано, закрыто, открыто');
+  for (let g = 0; g <= mx; g += mx / 4) s += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + y(g).toFixed(1) + '" y2="' + y(g).toFixed(1) + '" class="grid"/>' + txt(pl - 6, y(g) + 3.5, fmt(g), 'ax', 'end');
+  s += '<rect x="' + (x(sel) - bw / 2).toFixed(1) + '" y="' + pt + '" width="' + bw.toFixed(1) + '" height="' + h1 + '" class="sel-band"/>';
+  ss.forEach((m, i) => {
+    const bwid = Math.min(bw * 0.34, 12);
+    s += '<rect x="' + (x(i) - bwid - 1).toFixed(1) + '" y="' + y(m.issued).toFixed(1) + '" width="' + bwid.toFixed(1) + '" height="' + (y(0) - y(m.issued)).toFixed(1) + '" class="sk-iss"><title>' + esc(monthFull(m.key) + ': выдано ' + m.issued) + '</title></rect>';
+    s += '<rect x="' + (x(i) + 1).toFixed(1) + '" y="' + y(m.closed).toFixed(1) + '" width="' + bwid.toFixed(1) + '" height="' + (y(0) - y(m.closed)).toFixed(1) + '" class="sk-cls"><title>' + esc(monthFull(m.key) + ': закрыто ' + m.closed) + '</title></rect>';
+  });
+  let d = '';
+  ss.forEach((m, i) => { d += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(m.open).toFixed(1); });
+  s += '<path d="' + d + '" class="ln-open"/>';
+  ss.forEach((m, i) => { s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(m.open).toFixed(1) + '" r="3" class="dot-open"><title>' + esc(monthFull(m.key) + ': открыто на конец месяца ' + m.open + (m.awaiting ? ', из них ждут проверки ' + m.awaiting : '')) + '</title></circle>'; });
+  s += xAxis(ss, sel, x, bw, h - 4);
+  return s + '</svg>';
+}
+
+const CHARTS = { trend: chartTrend, zones: chartZones, bclass: chartBclass, iko: chartIko, sk: chartSk };
 
 /* ---------- Блоки ---------- */
 
@@ -787,6 +824,34 @@ function blockCompanyObjects(r) {
     + '<div class="md-card md-d6"><h3>ИКО объектов по месяцам' + hint('iko') + '</h3><div class="md-lg">' + r.objs.slice(0, 5).map((o, k) => '<span><i class="line" style="background:' + OBJ_COLORS[k] + '"></i>' + esc(o.name) + '</span>').join('') + '<span>фон: зелёный — низкий риск, жёлтый — повышенный, красный — высокий</span></div><div class="md-chart" data-md-chart="iko"></div></div>';
 }
 
+function blockSk(r, n) {
+  const k = r.sk, c = k.cur, p = k.prev, ps = monthShort(r.prevMonth);
+  const idzCls = (v) => (v == null ? 'md-muted' : v >= 70 ? 'md-ok' : v >= 45 ? 'md-warn' : 'md-bad');
+  const rows = k.cons.map((x) => {
+    const xc = x.cur, d = x.idz != null && x.idzPrev != null ? x.idz - x.idzPrev : null;
+    return '<tr><td data-label="Подрядчик" class="name full nolbl">' + esc(x.name) + '</td>'
+      + '<td data-label="Выдано" class="r">' + xc.issued + '</td><td data-label="Закрыто" class="r">' + xc.closed + '</td>'
+      + '<td data-label="Открыто" class="r">' + xc.open + (xc.awaiting ? ' <span class="md-muted">(ждут проверки ' + xc.awaiting + ')</span>' : '') + '</td>'
+      + '<td data-label="В срок" class="r">' + (xc.onTimePerc != null ? fmt(xc.onTimePerc) + ' %' : '—') + '</td>'
+      + '<td data-label="Просрочено сейчас" class="r">' + xc.overdueNow + '</td>'
+      + '<td data-label="Закрыто с опозданием" class="r">' + xc.closedLate + (xc.closedLate ? ' <span class="md-muted">(ср. ' + fmt(xc.avgLateDays) + ' дн.)</span>' : '') + '</td>'
+      + '<td data-label="ИДЗ" class="r"><b class="' + idzCls(x.idz) + '">' + (x.idz != null ? fmt(x.idz) : '—') + '</b>' + (d != null ? ' <span class="md-dlt ' + (d > 0 ? 'good' : d < 0 ? 'bad' : 'same') + '" style="font-size:11px">' + fmtS(d) + '</span>' : '') + '</td></tr>';
+  }).join('');
+  return '<h2 class="md-sec"><span class="n">' + n + '</span>Стройконтроль (ПК СК)' + hint('sk') + '<span class="note">замечания: выдано / закрыто / открыто на конец месяца</span></h2>'
+    + '<div class="md-card md-d2"><h3>Замечания по месяцам' + hint('sk') + '</h3><div class="md-lg"><span><i style="background:var(--md-blue)"></i>выдано</span><span><i style="background:var(--md-ok)"></i>закрыто (проверено)</span><span><i class="line" style="background:var(--md-bad)"></i>открыто на конец месяца</span></div>'
+    + '<div class="md-chart" data-md-chart="sk"></div>'
+    + '<div class="md-aging"><div><div class="k">Висят 0–7 дней</div><div class="v">' + c.age.a + '</div></div><div><div class="k">8–30 дней</div><div class="v md-warn">' + c.age.b + '</div></div><div><div class="k">больше 30 дней</div><div class="v md-bad">' + c.age.c + '</div></div></div></div>'
+    + '<div class="md-card md-d4"><h3>Дисциплина закрытия по подрядчикам' + hint('idz') + '</h3>'
+    + '<p class="sub">' + esc(monthFull(r.month)) + ': выдано ' + c.issued + ', закрыто ' + c.closed
+    + (c.closed >= c.issued ? ' <b class="md-ok">— закрыли не меньше, чем выдали</b>' : ' <b class="md-bad">— выдали больше, чем закрыли</b>')
+    + ', открыто ' + c.open + (p ? ' (' + ps + ': ' + p.open + ')' : '') + (c.awaiting ? ', из них ждут проверки инженера ' + c.awaiting : '') + '.</p>'
+    + '<div class="md-mini md-mini4" style="margin:0 0 10px"><div><div class="k">Просрочено сейчас' + hint('skov') + '</div><div class="v md-bad">' + c.overdueNow + '</div><div class="k">' + ps + ': ' + (p ? p.overdueNow : '—') + '</div></div>'
+    + '<div><div class="k">Закрыто с опозданием</div><div class="v md-warn">' + c.closedLate + '</div><div class="k">' + (c.closedLate ? 'в среднем на ' + fmt(c.avgLateDays) + ' дн.' : '—') + '</div></div>'
+    + '<div><div class="k">ИДЗ месяца' + hint('idz') + '</div><div class="v ' + idzCls(c.idz) + '">' + (c.idz != null ? fmt(c.idz) : '—') + '</div><div class="k">' + ps + ': ' + (p && p.idz != null ? fmt(p.idz) : '—') + '</div></div>'
+    + '<div><div class="k">Закрыто в срок</div><div class="v md-ok">' + (c.onTimePerc != null ? fmt(c.onTimePerc) + ' %' : '—') + '</div><div class="k">' + c.closedOnTime + ' из ' + c.closed + '</div></div></div>'
+    + (rows ? '<div class="md-tblw"><table class="md-tbl cards"><thead><tr><th>Подрядчик</th><th class="r">Выдано</th><th class="r">Закрыто</th><th class="r">Открыто</th><th class="r">В срок</th><th class="r">Просрочено сейчас</th><th class="r">Закрыто с опозд.</th><th class="r">ИДЗ ' + hint('idz') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="md-muted">В этом месяце замечаний нет.</p>') + '</div>';
+}
+
 function blockConcl(r) {
   const F = r.findings;
   const li = (a) => a.map((t) => '<li>' + esc(t) + '</li>').join('');
@@ -855,6 +920,14 @@ function calcOptions() {
   };
 }
 
+/** Замечания СК — с теми же фильтрами, что экран Стройконтроля, без периода (месяц выбирается здесь). */
+function skSource() {
+  try { return getFilteredSkRecords({ ignorePeriod: true }) || []; } catch (_) { return []; }
+}
+
+/** ИДЗ — формула экрана Стройконтроля (contractorMetrics). */
+const skDiscipline = skDisciplineMetrics;
+
 export function renderMonthDynamics(root, checks) {
   ensureStyle();
   const months = availableMonths(checks);
@@ -862,6 +935,7 @@ export function renderMonthDynamics(root, checks) {
   state.month = month;
   const global = getOnepagerScope() === 'global';
   const r = computeMonthDynamics(checks, Object.assign({ month, mode: global ? 'global' : 'local' }, calcOptions()));
+  r.sk = computeSkMonth(skSource(), month, { skDiscipline });
   state.result = r;
   const c = r.cur;
   const bar = '<div class="md-bar"><label class="md-f"><span>Месяц</span><select data-md-month>' + monthOptions(months, month) + '</select></label></div>'
@@ -874,9 +948,10 @@ export function renderMonthDynamics(root, checks) {
   if (!c.N) {
     body = blockVolume(r, checks) + '<div class="md-card md-d6"><p class="md-empty">За этот месяц нет проверок по выбранным фильтрам.</p></div>';
   } else {
+    const sk = r.sk.total ? blockSk(r, 8) : '';
     body = global
-      ? blockVolume(r, checks) + blockTiles(r) + blockCompanyObjects(r) + blockTrend(r, 4) + blockCons(r) + blockDefects(r) + blockConcl(r)
-      : blockVolume(r, checks) + blockTiles(r) + blockTrend(r) + blockCons(r) + blockDefects(r) + blockObjects(r) + blockConcl(r);
+      ? blockVolume(r, checks) + blockTiles(r) + blockCompanyObjects(r) + blockTrend(r, 4) + blockCons(r) + blockDefects(r) + sk + blockConcl(r)
+      : blockVolume(r, checks) + blockTiles(r) + blockTrend(r) + blockCons(r) + blockDefects(r) + blockObjects(r) + sk + blockConcl(r);
   }
   root.innerHTML = bar + '<div class="md-grid">' + body + '</div>';
   drawCharts(root);
@@ -993,7 +1068,8 @@ function ensureRoot(section) {
 function fingerprint(data) {
   let last = '';
   for (let i = 0; i < data.length; i++) { const d = data[i] && data[i].date; if (d && d > last) last = d; }
-  return [state.month || '', data.length, last, getOnepagerScope()].join('|');
+  const sk = Array.isArray(window.skRecords) ? window.skRecords.length : 0;
+  return [state.month || '', data.length, last, getOnepagerScope(), sk].join('|');
 }
 
 function applyView(force) {

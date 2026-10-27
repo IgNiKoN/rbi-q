@@ -8,6 +8,8 @@
  * Разбор: ai-dev/specs/2026-10-27-quality-month-dynamics.md.
  */
 
+import { skPeriodStats, skDisciplineInput } from './sk.issue-rules.js';
+
 export const FEW_DATA_N = 7;
 
 function _math() {
@@ -629,4 +631,43 @@ export function buildFindings(r) {
   var fewCons = (r.cons || []).filter(function (x) { return x.m.conf.few; });
   if (fewCons.length) out.recs.push('Мало проверок (меньше 7) у: ' + fewCons.map(function (x) { return x.name; }).join(', ') + ' — добавить выборку в следующем месяце.');
   return out;
+}
+
+/* ---------- Стройконтроль за месяц (P2-0049 этап 4) ---------- */
+
+// Как buildContrMap экрана Стройконтроля: подрядчик — поле contractor.
+function _skContractor(r) { return (r && r.contractor) || 'Без подрядчика'; }
+
+/**
+ * Замечания стройконтроля по единому правилу (sk.issue-rules.js): по месяцам — выдано / закрыто /
+ * открыто на конец месяца (в т.ч. «ждёт проверки»), просрочено сейчас, закрыто с опозданием.
+ * ИДЗ — формулой экрана Стройконтроля (opts.skDiscipline = contractorMetrics из sk.desktop.content.js)
+ * на тех же замечаниях, что в строке: закрытых в месяце и открытых на его конец.
+ */
+export function computeSkMonth(records, month, opts) {
+  opts = opts || {};
+  var n = opts.trendMonths || 12;
+  var keys = lastMonths(month, n);
+  records = records || [];
+  var disc = typeof opts.skDiscipline === 'function' ? opts.skDiscipline : null;
+  var idzOf = function (st) { return disc && st.open + st.closed > 0 ? disc(skDisciplineInput(st)).cmi : null; };
+  var series = keys.map(function (k) {
+    var b = monthBounds(k);
+    var st = skPeriodStats(records, b.start, b.end);
+    st.key = k;
+    st.idz = idzOf(st);
+    return st;
+  });
+  var cur = series[series.length - 1], prev = series[series.length - 2] || null;
+  var names = {};
+  records.forEach(function (r) { names[_skContractor(r)] = 1; });
+  var b = monthBounds(month), bp = monthBounds(shiftMonth(month, -1));
+  var cons = Object.keys(names).map(function (name) {
+    var rr = records.filter(function (r) { return _skContractor(r) === name; });
+    var c = skPeriodStats(rr, b.start, b.end);
+    var p = skPeriodStats(rr, bp.start, bp.end);
+    return { name: name, cur: c, prev: p, idz: idzOf(c), idzPrev: idzOf(p) };
+  }).filter(function (x) { return x.cur.issued + x.cur.open > 0; })
+    .sort(function (a, b2) { return (b2.idz == null ? -1 : b2.idz) - (a.idz == null ? -1 : a.idz) || b2.cur.issued - a.cur.issued; });
+  return { series: series, cur: cur, prev: prev, cons: cons, total: records.length };
 }

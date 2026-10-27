@@ -77,7 +77,7 @@ export function skPeriodStats(records, start, end) {
   var s = _date(start), e = _date(end);
   var r = {
     issued: 0, closed: 0, closedOnTime: 0, closedLate: 0, lateDays: [],
-    open: 0, awaiting: 0, overdueNow: 0
+    open: 0, awaiting: 0, overdueNow: 0, overdueDays: [], age: { a: 0, b: 0, c: 0 }
   };
   (records || []).forEach(function (rec) {
     var issued = _date(rec.date_issued);
@@ -101,7 +101,12 @@ export function skPeriodStats(records, start, end) {
     if (openAtEnd) {
       r.open++;
       if (isIssueAwaitingVerification(rec) && (!resolved || resolved <= e)) r.awaiting++;
-      if (deadline && deadline < e) r.overdueNow++;
+      if (deadline && deadline < e) {
+        r.overdueNow++;
+        r.overdueDays.push(Math.ceil((e - deadline) / 86400000));
+      }
+      var days = (e - issued) / 86400000;
+      if (days <= 7) r.age.a++; else if (days <= 30) r.age.b++; else r.age.c++;
     }
   });
   r.onTimePerc = r.closed > 0 ? Math.round((r.closedOnTime / r.closed) * 100) : null;
@@ -109,4 +114,18 @@ export function skPeriodStats(records, start, end) {
     ? Math.round(r.lateDays.reduce(function (a, b) { return a + b; }, 0) / r.lateDays.length)
     : 0;
   return r;
+}
+
+/**
+ * Входные данные ИДЗ за период в форме экрана Стройконтроля (buildContrMap → contractorMetrics):
+ * замечания, закрытые в периоде или открытые на его конец; просрочка — «просрочено сейчас» + «закрыто с опозданием».
+ */
+export function skDisciplineInput(st) {
+  return {
+    total: st.open + st.closed,
+    overdueCount: st.overdueNow + st.closedLate,
+    overdueDaysArr: st.overdueDays.concat(st.lateDays),
+    closedCount: st.closed,
+    closedOnTimeCount: st.closedOnTime
+  };
 }
