@@ -577,6 +577,7 @@ else {
       const base = await j(await rpc('pf_vor_revision_base', { p_import: r2 }, tok.alfaPto));
       check('0006b: база сравнения — строка №1 с позицией', Array.isArray(base) && base.length === 1 && base[0].position_id === p1?.id);
       check('0006b: Бета не читает базу сравнения Альфы', !(await rpc('pf_vor_revision_base', { p_import: r2 }, tok.betaPto)).ok);
+      check('0006d: прораб не читает базу сравнения (объёмы факта) — 046a', !(await rpc('pf_vor_revision_base', { p_import: r2 }, tok.alfaForeman)).ok);
       const items = [{ row_no: 7, position_id: p1?.id }];
       check('0006b: Бета не принимает редакцию Альфы', !(await rpc('pf_vor_accept_revision', { p_import: r2, p_items: items, p_red: [] }, tok.betaPto)).ok);
       check('0006b: прораб не принимает редакцию', !(await rpc('pf_vor_accept_revision', { p_import: r2, p_items: items, p_red: [] }, tok.alfaForeman)).ok);
