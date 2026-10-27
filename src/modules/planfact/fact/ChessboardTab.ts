@@ -19,7 +19,8 @@ import { fmtPct, fmtQty, percent, remainder } from './fact.ts';
 const ALL = '';
 type View = 'sections' | 'works';
 const VIEW_KEY = 'pf-chess-view';
-function readView(): View { try { return window.localStorage.getItem(VIEW_KEY) === 'works' ? 'works' : 'sections'; } catch { return 'sections'; } }
+/** Выбранный на устройстве вид; null — ещё не выбирали (тогда вид по данным, P2-0046: без секций — «Этажи × виды работ»). */
+function readView(): View | null { try { const v = window.localStorage.getItem(VIEW_KEY); return v === 'works' ? 'works' : v === 'sections' ? 'sections' : null; } catch { return null; } }
 function writeView(v: View): void { try { window.localStorage.setItem(VIEW_KEY, v); } catch { /* без хранилища — просто не запомним */ } }
 
 /** Главное число и подпись ячейки: % по объёму или «закрыто X из Y». */
@@ -126,7 +127,7 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
   const [building, setBuilding] = useState<string | null>(null);
   const [work, setWork] = useState(ALL);
   const [sel, setSel] = useState<Sel | null>(null);
-  const [view, setView] = useState<View>(readView);
+  const [saved, setSaved] = useState<View | null>(readView);
   const [section, setSection] = useState(ALL);
   const [open, setOpen] = useState<Set<string>>(new Set());
 
@@ -155,10 +156,22 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
   const works = useMemo(() => (data ? workTypesOf(data.pl.placed.filter((it) => (it.floor.building ? it.floor.building.id : '') === b).map((it) => it.pos)) : []), [data, b]);
   const w = work && works.some((x) => x.id === work) ? work : null;
   const secs = useMemo(() => (data && b !== null ? sectionsOf(data.idx, b) : []), [data, b]);
+  // P2-0046: в корпусе без секций «Этажи × секции» — одна колонка «Без секции»; по умолчанию тогда — «Этажи × виды работ»
+  const view: View = saved || (secs.length > 1 ? 'sections' : 'works');
+  /** % корпуса для кнопок выбора: средняя готовность позиций корпуса по объёму (не больше 100 % на позицию). */
+  const bldPct = useMemo(() => {
+    const m = new Map<string, { s: number; n: number }>();
+    if (data) for (const it of data.pl.placed) {
+      const id = it.floor.building ? it.floor.building.id : '';
+      const x = m.get(id) || { s: 0, n: 0 };
+      x.s += Math.min(100, percent(it.pos.fact_qty, it.pos.plan_qty)); x.n++; m.set(id, x);
+    }
+    return m;
+  }, [data]);
   const sc = view === 'works' && section !== ALL && secs.some((x) => x.id === section) ? section : null;
   const grid = useMemo(() => (data && b !== null ? (view === 'works' ? workGrid(data.idx, data.pl, b, sc) : sectionGrid(data.idx, data.pl, b, w)) : null), [data, b, w, view, sc]);
   const loose = data && b !== null ? unplacedIn(data.idx, data.pl, b, view === 'works' ? null : w) : [];
-  const pickView = (v: View): void => { setView(v); writeView(v); setSel(null); };
+  const pickView = (v: View): void => { setSaved(v); writeView(v); setSel(null); };
   const toggle = (row: string): void => { const n = new Set(open); if (n.has(row)) n.delete(row); else n.add(row); setOpen(n); };
 
   if (!data) return h('div', { className: 'pf-muted', 'data-testid': 'cb-loading' }, 'Загрузка…');
@@ -177,10 +190,13 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
     h('div', { className: 'pf-seg cb-views', role: 'tablist', 'data-testid': 'cb-views' },
       ([['sections', 'Этажи × секции'], ['works', 'Этажи × виды работ']] as [View, string][]).map(([id, label]) => h('button', { key: id, type: 'button', role: 'tab', 'aria-selected': view === id,
         'data-view': id, className: 'pf-seg-btn' + (view === id ? ' pf-seg-btn--active' : ''), onClick: () => pickView(id) }, label))),
+    // P2-0046: корпус — кнопками со своим процентом (вместо выпадающего списка)
+    blds.length > 1 ? h('div', { className: 'p2-reg__quick', role: 'group', 'aria-label': 'Корпус', 'data-testid': 'cb-building' }, blds.map((x) => {
+      const t = bldPct.get(x.id);
+      return h('button', { key: x.id, type: 'button', className: 'p2-reg__q' + (x.id === b ? ' p2-reg__q--on' : ''), 'aria-pressed': x.id === b, 'data-building': x.id,
+        onClick: () => { setBuilding(x.id); setSel(null); } }, x.name, t && t.n ? h('span', { className: 'p2-reg__qn' }, fmtPct(Math.round(t.s / t.n))) : null);
+    })) : null,
     h('div', { className: 'cb-filters' },
-      blds.length > 1 ? h('label', { className: 'pf-field' }, 'Корпус',
-        h('select', { className: 'pj-input', value: b || '', 'data-testid': 'cb-building', onChange: (e) => { setBuilding((e.target as HTMLSelectElement).value); setSel(null); } },
-          blds.map((x) => h('option', { key: x.id, value: x.id }, x.name)))) : null,
       view === 'sections'
         ? h('label', { className: 'pf-field cb-workpick' }, 'Вид работ',
             h('select', { className: 'pj-input', value: w || ALL, 'data-testid': 'cb-work', onChange: (e) => { setWork((e.target as HTMLSelectElement).value); setSel(null); } },
@@ -205,7 +221,18 @@ export const CHESSBOARD_CSS = `
 .cb-root{display:flex;flex-direction:column;gap:10px;min-width:0}
 .cb-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .cb-mode,.cb-loose{font-size:12px}
-.cb-views .pf-seg-btn{flex:1 1 auto;padding:8px 10px;letter-spacing:.04em}
+.cb-views{align-self:flex-start;max-width:100%}
+.cb-views .pf-seg-btn{flex:1 1 auto;padding:6px 12px}
+.cb-filters:empty{display:none}
+.cb-root .p2-chess__table thead th{overflow-wrap:normal;word-break:normal;hyphens:auto;-webkit-hyphens:auto}
+/* P2-0046: телефон — клетки компактнее (одно число), сетка листается вбок внутри себя, первый столбец закреплён */
+@media (max-width:767.98px){
+.cb-root .p2-chess__table thead th{min-width:44px;font-size:11px;padding:6px 3px}
+.cb-root .p2-chess__cell{min-width:44px;min-height:40px;padding:2px 3px}
+.cb-root .p2-chess__main{font-size:12px}
+.cb-root .p2-chess__sub{display:none}
+.cb-root .p2-chess__table th[scope=row]{padding:4px 8px;font-size:12px}
+}
 .cb-toggle{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
 .cb-caret{display:inline-block;width:12px;color:var(--text-muted)}
 .cb-kids{font-size:11px;font-weight:400;color:var(--text-muted)}
