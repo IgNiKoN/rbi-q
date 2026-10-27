@@ -2683,6 +2683,7 @@
   "quality.tasks.prompt.pause_reason": "მიუთითეთ პაუზის მიზეზი:",
   "quality.tasks.prompt.postpone_days": "რამდენი დღით გადავდოთ ამოცანა? (შეიყვანეთ რიცხვი)",
   "quality.tasks.report_settings.all_projects": "კომპანიის ყველა ობიექტი (გლობალურად)",
+  "quality.tasks.report_settings.all_my_projects": "ჩემი ყველა ობიექტი",
   "quality.tasks.report_settings.cancel": "გაუქმება",
   "quality.tasks.report_settings.download": "PDF-ის ჩამოტვირთვა",
   "quality.tasks.report_settings.info_close": "აირჩიეთ პარამეტრები გამოგზავნის ფორმირებისთვის...",

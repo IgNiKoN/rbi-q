@@ -4103,3 +4103,21 @@ body.ui-motion-off .rbi-acc {
     box-shadow: none !important;
 }
 
+
+/* Закреплённый объект инженера (поле «Объект» только для чтения, object-directory.service.js → project-locked).
+   Цвета заданы явно по темам: на ПК стиль полей «Осмотра» (audit.desktop.css) перекрашивал фон в светлый,
+   а текст и замок оставались белыми — не читалось; в «RBI тёмной» и «тёмной v2» белый на золоте был бледным.
+   Фон — как был на телефоне в каждой теме; текст и замок — контрастные. */
+:root { --rbi-locked-bg: #4f46e5; --rbi-locked-fg: #fff; }
+[data-theme="rbi-light"], [data-theme="rbi-light-v2"] { --rbi-locked-bg: var(--primary); --rbi-locked-fg: #fff; }
+[data-theme="rbi-dark"], [data-theme="rbi-dark-v2"] { --rbi-locked-bg: var(--primary); --rbi-locked-fg: #101923; }
+[data-theme="rbi-light-v3"], [data-theme="rbi-dark-v3"] { --rbi-locked-bg: var(--blue-steel, #4c7288); --rbi-locked-fg: #fff; }
+#inp-project.project-locked,
+body.rbi-audit-desktop-wide #data-block-content #inp-project.project-locked {
+    background: var(--rbi-locked-bg) !important;
+    border-color: var(--rbi-locked-bg) !important;
+    color: var(--rbi-locked-fg) !important;
+    -webkit-text-fill-color: var(--rbi-locked-fg);
+    opacity: 1;
+}
+#lock-inp-project.project-lock-visible { color: var(--rbi-locked-fg) !important; }

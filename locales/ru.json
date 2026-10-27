@@ -2683,6 +2683,7 @@
   "quality.tasks.prompt.pause_reason": "Укажите причину паузы:",
   "quality.tasks.prompt.postpone_days": "На сколько дней перенести задачу? (введите число)",
   "quality.tasks.report_settings.all_projects": "Все объекты компании (Глобально)",
+  "quality.tasks.report_settings.all_my_projects": "Все мои объекты",
   "quality.tasks.report_settings.cancel": "Отмена",
   "quality.tasks.report_settings.download": "Скачать PDF",
   "quality.tasks.report_settings.info_close": "Выберите параметры для формирования выгрузки...",

@@ -2683,6 +2683,7 @@
   "quality.tasks.prompt.pause_reason": "Enter the pause reason:",
   "quality.tasks.prompt.postpone_days": "How many days to postpone? (enter a number)",
   "quality.tasks.report_settings.all_projects": "All company projects (Global)",
+  "quality.tasks.report_settings.all_my_projects": "All my projects",
   "quality.tasks.report_settings.cancel": "Cancel",
   "quality.tasks.report_settings.download": "Download PDF",
   "quality.tasks.report_settings.info_close": "Choose options for the export...",

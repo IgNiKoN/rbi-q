@@ -2063,13 +2063,45 @@ async function _finishWorkshop(taskId) {
 // 8. ОТЧЁТ ИЗ ЗАДАЧИ
 // =========================================================================
 
+/**
+ * Объекты для окна «Настройки отчёта». Руководство — объекты из проверок (как было).
+ * Инженер и другие роли «по объектам» — закреплённые объекты (справочник), даже если
+ * проверок по ним на устройстве ещё нет; раньше список строился только из проверок
+ * и у инженера бывал пустым.
+ */
+function _reportProjectChoices(allInspections) {
+    var perm = (_ctx && _ctx.permissions) || (window.RBI && window.RBI.services && window.RBI.services.permissions);
+    var role = perm ? perm.getCurrentRole() : 'guest';
+    var isManager = perm ? perm.canManageHierarchy() : ['director', 'deputy_manager', 'manager'].includes(role);
+    var fromInspections = (allInspections || []).map(function(c){ return c.projectName || c.project_display_name; }).filter(Boolean);
+    if (isManager || role === 'guest') {
+        return { names: Array.from(new Set(fromInspections)).sort(), own: false };
+    }
+    var od = window.RBI && window.RBI.services && window.RBI.services.objects;
+    var assigned = (od && typeof od.getAssignedProjectObjects === 'function') ? (od.getAssignedProjectObjects() || []) : [];
+    var uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    var names = assigned.map(function(o){ return String(o.display_name || '').trim(); })
+        .filter(function(n){ return n && !uuidLike.test(n); });
+    if (!names.length) names = fromInspections;
+    return { names: Array.from(new Set(names)).sort(), own: true };
+}
+
 function _openReportSettingsModal(actionType, mode, taskId, closeTask) {
     const _allInspections = _inspections();
     if (typeof closeTask === 'undefined') closeTask = true;
     var modal = document.getElementById('modal-overlay');
-    var uniqueProjects = Array.from(new Set(_allInspections.map(function(c){ return c.projectName; }).filter(Boolean))).sort();
-    var projOptions = '<option value="ALL">' + _t('quality.tasks.report_settings.all_projects', 'Все объекты компании (Глобально)') + '</option>';
-    uniqueProjects.forEach(function(p) { projOptions += '<option value="' + p.replace(/"/g, '&quot;') + '">' + p + '</option>'; });
+    var choices = _reportProjectChoices(_allInspections);
+    var uniqueProjects = choices.names;
+    var allLabel = choices.own
+        ? _t('quality.tasks.report_settings.all_my_projects', 'Все мои объекты')
+        : _t('quality.tasks.report_settings.all_projects', 'Все объекты компании (Глобально)');
+    // Один закреплённый объект — сразу выбран (в шапке отчёта — его название)
+    var preselect = choices.own && uniqueProjects.length === 1 ? uniqueProjects[0] : null;
+    var projOptions = '<option value="ALL"' + (preselect ? '' : ' selected') + '>' + allLabel + '</option>';
+    uniqueProjects.forEach(function(p) {
+        var v = String(p).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        projOptions += '<option value="' + v + '"' + (p === preselect ? ' selected' : '') + '>' + v + '</option>';
+    });
     document.getElementById('modal-icon').innerHTML = '<div class="w-14 h-14 bg-brand-soft text-brand rounded-2xl flex items-center justify-center text-3xl mx-auto mb-2 border border-brand-soft">⚙️</div>';
     document.getElementById('modal-title').innerHTML = '<div class="text-center font-black uppercase text-lg">' + _t('quality.tasks.report_settings.title', 'Настройки Отчета') + '</div>';
     var taskInfoText = closeTask

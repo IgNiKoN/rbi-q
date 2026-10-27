@@ -2683,6 +2683,7 @@
   "quality.tasks.prompt.pause_reason": "Navedite razlog pauze:",
   "quality.tasks.prompt.postpone_days": "Za koliko dana pomeriti zadatak? (unesite broj)",
   "quality.tasks.report_settings.all_projects": "Svi objekti kompanije (Globalno)",
+  "quality.tasks.report_settings.all_my_projects": "Svi moji objekti",
   "quality.tasks.report_settings.cancel": "Otkaži",
   "quality.tasks.report_settings.download": "Preuzmi PDF",
   "quality.tasks.report_settings.info_close": "Izaberite parametre za formiranje izvoza...",
