@@ -30,3 +30,8 @@ select '00000000-0000-4000-8000-000000048100', ('00000000-0000-4000-8000-0000000
                ('07', 'qc_engineer', null, null, null, null),
                ('08', 'foreman', '00000000-0000-4000-8000-000000048202', null, now() + interval '10 days', null),
                ('09', 'foreman', '00000000-0000-4000-8000-000000048201', null, null, now())) v(u, t, p, o, vt, rv);
+-- Стройконтроль 2.0: замечания и приёмка компании (для строки снимка «видят»)
+insert into quality.construction_defects_v2(id, core_company_id, status, text)
+  select 'd' || g || '-048', '00000000-0000-4000-8000-000000048100', 'issued', 'Замечание ' || g from generate_series(1, 3) g;
+insert into quality.construction_acceptance_v2(id, core_company_id, status)
+  values ('a1-048', '00000000-0000-4000-8000-000000048100', 'requested');

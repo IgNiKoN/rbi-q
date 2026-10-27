@@ -243,9 +243,17 @@ begin
   perform pg_temp.as_user(uadm);
   j := public.pf_set_participation(array[uqe], r_qe, null, null, false, null, array[o1]);
   res := res || pg_temp.t((j ->> 'added')::int = 1, 'инженер качества привязан к объекту 1');
+  perform pg_temp.as_user(uqe); perform set_config('request.headers', json_build_object('x-company-id', ca)::text, true);
+  res := res || pg_temp.t((select array_agg(x ->> 'id') from jsonb_array_elements(quality.my_access(null) -> 'objects') x) = array[o1],
+                          'Качество видит у инженера объект 1 (мост: назначение → объекты Качества): ' || coalesce((quality.my_access(null) -> 'objects')::text, 'null'));
+  perform set_config('request.headers', '{}', true); perform pg_temp.as_user(uadm);
   select id into v_id2 from pg_temp.ra() where user_id = uqe and revoked_at is null;
   j := public.pf_set_participation(array[uqe], r_qe, null, null, false, null, array[o2]);
   res := res || pg_temp.t(j = '{"added": 0, "changed": 1, "revoked": 0}', 'перепривязан на объект 2 (' || j::text || ')');
+  perform pg_temp.as_user(uqe); perform set_config('request.headers', json_build_object('x-company-id', ca)::text, true);
+  res := res || pg_temp.t((select array_agg(x ->> 'id') from jsonb_array_elements(quality.my_access(null) -> 'objects') x) = array[o2],
+                          'после перепривязки Качество видит у инженера только объект 2');
+  perform set_config('request.headers', '{}', true); perform pg_temp.as_user(uadm);
   res := res || pg_temp.t((select quality_objects from pg_temp.ra() where id = v_id2 and revoked_at is null) = array[o2],
                           'то же назначение, объект 2');
   reset role;
