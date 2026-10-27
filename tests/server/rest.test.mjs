@@ -920,8 +920,11 @@ else {
     const cat = await j(await rpc('pf_project_catalog', { p_company: cA7 }, tok.alfaAdmin));
     const p7 = Array.isArray(cat) ? cat.find((x) => x.name === REST_PROJECT && !x.archived_at) : null;
     check('0047: каталог Альфы — есть объект автопроверок с карточкой', !!p7 && typeof p7.stage === 'string' && 'object_count' in p7);
-    check('0047: Бета не читает каталог Альфы', !(await rpc('pf_project_catalog', { p_company: cA7 }, tok.betaPto)).ok);
-    check('0047: Бета не читает подразделения Альфы', !(await rpc('pf_company_divisions', { p_company: cA7 }, tok.betaPto)).ok);
+    // чужая компания: отказ или пустой список (данных Альфы нет)
+    const none = async (fn) => { const r = await rpc(fn, { p_company: cA7 }, tok.betaPto); const v = r.ok ? await j(r) : null; return { ok: !r.ok || (Array.isArray(v) && v.length === 0), why: r.ok ? `строк ${Array.isArray(v) ? v.length : '?'}` : `статус ${r.status}` }; };
+    const nc = await none('pf_project_catalog'), nd = await none('pf_company_divisions');
+    check('0047: Бета не видит каталог Альфы', nc.ok, nc.why);
+    check('0047: Бета не видит подразделения Альфы', nd.ok, nd.why);
     check('0047: Бета не создаёт подразделение в Альфе', !(await rpc('pf_save_division', { p_company: cA7, p_id: uuid(), p_name: 'ВЗЛОМ-045', p_head_user: null, p_archived: null }, tok.betaPto)).ok);
     check('0047: Бета не меняет карточку проекта Альфы', !(await rpc('pf_save_project', { p_company: cA7, p_id: p7?.id, p_card: { address: 'ВЗЛОМ' } }, tok.betaPto)).ok);
     check('0047: Бета не читает места проекта Альфы', !(await rpc('pf_project_places', { p_project: p7?.id, p_parent: null }, tok.betaPto)).ok);
