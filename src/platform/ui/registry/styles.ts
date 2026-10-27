@@ -77,8 +77,26 @@ export const P2_REGISTRY_CSS = `
 .p2-history__item{border-left:2px solid var(--card-border);padding:2px 0 2px 10px;display:flex;flex-direction:column;gap:4px;font-size:13px}
 .p2-history__head{display:flex;flex-wrap:wrap;gap:8px;font-size:12px}
 .p2-history__status{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.p2-reg__compact{display:none}
+.p2-reg__quick{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+.p2-reg__quick::-webkit-scrollbar{display:none}
+.p2-reg__q{font:inherit;font-size:13px;font-weight:500;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);cursor:pointer;white-space:nowrap}
+.p2-reg__q--on{background:var(--primary);border-color:var(--primary);color:var(--card-bg)}
+.p2-reg__qn{font-variant-numeric:tabular-nums;opacity:.72}
+.p2-reg__q:focus-visible{outline:2px solid var(--accent,var(--primary));outline-offset:2px}
+.p2-reg__cbtn{font:inherit;color:inherit;background:transparent;border:0;padding:0;width:100%;text-align:left;cursor:pointer;display:block}
 @media (max-width:760px){
 .p2-reg__scroll{border:0;background:transparent;overflow:visible}
+.p2-reg--compact .p2-reg__scroll{border:1px solid var(--card-border);border-radius:14px;background:var(--card-bg);overflow:hidden}
+.p2-reg--compact .p2-reg__row{border:0;border-top:1px solid var(--card-border);border-radius:0;margin:0;padding:10px 14px}
+.p2-reg--compact .p2-reg__row td{display:none}
+.p2-reg--compact .p2-reg__row td.p2-reg__compact{display:block;padding:0;text-align:left}
+.p2-reg--compact .p2-reg__row td.p2-reg__check{display:block}
+.p2-reg--compact:not(.p2-reg--nocheck) .p2-reg__row{padding-left:48px}
+.p2-reg--compact .p2-reg__group{margin:0;border-top:1px solid var(--card-border);background:var(--hover-bg,var(--card-bg))}
+.p2-reg--compact .p2-reg__group td{padding:4px 10px}
+.p2-reg--compact tbody:first-child .p2-reg__group,.p2-reg--compact tbody:first-child .p2-reg__row:first-child{border-top:0}
+.p2-reg--nocheck .p2-reg__row{padding-left:12px}
 .p2-reg__table,.p2-reg__table tbody,.p2-reg__table tr,.p2-reg__table td{display:block;width:100%;box-sizing:border-box}
 .p2-reg__table thead{display:none}
 .p2-reg__row{position:relative;background:var(--card-bg);border:1px solid var(--card-border);border-radius:10px;margin-bottom:8px;padding:8px 8px 8px 44px}

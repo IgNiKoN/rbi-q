@@ -51,7 +51,7 @@ function shell(): { calls: { name: string; role: string }[] } {
 test('#/planfact и адрес раздела без права (Смета без planfact.estimate.manage) → «Сводка», не старая таблица', async () => {
   for (const hash of ['#/planfact', '#/planfact/estimate', '#/planfact/ks2']) {
     const el = mount(hash, auth()); await tick();
-    assert.match(el.textContent || '', /Сводка — готовность объектов/, hash);
+    assert.equal(el.querySelector('.pf-title')?.textContent, 'Сводка', hash);
     assert.ok(el.querySelector('[data-testid="sm-portfolio"], [data-project-id]') || /ЖК/.test(el.textContent || ''), `${hash}: портфель на экране`);
     assert.ok(!el.querySelector('[data-work-id]'), `${hash}: без старой демо-таблицы`);
   }

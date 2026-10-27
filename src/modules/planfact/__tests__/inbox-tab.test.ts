@@ -110,7 +110,7 @@ test('маршрут #/planfact/inbox: заголовок и страница; �
   const summary = makeFakeSummary([{ ...PTO_PROJECT }], { inbox: [PM] }).api;
   const box = await mount(h(PlanfactApp, { auth, data: { works: [] } as N, projects, summary } as N));
   await tick();
-  assert.match(box.textContent, /Требует моего участия/);
+  assert.equal(box.querySelector('.pf-title')?.textContent, 'Входящие');
   assert.ok(box.querySelector('[data-testid="ib-tab"]'));
   const list = [{ id: 'x', name: 'X', archived_at: '2026-01-01' }, { id: 'y', name: 'Y' }, { id: 'z', name: 'Z' }];
   assert.equal(initialProjectId(list, '#/planfact/ks2?p=z'), 'z');

@@ -58,7 +58,7 @@ export const FACT_SUBS: { id: FactSub; label: string; short?: string; path: stri
 const FACT_SUB_IDS: string[] = ['chessboard', 'pending', 'journal'];
 /** Подвкладка «ВОР» (P2-0019): #/planfact/vor — «Загрузка», #/planfact/vor/positions[?вид] — «Позиции» (реестр). */
 export type VorSub = 'load' | 'positions';
-export const VOR_SUBS: { id: VorSub; label: string; path: string }[] = [{ id: 'load', label: 'Загрузка', path: '/vor' }, { id: 'positions', label: 'Позиции', path: '/vor/positions' }];
+export const VOR_SUBS: { id: VorSub; label: string; path: string }[] = [{ id: 'load', label: 'Загрузки', path: '/vor' }, { id: 'positions', label: 'Позиции', path: '/vor/positions' }];
 export function vorSubFromHash(hash: string): VorSub {
   return String(hash || '').replace(/^#\/planfact\/?/, '').split('?')[0].split('/')[1] === 'positions' ? 'positions' : 'load';
 }
@@ -92,12 +92,20 @@ export function canonicalHash(hash: string, a: RouteAccess): string | null {
   return null;
 }
 
-/** Подпись подвкладки со счётчиком; short — на телефоне (≤ 760 px), полная — для экранного диктора и на ПК. */
+/** Подпись подвкладки со счётчиком; short — на телефоне (≤ 760 px), полная — для экранного диктора и на ПК.
+ *  P2-0046: счётчик — плашка рядом с подписью, а не «(N)». */
 function segLabel(label: string, short: string | undefined, count: number | null): ReactNode[] {
-  const n = count === null ? '' : ` (${count})`;
+  const n = count === null ? null : h('span', { key: 'n', className: 'pf-tab-n' }, String(count));
   return short
-    ? [h('span', { key: 'f', className: 'pf-seg-full' }, label + n), h('span', { key: 's', className: 'pf-seg-short', 'aria-hidden': 'true' }, short + n)]
-    : [label + n];
+    ? [h('span', { key: 'f', className: 'pf-seg-full' }, label), h('span', { key: 's', className: 'pf-seg-short', 'aria-hidden': 'true' }, short), n]
+    : [label, n];
+}
+
+/** P2-0046: вкладки раздела — подчёркиванием, обычными буквами (образец «Вкладки» дизайн-системы). */
+function PageTabs(props: { testId: string; items: { id: string; label: ReactNode[] }[]; active: string; onPick: (id: string) => void }): ReactElement {
+  return h('div', { className: 'pf-tabs', role: 'tablist', 'data-testid': props.testId },
+    props.items.map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': props.active === t.id, 'data-sub': t.id,
+      className: 'pf-tab' + (props.active === t.id ? ' pf-tab--active' : ''), onClick: () => props.onPick(t.id) }, ...t.label)));
 }
 
 function accessLabel(entries: AccessEntry[]): string {
@@ -178,7 +186,7 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
 
   // На телефоне подвкладки «Факта» прокручиваются вбок: открытая — всегда в поле зрения (P2-0020: их четыре).
   useEffect(() => {
-    const el = document.querySelector('[data-testid="pf-facttabs"] .pf-seg-btn--active') as (HTMLElement & { scrollIntoView?: (o?: object) => void }) | null;
+    const el = document.querySelector('[data-testid="pf-facttabs"] .pf-tab--active') as (HTMLElement & { scrollIntoView?: (o?: object) => void }) | null;
     if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [route, factSubFromHash(window.location.hash), mode, companies.length, factApprove]);
 
@@ -259,33 +267,27 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     : h('div', { className: 'pf-root' }, h('div', { className: 'pf-card pf-hint', 'data-testid': 'pf-hint' },
         h('div', null, hint),
         mode === 'demo' ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'pf-hint-vor', onClick: () => nav(`${BASE}/vor`) }, 'Разбор файла ВОР') : null));
+  // P2-0046: заголовки — короткие, обычными буквами; подвкладки — подчёркиванием (утверждённые макеты reports/P2-0046/compare).
   const head = inb
-    ? pageHead('Требует моего участия')
+    ? pageHead('Входящие')
     : sm
-    ? pageHead('Сводка — готовность объектов')
+    ? pageHead('Сводка')
     : k2
-    ? pageHead('КС-2 — акты о приёмке')
+    ? pageHead('КС-2')
     : fct
-    ? pageHead('Факт — выполненные объёмы',
-        h('div', { className: 'pf-seg', role: 'tablist', 'data-testid': 'pf-facttabs' },
-          FACT_SUBS.filter((t) => !t.approve || factApprove !== null).map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': fsub === t.id, 'data-sub': t.id,
-            className: 'pf-seg-btn' + (fsub === t.id ? ' pf-seg-btn--active' : ''), onClick: () => nav(`${BASE}${t.path}`) },
-            ...segLabel(t.label, t.short, t.approve && factApprove !== null ? factApprove : null)))))
+    ? pageHead('Факт', h(PageTabs, { testId: 'pf-facttabs', active: fsub, onPick: (id) => nav(`${BASE}${FACT_SUBS.find((t) => t.id === id)!.path}`),
+        items: FACT_SUBS.filter((t) => !t.approve || factApprove !== null).map((t) => ({ id: t.id, label: segLabel(t.label, t.short, t.approve && factApprove !== null ? factApprove : null) })) }))
     : est
-    ? pageHead('Смета — тендерная стоимость')
+    ? pageHead('Смета')
     : vor
-    ? pageHead(vsub === 'positions' && mode === 'authed' ? 'ВОР — позиции' : 'ВОР — загрузка ведомости',
+    ? pageHead('ВОР',
         mode === 'authed'
-          ? h('div', { className: 'pf-seg', role: 'tablist', 'data-testid': 'pf-vortabs' },
-              VOR_SUBS.map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': vsub === t.id, 'data-sub': t.id,
-                className: 'pf-seg-btn' + (vsub === t.id ? ' pf-seg-btn--active' : ''), onClick: () => nav(`${BASE}${t.path}`) },
-                t.id === 'positions' && vorCount !== null ? `${t.label} (${vorCount})` : t.label)))
+          ? h(PageTabs, { testId: 'pf-vortabs', active: vsub, onPick: (id) => nav(`${BASE}${VOR_SUBS.find((t) => t.id === id)!.path}`),
+              items: VOR_SUBS.map((t) => ({ id: t.id, label: segLabel(t.label, undefined, t.id === 'positions' ? vorCount : null) })) })
           : null)
     : dirs
-    ? pageHead('Справочники',
-        h('div', { className: 'pf-seg', role: 'tablist', 'data-testid': 'pf-dirtabs' },
-          SUBS.filter((t) => !t.estimate || canEstimate).map((t) => h('button', { key: t.id, type: 'button', role: 'tab', 'aria-selected': route.sub === t.id, 'data-sub': t.id,
-            className: 'pf-seg-btn' + (route.sub === t.id ? ' pf-seg-btn--active' : ''), onClick: () => go(t.id) }, t.label))))
+    ? pageHead('Справочники', h(PageTabs, { testId: 'pf-dirtabs', active: route.sub, onPick: (id) => go(id as Sub),
+        items: SUBS.filter((t) => !t.estimate || canEstimate).map((t) => ({ id: t.id, label: [t.label] })) }))
     : null;
   return h(HeadSlotsContext.Provider, { value: { picker: head ? pickEl : null, actions: head ? actEl : null } }, h('div', { className: 'pf-page' }, bar, userTag, head, body));
 }
@@ -297,11 +299,21 @@ export const PLANFACT_TABS_CSS = `
 /* P2-0041: страница План/Факта — во всю ширину рабочей области; общий список компании (CompanyScope) здесь тоже без предела */
 .pf-page .pj-root{max-width:none}
 .pf-hint{padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:12px;font-size:14px}
-.pf-seg{display:flex;flex-wrap:nowrap;gap:var(--rbi-subtab-gap,6px);padding:4px;border:1px solid var(--card-border);border-radius:12px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.pf-seg-btn{flex:1 0 auto;min-width:5rem;min-height:40px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;padding:8px 12px;border-radius:8px;border:0;background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap;text-align:center}
+/* P2-0046: переключатель внутри формы («День / Период», «Этажи × секции») — спокойный: обычные буквы, активный — графит */
+.pf-seg{display:flex;flex-wrap:nowrap;gap:2px;padding:3px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.pf-seg-btn{flex:1 0 auto;min-width:4.5rem;min-height:40px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:7px;border:0;background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap;text-align:center}
 .pf-seg-short{display:none}
 @media (max-width:760px){.pf-seg-full{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.pf-seg-short{display:inline}}
-.pf-seg-btn--active{background:var(--accent,var(--primary));color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.pf-seg-btn--active{background:var(--primary);color:var(--card-bg)}
+/* P2-0046: вкладки раздела — подчёркиванием, без «таблетки»; на телефоне прокручиваются вбок внутри строки */
+.pf-tabs{display:flex;flex-wrap:nowrap;gap:20px;border-bottom:1px solid var(--card-border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;min-width:0}
+.pf-tabs::-webkit-scrollbar{display:none}
+.pf-tab{font:inherit;font-size:14px;font-weight:500;color:var(--text-muted);background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 0 9px;min-height:44px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
+.pf-tab:hover{color:var(--text-main)}
+.pf-tab--active{color:var(--text-main);font-weight:600;border-bottom-color:var(--accent,var(--primary))}
+.pf-tab:focus-visible{outline:2px solid var(--accent,var(--primary));outline-offset:2px}
+.pf-tab-n{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--hover-bg,var(--card-border));color:var(--text-main);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+@media (max-width:767.98px){.pf-tabs{gap:16px}}
 `;
 
 /** Стили входа перенесены в платформенный слой (LoginForm); имя сохранено для index.ts. */

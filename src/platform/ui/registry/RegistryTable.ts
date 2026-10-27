@@ -5,6 +5,8 @@
  * и «Скопировать ссылку» (1.6). Вид (фильтры, сортировка, колонки, группировка) хранит модуль (state / onState); выбор — тоже.
  * P2-0041: панель — одна строка «Фильтр · Показано | (действия модуля, например Excel) · ⋯»; «Только просроченные» — в «Фильтре»,
  * группировка, колонки, виды и ссылка — в меню «⋯». На телефоне — та же одна строка.
+ * P2-0046: quick — фильтр одним нажатием, кнопками со счётчиками («Все 6 · Черновики 1 · Выданы 4»); compact — строка телефона
+ * (2–3 главных поля одной строкой вместо карточки «подпись: значение»); selectMode — галочки появляются после «Выбрать».
  * Цвета — только токены дизайн-системы (tokens.ts, StatusBadge). Бизнес-API не вызывает.
  */
 import { createElement as h, useEffect, useMemo, useRef, useState } from 'react';
@@ -56,6 +58,12 @@ export interface RegistryProps<T> {
   lead?: ReactNode;
   /** Подменяется в тестах. */
   copy?: (text: string) => Promise<boolean>;
+  /** P2-0046: фильтр-кнопки над списком по одному из filters (id) — «Все N» и значения со счётчиками. */
+  quick?: { filter: string; all?: string };
+  /** P2-0046: строка на телефоне (≤ 760 px) — вместо карточки со всеми колонками. */
+  compact?: (r: T) => ReactNode;
+  /** P2-0046: галочки выбора скрыты, пока не нажали «Выбрать» (или пока что-то выбрано). */
+  selectMode?: boolean;
 }
 
 /** P2-0041: кнопка «Excel» панели реестра — коротко «Excel (N)»; на телефоне — «Excel»; полная подпись — для диктора и подсказки. */
@@ -92,6 +100,8 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
   const [notice, setNotice] = useState('');
   const [link, setLink] = useState('');
   const [, bump] = useState(0);
+  const [picking, setPicking] = useState(false);
+  const checks = !p.selectMode || picking || selected.size > 0;
 
   const visible = visibleColumns(columns, state);
   const list = useMemo(() => sortRows(filterRows(rows, filters, state, p.isOverdue), columns, state.sort), [rows, filters, state, p.isOverdue, columns]);
@@ -126,8 +136,10 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
   const rowEl = (r: T): ReactElement => {
     const k = rowKey(r);
     return h('tr', { key: k, className: 'p2-reg__row' + (selected.has(k) ? ' p2-reg__row--sel' : '') + (p.openKey === k ? ' p2-reg__row--open' : ''), 'data-row': k },
-      h('td', { className: 'p2-reg__check' },
-        h('input', { type: 'checkbox', checked: selected.has(k), 'aria-label': 'Выбрать строку', 'data-testid': 'p2-reg-select', onChange: () => toggleRow(k) })),
+      checks ? h('td', { className: 'p2-reg__check' },
+        h('input', { type: 'checkbox', checked: selected.has(k), 'aria-label': 'Выбрать строку', 'data-testid': 'p2-reg-select', onChange: () => toggleRow(k) })) : null,
+      p.compact ? h('td', { className: 'p2-reg__compact', 'data-testid': 'p2-reg-compact' },
+        p.onOpen && !checks ? h('button', { type: 'button', className: 'p2-reg__cbtn', onClick: () => p.onOpen!(r) }, p.compact(r)) : p.compact(r)) : null,
       visible.map((c, i) => h('td', { key: c.id, 'data-col': c.id, 'data-label': c.label, className: (c.align === 'right' ? 'p2-num p2-reg__r' : '') + (i === 0 ? ' p2-reg__main' : '') },
         i === 0 && p.onOpen
           ? h('button', { type: 'button', className: 'p2-reg__open', 'data-testid': 'p2-reg-open', onClick: () => p.onOpen!(r) }, cell(c, r))
@@ -135,7 +147,8 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
   };
 
   const head = h('thead', null, h('tr', null,
-    h('th', { className: 'p2-reg__check' }, h('input', { type: 'checkbox', checked: allSel, 'aria-label': 'Выбрать все строки списка', 'data-testid': 'p2-reg-select-all', onChange: toggleAll, disabled: !ordered.length })),
+    checks ? h('th', { className: 'p2-reg__check' }, h('input', { type: 'checkbox', checked: allSel, 'aria-label': 'Выбрать все строки списка', 'data-testid': 'p2-reg-select-all', onChange: toggleAll, disabled: !ordered.length })) : null,
+    p.compact ? h('th', { className: 'p2-reg__compact' }) : null,
     visible.map((c) => {
       const dir = state.sort && state.sort.id === c.id ? state.sort.dir : null;
       return h('th', { key: c.id, className: c.align === 'right' ? 'p2-reg__r' : '', 'aria-sort': dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none' },
@@ -154,7 +167,7 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
     ? groups.map((g) => {
         const open = !closed[g.key];
         return h('tbody', { key: g.key, 'data-group': g.key },
-          h('tr', { className: 'p2-reg__group' }, h('td', { colSpan: visible.length + 1 },
+          h('tr', { className: 'p2-reg__group' }, h('td', { colSpan: visible.length + (checks ? 1 : 0) + (p.compact ? 1 : 0) },
             h('button', { type: 'button', className: 'p2-reg__gbtn', 'aria-expanded': open, 'data-testid': 'p2-reg-group', onClick: () => setClosed({ ...closed, [g.key]: open }) },
               h('span', { 'aria-hidden': 'true', className: 'p2-reg__chev' }, open ? '▾' : '▸'),
               h('b', null, g.key), h('span', { className: 'p2-reg__total' }, `Всего: ${g.rows.length}`)),
@@ -210,7 +223,22 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
             onClick: () => { const ok = saveView(p.views!, viewName, state); setNotice(ok ? `Вид «${viewName.trim()}» сохранён на этом устройстве` : 'Не удалось сохранить вид на этом устройстве'); setViewName(''); bump((x) => x + 1); } }, 'Сохранить')))
     : null;
 
-  return h('div', { className: 'p2-reg', 'data-testid': p.testId },
+  // P2-0046: фильтр-кнопки — одно нажатие вместо панели «Фильтр»; выбранная — единственное значение фильтра quick.filter.
+  const qd = p.quick ? filters.find((d) => d.id === p.quick!.filter) : undefined;
+  const qVal = qd ? state.f[qd.id] || [] : [];
+  const quickRow = qd
+    ? h('div', { className: 'p2-reg__quick', role: 'group', 'aria-label': qd.label, 'data-testid': 'p2-reg-quick' },
+        h('button', { type: 'button', className: 'p2-reg__q' + (!qVal.length ? ' p2-reg__q--on' : ''), 'aria-pressed': !qVal.length, 'data-value': '',
+          onClick: () => { const f = { ...state.f }; delete f[qd.id]; onState({ ...state, f }); } }, p.quick!.all || 'Все', h('span', { className: 'p2-reg__qn' }, String(rows.length))),
+        filterOptions(rows, qd).map((o) => {
+          const on = qVal.length === 1 && qVal[0] === o.value;
+          return h('button', { key: o.value, type: 'button', className: 'p2-reg__q' + (on ? ' p2-reg__q--on' : ''), 'aria-pressed': on, 'data-value': o.value, 'data-testid': 'p2-reg-q',
+            onClick: () => onState({ ...state, f: { ...state.f, [qd.id]: on ? [] : [o.value] } }) }, o.label, h('span', { className: 'p2-reg__qn' }, String(o.count)));
+        }))
+    : null;
+
+  return h('div', { className: 'p2-reg' + (p.compact ? ' p2-reg--compact' : '') + (checks ? '' : ' p2-reg--nocheck'), 'data-testid': p.testId },
+    quickRow,
     h('div', { className: 'p2-reg__tools' },
       p.lead || null,
       h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'p2-reg-filter', onClick: () => { setPanel(state); closeMenus(); } },
@@ -218,6 +246,10 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
       h('span', { className: 'p2-reg__muted p2-num p2-reg__shown', 'data-testid': 'p2-reg-shown' }, h('span', { className: 'p2-reg__long' }, 'Показано: '), `${list.length} из ${rows.length}`),
       h('span', { className: 'p2-reg__right' },
         p.tools || null,
+        p.selectMode
+          ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'aria-pressed': checks, 'data-testid': 'p2-reg-pick',
+              onClick: () => { if (checks) { setPicking(false); onSelect(new Set()); } else setPicking(true); } }, checks ? 'Готово' : 'Выбрать')
+          : null,
         h('span', { className: 'p2-reg__wrap', ref: moreRef },
           h('button', { type: 'button', className: 'pf-btn pf-btn--ghost p2-reg__more', 'aria-expanded': anyPop, 'aria-label': 'Ещё: группировка, колонки, виды, ссылка',
             'data-testid': 'p2-reg-more', onClick: () => { const o = anyPop; closeMenus(); setMoreOpen(!o); } }, '⋯'),
