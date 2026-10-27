@@ -876,10 +876,16 @@ function ensureRoot(section) {
 }
 
 function fingerprint(data) {
-  let last = '';
-  for (let i = 0; i < data.length; i++) { const d = data[i] && data[i].date; if (d && d > last) last = d; }
+  // Отпечаток набора: число, последняя дата и хэш id — смена фильтров с тем же числом проверок тоже перерисует экран.
+  let last = '', h = 5381;
+  for (let i = 0; i < data.length; i++) {
+    const d = data[i] && data[i].date;
+    if (d && d > last) last = d;
+    const id = String((data[i] && data[i].id) || '');
+    for (let k = 0; k < id.length; k++) h = ((h << 5) + h + id.charCodeAt(k)) | 0;
+  }
   const sk = Array.isArray(window.skRecords) ? window.skRecords.length : 0;
-  return [state.month || '', data.length, last, getOnepagerScope(), sk].join('|');
+  return [state.month || '', data.length, last, h, getOnepagerScope(), sk].join('|');
 }
 
 function applyView(force) {
