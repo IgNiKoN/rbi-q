@@ -260,13 +260,118 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 
 .m .toolbar { display: flex; align-items: center; gap: 10px; }
 .m .search { height: 40px; border: 1px solid var(--ln); border-radius: 10px; background: var(--card); display: flex; align-items: center; padding: 0 12px; color: var(--mut); font-size: 14px; width: 240px; }
 .m .pin { position: absolute; left: 16px; right: 16px; bottom: 77px; }
+.m .pin.two { display: flex; gap: 10px; }
+.m .pin.two .btn { flex: 1 1 0; }
+
+/* группа в списке */
+.m .grp { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f7f8f9; border-top: 1px solid var(--ln); font-size: 13px; }
+.m .grp:first-child { border-top: 0; border-radius: 14px 14px 0 0; }
+.m .grp b { font-weight: 600; }
+.m .grp em { font-style: normal; color: var(--mut); }
+.m tr.gr td { background: #f7f8f9; font-size: 13px; padding: 8px 12px; }
+.m .mini { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.m .mini span { font-size: 11.5px; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+.m .mini .bad { color: var(--bad); background: var(--badbg); }
+.m .mini .warn { color: var(--warn); background: var(--warnbg); }
+.m .mini .info { color: var(--info); background: var(--infobg); }
+.m .mini .ok { color: #1c7c3a; background: var(--okbg); }
+.m .mini .grey { color: #5c6670; background: #eceef0; }
+/* дела (входящие) */
+.m .todo .it { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--ln); }
+.m .todo .it:first-child { border-top: 0; }
+.m .todo .num { min-width: 40px; height: 32px; padding: 0 8px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+.m .todo .num.bad { color: var(--bad); background: var(--badbg); }
+.m .todo .num.warn { color: var(--warn); background: var(--warnbg); }
+.m .todo .num.info { color: var(--info); background: var(--infobg); }
+.m .todo .num.grey { color: #5c6670; background: #eceef0; }
+.m .todo .tx { flex: 1 1 auto; min-width: 0; }
+.m .todo .tx b { display: block; font-weight: 600; font-size: 14.5px; }
+.m .todo .tx span { font-size: 12.5px; color: var(--mut); }
+.m .obh { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 14px 4px; }
+.m .obh b { font-size: 15px; font-weight: 600; }
+.m .obh span { font-size: 12.5px; color: var(--mut); }
+/* шаги-подсказка */
+.m .steps { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.m .steps.row { flex-direction: row; gap: 16px; }
+.m .steps .st { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: #3c4650; flex: 1 1 0; }
+.m .steps .st i { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--paper); border: 1px solid var(--ln); display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 12px; color: var(--g); }
+.m .steps .st.done i { background: var(--okbg); color: #1c7c3a; border-color: transparent; }
+.m .file { display: flex; align-items: center; gap: 12px; padding: 14px; }
+.m .file .ic { width: 40px; height: 48px; border-radius: 8px; background: #e3f0e8; color: #1c7c3a; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: 0 0 auto; }
+.m .file .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.m .file .t b { font-weight: 600; font-size: 15px; }
+.m .file .t span { font-size: 12.5px; color: var(--mut); }
+/* шахматка */
+.m .seg2 { display: inline-flex; border: 1px solid var(--ln); border-radius: 10px; padding: 3px; background: var(--card); }
+.m .seg2 span { padding: 6px 12px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--mut); white-space: nowrap; }
+.m .seg2 span.on { background: var(--g); color: #fff; }
+.m .mx { border-collapse: separate; border-spacing: 3px; font-size: 12px; }
+.m .mx th { padding: 4px 6px; font-size: 11.5px; font-weight: 600; color: var(--mut); border: 0; white-space: nowrap; text-align: center; }
+.m .mx th.fl, .m .mx td.fl { text-align: left; position: sticky; left: 0; background: var(--card); font-weight: 600; color: var(--ink); font-size: 12.5px; padding-right: 10px; }
+.m .mx td { padding: 0; border: 0; }
+.m .mx td.c { width: 62px; height: 34px; border-radius: 6px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.m .c.done { background: #cfead7; color: #1c6a33; }
+.m .c.prog { background: #f3e2c4; color: #7a5419; }
+.m .c.pend { background: #d6e6f3; color: #1f5a85; }
+.m .c.none { background: #eceef0; color: #8a939b; }
+.m .c.rej { background: #f4d3ca; color: #9a3a23; }
+.m .lg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: #3c4650; }
+.m .lg span { display: inline-flex; align-items: center; gap: 6px; }
+.m .lg i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.m .floors .fr { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--ln); }
+.m .floors .fr:first-child { border-top: 0; }
+.m .floors .fr b { width: 62px; font-weight: 600; font-size: 14px; flex: 0 0 auto; }
+.m .floors .fr .cells { display: flex; gap: 3px; flex: 1 1 auto; }
+.m .floors .fr .cells i { flex: 1 1 0; height: 22px; border-radius: 4px; }
+.m .floors .fr em { font-style: normal; font-size: 12.5px; font-weight: 600; width: 58px; text-align: right; font-variant-numeric: tabular-nums; }
+/* ждёт РП */
+.m .dec .it { padding: 12px 14px; border-top: 1px solid var(--ln); display: flex; flex-direction: column; gap: 8px; }
+.m .dec .it:first-child { border-top: 0; }
+.m .dec .r1 { display: flex; justify-content: space-between; gap: 10px; }
+.m .dec .r1 b { font-weight: 600; font-size: 14.5px; }
+.m .dec .r1 span { font-size: 12.5px; color: var(--mut); }
+.m .dec .q { font-weight: 600; font-size: 15px; white-space: nowrap; text-align: right; }
+.m .dec .q small { display: block; font-size: 12px; font-weight: 500; color: var(--mut); }
+.m .dec .q.over small { color: var(--bad); font-weight: 600; }
+.m .dec .acts2 { display: flex; gap: 8px; }
+.m .dec .acts2 .btn { flex: 1 1 0; height: 40px; }
+.m .btn.ok { background: #1c7c3a; border-color: #1c7c3a; color: #fff; }
+.m .btn.no { color: var(--bad); }
+.m .selbar { position: absolute; left: 0; right: 0; bottom: 0; background: var(--g); color: #fff; display: flex; align-items: center; gap: 12px; padding: 12px 24px; }
+.m .selbar b { font-weight: 600; }
+.m .selbar .btn { height: 36px; }
+.m .cb { width: 18px; height: 18px; border: 1.5px solid #9aa3ab; border-radius: 4px; display: inline-block; vertical-align: middle; }
+.m .cb.on { background: var(--g); border-color: var(--g); box-shadow: inset 0 0 0 3px #fff; }
+.m td.over { color: var(--bad); font-weight: 600; }
+/* журнал */
+.m .day { padding: 8px 14px; background: #f7f8f9; font-size: 12.5px; font-weight: 600; color: var(--mut); border-top: 1px solid var(--ln); }
+.m .day:first-child { border-top: 0; border-radius: 14px 14px 0 0; }
+.m .jr { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--ln); }
+.m .jr .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .jr .t b { font-weight: 600; font-size: 14px; }
+.m .jr .t span { font-size: 12.5px; color: var(--mut); }
+.m .jr .s { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.m .jr .s b { font-weight: 600; font-variant-numeric: tabular-nums; }
+/* цены */
+.m .pr { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.m .pr:first-child { border-top: 0; }
+.m .pr .t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.m .pr .t b { font-weight: 600; font-size: 14.5px; }
+.m .pr .t span { font-size: 12.5px; color: var(--mut); }
+.m .pr .s { text-align: right; font-variant-numeric: tabular-nums; }
+.m .pr .s b { display: block; font-weight: 600; font-size: 15px; }
+.m .pr .s span { font-size: 12px; color: var(--mut); }
+.m .tog { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #3c4650; white-space: nowrap; }
+.m .tog i { width: 34px; height: 20px; border-radius: 10px; background: #cfd4d9; position: relative; }
+.m .tog i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.m .note { font-size: 12.5px; color: var(--mut); background: #f7f8f9; border: 1px dashed var(--ln); border-radius: 10px; padding: 8px 12px; }
 .m .pin .btn { width: 100%; height: 50px; font-size: 16px; box-shadow: 0 6px 18px rgba(28, 43, 57, 0.25); }
 </style>
 
 <div class="wrap">
   <header>
     <h1>План/Факт: как сейчас и как предлагаю</h1>
-    <p class="lead">Те же данные стенда, слева — снимок нынешнего экрана, справа — макет. Выберите экран и размер. Макеты — картинки, не рабочие экраны: после вашего решения переделаю сами экраны.</p>
+    <p class="lead">Те же данные стенда, слева — снимок нынешнего экрана, справа — макет. Выберите экран и размер. Сводка, Факт и КС-2 утверждены 27.10.2026; остальные восемь экранов — на ваш просмотр. Макеты — картинки, не рабочие экраны.</p>
   </header>
 
   <div class="controls">
@@ -275,6 +380,14 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 
         <button type="button" id="s-summary" data-v="summary">Сводка</button>
         <button type="button" id="s-fact" data-v="fact">Факт</button>
         <button type="button" id="s-ks2" data-v="ks2">КС-2</button>
+        <button type="button" id="s-inbox" data-v="inbox">Входящие</button>
+        <button type="button" id="s-vor" data-v="vor">ВОР</button>
+        <button type="button" id="s-vorpos" data-v="vorpos">Позиции ВОР</button>
+        <button type="button" id="s-estimate" data-v="estimate">Смета</button>
+        <button type="button" id="s-prices" data-v="prices">Цены</button>
+        <button type="button" id="s-chess" data-v="chess">Шахматка</button>
+        <button type="button" id="s-pending" data-v="pending">Ждёт РП</button>
+        <button type="button" id="s-journal" data-v="journal">Журнал</button>
       </div>
     </div>
     <div class="ctl"><span class="seg-label">Размер</span>
@@ -496,6 +609,180 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 
     return shellPc('<div class="ph"><div><h3>КС-2</h3><p>Акты о приёмке выполненных работ</p></div><span class="btn pri">Новый акт</span></div>' + ksCtxLine + ksKpis('four') + ksTool + ksTable(true), 'КС-2', 'ЖК «Стенд-реестр»');
   }
 
+  var P = 'ЖК «Стенд-реестр»';
+  function chipsOf(list) {
+    return '<div class="chips">' + list.map(function (c, i) { return '<span' + (i === 0 ? ' class="on"' : '') + '>' + c[0] + (c[1] != null ? ' <em>' + c[1] + '</em>' : '') + '</span>'; }).join('') + '</div>';
+  }
+  function sub2(items, active, cls) {
+    return '<div class="tabs ' + (cls || 'in') + '">' + items.map(function (t) { return '<span' + (t[0] === active ? ' class="on"' : '') + '>' + t[0] + (t[1] ? '<em class="cnt mut">' + t[1] + '</em>' : '') + '</span>'; }).join('') + '</div>';
+  }
+  var FACT_TABS = [['Ввод'], ['Шахматка'], ['Ждёт РП', 8], ['Журнал']];
+  var VOR_TABS = [['Загрузки'], ['Позиции', 600]];
+  var DIR_TABS = [['Бригады'], ['Цены'], ['Надбавки']];
+
+  /* ---------- Входящие ---------- */
+  var TODO = [
+    { obj: P, sub: '9 дел', items: [['info', '8', 'Факт ждёт вашего решения', '8 записей прорабов · 4 с перебором', 'Решить'], ['warn', '1', 'Черновик КС-2 не выдан', 'Акт № 6 · 18 450 300,50 ₽', 'Выдать'],
+      ['warn', '12', 'Сделано, но не выставлено', '12 позиций на 345 000 ₽', 'В КС-2'], ['grey', '30', 'Стоят больше 14 дней', 'позиции без факта', 'Посмотреть']] },
+    { obj: 'ЖК «Срок прошёл»', sub: '2 дела', items: [['warn', '3', 'Сделано, но не выставлено', '3 позиции на 52 000 ₽', 'В КС-2'], ['grey', '15', 'Стоят больше 14 дней', 'позиции без факта', 'Посмотреть']] }];
+  function todoCards(btn) {
+    return TODO.map(function (o) {
+      return '<div class="card todo"><div class="obh"><b>' + o.obj + '</b><span>' + o.sub + '</span></div>' + o.items.map(function (t) {
+        return '<div class="it"><span class="num ' + t[0] + '">' + t[1] + '</span><div class="tx"><b>' + t[2] + '</b><span>' + t[3] + '</span></div>' + (btn ? '<span class="btn sm">' + t[4] + '</span>' : '<span class="go" style="color:#2a6f9e;font-weight:600;font-size:13px">' + t[4] + '</span>') + '</div>';
+      }).join('') + '</div>';
+    }).join('');
+  }
+  function inboxPhone() { return shellPhone('<div class="ph"><div><h3>Входящие</h3><p>11 дел на 2 объектах · сначала срочные</p></div></div>' + todoCards(false), 'Входящие', 'Все объекты <small>· 2</small>'); }
+  function inboxWide(shell) {
+    return shell('<div class="ph"><div><h3>Входящие</h3><p>11 дел на 2 объектах · сначала срочные</p></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">' + todoCards(true) + '</div>', 'Входящие', 'Все объекты <small>· 2</small>');
+  }
+
+  /* ---------- ВОР: загрузки ---------- */
+  var STEPS = [['1', 'Загрузите файл заказчика в любой форме'], ['2', 'Проверьте разбор: работы, места, единицы'], ['3', 'Сохраните черновик'], ['4', 'Подтвердите — появятся позиции для факта']];
+  function steps(row) { return '<div class="card steps' + (row ? ' row' : '') + '">' + STEPS.map(function (s) { return '<div class="st"><i>' + s[0] + '</i><span>' + s[1] + '</span></div>'; }).join('') + '</div>'; }
+  var fileCard = '<div class="card file"><span class="ic">XLSX</span><div class="t"><b>ВОР.xlsx</b><span>лист «Лист 1» · 600 строк → 600 позиций · 01.10.2026 · ПТО</span></div><span class="pill ok">Подтверждена</span></div>';
+  function vorPhone() {
+    return shellPhone('<div class="ph"><h3>ВОР</h3></div>' + sub2(VOR_TABS, 'Загрузки') + '<p class="sec">Загрузки объекта</p>' + fileCard + '<p class="sec">Как загрузить новую редакцию</p>' + steps(false), 'ВОР', P, '<div class="pin"><span class="btn pri">Загрузить ВОР</span></div>');
+  }
+  function vorWide(shell) {
+    return shell('<div class="ph"><div><h3>ВОР</h3><p>Ведомость объёмов работ заказчика</p></div><span class="btn pri">Загрузить ВОР</span></div>' + sub2(VOR_TABS, 'Загрузки') + '<p class="sec">Загрузки объекта</p>' + fileCard + '<p class="sec">Как загрузить новую редакцию</p>' + steps(true), 'ВОР', P);
+  }
+
+  /* ---------- ВОР: позиции ---------- */
+  var POS = [['Штукатурка стен', 'Корпус 1 · 3 этаж', 100, 50, 'м²', ['warn', 'В работе']], ['Окраска стен', 'Корпус 1 · 3 этаж', 100, 35, 'м²', ['warn', 'В работе']],
+    ['Стяжка пола', 'Корпус 1 · 6 этаж', 4, 0, 'шт.', ['bad', 'Просрочено']], ['Ламинат', 'Корпус 1 · 7 этаж', 4, 0, 'шт.', ['info', 'Ждёт РП']],
+    ['Штукатурка стен', 'Корпус 1 · 1 этаж', 100, 100, 'м²', ['ok', 'Выполнено']], ['Окраска стен', 'Корпус 1 · 1 этаж', 100, 100, 'м²', ['ok', 'Выполнено']],
+    ['Двери входные', 'Корпус 1 · 8 этаж', 100, 0, 'м²', ['grey', 'Не начато']], ['Электромонтаж', 'Корпус 1 · 3 этаж', 100, 50, 'м²', ['warn', 'В работе']], ['Плитка санузлов', 'Корпус 1 · 6 этаж', 4, 0, 'шт.', ['bad', 'Просрочено']]];
+  var posChips = [['Все', 600], ['Просрочено', 30], ['В работе', 31], ['Ждёт РП', 1], ['Выполнено', 40], ['Не начато', 98]];
+  var grpK1 = '<b>Корпус 1</b><em>· 200 позиций</em><span class="mini" style="margin-left:auto"><span class="bad">30</span><span class="warn">31</span><span class="info">1</span><span class="ok">40</span><span class="grey">98</span></span>';
+  function vorPosPhone() {
+    var list = '<div class="card rows"><div class="grp">' + grpK1 + '</div>' + POS.slice(0, 6).map(function (p) {
+      return '<div class="rw"><div class="t"><b>' + p[0] + '</b><div class="ln"><span>' + p[1] + '</span></div></div><div style="text-align:right"><b class="tnum" style="font-size:14px">' + p[3] + ' / ' + p[2] + ' ' + p[4] + '</b><div style="margin-top:4px"><span class="pill ' + p[5][0] + '">' + p[5][1] + '</span></div></div></div>';
+    }).join('') + '</div>';
+    return shellPhone('<div class="ph"><h3>ВОР</h3></div>' + sub2(VOR_TABS, 'Позиции') + '<div class="search" style="width:100%">Найти работу или место</div>' + chipsOf(posChips) + list, 'ВОР', P);
+  }
+  function posTable(n, wide) {
+    return '<div class="card"><table><thead><tr><th>Работа</th><th>Место</th><th class="n">План</th><th class="n">Сделано</th>' + (wide ? '<th>Готовность</th>' : '') + '<th class="n">Остаток</th><th>Статус</th></tr></thead><tbody>' +
+      '<tr class="gr"><td colspan="' + (wide ? 7 : 6) + '"><div style="display:flex;gap:8px;align-items:center">' + grpK1 + '</div></td></tr>' +
+      POS.slice(0, n).map(function (p) {
+        var pc = Math.round(p[3] / p[2] * 100);
+        return '<tr><td><b>' + p[0] + '</b></td><td>' + p[1] + '</td><td class="n">' + p[2] + ' ' + p[4] + '</td><td class="n">' + p[3] + '</td>' + (wide ? '<td><div class="barc">' + bar(pc, null, pc === 100) + '<em>' + pc + ' %</em></div></td>' : '') + '<td class="n">' + (p[2] - p[3]) + '</td><td><span class="pill ' + p[5][0] + '">' + p[5][1] + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  function vorPosWide(shell, wide) {
+    return shell('<div class="ph"><div><h3>ВОР</h3><p>600 позиций · 3 корпуса</p></div><span class="btn pri">Загрузить ВОР</span></div>' + sub2(VOR_TABS, 'Позиции') +
+      '<div class="toolbar"><div class="search">Найти работу или место</div>' + chipsOf(posChips) + '<div style="flex:1"></div><span class="btn">Excel</span></div>' + posTable(wide ? 9 : 8, wide), 'ВОР', P);
+  }
+
+  /* ---------- Смета ---------- */
+  var EST = [['Смета «Стенд» — договорная', 'ВОР.xlsx · 600 строк · S 12 450 м²', ['ok', 'Все цены'], 'КП ред. 2', '20.10.2026'], ['Тендер — вариант с экономией', 'ВОР.xlsx · 600 строк · S 12 450 м²', ['warn', 'Без цены 37'], 'КП нет', '24.10.2026']];
+  function estPhone() {
+    var list = '<div class="card acts">' + EST.map(function (e) {
+      return '<div class="ac"><div class="t"><b>' + e[0] + '</b><span>' + e[1] + '</span><span>' + e[3] + ' · изменена ' + e[4] + '</span></div><div class="s"><span class="pill ' + e[2][0] + '">' + e[2][1] + '</span><span class="chev" style="margin-top:8px"></span></div></div>';
+    }).join('') + '</div>';
+    return shellPhone('<div class="ph"><div><h3>Смета</h3><p>Тендерная стоимость по ВОР</p></div></div>' + list + '<div class="note">Нажмите на смету, чтобы открыть строки, надбавки и КП.</div>', 'Ещё', P, '<div class="pin"><span class="btn pri">Новая смета</span></div>');
+  }
+  function estWide(shell) {
+    return shell('<div class="ph"><div><h3>Смета</h3><p>Тендерная стоимость по ВОР · нажмите на смету, чтобы открыть</p></div><span class="btn pri">Новая смета</span></div>' +
+      '<div class="card"><table><thead><tr><th>Смета</th><th>Загрузка ВОР</th><th class="n">Площадь</th><th>Цены</th><th>КП</th><th class="n">Изменена</th></tr></thead><tbody>' +
+      EST.map(function (e) { return '<tr><td><b>' + e[0] + '</b></td><td>ВОР.xlsx · 600 строк</td><td class="n">12 450 м²</td><td><span class="pill ' + e[2][0] + '">' + e[2][1] + '</span></td><td>' + e[3] + '</td><td class="n">' + e[4] + '</td></tr>'; }).join('') +
+      '</tbody></table></div>', 'Смета', P);
+  }
+
+  /* ---------- Справочники: цены ---------- */
+  var PRICES = [['Штукатурка стен', 'м²', 420, 180], ['Окраска стен', 'м²', 260, 95], ['Стяжка пола', 'м²', 380, 240], ['Электромонтаж', 'м²', 610, 450], ['Плитка санузлов', 'м²', 1150, 1600], ['Ламинат', 'м²', 340, 890]];
+  var rub0 = function (v) { return v.toLocaleString('ru-RU') + ' ₽'; };
+  function pricesPhone() {
+    var list = '<div class="card">' + PRICES.map(function (p) {
+      return '<div class="pr"><div class="t"><b>' + p[0] + '</b><span>за ' + p[1] + ' · от 01.10.2026</span></div><div class="s"><b>' + rub0(p[2] + p[3]) + '</b><span>работа ' + p[2] + ' · мат. ' + p[3] + '</span></div><span class="chev"></span></div>';
+    }).join('') + '</div>';
+    return shellPhone('<div class="ph"><h3>Справочники</h3></div>' + sub2(DIR_TABS, 'Цены') + chipsOf([['Работы', 6], ['Материалы', 2], ['Без цены', 0]]) + '<div class="search" style="width:100%">Найти работу или материал</div>' + list, 'Ещё', 'Компания «Стенд»', '<div class="pin"><span class="btn pri">Добавить цену</span></div>');
+  }
+  function pricesWide(shell) {
+    return shell('<div class="ph"><div><h3>Справочники</h3><p>Цены компании · нажмите на строку, чтобы изменить</p></div><div style="display:flex;gap:10px"><span class="btn">Взять цены из ВОР</span><span class="btn pri">Добавить цену</span></div></div>' + sub2(DIR_TABS, 'Цены') +
+      '<div class="toolbar"><div class="search">Найти работу или материал</div>' + chipsOf([['Работы', 6], ['Материалы', 2]]) + '<span class="tog"><i></i>Только без цены</span></div>' +
+      '<div class="card"><table><thead><tr><th>Работа</th><th>Ед.</th><th class="n">Работа, ₽</th><th class="n">Материалы, ₽</th><th class="n">Итого, ₽</th><th class="n">Цена от</th></tr></thead><tbody>' +
+      PRICES.map(function (p) { return '<tr><td><b>' + p[0] + '</b></td><td>' + p[1] + '</td><td class="n">' + p[2].toLocaleString('ru-RU') + ',00</td><td class="n">' + p[3].toLocaleString('ru-RU') + ',00</td><td class="n"><b>' + (p[2] + p[3]).toLocaleString('ru-RU') + ',00</b></td><td class="n">01.10.2026</td></tr>'; }).join('') +
+      '</tbody></table></div><div class="note">По решению 7.7 цены и надбавки переедут в модуль «Сметы и КС-2», бригады — в «Компанию».</div>', 'Справочники', 'Компания «Стенд»');
+  }
+
+  /* ---------- Шахматка ---------- */
+  var MXW = ['Штук.', 'Окраска', 'Стяжка', 'Двери', 'Электр.', 'Плитка', 'Грунт', 'Шпакл.', 'Ламинат', 'Потолки'];
+  function mxRow(f) {
+    if (f <= 2) return MXW.map(function () { return ['done', '✓']; });
+    if (f <= 5) return MXW.map(function (w, i) { return ['prog', [50, 35, 50, 35, 50, 35, 50, 35, 50, 35][i] + '%']; });
+    if (f === 6) return MXW.map(function (w, i) { return i < 2 ? ['prog', '10%'] : ['none', '']; });
+    if (f === 7) return MXW.map(function (w, i) { return i === 8 ? ['pend', 'ждёт'] : ['none', '']; });
+    return MXW.map(function () { return ['none', '']; });
+  }
+  var LG = '<div class="lg"><span><i class="c done"></i>Сделано</span><span><i class="c prog"></i>В работе, %</span><span><i class="c pend"></i>Ждёт РП</span><span><i class="c rej"></i>Отклонено</span><span><i class="c none"></i>Не начато</span></div>';
+  function floorsPhone() {
+    var pct = { 10: '0 %', 9: '0 %', 8: '0 %', 7: 'ждёт РП', 6: '2 %', 5: '42 %', 4: '42 %', 3: '42 %', 2: '100 %', 1: '100 %' };
+    var col = { done: '#9fd5b0', prog: '#e8c88f', pend: '#9cc3e2', none: '#e1e4e7' };
+    var rows = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(function (f) {
+      return '<div class="fr"><b>' + f + ' этаж</b><div class="cells">' + mxRow(f).map(function (c) { return '<i style="background:' + col[c[0]] + '"></i>'; }).join('') + '</div><em>' + pct[f] + '</em></div>';
+    }).join('');
+    return shellPhone('<div class="ph"><h3>Факт</h3></div>' + sub2(FACT_TABS, 'Шахматка') + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' + chipsOf([['Корпус 1'], ['Корпус 2'], ['Корпус 3']]) + '</div>' +
+      LG + '<div class="card floors">' + rows + '</div><div class="note">Полоса этажа — 10 видов работ. Нажмите на этаж — откроется список работ с вводом.</div>', 'Факт', P);
+  }
+  function mxTable() {
+    return '<div class="card" style="padding:10px;overflow:hidden"><table class="mx"><thead><tr><th class="fl">Этаж</th>' + MXW.map(function (w) { return '<th>' + w + '</th>'; }).join('') + '<th>Итого</th></tr></thead><tbody>' +
+      [10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(function (f) {
+        var r = mxRow(f), tot = f <= 2 ? '100 %' : f <= 5 ? '42 %' : f === 6 ? '2 %' : '0 %';
+        return '<tr><td class="fl">' + f + ' этаж</td>' + r.map(function (c) { return '<td class="c ' + c[0] + '">' + c[1] + '</td>'; }).join('') + '<td class="c" style="background:none;color:#161616">' + tot + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  function chessWide(shell) {
+    return shell('<div class="ph"><div><h3>Факт</h3></div></div>' + sub2(FACT_TABS, 'Шахматка') +
+      '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">' + chipsOf([['Корпус 1', '47 %'], ['Корпус 2', '0 %'], ['Корпус 3', '0 %']]) + '<span class="seg2"><span>Этажи × секции</span><span class="on">Этажи × виды работ</span></span><div style="flex:1"></div>' + LG + '</div>' + mxTable(), 'Факт', P);
+  }
+
+  /* ---------- Ждёт РП ---------- */
+  var PEND = [['Штукатурка стен', 'Корпус 2 · 1 этаж', '50 м²', 'станет 50 %', false, 'Иванова', '27.10'], ['Окраска стен', 'Корпус 2 · 1 этаж', '50 м²', 'станет 50 %', false, 'Иванова', '27.10'],
+    ['Стяжка пола', 'Корпус 2 · 1 этаж', '2 шт.', 'станет 50 %', false, 'Иванова', '27.10'], ['Грунтовка', 'Корпус 3 · 5 этаж', '120 м²', 'перебор: 120 из 100', true, 'Петрова', '27.10'],
+    ['Штукатурка стен', 'Корпус 2 · 2 этаж', '110 м²', 'перебор: 110 из 100', true, 'Петрова', '26.10'], ['Окраска стен', 'Корпус 2 · 2 этаж', '105 м²', 'перебор: 105 из 100', true, 'Петрова', '26.10'],
+    ['Двери входные', 'Корпус 3 · 4 этаж', '104 м²', 'перебор: 104 из 100', true, 'Иванова', '25.10'], ['Ламинат', 'Корпус 1 · 7 этаж', '101 шт.', 'перебор: 101 из 4 — ошибка?', true, 'Иванова', '24.10']];
+  function pendPhone() {
+    var list = '<div class="card dec">' + PEND.slice(0, 3).concat([PEND[3]]).map(function (p) {
+      return '<div class="it"><div class="r1"><div><b>' + p[0] + '</b><br><span>' + p[1] + ' · бр. ' + p[5] + ' · ' + p[6] + '</span></div><div class="q' + (p[4] ? ' over' : '') + '">' + p[2] + '<small>' + p[3] + '</small></div></div>' +
+        '<div class="acts2"><span class="btn ok">Принять</span><span class="btn no">Отклонить</span></div></div>';
+    }).join('') + '</div>';
+    return shellPhone('<div class="ph"><div><h3>Факт</h3></div></div>' + sub2(FACT_TABS, 'Ждёт РП') + chipsOf([['Все', 8], ['Без перебора', 3], ['С перебором', 5]]) + list, 'Факт', P,
+      '<div class="pin"><span class="btn pri">Принять все без перебора · 3</span></div>');
+  }
+  function pendWide(shell, wide) {
+    var rows = PEND.map(function (p, i) {
+      return '<tr' + (i < 3 ? ' class="sel"' : '') + '><td><span class="cb' + (i < 3 ? ' on' : '') + '"></span></td><td><b>' + p[0] + '</b><span class="sub">' + p[1] + '</span></td><td class="n">' + p[2] + '</td><td class="' + (p[4] ? 'over' : '') + '">' + p[3] + '</td><td>' + p[5] + '</td><td class="n">' + p[6] + '</td>' +
+        (wide ? '<td class="n"><span class="btn sm ok">Принять</span> <span class="btn sm no">Отклонить</span></td>' : '') + '</tr>';
+    }).join('');
+    var bar2 = '<div class="selbar"><b>Выбрано 3</b><span>· все без перебора</span><div style="flex:1"></div><span class="btn ok">Принять 3</span><span class="btn">Отклонить…</span></div>';
+    return shell('<div class="ph"><div><h3>Факт</h3></div></div>' + sub2(FACT_TABS, 'Ждёт РП') + '<div class="toolbar">' + chipsOf([['Все', 8], ['Без перебора', 3], ['С перебором', 5]]) + '</div>' +
+      '<div class="card"><table><thead><tr><th></th><th>Работа и место</th><th class="n">Объём</th><th>Что будет</th><th>Бригада</th><th class="n">Дата</th>' + (wide ? '<th></th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table></div>', 'Факт', P, bar2);
+  }
+
+  /* ---------- Журнал ---------- */
+  var JR = [['27 октября', [['Грунтовка', 'Корпус 3 · 5 этаж', '120 м²', ['info', 'Ждёт РП'], 'Петрова'], ['Штукатурка стен', 'Корпус 1 · 6 этаж', '28 м²', ['ok', 'Принято'], 'Иванова · за 14–27.10'], ['Штукатурка стен', 'Корпус 2 · 1 этаж', '50 м²', ['info', 'Ждёт РП'], 'Иванова']]],
+    ['26 октября', [['Окраска стен', 'Корпус 2 · 2 этаж', '105 м²', ['info', 'Ждёт РП'], 'Петрова'], ['Штукатурка стен', 'Корпус 2 · 2 этаж', '110 м²', ['info', 'Ждёт РП'], 'Петрова']]],
+    ['25 октября', [['Двери входные', 'Корпус 3 · 4 этаж', '104 м²', ['info', 'Ждёт РП'], 'Иванова'], ['Штукатурка стен', 'Корпус 3 · 1 этаж', '20 м²', ['bad', 'Отклонено'], 'Иванова · «объём не совпал с замером»']]],
+    ['24 октября', [['Ламинат', 'Корпус 1 · 7 этаж', '101 шт.', ['info', 'Ждёт РП'], 'Иванова'], ['Уборка', 'Корпус 1 · 5 этаж', '5 м²', ['ok', 'Принято'], 'Иванова']]]];
+  var jrChips = [['Все', 132], ['Принято', 121], ['Ждёт РП', 8], ['Отклонено', 3]];
+  var period = '<div class="chips"><span>7 дней</span><span class="on">30 дней</span><span>Октябрь</span><span>Свой период…</span></div>';
+  function journalPhone() {
+    var list = '<div class="card">' + JR.slice(0, 3).map(function (d) {
+      return '<div class="day">' + d[0] + '</div>' + d[1].map(function (r) { return '<div class="jr"><div class="t"><b>' + r[0] + '</b><span>' + r[1] + ' · ' + r[4] + '</span></div><div class="s"><b>' + r[2] + '</b><span class="pill ' + r[3][0] + '">' + r[3][1] + '</span></div></div>'; }).join('');
+    }).join('') + '</div>';
+    return shellPhone('<div class="ph"><h3>Факт</h3></div>' + sub2(FACT_TABS, 'Журнал') + period + chipsOf(jrChips) + list, 'Факт', P);
+  }
+  function journalWide(shell) {
+    var rows = JR.map(function (d) {
+      return '<tr class="gr"><td colspan="6"><b>' + d[0] + '</b></td></tr>' + d[1].map(function (r) { return '<tr><td><b>' + r[0] + '</b></td><td>' + r[1] + '</td><td class="n">' + r[2] + '</td><td><span class="pill ' + r[3][0] + '">' + r[3][1] + '</span></td><td>Бригада ' + r[4].split(' · ')[0] + '</td><td style="color:#6f6f6f">' + (r[4].split(' · ')[1] || '') + '</td></tr>'; }).join('');
+    }).join('');
+    return shell('<div class="ph"><div><h3>Факт</h3></div></div>' + sub2(FACT_TABS, 'Журнал') + '<div class="toolbar">' + period + chipsOf(jrChips) + '<div style="flex:1"></div><span class="btn">Excel</span></div>' +
+      '<div class="card"><table><thead><tr><th>Работа</th><th>Место</th><th class="n">Объём</th><th>Статус</th><th>Бригада</th><th>Пометка</th></tr></thead><tbody>' + rows + '</tbody></table></div>', 'Факт', P);
+  }
+
+  var W = function (fn, shell, extra) { return function () { return fn(shell, extra); }; };
+
   /* ---------- экраны ---------- */
   var SCREENS = {
     summary: {
@@ -527,6 +814,70 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 
         'Итоги: сколько выдано, сколько сделано, но не выставлено (с кнопкой «Создать акт на остаток»), черновики.',
         'Фильтр по статусу — кнопки «Черновики / Выданы / Аннулированы»; период — месяцем, а не двумя датами.',
         'Галочки у строк — только после «Выбрать»; на телефоне акт — строка: номер, месяц, сумма, статус.']
+    },
+    inbox: {
+      name: 'Входящие', now: 'now/inbox-',
+      make: { phone: [[inboxPhone, '']], tablet: [[W(inboxWide, shellTablet), '']], pc: [[W(inboxWide, shellPc), '']] },
+      notes: ['Каждое дело — строка с понятным действием: «Решить», «Выдать», «В КС-2», «Посмотреть».',
+        'Срочное сверху: сначала то, что ждёт вашего решения, потом черновики и невыставленное.',
+        'Число в цветной плашке — сколько и насколько важно; заголовок обычными буквами.',
+        'На ПК объекты — две колонки рядом, а не сетка карточек с пустыми местами.']
+    },
+    vor: {
+      name: 'ВОР', now: 'now/vor-',
+      make: { phone: [[vorPhone, '']], tablet: [[W(vorWide, shellTablet), '']], pc: [[W(vorWide, shellPc), '']] },
+      notes: ['Загрузка — строка файла: имя, лист, сколько строк превратилось в позиции, кто и когда, статус.',
+        'Вместо двух абзацев пояснений — четыре шага «как загрузить новую редакцию».',
+        'Главная кнопка «Загрузить ВОР» одна: на телефоне внизу, на ПК в шапке.',
+        'Вкладки «Загрузки · Позиции 600» — обычными буквами и без «таблетки».']
+    },
+    vorpos: {
+      name: 'Позиции ВОР', now: 'now/vorpos-',
+      make: { phone: [[vorPosPhone, '']], tablet: [[W(vorPosWide, shellTablet, false), '']], pc: [[W(vorPosWide, shellPc, true), '']] },
+      notes: ['Поиск и фильтр по статусу — кнопками со счётчиками: «Просрочено 30», «В работе 31», «Выполнено 40».',
+        'На телефоне позиция — одна строка: работа, место, «сделано / план», статус. Было 7 строк на одну позицию.',
+        'На ПК у каждой позиции полоса готовности; галочки — только в режиме выбора.',
+        'Группа «Корпус 1 · 200 позиций» показывает свои счётчики по статусам цветом.']
+    },
+    estimate: {
+      name: 'Смета', now: 'now/estimate-',
+      make: { phone: [[estPhone, '']], tablet: [[W(estWide, shellTablet), '']], pc: [[W(estWide, shellPc), '']] },
+      notes: ['Смета открывается нажатием на строку — без большой кнопки «Открыть» у каждой.',
+        'Сразу видно главное: все ли цены есть («Без цены 37»), есть ли КП и когда меняли.',
+        'Главная кнопка «Новая смета» одна.',
+        'Пустой раздел (нет права) — пункт меню не показывается вовсе, а не «нет права» внутри.']
+    },
+    prices: {
+      name: 'Цены', now: 'now/prices-',
+      make: { phone: [[pricesPhone, '']], tablet: [[W(pricesWide, shellTablet), '']], pc: [[W(pricesWide, shellPc), '']] },
+      notes: ['Цены — список для чтения: работа, единица, итог и состав. Изменение — по нажатию, в отдельном окне.',
+        'Было: у каждой цены два поля ввода и кнопки «История / Удалить» — легко случайно изменить.',
+        '«Взять цены из ВОР» — второстепенная кнопка, «Добавить цену» — главная.',
+        'По решению 7.7 цены и надбавки переедут в «Сметы и КС-2», бригады — в «Компанию».']
+    },
+    chess: {
+      name: 'Шахматка', now: 'now/chess-',
+      make: { phone: [[floorsPhone, '']], tablet: [[W(chessWide, shellTablet), '']], pc: [[W(chessWide, shellPc), '']] },
+      notes: ['Шахматка показывает этажи × виды работ, а не одну колонку «Без секции».',
+        'Цвета различимы на солнце, у каждого есть подпись: сделано, в работе с %, ждёт РП, отклонено, не начато.',
+        'На телефоне этаж — полоса из 10 работ и процент; нажали — откроется список работ этажа с вводом.',
+        'Корпус выбирается кнопками со своим процентом; списки «Корпус / Вид работ» убраны.']
+    },
+    pending: {
+      name: 'Ждёт РП', now: 'now/pending-',
+      make: { phone: [[pendPhone, '']], tablet: [[W(pendWide, shellTablet, false), '']], pc: [[W(pendWide, shellPc, true), '']] },
+      notes: ['У каждой записи — «Принять» и «Отклонить» прямо в списке; кнопки крупные.',
+        'Перебор видно сразу красным: «120 из 100», «101 из 4 — ошибка?».',
+        'Одной кнопкой — «Принять все без перебора»; на ПК можно выбрать несколько и решить пачкой.',
+        'Вместо 10 строк на запись — работа, место, объём, что будет после принятия, бригада и дата.']
+    },
+    journal: {
+      name: 'Журнал', now: 'now/journal-',
+      make: { phone: [[journalPhone, '']], tablet: [[W(journalWide, shellTablet), '']], pc: [[W(journalWide, shellPc), '']] },
+      notes: ['Период — кнопками «7 дней / 30 дней / Октябрь», а не двумя полями дат.',
+        'Записи сгруппированы по дням; на телефоне запись — одна строка с объёмом и статусом.',
+        'Фильтр по статусу со счётчиками: принято 121, ждёт РП 8, отклонено 3; причина отказа видна в строке.',
+        'Вкладка «Журнал» видна на телефоне сразу, без прокрутки вкладок.']
     }
   };
 
