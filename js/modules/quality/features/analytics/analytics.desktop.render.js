@@ -27,6 +27,7 @@ import {
   shouldRepaintDeskContextZones
 } from '../../../../shared/sync-live-paint.policy.js';
 import { buildRiskZonesInsight, formatRiskInsightDisplayHtml, isAutoRiskInsightText } from './analytics.risk-insight.js';
+import { syncMonthDynamics } from './month-dynamics.view.js';
 
 const DESKTOP_MIN = 1280;
 const SHELL_ID = 'analytics-desktop-shell';
@@ -2100,6 +2101,7 @@ function afterTabPaint(tabId) {
   syncDesktopChrome(tabId);
   if (tabId === 'sub-onepager') {
     try { paintOnePagerDesktop(getFilteredData()); } catch (_) { /* ignore */ }
+    syncMonthDynamics();
     return;
   }
   if (tabId === 'sub-history') {

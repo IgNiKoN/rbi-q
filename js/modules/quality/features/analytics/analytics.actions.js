@@ -464,6 +464,16 @@ export const AnalyticsActions = {
     },
 
     /**
+     * P2-0049 «Динамика за месяц»: все даты (месяц выбирается на экране), период фильтров не действует;
+     * фильтры объекта / подрядчика / инспектора / вида работ — общие.
+     */
+    getMonthDynamicsSourceData() {
+        let arr = AnalyticsActions.getAnalyticsDataSource(_analyticsMode());
+        arr = arr.filter(i => i.inspection_type !== 'sk_acceptance');
+        return AnalyticsActions.applyAnalyticsEntityFilters(arr);
+    },
+
+    /**
      * One-pager «Динамика уровня качества»: own lookback, ignores global D30/CUSTOM.
      * WEEK → 12 weeks; MONTH → 6 months. Entity filters still apply.
      */

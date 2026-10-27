@@ -10,6 +10,7 @@
  */
 
 import { AnalyticsState } from './analytics.state.js';
+import { syncMonthDynamics } from './month-dynamics.view.js';
 import {
     shouldFullRebuildAnalyticsLive,
     shouldSkipAnalyticsLivePaint,
@@ -1533,6 +1534,8 @@ export const AnalyticsRender = {
         }
         else if (activeTab === 'sub-onepager') {
             AnalyticsRender.renderOnePagerSubTab(data);
+            // P2-0049: переключатель «Сводка / Динамика за месяц».
+            syncMonthDynamics();
             if (data.length > 0) _analyticsRenderedTabs.add(activeTab);
             else _analyticsRenderedTabs.delete(activeTab);
         }

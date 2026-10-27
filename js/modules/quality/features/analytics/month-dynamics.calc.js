@@ -270,6 +270,7 @@ export function computeMonthDynamics(checks, opts) {
     return {
       key: k, N: a.N, few: a.N < FEW_DATA_N, base: a.base, final: a.final,
       nRed: a.nRed, nYellow: a.nYellow, nGreen: a.nGreen,
+      red: a.red, yellow: a.yellow, green: a.green, b3share: a.b3share, per100: a.per100,
       b1p: a.b1p, b2p: a.b2p, b3p: a.b3p, critShare: a.critShare
     };
   });
