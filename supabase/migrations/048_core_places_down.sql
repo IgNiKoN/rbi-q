@@ -135,6 +135,7 @@ begin
   return null;
 end $$;
 
+drop function quality.core_led_roots();
 drop function quality.nodes_core_guard();
 drop function quality.core_place_mirror();
 drop function quality.mirror_place(uuid, int);

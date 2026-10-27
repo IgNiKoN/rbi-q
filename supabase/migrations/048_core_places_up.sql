@@ -9,7 +9,8 @@
 --   4) защита: в проекте ядра запись структуры мест в quality.location_nodes (создание, родитель, название, тип, удаление,
 --      связь с местом ядра) — отказ сервера; синонимы, порядок и узел-проект ("nodeType" = 'object', корень) — как сейчас;
 --   5) виды объектов «Детский сад», «Школа»;
---   6) места уже существующих проектов ядра — в Качество (у кого есть узел-проект).
+--   6) места уже существующих проектов ядра — в Качество (у кого есть узел-проект);
+--   7) quality.core_led_roots() — приложению Качества: какие ЖК ведёт ядро (там структура мест — только просмотр).
 -- Применять после 047, одним запросом. Откат — 048_core_places_down.sql.
 begin;
 
@@ -271,7 +272,19 @@ begin
   end loop;
 end $$;
 
+-- 7. Приложению Качества: узлы-проекты компании запроса, места которых ведёт ядро (там структура — только просмотр).
+create function quality.core_led_roots()
+returns text[] language sql stable security definer set search_path = pg_catalog as $$
+  select coalesce(array_agg(n.id order by n.id), '{}')
+    from quality.location_nodes n
+   where n.core_company_id = quality.request_company() and n."nodeType" = 'object' and not n.is_deleted
+     and coalesce(n."parentId", '') = ''
+     and exists (select 1 from core.projects pr where pr.id = quality.node_root_project(n) and pr.places_master = 'core')
+$$;
+
 revoke all on function quality.node_core_project(uuid, text), quality.project_root_node(uuid), quality.mirror_place(uuid, int),
   quality.core_place_mirror(), quality.nodes_core_guard() from public, anon, authenticated;
+revoke all on function quality.core_led_roots() from public, anon;
+grant execute on function quality.core_led_roots() to authenticated;
 
 commit;

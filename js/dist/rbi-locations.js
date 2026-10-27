@@ -376,6 +376,30 @@ async function migrateOdCatalogToLocations(api, opts = {}) {
 let _nodes = [];
 let _plans = [];
 let _ready = false;
+let _coreRoots = /* @__PURE__ */ new Set();
+const CORE_PLACES_MSG = "Места ведутся в «Компания → Объекты и места»";
+function _coreKey() {
+  var _a, _b;
+  const c = ((_b = (_a = window.RBI) == null ? void 0 : _a.qualitySync) == null ? void 0 : _b.companyId) || "";
+  return "rbi_core_led_roots" + (c ? "_" + c : "");
+}
+function _loadCoreRoots() {
+  try {
+    const v = JSON.parse(localStorage.getItem(_coreKey()) || "[]");
+    _coreRoots = new Set(Array.isArray(v) ? v.map(String) : []);
+  } catch (_e) {
+    _coreRoots = /* @__PURE__ */ new Set();
+  }
+}
+function _rootOf(id) {
+  let cur = id ? _nodes.find((n) => n.id === id) || null : null;
+  const guard = /* @__PURE__ */ new Set();
+  while (cur && cur.parentId && !guard.has(cur.id)) {
+    guard.add(cur.id);
+    cur = _nodes.find((n) => n.id === cur.parentId) || null;
+  }
+  return cur;
+}
 function _storage() {
   var _a, _b;
   return ((_b = (_a = window.RBI) == null ? void 0 : _a.services) == null ? void 0 : _b.storage) || null;
@@ -464,6 +488,7 @@ const LocationsService = {
       const plans = stores.CONST_FLOORS_V2 ? await storage.getAll(stores.CONST_FLOORS_V2) : [];
       _nodes = Array.isArray(nodes) ? nodes : [];
       _plans = Array.isArray(plans) ? plans : [];
+      _loadCoreRoots();
       _ready = true;
       return true;
     } catch (e) {
@@ -473,6 +498,25 @@ const LocationsService = {
   },
   isReady() {
     return _ready;
+  },
+  /** P2-0054: список ЖК, места которых ведёт «Компания» (после обмена с сервером; хранится на устройстве для работы без связи). */
+  setCoreLedRoots(ids) {
+    _coreRoots = new Set((Array.isArray(ids) ? ids : []).map(String));
+    try {
+      localStorage.setItem(_coreKey(), JSON.stringify(Array.from(_coreRoots)));
+    } catch (_e) {
+    }
+    _emit({ reason: "coreLedRoots" });
+  },
+  /** P2-0054: место (или ЖК) из проекта, места которого ведёт «Компания» — структура здесь только для просмотра. */
+  isCoreLed(id) {
+    const root = _rootOf(id);
+    return !!root && _coreRoots.has(root.id);
+  },
+  /** P2-0054: узел — сам ЖК (верх дерева), а не место. */
+  isProjectNode(id) {
+    const n = id ? _nodes.find((x) => x.id === id) : null;
+    return !!n && n.nodeType === "object" && !n.parentId;
   },
   /** Подмена in-memory после pull sync. */
   replaceCache(nodes, plans) {
@@ -513,6 +557,7 @@ const LocationsService = {
     const name = String(input.displayName || "").trim();
     if (!name) throw new Error("displayName обязателен");
     const parentId = input.parentId ?? null;
+    if (parentId && this.isCoreLed(parentId)) throw new Error(CORE_PLACES_MSG);
     _assertParent(input.nodeType, parentId);
     const siblings = this.listNodes({ parentId });
     const node = {
@@ -541,6 +586,9 @@ const LocationsService = {
   async updateNode(id, patch) {
     const cur = _nodes.find((n) => n.id === id);
     if (!cur || cur.is_deleted || cur._deleted) throw new Error("Узел не найден");
+    if (!this.isProjectNode(id) && this.isCoreLed(id) && (patch.displayName != null && String(patch.displayName).trim() && String(patch.displayName).trim() !== cur.displayName || patch.canonical_key != null && patch.canonical_key !== cur.canonical_key)) {
+      throw new Error(CORE_PLACES_MSG);
+    }
     const next = {
       ...cur,
       displayName: patch.displayName != null ? String(patch.displayName).trim() || cur.displayName : cur.displayName,
@@ -568,6 +616,7 @@ const LocationsService = {
     const cur = _nodes.find((n) => n.id === id);
     if (!cur) throw new Error("Узел не найден");
     if (cur.is_deleted || cur._deleted) return cur;
+    if (this.isCoreLed(id)) throw new Error(CORE_PLACES_MSG);
     const kids = this.getChildren(id);
     for (const k of kids) {
       await this.softDeleteNode(k.id);

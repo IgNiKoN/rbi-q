@@ -303,7 +303,7 @@ const ConstructionUnitsService = {
     });
   },
   async softDelete(id, opts) {
-    var _a;
+    var _a, _b;
     const cur = _items.find((d) => d.id === id);
     if (!cur) throw new Error("Помещение не найдено");
     if (cur.is_deleted || cur._deleted) return cur;
@@ -323,7 +323,7 @@ const ConstructionUnitsService = {
     if (!(opts == null ? void 0 : opts.skipApartment)) {
       const loc = _locations();
       const node = (_a = loc == null ? void 0 : loc.getNode) == null ? void 0 : _a.call(loc, cur.locationId);
-      if ((node == null ? void 0 : node.nodeType) === "apartment" && (loc == null ? void 0 : loc.softDeleteNode)) {
+      if ((node == null ? void 0 : node.nodeType) === "apartment" && (loc == null ? void 0 : loc.softDeleteNode) && !((_b = loc.isCoreLed) == null ? void 0 : _b.call(loc, cur.locationId))) {
         await loc.softDeleteNode(cur.locationId, { skipLinkedUnit: true });
       }
     }
@@ -334,10 +334,12 @@ const ConstructionUnitsService = {
    * Если уже apartment — no-op. Возвращает актуальный unit.
    */
   async ensureApartmentForUnit(unitId) {
+    var _a;
     const cur = this.get(unitId);
     if (!cur) throw new Error("Помещение не найдено");
     const loc = _locations();
     if (!(loc == null ? void 0 : loc.getNode) || !(loc == null ? void 0 : loc.createNode)) return cur;
+    if ((_a = loc.isCoreLed) == null ? void 0 : _a.call(loc, cur.locationId)) return cur;
     const node = loc.getNode(cur.locationId);
     if ((node == null ? void 0 : node.nodeType) === "apartment") return cur;
     const floorId = (node == null ? void 0 : node.nodeType) === "floor" ? node.id : node ? null : cur.locationId;

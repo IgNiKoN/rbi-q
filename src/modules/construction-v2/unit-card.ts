@@ -5,11 +5,13 @@
 
 import type { ConstructionUnitV2, UnitStatusV2 } from '../../services/construction-units/types';
 import { UNIT_STATUS_LABELS_RU, UNIT_STATUSES_V2 } from '../../services/construction-units/types';
+import { CORE_PLACES_HREF, isCoreLed } from './core-places';
 
 type LocPathNode = { id: string; displayName?: string; nodeType?: string };
 
 type LocSvc = {
   getPath?: (id: string) => LocPathNode[];
+  isCoreLed?: (id: string | null | undefined) => boolean;
 };
 
 type UnitsSvc = {
@@ -89,7 +91,9 @@ export function openUnitCard(
   closeUnitCard();
   _openUnitId = unit.id;
   const guest = deps.cb.isGuest();
-  const canDel = !guest && deps.cb.canSoftDelete(unit);
+  // P2-0054: квартира проекта «Компании» удаляется только там — вместо «Удалить помещение» ссылка
+  const coreLed = isCoreLed(deps.loc, unit.locationId);
+  const canDel = !guest && !coreLed && deps.cb.canSoftDelete(unit);
   const path = _pathLabel(deps.loc, unit.locationId);
   const status = String(unit.status || 'not_inspected') as UnitStatusV2;
   const hasPdf = !!(unit.pdf_url && String(unit.pdf_url).startsWith('http'));
@@ -151,7 +155,10 @@ export function openUnitCard(
           canDel
             ? `<button type="button" data-c2-unit-delete="${_escape(unit.id)}"
                 class="w-full py-2.5 rounded-xl text-rbi-label font-black uppercase text-danger border border-danger-soft bg-danger-soft">${_escape(_t('construction.v2.unit.delete_room', 'Удалить помещение'))}</button>`
-            : ''
+            : coreLed && !guest
+              ? `<a href="${CORE_PLACES_HREF}" data-c2-unit-core-places
+                  class="block w-full py-2.5 rounded-xl text-center text-rbi-label font-black uppercase text-brand border border-brand-soft bg-brand-soft">${_escape(_t('construction.v2.unit.core_places', 'Править в Компании →'))}</a>`
+              : ''
         }
       </div>
     </div>`;
@@ -208,6 +215,8 @@ export function openUnitCard(
     }
     void deps.cb.onOpenAcceptance(fresh);
   });
+
+  wrap.querySelector('[data-c2-unit-core-places]')?.addEventListener('click', () => closeUnitCard());
 
   wrap.querySelector('[data-c2-unit-delete]')?.addEventListener('click', (ev) => {
     ev.preventDefault();

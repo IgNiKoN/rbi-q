@@ -1984,6 +1984,16 @@ window.triggerSync = async function (mode = 'silent') {
                             });
                         }
                     }
+                    // P2-0054: ЖК, места которых ведёт «Компания» (там структура мест — только просмотр). До 048 на сервере — пропуск.
+                    try {
+                        const { data: coreRoots, error: coreErr } = await window.supabaseClient.rpc('core_led_roots');
+                        const locCore = window.RBI && window.RBI.services && window.RBI.services.locations;
+                        if (!coreErr && Array.isArray(coreRoots) && locCore && typeof locCore.setCoreLedRoots === 'function') {
+                            locCore.setCoreLedRoots(coreRoots);
+                        }
+                    } catch (e) {
+                        console.warn('[Sync][Локации] Не удалось узнать ЖК «Компании»:', e.message || e);
+                    }
                     if (STORES.CONST_FLOORS_V2) {
                         const { data: cloudPlans, error: planErr } = await window.supabaseClient
                             .from('construction_floors_v2')
@@ -3787,12 +3797,27 @@ window.triggerSync = async function (mode = 'silent') {
                                         const source = n.source || '';
                                         return status === 'not_synced' || status === 'blocked' || source === 'local';
                                     });
+                                    const coreRefused = [];
                                     for (const item of nodesToPush) {
                                         const cloudItem = window.prepareLocationNodeForCloud(item);
                                         if (!cloudItem) continue;
                                         const { error } = await window.supabaseClient
                                             .from('location_nodes')
                                             .upsert(cloudItem, { onConflict: 'id' });
+                                        // P2-0054: места ЖК ведёт «Компания» — старая правка с телефона снимается (узел — как на сервере,
+                                        // новый — убирается), остальные узлы и планы этажей отправляются дальше.
+                                        if (error && String(error.message || '').indexOf('Компания → Объекты и места') >= 0) {
+                                            const { data: srv } = await window.supabaseClient
+                                                .from('location_nodes').select('*').eq('id', item.id).maybeSingle();
+                                            if (srv && srv.id) {
+                                                await dbPut(STORES.LOCATION_NODES, { ...srv, _deleted: srv.is_deleted === true, source: 'cloud',
+                                                    syncStatus: 'synced', sync_status: 'synced', updatedAt: srv.updated_at || new Date().toISOString() });
+                                            } else {
+                                                await dbDelete(STORES.LOCATION_NODES, item.id);
+                                            }
+                                            coreRefused.push(item.displayName || item.id);
+                                            continue;
+                                        }
                                         if (error) throw error;
                                         item.source = 'cloud';
                                         item.syncStatus = 'synced';
@@ -3826,6 +3851,11 @@ window.triggerSync = async function (mode = 'silent') {
                                     const locSvc = window.RBI && window.RBI.services && window.RBI.services.locations;
                                     if (locSvc && typeof locSvc.init === 'function') {
                                         await locSvc.init();
+                                    }
+                                    if (coreRefused.length) {
+                                        safeToast('Места этого проекта ведутся в «Компания → Объекты и места». Не отправлено и снято на телефоне: '
+                                            + coreRefused.slice(0, 3).join(', ') + (coreRefused.length > 3 ? ' и ещё ' + (coreRefused.length - 3) : '')
+                                            + '. Остальные данные отправлены.');
                                     }
                                 } catch (e) {
                                     console.warn('[Sync][Локации] Ошибка отправки location_nodes/floors_v2:', e);

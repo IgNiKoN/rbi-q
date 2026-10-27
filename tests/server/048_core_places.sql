@@ -204,6 +204,17 @@ begin
   res := res || pg_temp.t((select count(*) from quality.location_nodes x join core.locations l on l.id::text = x.id where l.project_id = pq) = 0,
                           'проект Качества: зеркальных узлов нет');
 
+  -- 8а. Приложению Качества — какие ЖК ведёт ядро
+  perform pg_temp.as_user(ueng, ca);
+  res := res || pg_temp.t(quality.core_led_roots() = array[root], 'core_led_roots: инженер видит узел-проект ядра, без проекта Качества ('
+                          || coalesce(quality.core_led_roots()::text, 'null') || ')');
+  perform pg_temp.as_user(ub, cb);
+  res := res || pg_temp.t(quality.core_led_roots() = '{}', 'core_led_roots: чужая компания — пусто');
+  perform pg_temp.as_user(ub, ca);
+  res := res || pg_temp.t(quality.core_led_roots() = '{}', 'core_led_roots: подмена компании в заголовке — пусто');
+  reset role;
+  res := res || pg_temp.t(not has_function_privilege('anon', 'quality.core_led_roots()', 'execute'), 'core_led_roots: аноним — нет');
+
   -- 9. Компания без Качества: места заводятся, узлов Качества нет
   perform pg_temp.as_user(uc, cc);
   perform public.pf_save_project(cc, pc, '{"name": "ЖК Без Качества 048"}');
