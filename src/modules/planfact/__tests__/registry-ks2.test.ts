@@ -55,7 +55,7 @@ test('колонки и статусы палитрой: номер, дата, �
   assert.deepEqual(qa(box, '[data-testid="p2-reg-sort"]').map((b) => b.textContent), ['№ акта', 'Дата акта', 'Период', 'Статус', 'Сумма, ₽', 'Редакций', 'Выдал']);
   const r = (id: string, col: string) => box.querySelector(`tr[data-row="${id}"] [data-col="${col}"]`);
   assert.equal(r('a4', 'no').textContent, '№ 4');
-  assert.equal(r('a4', 'period').textContent, '01.10.2026 — 31.10.2026');
+  assert.equal(r('a4', 'period').textContent, 'Октябрь 202601.10.2026 — 31.10.2026');
   assert.match(r('a4', 'sum').textContent, /1\s500,50/);
   assert.deepEqual(['a4', 'a3', 'a2'].map((id) => r(id, 'status').querySelector('[data-testid="k2r-status"]').className.match(/--(\w+)/)?.[1]), ['yellow', 'green', 'grey']);
   assert.match(r('a2', 'status').textContent, /Аннулирован.*ошибка в объёмах/);
@@ -96,6 +96,7 @@ test('выгрузка в Excel: суммы — числа с сервера, в
   const ExcelJS: N = (await import('exceljs')).default;
   const files: { bytes: Uint8Array; name: string }[] = [];
   const box = await mount(reg({ save: (bytes: Uint8Array, name: string) => files.push({ bytes, name }) }));
+  click(box.querySelector('[data-testid="p2-reg-pick"]'));   // P2-0046: галочки — после «Выбрать»
   click(box.querySelector('tr[data-row="a4"] [data-testid="p2-reg-select"]'));
   click(box.querySelector('tr[data-row="a2"] [data-testid="p2-reg-select"]'));
   click(box.querySelector('[data-testid="k2r-export-selected"]')); await tick();

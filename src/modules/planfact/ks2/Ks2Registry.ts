@@ -22,13 +22,17 @@ const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 /** «2026-10» → «Октябрь 2026». */
 export const monthLabel = (ym: string): string => { const m = Number(ym.slice(5, 7)); return m >= 1 && m <= 12 ? `${cap(MONTHS[m - 1])} ${ym.slice(0, 4)}` : ym; };
 
+/** Период акта словами: месяц целиком — «Октябрь 2026», иначе — месяц конца периода. */
+export const periodName = (a: Pick<Ks2ActItem, 'period_from' | 'period_to'>): string => monthLabel(a.period_to.slice(0, 7));
 const statusText = (a: Ks2ActItem): string => STATUS_LABEL[a.status] + (a.annul_reason ? `: ${a.annul_reason}` : '');
 
 export function ks2Columns(canMoney: boolean): RegistryColumn<Ks2ActItem>[] {
   const cols: RegistryColumn<Ks2ActItem>[] = [
     { id: 'no', label: '№ акта', value: (a) => a.act_no, fixed: true, render: (a) => `№ ${a.act_no}` },
     { id: 'date', label: 'Дата акта', value: (a) => a.act_date, render: (a) => ruDate(a.act_date) },
-    { id: 'period', label: 'Период', value: (a) => `${ruDate(a.period_from)} — ${ruDate(a.period_to)}` },
+    // P2-0046: период — месяцем («Октябрь 2026»), даты — мелко под ним
+    { id: 'period', label: 'Период', value: (a) => `${ruDate(a.period_from)} — ${ruDate(a.period_to)}`,
+      render: (a) => h('span', { className: 'k2r-period' }, periodName(a), h('span', { className: 'pf-muted k2r-sub' }, `${ruDate(a.period_from)} — ${ruDate(a.period_to)}`)) },
     { id: 'status', label: 'Статус', value: statusText,
       render: (a) => h('span', { className: 'k2r-status' }, h(StatusBadge, { status: STATUS_TONE[a.status], label: cap(STATUS_LABEL[a.status]), testId: 'k2r-status' }),
         a.annul_reason ? h('span', { className: 'pf-muted k2-reason' }, a.annul_reason) : null) },
@@ -69,7 +73,11 @@ export function Ks2Registry(props: Ks2RegistryProps): ReactElement {
       tools: h(RegistryExport, { testId: 'k2r-export-all', count: ordered.length, onClick: () => { void exportActs(visibleCols, ordered, save); } }),
       testId: 'k2r-table', rows: acts, rowKey: (a) => a.id, columns, filters: KS2_FILTERS, state, onState,
       toneOf: (a) => STATUS_TONE[a.status], toneLabel: TONE_LABEL,
-      selected, onSelect: setSelected, onOpen: (a) => props.onOpen(a.id),
+      selected, onSelect: setSelected, onOpen: (a) => props.onOpen(a.id), quick: { filter: 'status' }, selectMode: true,
+      compact: (a) => h('span', { className: 'k2r-c' },
+        h('span', { className: 'k2r-c-name' }, h('b', null, `№ ${a.act_no} · ${periodName(a)}`), h('span', { className: 'pf-muted k2r-sub' }, a.annul_reason || `акт от ${ruDate(a.act_date)}`)),
+        h('span', { className: 'k2r-c-q' }, canMoney && a.total !== null ? h('b', null, `${money(a.total)} ₽`) : null,
+          h(StatusBadge, { status: STATUS_TONE[a.status], label: cap(STATUS_LABEL[a.status]) }))),
       actions: (sel) => h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'k2r-export-selected', onClick: () => { void exportActs(visibleCols, sel, save); } }, 'Выгрузить в Excel'),
       empty: 'Актов пока нет.',
       views: { registry: 'ks2-acts', company: props.companyId, user: props.user }, linkBase: KS2_LINK,
@@ -79,6 +87,12 @@ export function Ks2Registry(props: Ks2RegistryProps): ReactElement {
 export const KS2_REGISTRY_CSS = `
 .k2r{display:flex;flex-direction:column;gap:10px;min-width:0}
 .k2r-status{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.k2r-period{display:inline-flex;flex-direction:column;gap:2px}
+.k2r-sub{font-size:12px;white-space:nowrap}
+.k2r-c{display:flex;justify-content:space-between;gap:10px}
+.k2r-c-name{display:flex;flex-direction:column;gap:2px;min-width:0}
+.k2r-c-name b{font-size:14.5px;font-weight:600}
+.k2r-c-q{display:flex;flex-direction:column;align-items:flex-end;gap:4px;white-space:nowrap}
 .k2r .p2-reg__table td[data-col="status"]{text-align:left}
 @media (min-width:761px){.k2r .p2-reg__table td{overflow-wrap:break-word}.k2r .p2-reg__table td[data-col="date"],.k2r .p2-reg__table td[data-col="sum"]{white-space:nowrap}}
 `;

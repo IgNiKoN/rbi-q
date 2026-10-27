@@ -18,6 +18,7 @@ import { Ks2Act } from './Ks2Act.ts';
 import { Ks2Template } from './Ks2Template.ts';
 import { initialProjectId, ProjectPicker } from '../ProjectPicker.ts';
 import { InHead } from '../PageHead.ts';
+import { KpiTile, compactRub } from '../../../platform/ui/index.ts';
 
 /** me — почта вошедшего (личные виды реестра актов). */
 export function Ks2Tab(props: { api: Ks2Api; vor: VorApi; me?: string }): ReactElement {
@@ -74,9 +75,10 @@ export function Ks2Tab(props: { api: Ks2Api; vor: VorApi; me?: string }): ReactE
   const contract = settings?.kp_revisions.find((k) => k.id === settings.contract_kp_revision_id) || null;
   const kpLabel = (k: { estimate_name: string; revision_no: number; total: number }): string => `${k.estimate_name} · ред. ${k.revision_no} · ${money(k.total)} ₽`;
 
+  // P2-0046: цены акта и бланк — одной карточкой по строке («Цены акта: …», «Бланк КС-2 …»), а не двумя большими блоками
   const contractCard = settings
-    ? h('div', { className: 'pf-card k2-card', 'data-testid': 'k2-contract' },
-        h('div', { className: 'pf-field' }, 'Договорная редакция КП (цены акта)'),
+    ? h('div', { className: 'k2-card k2-ctx-row', 'data-testid': 'k2-contract' },
+        h('span', { className: 'k2-ctx-label' }, 'Цены акта'),
         canEdit && settings.kp_revisions.length
           ? h('select', { className: 'pj-input', value: settings.contract_kp_revision_id || '', disabled: busy, 'data-testid': 'k2-contract-select',
               onChange: (e) => { void chooseContract((e.target as HTMLSelectElement).value); } },
@@ -88,11 +90,24 @@ export function Ks2Tab(props: { api: Ks2Api; vor: VorApi; me?: string }): ReactE
     : null;
 
   const rows = acts || [];
+  const canMoney = (perms[projectId] || []).includes(MONEY_VIEW);
+  // P2-0046: итоги по актам — выдано, черновики, договор (сумма КП) и сколько от него выставлено; суммы — с сервера
+  const sumOf = (st: string): number => rows.filter((a) => a.status === st).reduce((x, a) => x + (a.total || 0), 0);
+  const issued = sumOf('issued');
+  const drafts = rows.filter((a) => a.status === 'draft');
+  const kpis = canMoney && rows.length
+    ? h('div', { className: 'k2-kpis', 'data-testid': 'k2-kpis' },
+        h(KpiTile, { label: 'Выдано по актам', value: compactRub(issued), metric: 'k2-issued', hint: `актов: ${rows.filter((a) => a.status === 'issued').length}` }),
+        h(KpiTile, { label: 'Черновики', value: String(drafts.length), metric: 'k2-drafts', hint: drafts.length ? compactRub(sumOf('draft')) : undefined }),
+        contract ? h(KpiTile, { label: 'Договор (КП)', value: compactRub(contract.total), metric: 'k2-contract-total',
+          hint: contract.total > 0 ? `выставлено ${(issued / contract.total * 100).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} %` : undefined }) : null)
+    : null;
   return h('div', { className: 'pj-tab k2-tab', 'data-testid': 'k2-tab' }, picker,
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     settings === null && !error ? h('div', { className: 'pf-muted' }, 'Загрузка…') : null,
-    contractCard,
-    settings ? h(Ks2Template, { api, projectId, settings, onChanged: () => { void api.settings(projectId).then((r) => { if (r.ok) setSettings(r.value); }); } }) : null,
+    settings ? h('div', { className: 'pf-card k2-ctx' }, contractCard,
+      h(Ks2Template, { api, projectId, settings, onChanged: () => { void api.settings(projectId).then((r) => { if (r.ok) setSettings(r.value); }); } })) : null,
+    kpis,
     settings && canEdit && contract && !creating
       ? h(InHead, { slot: 'actions' }, h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'k2-new', onClick: () => setCreating(true) }, 'Новый акт'))
       : null,
@@ -100,7 +115,7 @@ export function Ks2Tab(props: { api: Ks2Api; vor: VorApi; me?: string }): ReactE
     acts === null && settings ? h('div', { className: 'pf-muted' }, 'Загрузка…') : null,
     acts && !rows.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'k2-empty' }, 'Актов пока нет.') : null,
     rows.length
-      ? h(Ks2Registry, { key: projectId, acts: rows, canMoney: (perms[projectId] || []).includes(MONEY_VIEW), onOpen: setActId,
+      ? h(Ks2Registry, { key: projectId, acts: rows, canMoney, onOpen: setActId,
           companyId: list.find((p) => p.id === projectId)?.company_id || '', user: props.me || '' })
       : null);
 }
@@ -142,6 +157,15 @@ export const KS2_CSS = KS2_REGISTRY_CSS + `
 .k2-tab{min-width:0}
 .k2-card{display:flex;flex-direction:column;gap:8px;padding:12px 14px;overflow:visible}
 .k2-card .pj-input{max-width:560px}
+.k2-ctx{padding:0;display:flex;flex-direction:column;overflow:visible}
+.k2-ctx>.k2-card,.k2-ctx>.pf-card{border:0;border-radius:0;box-shadow:none;background:transparent}
+.k2-ctx>*+*{border-top:1px solid var(--card-border)!important}
+.k2-ctx-row{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.k2-ctx-label{font-size:13px;color:var(--text-muted);min-width:76px}
+.k2-ctx-row .pj-input{flex:1 1 260px;min-width:0;min-height:40px}
+.k2-ctx-row .ft-warn,.k2-ctx-row .pf-muted{flex-basis:100%}
+.k2-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:767.98px){.k2-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.k2-kpis>:last-child:nth-child(odd){grid-column:1/-1}}
 .k2-hint{flex-basis:100%;font-size:12px}
 .k2-no-input{width:110px}
 .k2-reason{font-size:12px}
