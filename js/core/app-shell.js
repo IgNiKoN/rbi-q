@@ -179,6 +179,7 @@
       el.classList.add('has-shell-nav-badge');
       el.appendChild(b);
     }
+    paintMoreBadge(hasAny);
   }
 
   function setNavBadges(scope, map) {
@@ -231,11 +232,98 @@
     return defaultBusinessModuleIds();
   }
 
+  /**
+   * P2-0046: нижняя панель телефона — не больше 5 пунктов. Больше — первые 4 видны, остальные уходят в «Ещё» (список над панелью).
+   * Пункты остаются в панели с классом nav-item--overflow: подсветка роутера, числа и nav2 (≥1280) работают как раньше;
+   * на ширине ≥ 768 «Ещё» скрыт и видны все пункты (css/app-shell.desktop.css). Скрытые правилом роли пункты не считаются.
+   */
+  var BOTTOM_NAV_MAX = 5;
+  var MORE_SHEET_ID = 'shell-more-sheet';
+  var MORE_ICON = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"></path></svg>';
+
+  function fitBottomNav(nav) {
+    if (!nav) return;
+    closeMoreSheet();
+    var items = Array.prototype.filter.call(nav.querySelectorAll('.nav-item[data-path]'), function (el) {
+      return window.getComputedStyle(el).display !== 'none';
+    });
+    if (items.length <= BOTTOM_NAV_MAX) return;
+    items.slice(BOTTOM_NAV_MAX - 1).forEach(function (el) { el.classList.add('nav-item--overflow'); });
+    var more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'nav-item nav-item--more';
+    more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
+    more.innerHTML = MORE_ICON + '<span class="nav-text">' + _navLabel('bottom.more', 'Ещё') + '</span>';
+    more.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (document.getElementById(MORE_SHEET_ID)) closeMoreSheet();
+      else openMoreSheet(nav, more);
+    });
+    nav.appendChild(more);
+    paintNavBadges();
+  }
+
+  function openMoreSheet(nav, more) {
+    var sheet = document.createElement('div');
+    sheet.id = MORE_SHEET_ID;
+    sheet.setAttribute('role', 'menu');
+    var html = '';
+    Array.prototype.forEach.call(nav.querySelectorAll('.nav-item--overflow'), function (el) {
+      var svg = el.querySelector('svg');
+      var text = el.querySelector('.nav-text');
+      var badge = el.querySelector('.shell-nav-badge');
+      html += '<button type="button" role="menuitem" class="shell-more-item' + (el.classList.contains('active') ? ' active' : '') + '"' +
+        ' data-path="' + el.getAttribute('data-path') + '">' + (svg ? svg.outerHTML : '') +
+        '<span class="shell-more-text">' + (text ? text.textContent : '') + '</span>' +
+        (badge ? '<span class="shell-nav-badge">' + badge.textContent + '</span>' : '') + '</button>';
+    });
+    sheet.innerHTML = html;
+    document.body.appendChild(sheet);
+    more.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeMoreSheet() {
+    var sheet = document.getElementById(MORE_SHEET_ID);
+    if (sheet) sheet.remove();
+    var more = document.querySelector('#main-bottom-nav .nav-item--more');
+    if (more) more.setAttribute('aria-expanded', 'false');
+  }
+
+  /** Число на «Ещё» — сумма чисел пунктов, ушедших в список (иначе на телефоне их не видно). */
+  function paintMoreBadge(hasAny) {
+    var more = document.querySelector('#main-bottom-nav .nav-item--more');
+    if (!more) return;
+    var old = more.querySelector('.shell-nav-badge');
+    if (old) old.remove();
+    more.classList.remove('has-shell-nav-badge');
+    if (!hasAny) return;
+    var n = 0;
+    Array.prototype.forEach.call(document.querySelectorAll('#main-bottom-nav .nav-item--overflow'), function (el) {
+      n += navBadgeCount(el.getAttribute('data-path'));
+    });
+    if (n <= 0) return;
+    var b = document.createElement('span');
+    b.className = 'shell-nav-badge';
+    b.textContent = navBadgeText(n);
+    b.setAttribute('aria-label', 'Требует участия: ' + n);
+    more.classList.add('has-shell-nav-badge');
+    more.appendChild(b);
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('.nav-item--more')) closeMoreSheet();   // выбор пункта списка — навигация роутера, список закрывается
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMoreSheet(); });
+  window.addEventListener('hashchange', closeMoreSheet);
+
   var ShellService = {
     platformEntryMode: platformEntryMode,
     isPlatformModuleAllowed: isPlatformModuleAllowed,
     legacyModuleAllowed: legacyModuleAllowed,
     setNavBadges: setNavBadges,
+    fitBottomNav: fitBottomNav,
     paintNavBadges: paintNavBadges,
     getContentRoot: function () {
       return document.getElementById('app-content');

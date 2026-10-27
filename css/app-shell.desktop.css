@@ -398,3 +398,116 @@ body.has-app-nav2 #app-root {
         width: var(--desk-rail);
     }
 }
+
+/* === P2-0046: навигация общей оболочки — подписи у всех пунктов, обычный регистр, ≤ 5 пунктов на телефоне («Ещё») ===
+   Все модули (Качество, Стройконтроль, План/Факт): меняется только вид меню, пункты и адреса прежние. */
+#main-bottom-nav .nav-item {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 44px;
+    max-width: 96px;
+}
+
+#main-bottom-nav .nav-item.active,
+#main-bottom-nav .nav-item.active svg {
+    transform: none;
+}
+
+#main-bottom-nav .nav-text {
+    opacity: 1;
+    transform: none;
+    height: auto;
+    margin-top: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+#main-bottom-nav .nav-item--more {
+    border: 0;
+    padding: 0;
+    background: none;
+    font: inherit;
+    color: var(--text-muted);
+}
+
+#main-bottom-nav:has(.nav-item--overflow.active) .nav-item--more {
+    color: var(--primary);
+}
+
+@media (max-width: 767.98px) {
+    #main-bottom-nav .nav-item--overflow {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    #main-bottom-nav .nav-item--more {
+        display: none !important;
+    }
+}
+
+/* Список «Ещё» — над нижней панелью, справа, под большим пальцем */
+#shell-more-sheet {
+    position: fixed;
+    right: 8px;
+    bottom: calc(65px + env(safe-area-inset-bottom) + 8px);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 65px - env(safe-area-inset-bottom) - 24px);
+    overflow-y: auto;
+    padding: 4px;
+    border: 1px solid var(--card-border);
+    border-radius: var(--rbi-radius-lg, 12px);
+    background: var(--card-bg, var(--header-bg));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+#shell-more-sheet .shell-more-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--text-main, inherit);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+
+#shell-more-sheet .shell-more-item svg {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+}
+
+#shell-more-sheet .shell-more-item.active {
+    color: var(--primary);
+    background: var(--hover-bg);
+}
+
+#shell-more-sheet .shell-nav-badge {
+    margin-left: auto;
+}
+
+/* Боковое меню: читаемые подписи без ПРОПИСНЫХ */
+.app-sidebar-item-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}

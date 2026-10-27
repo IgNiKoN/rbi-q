@@ -1,0 +1,5 @@
+quality/audit bottom: Осмотр, Инженер, Аналитика, Настройки | nav2: Осмотр, Инженер, Аналитика | side: Качество, Стройконтроль, Стройконтроль в2 (тест), План/Факт, Настройки | scrollWidth 1288 > 1280 (уже есть переполнение 8px)
+quality/engineer -> #/quality/engineer/tasks; quality/analytics -> #/quality/analytics/contractors
+construction bottom: Дефекты, Приёмка, Шахматка, Отчеты СК, Настройки
+construction-v2 bottom: Планы, Замечания, Приёмка, Передача, Сроки, Кабинет, Настройки (7)
+planfact bottom: Сводка, Входящие, ВОР, Факт, Смета, КС-2, Справочники, Настройки (8)

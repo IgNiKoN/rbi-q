@@ -858,6 +858,9 @@ const AppModeManager = {
         }
 
         nav.innerHTML = html;
+        // P2-0046: на телефоне не больше 5 пунктов — остальные в «Ещё» (оболочка, js/core/app-shell.js)
+        const shellSvc = window.RBI && window.RBI.services && window.RBI.services.shell;
+        if (shellSvc && typeof shellSvc.fitBottomNav === 'function') shellSvc.fitBottomNav(nav);
 
         if (window.RBI && window.RBI.shellDesktop && typeof window.RBI.shellDesktop.fillNav2 === 'function') {
             window.RBI.shellDesktop.fillNav2(html, platformNavOn ? 'platform' : this.currentMode);
