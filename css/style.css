@@ -3935,6 +3935,23 @@ html[data-theme="std-light"] .text-purple-600, html[data-theme="std-light"] .tex
 html[data-theme="std-dark"] .text-purple-600, html[data-theme="std-dark"] .text-purple-700 {
     color: var(--color-violet) !important;
 }
+/* Доработка по приёмке (решение владельца 27.10): мелкие недочёты, бывшие и до темы. */
+/* Плавающая «Скачать PDF» в Аналитике — не индиго, а главное действие темы (золото) */
+html[data-theme="std-light"] #fab-download-btn, html[data-theme="std-dark"] #fab-download-btn {
+    background-color: color-mix(in srgb, var(--accent) 88%, transparent) !important;
+    color: var(--btn-primary-text) !important;
+    border-color: transparent !important;
+}
+/* Рамки «border-surface» (карточка «Добро пожаловать» и др.) — линия темы, а не светлый серый */
+html[data-theme="std-light"] .border-surface, html[data-theme="std-light"] .border-surface\/50,
+html[data-theme="std-dark"] .border-surface, html[data-theme="std-dark"] .border-surface\/50 {
+    border-color: var(--card-border) !important;
+}
+/* Белый текст на зелёной заливке — тёмный зелёный палитры (контраст ≥ 4.5:1 вместо 3.1:1) */
+html[data-theme="std-light"] .bg-green-500.text-white, html[data-theme="std-light"] .bg-green-600.text-white,
+html[data-theme="std-dark"] .bg-green-500.text-white, html[data-theme="std-dark"] .bg-green-600.text-white {
+    background-color: #3f6b55 !important;
+}
 
 /* === RBI interactive lightness ===
    Hover lift/tint — только мышь/трекпад; на тач — active press.
