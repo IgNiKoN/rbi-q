@@ -140,6 +140,7 @@ begin
   if p_correction or cardinality(v_owners) = 0 or v_uid = any (v_owners) then return; end if;
   select string_agg(coalesce(nullif(btrim(up.full_name), ''), u.email::text), ', ' order by 1) into v_names
     from unnest(v_owners) o(id) left join core.user_profiles up on up.user_id = o.id left join auth.users u on u.id = o.id;
+  v_names := regexp_replace(v_names, '\.$', '');   -- «Иванов И. И.» — без второй точки перед «РП может…»
   raise exception 'Факт по этому месту вносит ответственный: %. РП может внести за него — с отметкой «за кого»', v_names
     using errcode = '42501';
 end $$;
@@ -719,6 +720,54 @@ begin
   order by (m.disabled_at is not null), coalesce(up.full_name, u.email::text), r.name, p.name nulls first, planfact.location_path(a.location_id) nulls first;
 end $function$;
 
+-- pf_vor_list_imports
+CREATE OR REPLACE FUNCTION public.pf_vor_list_imports(p_project uuid)
+ RETURNS TABLE(id uuid, file_name text, sheet_name text, status text, row_count integer, works integer, positions integer, created_at timestamp with time zone, created_by_email text, confirmed_at timestamp with time zone, profile_id uuid, revision_no integer, previous_import_id uuid, root_import_id uuid, is_current boolean, confirmed_by_email text)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'planfact', 'core'
+AS $function$
+begin
+  if p_project is null or auth.uid() is null or not planfact.is_project_member(p_project) then
+    raise exception 'Нет доступа к проекту' using errcode = '42501';
+  end if;
+  return query
+  select i.id, i.file_name, i.sheet_name, i.status, i.row_count,
+         (select count(*)::int from planfact.vor_source_rows s where s.import_id = i.id and s.kind = 'work'),
+         (select count(distinct l.position_id)::int from planfact.vor_links l join planfact.vor_source_rows s on s.id = l.source_row_id
+           where s.import_id = i.id),
+         i.created_at, u.email::text, i.confirmed_at, i.profile_id,
+         i.revision_no, i.previous_import_id, coalesce(i.root_import_id, i.id),
+         exists (select 1 from planfact.vor_heads h where h.current_import_id = i.id), cu.email::text
+  from planfact.vor_imports i left join auth.users u on u.id = i.created_by left join auth.users cu on cu.id = i.confirmed_by
+  where i.project_id = p_project and (select planfact.my_area(p_project)) is null
+  order by i.created_at desc;
+end $function$;
+
+-- pf_vor_import_rows
+CREATE OR REPLACE FUNCTION public.pf_vor_import_rows(p_import uuid)
+ RETURNS TABLE(id uuid, row_no integer, kind text, number text, name text, unit_text text, qty numeric, norm numeric, prices jsonb, context jsonb, parent_row_no integer, location_id uuid, work_type_id uuid, unit_id uuid, match text)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'planfact', 'core'
+AS $function$
+declare v_project uuid; v_money boolean;
+begin
+  select project_id into v_project from planfact.vor_imports where vor_imports.id = p_import;
+  if v_project is null or auth.uid() is null or not planfact.is_project_member(v_project)
+     or planfact.my_area(v_project) is not null then
+    raise exception 'Загрузка не найдена' using errcode = '22023';
+  end if;
+  v_money := planfact.has_permission(v_project, 'planfact.money.view') or planfact.has_permission(v_project, 'planfact.estimate.manage');
+  return query
+  select s.id, s.row_no, s.kind, s.number, s.name, s.unit_text, s.qty, s.norm,
+         case when v_money then s.prices else '{}'::jsonb end, s.context,
+         w.row_no, s.location_id, s.work_type_id, s.unit_id, s.match
+  from planfact.vor_source_rows s left join planfact.vor_source_rows w on w.id = s.parent_row_id
+  where s.import_id = p_import
+  order by s.row_no;
+end $function$;
+
 -- 5. Участие: пакетное назначение и «Изменить область» (одна функция). Для каждого сотрудника набор действующих назначений
 --    (сотрудник, роль, проект) приводится к выбранной области: новые места — добавляются, прежние — меняются (ответственный,
 --    срок, объекты Качества, фирма) без отзыва, лишние — отзываются; всё — в журнал.
@@ -901,6 +950,11 @@ alter policy fact_entries_select on planfact.fact_entries
          and planfact.in_area(planfact.position_location(position_id), planfact.my_area(project_id)));
 alter policy vor_position_events_select on planfact.vor_position_events
   using (planfact.is_project_member(project_id) and planfact.in_area(planfact.position_location(position_id), planfact.my_area(project_id)));
+-- Загрузки ВОР (файлы, строки, связи, редакции) — только при доступе ко всему проекту (ведут ПТО и РП)
+alter policy vor_imports_select on planfact.vor_imports using (planfact.is_project_member(project_id) and planfact.my_area(project_id) is null);
+alter policy vor_source_rows_select on planfact.vor_source_rows using (planfact.is_project_member(project_id) and planfact.my_area(project_id) is null);
+alter policy vor_links_select on planfact.vor_links using (planfact.is_project_member(project_id) and planfact.my_area(project_id) is null);
+alter policy vor_heads_select on planfact.vor_heads using (planfact.is_project_member(project_id) and planfact.my_area(project_id) is null);
 
 -- 7. Права на функции: служебные — никому (кроме тех, что нужны правилам строк); pf_* — только authenticated.
 revoke all on function planfact.my_area_nodes(uuid), planfact.place_fact_owners(uuid, uuid), planfact.require_fact_place(uuid, uuid, uuid, boolean)

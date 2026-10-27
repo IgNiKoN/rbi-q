@@ -15,7 +15,7 @@ create or replace function pg_temp.t(c boolean, l text) returns text language sq
 create or replace function pg_temp.pos(imp uuid, rn int) returns uuid language sql as $f$
   select l.position_id from planfact.vor_links l join planfact.vor_source_rows s on s.id = l.source_row_id where s.import_id = imp and s.row_no = rn $f$;
 -- позиции, которые видит текущий пользователь в списке ВОР (через запятую, по номеру строки)
-create or replace function pg_temp.vis(p uuid, imp uuid) returns text language sql as $f$
+create or replace function pg_temp.vis(p uuid, imp uuid) returns text language sql security definer as $f$   -- номера строк — мимо правил строк; список позиций — от имени пользователя (auth.uid)
   select coalesce(string_agg(s.row_no::text, ',' order by s.row_no), '')
     from public.pf_vor_positions(p) v join planfact.vor_links l on l.position_id = v.id
     join planfact.vor_source_rows s on s.id = l.source_row_id and s.import_id = imp $f$;
@@ -155,6 +155,11 @@ begin
   res := res || pg_temp.t((select string_agg(name, ',' order by name) from public.pf_list_locations(pa, bld)) = 'Секция 1,Секция 2',
                           'Иванов: в дереве секции 1, 2 (' || coalesce((select string_agg(name, ',') from public.pf_list_locations(pa, bld)), '') || ')');
   res := res || pg_temp.t((select count(*) from public.pf_list_locations(pa)) = 1, 'Иванов: корпус виден (родитель своей секции)');
+  res := res || pg_temp.t((select count(*) from public.pf_vor_list_imports(pa)) = 0 and (select count(*) from planfact.vor_imports where project_id = pa) = 0
+                          and (select count(*) from planfact.vor_source_rows where project_id = pa) = 0,
+                          'Иванов: загрузки ВОР (файлы и строки) не видны — их ведут ПТО и РП по всему проекту');
+  t := pg_temp.err(format('select * from public.pf_vor_import_rows(%L)', imp));
+  res := res || pg_temp.t(t like '22023%', 'Иванов: строки файла ВОР — отказ (' || t || ')');
   t := pg_temp.err(format('select * from public.pf_fact_history(%L)', p3));
   res := res || pg_temp.t(t like '42501%', 'Иванов: история позиции секции 3 — отказ (' || t || ')');
   res := res || pg_temp.t((select jsonb_build_array(j2 -> 'full', j2 -> 'can_on_behalf', jsonb_array_length(j2 -> 'fact_owner'))
@@ -166,6 +171,7 @@ begin
   res := res || pg_temp.t(pg_temp.vis(pa, imp) = '1', 'РП на секцию 1: строка 1');
   perform pg_temp.as_user(upm);
   res := res || pg_temp.t(pg_temp.vis(pa, imp) = '1,2,3', 'РП проекта: все строки');
+  res := res || pg_temp.t((select count(*) from public.pf_vor_list_imports(pa)) = 1, 'РП проекта: загрузки ВОР видны');
   res := res || pg_temp.t('planfact.ks2.edit' = any (public.pf_my_permissions(pa)) and 'planfact.money.view' = any (public.pf_my_permissions(pa)), 'РП проекта: КС-2 и деньги есть');
   perform pg_temp.as_user(ufor);
   res := res || pg_temp.t(pg_temp.vis(pa, imp) = '1,2,3', 'прораб на всю компанию (старое назначение): все строки');
@@ -186,6 +192,7 @@ begin
   perform pg_temp.as_user(ufor);
   t := pg_temp.err(format('select public.pf_fact_add(%L, %L, %L, 5)', p2, br, today));
   res := res || pg_temp.t(t like '42501%вносит ответственный: Иванов И.%', 'прораб компании: место с ответственным — отказ с именем (' || t || ')');
+  res := res || pg_temp.t(t not like '%..%', 'в отказе нет двойной точки после инициалов (' || t || ')');
   t := pg_temp.err(format('select public.pf_fact_add(%L, %L, %L, 5)', p3, br, today));
   res := res || pg_temp.t(t = 'OK', 'прораб компании: место без ответственного — как сейчас');
   t := pg_temp.err(format('select public.pf_fact_add_for(%L, %L, %L, %L, 5)', uiv, p2, br, today));
