@@ -10,7 +10,8 @@ import { ProgressBar, StatusBadge } from '../../../platform/ui/index.ts';
 import { fmtQty } from '../fact/fact.ts';
 
 export type SummaryPage = 'ks2' | 'estimate' | 'fact';
-export interface SummaryLinks { go?: (page: SummaryPage) => void; can?: Partial<Record<SummaryPage, boolean>> }
+/** P2-0046: to — переход по адресу раздела с параметрами («ks2?p=…», «fact/pending?p=…») для «Требует внимания» портфеля. */
+export interface SummaryLinks { go?: (page: SummaryPage) => void; to?: (path: string) => void; can?: Partial<Record<SummaryPage, boolean>> }
 
 interface Item { id: string; title: string; detail?: string; status: 'red' | 'yellow'; action?: { label: string; run: () => void }; rows?: string[]; total?: number }
 

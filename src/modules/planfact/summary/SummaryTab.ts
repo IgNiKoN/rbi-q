@@ -12,7 +12,8 @@ import { ProjectView } from './ProjectView.ts';
 import { Ks2Gap } from './Ks2Gap.ts';
 import { Dashboard, PERIODS } from './Dashboard.ts';
 import type { Period } from './Dashboard.ts';
-import { StatusBadge } from '../../../platform/ui/index.ts';
+import { ProgressBar, StatusBadge } from '../../../platform/ui/index.ts';
+import { ObjectCards, PortfolioHead } from './Portfolio.ts';
 import type { SummaryLinks } from './Attention.ts';
 import { hashParam } from '../ProjectPicker.ts';
 import { InHead, rememberProject } from '../PageHead.ts';
@@ -92,22 +93,28 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
       ? h(ProjectView, { key: opened.project_id, api, p: opened, card: dash(opened), onBack: list.length > 1 ? () => pick('all') : undefined,
           ks2: (x) => h(Ks2Gap, { api, p: x }), save })
       : null,
-    list.length && (!opened || list.length > 1) ? h(Objects, { list: sorted, onOpen: pick }) : null);
+    // P2-0046: «Все объекты» — сначала «Требует внимания» и итоги, ниже объекты (ПК — таблица, телефон — карточки)
+    !opened && list.length ? h(PortfolioHead, { list: sorted, links, open: pick }) : null,
+    list.length && (!opened || list.length > 1) ? h(Objects, { list: sorted, onOpen: pick, all: !opened }) : null,
+    !opened && list.length ? h(ObjectCards, { list: sorted, onOpen: pick }) : null);
 }
 
 /** Таблица объектов: статус (светофор ТЗ 8.2), готовность, отставание в днях, сделано, не выставлено, прогноз — сверху самые отстающие. */
-function Objects(props: { list: SummaryProject[]; onOpen: (id: string) => void }): ReactElement {
+function Objects(props: { list: SummaryProject[]; onOpen: (id: string) => void; all?: boolean }): ReactElement {
   const { list, onOpen } = props;
   const anyMoney = list.some((p) => p.can_money);
-  return h('section', { className: 'p2-chart sm-objects', 'data-testid': 'sm-objects', 'aria-label': 'Объекты' },
+  return h('section', { className: 'p2-chart sm-objects' + (props.all ? ' sm-objects--all' : ''), 'data-testid': 'sm-objects', 'aria-label': 'Объекты' },
     h('h2', { className: 'p2-chart__title' }, 'Объекты'),
     anyMoney ? null : h('div', { className: 'pf-muted sm-note', 'data-testid': 'sm-nomoney-list' }, 'Суммы в рублях, общий % и отставание видят РП, ПТО, экономист и руководство.'),
     h('div', { className: 'p2-chart__body' }, h('table', { className: 'p2-chart__table sm-otable' },
-      h('thead', null, h('tr', null, ['Объект', 'Статус', 'Готовность', 'Отставание', 'Сделано', 'Не выставлено', 'Прогноз'].map((c) => h('th', { key: c, scope: 'col' }, c)))),
+      h('thead', null, h('tr', null, ['Объект', 'Статус', 'Готовность и план на сегодня', 'Отставание', 'Сделано', 'Не выставлено', 'Прогноз'].map((c) => h('th', { key: c, scope: 'col' }, c)))),
       h('tbody', null, list.map((p) => h('tr', { key: p.project_id, 'data-project-id': p.project_id },
         h('td', { className: 'sm-omain' }, h('button', { type: 'button', className: 'sm-olink', 'data-testid': 'sm-open', onClick: () => onOpen(p.project_id) }, p.name)),
         h('td', { 'data-label': 'Статус' }, h(StatusBadge, { status: p.light, label: LIGHT_LABEL[p.light], title: lightText(p), testId: 'sm-olight' })),
-        h('td', { 'data-label': 'Готовность' }, pctText(p.pct_money)),
+        // P2-0046: полоса «сделано» с отметкой «план на сегодня» — отставание видно без чтения цифр
+        h('td', { 'data-label': 'Готовность' }, h('div', { className: 'sm-obar' },
+          p.can_money ? h(ProgressBar, { value: p.pct_money, label: `Готовность ${p.name}`, marker: p.plan_pct_today, markerLabel: 'план на сегодня' }) : null,
+          h('span', { className: 'sm-opct' }, pctText(p.pct_money)))),
         h('td', { 'data-testid': 'sm-olag', 'data-label': 'Отставание' }, lagDaysText(p.lag_days)),
         h('td', { 'data-label': 'Сделано' }, rub(p.done_money)),
         h('td', { 'data-label': 'Не выставлено' }, rub(p.gap_money)),
@@ -192,6 +199,9 @@ export const SUMMARY_CSS = `
 .sm-dash{display:flex;flex-direction:column;gap:12px}
 .sm-olink{font:inherit;font-weight:600;color:var(--text-main);background:none;border:0;padding:6px 0;min-height:32px;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
 .sm-otable{min-width:720px}
+.sm-obar{display:flex;align-items:center;gap:10px;min-width:170px}
+.sm-obar .p2-progress{flex:1 1 auto}
+.sm-opct{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:52px;text-align:right}
 .sm-dates{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
 .sm-th{display:flex;flex-direction:column;gap:10px;padding:14px 16px}
 @media (max-width:760px){

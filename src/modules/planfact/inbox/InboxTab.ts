@@ -29,23 +29,20 @@ export function inboxLink(kind: InboxKind, r: InboxRow, me: string): string {
   return join('#/planfact/summary', p, 'focus=attention');   // «#/planfact?…» роутер оболочки не узнаёт
 }
 
-interface Item { kind: InboxKind; label: string; value: string; tone: Status; hint: string }
+interface Item { kind: InboxKind; label: string; value: string; tone: Status; hint: string; verb: string }
 
 /** Строки объекта: только виды, на которые есть право (не null) и где что-то есть (> 0); сначала дела, затем сведения. */
 export function inboxItems(r: InboxRow): Item[] {
   const out: Item[] = [];
   const n = (v: number | null): number => (v && v > 0 ? v : 0);
-  if (n(r.pending)) out.push({ kind: 'pending', label: 'Ждёт подтверждения', value: String(r.pending), tone: FACT_LABEL.pending_approval.tone, hint: 'записей факта — решить' });
-  if (n(r.my_rejected)) out.push({ kind: 'my_rejected', label: 'Мои отклонённые', value: String(r.my_rejected), tone: FACT_LABEL.rejected.tone, hint: 'записей — исправить или внести заново' });
-  if (n(r.ks2_drafts)) out.push({ kind: 'ks2_drafts', label: 'Черновики КС-2', value: String(r.ks2_drafts), tone: 'yellow', hint: 'актов не выдано' });
+  if (n(r.pending)) out.push({ kind: 'pending', label: 'Ждёт подтверждения', value: String(r.pending), tone: FACT_LABEL.pending_approval.tone, hint: 'записей факта прорабов', verb: 'Решить' });
+  if (n(r.my_rejected)) out.push({ kind: 'my_rejected', label: 'Мои отклонённые', value: String(r.my_rejected), tone: FACT_LABEL.rejected.tone, hint: 'записей — исправить или внести заново', verb: 'Исправить' });
+  if (n(r.ks2_drafts)) out.push({ kind: 'ks2_drafts', label: 'Черновики КС-2', value: String(r.ks2_drafts), tone: 'yellow', hint: 'актов не выдано', verb: 'Выдать' });
   if (n(r.ks2_gap)) out.push({ kind: 'ks2_gap', label: 'Сделано, не выставлено', value: `${r.ks2_gap} поз.`, tone: 'grey',
-    hint: r.ks2_gap_money !== null ? `на ${rub(r.ks2_gap_money)}` : 'строк сметы' });
-  if (n(r.stale)) out.push({ kind: 'stale', label: `Стоят больше ${r.stale_days ?? 14} дней`, value: `${r.stale} поз.`, tone: 'grey', hint: 'позиций без факта' });
+    hint: r.ks2_gap_money !== null ? `на ${rub(r.ks2_gap_money)}` : 'строк сметы', verb: 'В КС-2' });
+  if (n(r.stale)) out.push({ kind: 'stale', label: `Стоят больше ${r.stale_days ?? 14} дней`, value: `${r.stale} поз.`, tone: 'grey', hint: 'позиций без факта', verb: 'Посмотреть' });
   return out;
 }
-
-const CHEVRON = h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true', className: 'ib-chevron' },
-  h('path', { d: 'M9 6l6 6-6 6' }));
 
 export function InboxTab(props: { api: SummaryApi; me: string; go: (path: string) => void }): ReactElement {
   const { api, me, go } = props;
@@ -60,7 +57,7 @@ export function InboxTab(props: { api: SummaryApi; me: string; go: (path: string
       : h('div', { className: 'pf-card ib-empty', 'data-testid': 'ib-empty' },
           h('div', { className: 'ib-empty__title' }, 'Всё сделано'),
           h('div', { className: 'pf-muted' }, 'Ничего не ждёт вашего участия. Новое появится здесь и красной точкой в меню.')),
-    groups.map(({ r, items }) => h('section', { key: r.project_id, className: 'pf-card ib-group', 'data-testid': 'ib-group', 'data-project-id': r.project_id, 'aria-label': r.name },
+    h('div', { className: 'ib-groups' }, groups.map(({ r, items }) => h('section', { key: r.project_id, className: 'pf-card ib-group', 'data-testid': 'ib-group', 'data-project-id': r.project_id, 'aria-label': r.name },
       h('div', { className: 'ib-group__head' },
         h('h3', { className: 'ib-group__title' }, r.name, r.code ? h('span', { className: 'pf-muted ib-code' }, ' · ' + r.code) : null),
         rowTasks(r) ? h('span', { className: 'ib-group__n', 'data-testid': 'ib-group-tasks' }, `Дел: ${rowTasks(r)}`) : null),
@@ -68,27 +65,29 @@ export function InboxTab(props: { api: SummaryApi; me: string; go: (path: string
           'aria-label': `${it.label}: ${it.value} — открыть`, onClick: () => go(inboxLink(it.kind, r, me)) },
         h(StatusBadge, { status: it.tone, label: it.value, testId: 'ib-count' }),
         h('span', { className: 'ib-item__text' }, h('span', { className: 'ib-item__label' }, it.label), h('span', { className: 'pf-muted ib-item__hint' }, it.hint)),
-        CHEVRON))))));
+        h('span', { className: 'ib-verb', 'aria-hidden': 'true' }, it.verb))))))));
 }
 
+/* P2-0046 (утверждённый макет): дело — строка «число · что · действие» внутри карточки объекта; на ПК объекты — в две колонки. */
 export const INBOX_CSS = `
 .ib-tab{display:flex;flex-direction:column;gap:12px}
 .ib-total{font-size:13px}
 .ib-empty{padding:24px 16px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .ib-empty__title{font-size:15px;font-weight:900;color:var(--text-main)}
-.ib-group{padding:12px;display:flex;flex-direction:column;gap:10px;overflow:visible}
-.ib-group__head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.ib-group__title{margin:0;font-size:15px;font-weight:900;color:var(--text-main);min-width:0;overflow-wrap:anywhere}
-.ib-code{font-weight:600;font-size:13px}
-.ib-group__n{font-size:12px;font-weight:700;color:var(--text-muted)}
-.ib-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
-.ib-item{display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;border:1px solid var(--card-border);border-radius:12px;background:var(--card-bg);color:var(--text-main);cursor:pointer;text-align:left;font:inherit}
+.ib-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.ib-group{padding:0;display:flex;flex-direction:column;overflow:hidden}
+.ib-group__head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:12px 14px 6px}
+.ib-group__title{margin:0;font-size:15px;font-weight:600;color:var(--text-main);min-width:0;overflow-wrap:anywhere}
+.ib-code{font-weight:500;font-size:13px}
+.ib-group__n{font-size:12.5px;font-weight:500;color:var(--text-muted)}
+.ib-items{display:flex;flex-direction:column}
+.ib-item{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px;border:0;border-top:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);cursor:pointer;text-align:left;font:inherit}
 .ib-item:hover{background:var(--hover-bg)}
-.ib-item:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
+.ib-item:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
 .ib-item .p2-badge{flex:0 0 auto;font-variant-numeric:tabular-nums}
 .ib-item__text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
-.ib-item__label{font-size:13px;font-weight:800}
-.ib-item__hint{font-size:12px}
-.ib-chevron{flex:0 0 auto;color:var(--text-muted)}
-@media (max-width:760px){.ib-items{grid-template-columns:1fr}}
+.ib-item__label{font-size:14px;font-weight:600}
+.ib-item__hint{font-size:12.5px}
+.ib-verb{flex:0 0 auto;font-size:13px;font-weight:600;color:var(--p2-chart-fact);white-space:nowrap}
+@media (max-width:1023.98px){.ib-groups{grid-template-columns:1fr}}
 `;

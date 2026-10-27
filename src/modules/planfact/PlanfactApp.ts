@@ -249,7 +249,7 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
   const body = inb
     ? h('div', { className: 'pf-root' }, h(InboxTab, { api: summaryApi!, me: who, go: nav }))
     : sm
-    ? h('div', { className: 'pf-root' }, h(SummaryTab, { api: summaryApi!, links: { go: (pg) => nav(`${BASE}/${pg}`), can: { ks2: !!canKs2, estimate: !!canEstimate, fact: true } } }))
+    ? h('div', { className: 'pf-root' }, h(SummaryTab, { api: summaryApi!, links: { go: (pg) => nav(`${BASE}/${pg}`), to: (path) => nav(`${BASE}/${path}`), can: { ks2: !!canKs2, estimate: !!canEstimate, fact: true } } }))
     : k2
     ? h('div', { className: 'pf-root' }, h(Ks2Tab, { api: ks2Api!, vor: vorApi!, me: who }))
     : fct
