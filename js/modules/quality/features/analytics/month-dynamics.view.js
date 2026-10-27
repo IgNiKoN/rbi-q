@@ -33,13 +33,13 @@ const HINTS = {
   mix: '<b>Поправка на состав.</b> Если в месяце больше проверили «трудный» вид работ, общий УрК может упасть без реального ухудшения. Здесь УрК пересчитан так, будто виды работ проверяли в обычных долях за 12 месяцев.',
   delta: '<b>Этот / прошлый месяц.</b> Изменение «заметное», только если оно больше разброса обоих месяцев. Иначе — «в пределах разброса»: разница может быть случайной. Если в любом месяце меньше 7 проверок — «мало данных», не сравниваем.',
   base: '<b>Базовый УрК</b> — средняя доля выполненных пунктов с весами (B1 = 1, B2 = 2, B3 = 3) по проверкам месяца, без штрафов. Рядом — разброс ±: где скорее всего находится настоящее значение.',
-  final: '<b>Итоговый УрК</b> — УрК проверок со штрафами за значимые (B2) и критичные (B3) дефекты, как в карточке проверки.',
+  iurk: '<b>ИУрК — интегральный уровень качества (надёжность)</b> — уровень качества по серии проверок, как «Надёжность» в «Сводке»: у каждого подрядчика на объекте — по всем его проверкам месяца, со штрафами за системный брак B2 и долю проверок с B3; среднее — по подрядчикам, у кого от 7 проверок. Если таких нет — «мало данных».',
   b3share: '<b>Проверок с критичным дефектом</b> — доля проверок месяца, где найден хотя бы один B3.',
   per100: '<b>Невыполненных пунктов на 100 проверенных</b> — делим на пункты, а не на проверки: чек-листы разной длины.',
-  red: '<b>Красная зона</b> — проверки с критичным дефектом (B3) или итоговым УрК ниже 70.',
-  trend: '<b>Тренд за 12 месяцев.</b> Сплошная линия — базовый УрК, полоса вокруг — разброс ±, пунктир — итоговый УрК. Пустой кружок — меньше 7 проверок. Внизу — число проверок по месяцам.',
-  zones: '<b>Зоны качества</b> — доли проверок месяца: зелёная (итоговый УрК от 85), жёлтая (70–84), красная (B3 или ниже 70).',
-  cons: '<b>УрК подрядчика за месяц</b> — по всем проверкам календарного месяца (не «последние 15»), те же штрафы за системный брак и B3, что в рейтинге. Сортировка — по нижней границе разброса: подрядчик с двумя случайно хорошими проверками не окажется первым. Меньше 7 проверок — бледная строка, ниже всех.',
+  red: '<b>Красная зона</b> — проверки с критичным дефектом (B3) или с УрК проверки (со штрафами, как в карточке проверки) ниже 70.',
+  trend: '<b>Тренд за 12 месяцев.</b> Сплошная линия — базовый УрК, полоса вокруг — разброс ±, пунктир — ИУрК (надёжность по серии проверок). Пустой кружок — меньше 7 проверок. Внизу — число проверок по месяцам.',
+  zones: '<b>Зоны качества</b> — доли проверок месяца по УрК самой проверки (со штрафами, как в карточке проверки): зелёная (от 85), жёлтая (70–84), красная (B3 или ниже 70).',
+  cons: '<b>ИУрК подрядчика за месяц</b> (надёжность) — по всем проверкам календарного месяца (не «последние 15»), те же штрафы за системный брак и B3, что в рейтинге. Сортировка — по нижней границе разброса: подрядчик с двумя случайно хорошими проверками не окажется первым. Меньше 7 проверок — бледная строка, ниже всех.',
   stab: '<b>Стабильность</b> — насколько ровно работает подрядчик от проверки к проверке (100 — одинаково, ниже 40 — качество скачет).',
   zoneC: '<b>Зона подрядчика</b> — красная: УрК ниже 70, или B3 в 20 % проверок и больше, или системный брак B2 от 40 %; «Образцовое» — УрК от 85 без B3 и без системного брака.',
   bcl: '<b>B1 / B2 / B3 на 100 проверенных пунктов</b> — малозначительные, значительные и критичные невыполненные пункты, делённые на число осмотренных пунктов.',
@@ -384,7 +384,7 @@ function chartTrend(w, r) {
   const pl = 30, pr = narrow ? 8 : 26, pt = 16, h1 = narrow ? 170 : 200, gap = 26, h2 = narrow ? 52 : 62, h = pt + h1 + gap + h2 + 20;
   const { bw, x } = band(ms.length, w, pl, pr);
   let mn = 100;
-  ms.forEach((m) => { if (m.base) mn = Math.min(mn, m.base.lo != null ? m.base.lo : m.base.mean, m.final.mean); });
+  ms.forEach((m) => { if (m.base) mn = Math.min(mn, m.base.lo != null ? m.base.lo : m.base.mean, m.iurk ? m.iurk.mean : 100); });
   let ymin = Math.max(0, Math.floor((mn - 3) / 10) * 10);
   if (ymin > 70) ymin = 60;
   const y = lin(ymin, 100, pt + h1, pt);
@@ -418,15 +418,15 @@ function chartTrend(w, r) {
     });
     return '<path d="' + d + '" class="ln ' + cls + '"/>';
   };
-  s += line('final', 'ln-final');
+  s += line('iurk', 'ln-final');
   s += line('base', 'ln-base');
   ms.forEach((m, i) => {
     if (!m.base) return;
     const tip = monthFull(m.key) + ': проверок ' + m.N + (m.few ? ' (мало данных)' : '')
       + '\nБазовый УрК ' + fmt(m.base.mean, 1) + (m.base.E != null ? ' ± ' + fmt(m.base.E, 1) : '') + ' %'
-      + '\nИтоговый УрК ' + fmt(m.final.mean, 1) + ' %';
+      + (m.iurk ? '\nИУрК ' + fmt(m.iurk.mean, 1) + ' %' + (m.iurk.few ? ' (ни у кого нет 7 проверок)' : '') : '');
     s += '<g><title>' + esc(tip) + '</title>';
-    s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(m.final.mean).toFixed(1) + '" r="2.6" class="dot-final"/>';
+    if (m.iurk) s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(m.iurk.mean).toFixed(1) + '" r="2.6" class="dot-final"/>';
     s += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(m.base.mean).toFixed(1) + '" r="' + (i === sel ? 5 : 4) + '" class="' + (m.few ? 'dot-hollow' : 'dot-base') + '"/>';
     s += '<rect x="' + (x(i) - bw / 2).toFixed(1) + '" y="' + pt + '" width="' + bw.toFixed(1) + '" height="' + h1 + '" fill="transparent"/></g>';
     if (i === sel) s += txt(x(i), y(m.base.hi != null ? Math.min(100, m.base.hi) : m.base.mean) - 6, fmt(m.base.mean, 1), 'val');
@@ -573,13 +573,13 @@ function blockVolume(r, all) {
     + '<div class="md-note">Это доля брака <b>среди осмотренного</b>, а не по всей стройке. Пересчитывать её на весь объём работ нельзя.</div></div></div></div>';
 }
 
-const TILE_FMT = { base: { d: 1, u: ' %' }, final: { d: 1, u: ' %' }, b3share: { d: 0, u: ' %' }, per100: { d: 1, u: '' }, red: { d: 0, u: ' %' } };
+const TILE_FMT = { base: { d: 1, u: ' %' }, iurk: { d: 1, u: ' %' }, b3share: { d: 0, u: ' %' }, per100: { d: 1, u: '' }, red: { d: 0, u: ' %' } };
 
 function tileHtml(t, r) {
   const c = t.cur, p = t.prev, f = TILE_FMT[t.key], d = f.d, isPct = f.u === ' %';
   const head = '<div class="t-head"><span class="t-title">' + esc(t.title) + '</span>' + hint(t.key) + '</div>';
   if (!c) return '<div class="md-tile">' + head + '<div class="t-val md-muted">—</div><div class="t-range">нет проверок</div></div>';
-  const valCls = (t.key === 'base' || t.key === 'final') ? 'md-' + zoneOfUrk(c.mean) : '';
+  const valCls = (t.key === 'base' || t.key === 'iurk') ? 'md-' + zoneOfUrk(c.mean) : '';
   const cmp = t.cmp;
   const pp = isPct ? ' п.п.' : '';
   let dl;
@@ -611,7 +611,7 @@ function blockTrend(r) {
   const first = r.trend[0].key, last = r.trend[r.trend.length - 1].key;
   return '<h2 class="md-sec"><span class="n">3</span>Динамика за 12 месяцев<span class="note">' + esc(monthFull(first).toLowerCase()) + ' — ' + esc(monthFull(last).toLowerCase()) + '</span></h2>'
     + '<div class="md-card md-d4"><h3>Уровень качества (УрК) по месяцам' + hint('trend') + '</h3>'
-    + '<div class="md-lg"><span><i class="line" style="background:var(--md-gold)"></i>Базовый УрК</span><span><i style="background:var(--md-gold);opacity:.3"></i>разброс ±</span><span><i class="dash"></i>Итоговый УрК</span><span><i class="hollow"></i>меньше 7 проверок</span><span><i style="background:var(--md-line2)"></i>число проверок</span></div>'
+    + '<div class="md-lg"><span><i class="line" style="background:var(--md-gold)"></i>Базовый УрК</span><span><i style="background:var(--md-gold);opacity:.3"></i>разброс ±</span><span><i class="dash"></i>ИУрК (надёжность)</span><span><i class="hollow"></i>меньше 7 проверок</span><span><i style="background:var(--md-line2)"></i>число проверок</span></div>'
     + '<div class="md-chart" data-md-chart="trend"></div></div>'
     + '<div class="md-card md-d2"><h3><span class="md-sec" style="margin:0;font-size:13px"><span class="n">4</span></span>Зоны качества по месяцам' + hint('zones') + '</h3>'
     + '<div class="md-lg"><span><i style="background:var(--md-ok)"></i>зелёная (от 85)</span><span><i style="background:var(--md-warn)"></i>жёлтая (70–84)</span><span><i style="background:var(--md-bad)"></i>красная (B3 или ниже 70)</span></div>'
@@ -641,7 +641,7 @@ function blockCons(r) {
     return '<tr class="' + (m.conf.few ? 'faint' : '') + '">'
       + '<td data-label="Место" class="r rk">' + (i + 1) + '</td>'
       + '<td data-label="Подрядчик" class="name full nolbl"><span class="md-rk-inline">' + (i + 1) + '.</span>' + esc(x.name) + '<small>' + esc(x.types.join(', ')) + '</small></td>'
-      + '<td data-label="УрК за ' + monthShort(r.month) + '" class="r"><b class="md-' + zoneOfUrk(m.U) + '" style="font-size:15px">' + m.U + '</b>' + (m.E != null ? ' <span class="md-muted">± ' + fmt(m.E) + '</span>' : '') + '</td>'
+      + '<td data-label="ИУрК за ' + monthShort(r.month) + '" class="r"><b class="md-' + zoneOfUrk(m.U) + '" style="font-size:15px">' + m.U + '</b>' + (m.E != null ? ' <span class="md-muted">± ' + fmt(m.E) + '</span>' : '') + '</td>'
       + '<td data-label="Разброс (0–100)" class="full">' + rngBar(m) + '</td>'
       + '<td data-label="' + ps + '" class="r">' + (mp ? mp.U + ' <span class="md-muted">(' + mp.N + ' пр.)</span>' : '—') + '</td>'
       + '<td data-label="Изменение"><span class="md-dlt ' + dcls + '">' + dtxt + '<small>' + dsub + '</small></span></td>'
@@ -651,7 +651,7 @@ function blockCons(r) {
       + '<td data-label="Стабильность">' + esc(m.stabText) + ' <span class="md-muted">' + m.stab + '</span></td></tr>';
   }).join('');
   return '<h2 class="md-sec"><span class="n">5</span>Подрядчики за ' + esc(monthFull(r.month).toLowerCase()) + hint('cons') + '<span class="note">сортировка по нижней границе разброса</span></h2>'
-    + '<div class="md-card md-d6">' + (rows ? '<div class="md-tblw"><table class="md-tbl cards"><thead><tr><th class="r">#</th><th>Подрядчик</th><th class="r">УрК</th><th>Разброс</th><th class="r">' + ps + '</th><th>Изменение ' + hint('delta') + '</th><th class="r">Проверок</th><th>Надёжность ' + hint('conf') + '</th><th>Зона ' + hint('zoneC') + '</th><th>Стабильность ' + hint('stab') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="md-muted">Нет проверок</p>')
+    + '<div class="md-card md-d6">' + (rows ? '<div class="md-tblw"><table class="md-tbl cards"><thead><tr><th class="r">#</th><th>Подрядчик</th><th class="r">ИУрК</th><th>Разброс</th><th class="r">' + ps + '</th><th>Изменение ' + hint('delta') + '</th><th class="r">Проверок</th><th>Надёжность ' + hint('conf') + '</th><th>Зона ' + hint('zoneC') + '</th><th>Стабильность ' + hint('stab') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="md-muted">Нет проверок</p>')
     + '<p class="sub" style="margin:8px 0 0">Бледные строки — меньше 7 проверок (сбор данных). Пустой кружок на шкале — то же.</p></div>';
 }
 

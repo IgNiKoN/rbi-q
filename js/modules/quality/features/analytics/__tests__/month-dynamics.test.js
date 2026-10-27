@@ -159,6 +159,21 @@ describe('computeMonthDynamics', () => {
     assert.equal(r.tiles[0].cmp.kind, 'few');
     assert.equal(r.prev.base.mean, 74.5);
   });
+  it('ИУрК месяца — «Надёжность» как в Сводке: getContractorMetrics по серии проверок группы, без окна', () => {
+    window.clearMetricsCache();
+    const r = computeMonthDynamics(data, { month: '2026-09' });
+    const sept = data.filter((c) => c.metrics && String(c.date).startsWith('2026-09'));
+    const m = window.getContractorMetrics(sept, {}, false);
+    assert.equal(r.cur.iurk.groups, 1);
+    assert.equal(r.cur.iurk.mean, m.finalC);
+    assert.ok(Math.abs(r.cur.iurk.E - m.ci95_margin) < 1e-9);
+    assert.equal(r.tiles[1].key, 'iurk');
+    assert.equal(r.tiles[1].title, 'ИУрК (надёжность)');
+    // октябрь: 3 проверки — ни у кого нет 7 → «мало данных»
+    const oct = computeMonthDynamics(data, { month: '2026-10' });
+    assert.equal(oct.cur.iurk.few, true);
+    assert.equal(oct.tiles[1].cmp.kind, 'few');
+  });
   it('сходится с getContractorMetrics по тем же проверкам (без скользящего окна)', () => {
     window.clearMetricsCache();
     const r = computeMonthDynamics(data, { month: '2026-09' });

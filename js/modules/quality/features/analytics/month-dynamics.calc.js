@@ -141,7 +141,7 @@ export function reliability(N) {
 export function compareMonths(cur, prev, higherIsBetter) {
   if (!cur || !prev) return { kind: 'few', d: null };
   var d = cur.mean - prev.mean;
-  if (cur.N < FEW_DATA_N || prev.N < FEW_DATA_N) return { kind: 'few', d: d };
+  if (cur.N < FEW_DATA_N || prev.N < FEW_DATA_N || cur.few || prev.few) return { kind: 'few', d: d };
   var notable = Math.abs(d) > (cur.E || 0) && Math.abs(d) > (prev.E || 0);
   return { kind: notable ? 'notable' : 'within', d: d, good: higherIsBetter ? d > 0 : d < 0 };
 }
@@ -235,6 +235,40 @@ export function typeShares(list) {
   return out;
 }
 
+/**
+ * ИУрК месяца — интегральный уровень качества (надёжность) по серии проверок, как «Надёжность» в «Сводке»
+ * (avgContractorRatingsFromChecks): у каждой группы «подрядчик [объект]» — getContractorMetrics по всем её
+ * проверкам месяца (без скользящего окна, штрафы за системный B2 и долю проверок с B3); среднее — по группам
+ * от 7 проверок. Нет ни одной такой группы — среднее по всем группам и пометка «мало данных».
+ * Разброс: по группам (их ≥ 2) или разброс самой группы, если она одна.
+ */
+export function integralUrk(list, opts) {
+  var w = _w();
+  var fn = (opts && opts.contractorMetrics) || w.getContractorMetrics;
+  var keyOf = typeof w.contractorGroupKey === 'function' ? w.contractorGroupKey
+    : function (c) { return checkContractor(c) + ' [' + checkObject(c) + ']'; };
+  list = (list || []).filter(hasMetrics);
+  if (typeof fn !== 'function' || !list.length) return null;
+  var g = {};
+  list.forEach(function (c) { var k = keyOf(c); (g[k] = g[k] || []).push(c); });
+  var all = [], ok = [];
+  Object.keys(g).forEach(function (k) {
+    var m = fn(g[k], (opts && opts.templates) || {}, false);
+    if (!m) return;
+    all.push(m);
+    if (m.count >= FEW_DATA_N) ok.push(m);
+  });
+  if (!all.length) return null;
+  var use = ok.length ? ok : all;
+  var st = meanWithMargin(use.map(function (m) { return m.finalC; }));
+  var E = use.length >= 2 ? st.E : (use[0].count >= 2 ? use[0].ci95_margin : null);
+  return {
+    N: list.length, mean: st.mean, E: E,
+    lo: E == null ? null : st.mean - E, hi: E == null ? null : st.mean + E,
+    groups: use.length, groupsAll: all.length, few: !ok.length
+  };
+}
+
 /** Плитки «этот / прошлый / изменение». */
 export function buildTiles(cur, prev) {
   function tile(key, title, c, p, higherIsBetter) {
@@ -242,7 +276,7 @@ export function buildTiles(cur, prev) {
   }
   return [
     tile('base', 'Базовый УрК', cur.base, prev.base, true),
-    tile('final', 'Итоговый УрК', cur.final, prev.final, true),
+    tile('iurk', 'ИУрК (надёжность)', cur.iurk, prev.iurk, true),
     tile('b3share', 'Проверок с критичным дефектом (B3)', cur.b3share, prev.b3share, false),
     tile('per100', 'Невыполненных пунктов на 100 проверенных', cur.per100, prev.per100, false),
     tile('red', 'Проверок в красной зоне', cur.red, prev.red, false)
@@ -265,10 +299,13 @@ export function computeMonthDynamics(checks, opts) {
   var prevKey = shiftMonth(month, -1);
   var cur = aggregateChecks(byMonth[month] || [], shares);
   var prev = aggregateChecks(byMonth[prevKey] || [], shares);
+  cur.iurk = integralUrk(cur.list, opts);
+  prev.iurk = integralUrk(prev.list, opts);
   var trend = keys.map(function (k) {
-    var a = aggregateChecks(byMonth[k] || [], shares);
+    var a = k === month ? cur : k === prevKey ? prev : aggregateChecks(byMonth[k] || [], shares);
+    var iu = k === month ? cur.iurk : k === prevKey ? prev.iurk : integralUrk(a.list, opts);
     return {
-      key: k, N: a.N, few: a.N < FEW_DATA_N, base: a.base, final: a.final,
+      key: k, N: a.N, few: a.N < FEW_DATA_N, base: a.base, final: a.final, iurk: iu,
       nRed: a.nRed, nYellow: a.nYellow, nGreen: a.nGreen,
       red: a.red, yellow: a.yellow, green: a.green, b3share: a.b3share, per100: a.per100,
       b1p: a.b1p, b2p: a.b2p, b3p: a.b3p, critShare: a.critShare
@@ -327,7 +364,7 @@ function _contractorZone(m) {
 }
 var ZONE_TEXT = { red: 'Красная зона', green: 'Образцовое', yellow: 'Жёлтая зона' };
 
-/** УрК подрядчика за набор проверок — getContractorMetrics из math.utils без скользящего окна. */
+/** ИУрК подрядчика за набор проверок — getContractorMetrics из math.utils без скользящего окна. */
 export function contractorMonthMetrics(list, opts) {
   var fn = (opts && opts.contractorMetrics) || _w().getContractorMetrics;
   if (typeof fn !== 'function' || !list || !list.length) return null;
@@ -531,7 +568,7 @@ function _fs(x, d) {
   return (v > 0 ? '+' : v < 0 ? '−' : '±') + _f(Math.abs(v), d);
 }
 
-var TILE_DIGITS = { base: 1, final: 1, b3share: 0, per100: 1, red: 0 };
+var TILE_DIGITS = { base: 1, iurk: 1, b3share: 0, per100: 1, red: 0 };
 
 export function buildFindings(r) {
   var cur = r.cur, out = { main: [], notable: [], within: [], recs: [], warn: [] };
@@ -555,11 +592,11 @@ export function buildFindings(r) {
   });
   (r.cons || []).forEach(function (x) {
     if (x.kind !== 'notable') return;
-    out.notable.push({ text: x.name + ': УрК подрядчика ' + x.mp.U + ' → ' + x.m.U + ' (' + _fs(x.d) + ')' + (x.d > 0 ? ' — улучшение' : ' — ухудшение'), good: x.d > 0 });
+    out.notable.push({ text: x.name + ': ИУрК подрядчика ' + x.mp.U + ' → ' + x.m.U + ' (' + _fs(x.d) + ')' + (x.d > 0 ? ' — улучшение' : ' — ухудшение'), good: x.d > 0 });
   });
   var red = (r.cons || []).filter(function (x) { return x.m.zone === 'red'; });
   var redOk = red.filter(function (x) { return !x.m.conf.few; });
-  if (redOk.length) out.main.push('В красной зоне: ' + redOk.map(function (x) { return x.name + ' (УрК ' + x.m.U + ' %, ' + x.m.N + ' ' + _pl(x.m.N, 'проверка', 'проверки', 'проверок') + ')'; }).join(', ') + '.');
+  if (redOk.length) out.main.push('В красной зоне: ' + redOk.map(function (x) { return x.name + ' (ИУрК ' + x.m.U + ' %, ' + x.m.N + ' ' + _pl(x.m.N, 'проверка', 'проверки', 'проверок') + ')'; }).join(', ') + '.');
   else if (red.length) out.main.push('Есть подрядчики в красной зоне, но по ним мало проверок (меньше 7) — вывод предварительный: ' + red.map(function (x) { return x.name; }).join(', ') + '.');
   if (r.top && r.top.length) {
     var t0 = r.top[0];
