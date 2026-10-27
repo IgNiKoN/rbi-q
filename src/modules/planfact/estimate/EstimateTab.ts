@@ -84,7 +84,7 @@ export function EstimateTab(props: { api: EstimateApi; vor: VorApi }): ReactElem
                 h('div', { className: 'es-imports' },
                   h('div', { className: 'pr-field-label' }, 'Подтверждённые загрузки ВОР (можно несколько листов)'),
                   imports.length
-                    ? imports.map((i) => h('label', { key: i.id, className: 'pr-check' },
+                    ? imports.filter((i) => i.is_current !== false).map((i) => h('label', { key: i.id, className: 'pr-check' },
                         h('input', { type: 'checkbox', checked: checked.includes(i.id), 'data-testid': 'es-import',
                           onChange: () => setChecked(checked.includes(i.id) ? checked.filter((x) => x !== i.id) : [...checked, i.id]) }),
                         `${i.file_name} · «${i.sheet_name}» (${i.works} работ)`))
@@ -98,7 +98,10 @@ export function EstimateTab(props: { api: EstimateApi; vor: VorApi }): ReactElem
                 // P2-0046: смета — строка целиком открывается нажатием; сразу видно цены (все / без цены N), КП и когда меняли
                 ? [h('div', { key: 'head', className: 'es-lrow es-lhead', 'aria-hidden': 'true' }, h('span', null, 'Смета'), h('span', null, 'Площадь'), h('span', null, 'Цены'), h('span', null, 'КП'), h('span', null, 'Изменена')),
                   ...list.map((e) => h('button', { key: e.id, type: 'button', className: 'es-lrow', 'data-estimate-id': e.id, 'data-testid': 'es-open', onClick: () => setOpenId(e.id) },
-                    h('span', { className: 'es-lname' }, h('b', null, e.name), h('span', { className: 'pf-muted' }, `${e.import_ids.map(sheetName).join(', ')} · ${e.rows} строк`)),
+                    h('span', { className: 'es-lname' }, h('b', null, e.name), h('span', { className: 'pf-muted' }, `${e.import_ids.map(sheetName).join(', ')} · ${e.rows} строк`),
+                      // P2-0006b: смета построена на заменённой редакции ВОР — не пересчитывается, только пометка
+                      e.import_ids.some((id) => imports.some((i) => i.id === id && i.is_current === false))
+                        ? h(StatusBadge, { status: 'yellow', label: 'Есть новая редакция ВОР', title: 'Смета построена на прежней редакции и не меняется; новую смету — по действующей', testId: 'es-new-revision' }) : null),
                     h('span', { className: 'es-larea' }, e.area_m2 ? `${e.area_m2.toLocaleString('ru-RU')} м²` : '—'),
                     h('span', null, h(StatusBadge, { status: e.unpriced ? 'yellow' : 'green', label: e.unpriced ? `Без цены ${e.unpriced}` : 'Все цены' })),
                     h('span', { className: 'es-lkp' }, e.revisions ? `КП ред. ${e.revisions}` : 'КП нет'),

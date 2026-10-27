@@ -67,7 +67,8 @@ function pairItem(b: BaseRow, n: NextRow, yellow: Yellow | null): CompareItem {
   const fact = num(b.fact_qty) + num(b.pending_qty);
   return {
     key: `m:${b.source_row_id}:${n.row_no}`, group: changed ? 'changed' : 'same', base: b, next: n,
-    yellow: yellow || (sameAttrs(b, n) ? null : 'attrs'),
+    // другие место / вид работ / ЕИ дерева важнее «похожего» и «дубля»: та же позиция невозможна (сервер откажет)
+    yellow: sameAttrs(b, n) ? yellow : 'attrs',
     red: b.position_id && fact > num(n.qty) + EPS ? 'fact_over_qty' : null
   };
 }

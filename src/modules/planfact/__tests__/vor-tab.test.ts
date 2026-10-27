@@ -70,7 +70,8 @@ function fakeApi(perms: string[], opts: { saveError?: string } = {}) {
       return { ok: true, value: 'f' + (profiles.length - 1) };
     },
     async listWorkTypes() { return []; }, addWorkType: no, addWorkTypes: no,
-    async dictionary() { return []; }, learn: no, resolveRows: no, confirm: no, async positions() { return []; }
+    async dictionary() { return []; }, learn: no, resolveRows: no, confirm: no, async positions() { return []; },
+    revisionBase: no, acceptRevision: no, async revisionChanges() { return []; }
   };
   return { api, store, saved, profiles };
 }

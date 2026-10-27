@@ -52,6 +52,8 @@ export interface SummaryPosition {
   position_id: string; location_id: string; location_path: string; work_type_id: string; work_name: string; unit_code: string;
   plan_qty: number; fact_qty: number; pct: number | null; rest_qty: number; fact7: number; fact14: number; pending_qty: number;
   forecast_finish: string | null; delta_days: number | null; plan_pct_today: number | null; dev_pp: number | null;
+  /** P2-0006b: снята в новой редакции ВОР (план 0, факт сохранён). */
+  withdrawn?: boolean;
 }
 export interface Ks2GapRow {
   source_row_id: string; import_id: string; row_no: number; number: string | null; name: string; unit_text: string | null; kind: 'work' | 'material';

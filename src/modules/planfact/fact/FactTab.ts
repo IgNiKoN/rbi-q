@@ -4,6 +4,7 @@
  * у РП — подвкладка «Ждёт подтверждения» (P2-0020: реестр, решение пачкой). Накопленный факт и % считает сервер (Σ принятых
  * записей); права и допуск перебора — тоже.
  */
+import { StatusBadge } from '../../../platform/ui/index.ts';
 import { createElement as h, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { VorApi, VorProject } from '../vor/vor.service.ts';
@@ -227,10 +228,13 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
           ? h('div', { className: 'pf-card ft-list' }, visibleRows.slice(0, shown).map((p) => {
               const pct = percent(p.fact_qty, p.plan_qty);
               const where = rel(p);
-              const open = (): void => { if (canCreate) { setOpenId(p.position_id); setHistoryId(''); } else setHistoryId(historyId === p.position_id ? '' : p.position_id); setClosing(false); };
+              // P2-0006b: снятая в новой редакции ВОР — новый факт не вносится, открывается история (исправить запись можно)
+              const entry = canCreate && !p.withdrawn;
+              const open = (): void => { if (entry) { setOpenId(p.position_id); setHistoryId(''); } else setHistoryId(historyId === p.position_id ? '' : p.position_id); setClosing(false); };
               return h('div', { key: p.position_id, className: 'ft-row', 'data-position-id': p.position_id },
-                h('button', { type: 'button', className: 'ft-row-main', onClick: open, 'aria-label': `${p.work_name}: ${canCreate ? 'внести факт' : 'история'}` },
+                h('button', { type: 'button', className: 'ft-row-main', onClick: open, 'aria-label': `${p.work_name}: ${entry ? 'внести факт' : 'история'}` },
                   h('span', { className: 'ft-name' }, h('b', null, p.work_name),
+                    p.withdrawn ? h(StatusBadge, { status: 'red', label: 'Снята в новой редакции ВОР', title: 'Факт сохранён, в план не считается', testId: 'ft-withdrawn' }) : null,
                     where ? h('span', { className: 'pf-muted ft-place' }, where) : null,
                     hints.get(p.position_id) ? h('span', { className: 'pf-muted ft-vor', 'data-testid': 'ft-vor' }, hints.get(p.position_id)) : null),
                   h('span', { className: 'ft-line' },

@@ -1,11 +1,12 @@
 /**
- * ВОР с сервера (P2-0006): только функции public.pf_vor_* миграции 007 — права, изоляция компаний и неизменяемость
+ * ВОР с сервера (P2-0006; редакции — P2-0006b, 046): только функции public.pf_vor_* — права, изоляция компаний и неизменяемость
  * подтверждённой загрузки проверяет сервер; кнопки на экране — подсказка.
  */
 import { getClient } from '../../../platform/auth/auth.service.ts';
 import { mapCompanyError } from '../../../platform/company/company.service.ts';
 import type { Result } from '../../../platform/company/company.service.ts';
 import type { ParsedRow, RowContext } from './parse.ts';
+import type { BaseRow } from './revision.ts';
 import { fetchMyProjects } from '../../../platform/core/projects.service.ts';
 
 export const VOR_MANAGE = 'planfact.vor.manage';
@@ -15,6 +16,8 @@ export interface VorProject { id: string; name: string; company_id: string; arch
 export interface VorImport {
   id: string; file_name: string; sheet_name: string; status: 'draft' | 'confirmed'; row_count: number; works: number; positions: number;
   created_at: string; created_by_email: string | null; confirmed_at: string | null; profile_id: string | null;
+  /** P2-0006b (046): номер редакции, предыдущая и первая редакция цепочки, «действующая», кто подтвердил. */
+  revision_no?: number; previous_import_id?: string | null; root_import_id?: string; is_current?: boolean; confirmed_by_email?: string | null;
 }
 export interface VorRow {
   id: string; row_no: number; kind: ParsedRow['kind']; number: string | null; name: string; unit_text: string | null;
@@ -28,8 +31,15 @@ export interface Resolution { row_no: number; location_id: string | null; work_t
 export interface VorPosition {
   id: string; location_id: string; location_path: string; work_type_id: string; work_type: string; unit_code: string; qty: number;
   apartments_note: string | null; import_id: string; file_name: string; source_row_no: number | null;
+  /** P2-0006b: снята в новой редакции (факт сохранён, в план не считается); номер редакции файла и строки. */
+  withdrawn?: boolean; revision_no?: number;
 }
-export interface NewImport { projectId: string; fileName: string; sha256: string; sheet: string; profileId: string | null; totals: Record<string, unknown> }
+/** previousId — новая редакция к действующей (pf_vor_create_revision), иначе — отдельная ВОР (pf_vor_create_import). */
+export interface NewImport { projectId: string; fileName: string; sha256: string; sheet: string; profileId: string | null; totals: Record<string, unknown>; previousId?: string | null }
+/** Итог pf_vor_accept_revision. */
+export interface AcceptResult { revision_no: number; added: number; unchanged: number; qty_changed: number; withdrawn: number; fact_kept: number; fact_moved_entries: number }
+/** Событие редакции (pf_vor_revision_changes): объём изменён / позиция снята. */
+export interface RevisionChange { position_id: string; kind: 'qty' | 'withdrawn'; qty_before: number; qty_after: number; location_path: string; work_name: string; unit_code: string; created_at: string; created_by_email: string | null }
 
 export interface VorApi {
   listProjects(): Promise<VorProject[]>;
@@ -50,6 +60,10 @@ export interface VorApi {
   resolveRows(importId: string, items: Resolution[]): Promise<Result<number>>;
   confirm(importId: string): Promise<Result<number>>;
   positions(projectId: string, locationId: string | null): Promise<VorPosition[]>;
+  /** P2-0006b: строки действующей редакции с позициями и фактом — база сравнения для черновика новой редакции. */
+  revisionBase(importId: string): Promise<Result<BaseRow[]>>;
+  acceptRevision(importId: string, items: { row_no: number; position_id: string | null }[], red: unknown[]): Promise<Result<AcceptResult>>;
+  revisionChanges(importId: string): Promise<RevisionChange[]>;
 }
 
 /** Строка разбора → строка для pf_vor_add_rows. */
@@ -98,8 +112,11 @@ export function createVorService(): VorApi | null {
     listImports: (p) => rows<VorImport>('pf_vor_list_imports', { p_project: p }),
     importRows: (i) => rows<VorRow>('pf_vor_import_rows', { p_import: i }),
     async saveDraft(p, list, onProgress) {
-      const created = await call<string>('pf_vor_create_import', { p_project: p.projectId, p_file_name: p.fileName, p_sha256: p.sha256,
-        p_sheet: p.sheet, p_profile: p.profileId, p_totals: p.totals });
+      const created = p.previousId
+        ? await call<string>('pf_vor_create_revision', { p_previous: p.previousId, p_file_name: p.fileName, p_sha256: p.sha256,
+            p_sheet: p.sheet, p_profile: p.profileId, p_totals: p.totals })
+        : await call<string>('pf_vor_create_import', { p_project: p.projectId, p_file_name: p.fileName, p_sha256: p.sha256,
+            p_sheet: p.sheet, p_profile: p.profileId, p_totals: p.totals });
       if (!created.ok) return created;
       let done = 0;
       for (const part of chunks(list, ROWS_CHUNK)) {
@@ -128,6 +145,13 @@ export function createVorService(): VorApi | null {
     learn: (p, items) => batched('pf_vor_learn', 'p_items', { p_project: p }, items),
     resolveRows: (i, items) => batched('pf_vor_resolve_rows', 'p_items', { p_import: i }, items),
     confirm: (i) => call<number>('pf_vor_confirm', { p_import: i }),
-    positions: (p, loc) => rows<VorPosition>('pf_vor_positions', { p_project: p, p_location: loc })
+    positions: (p, loc) => rows<VorPosition>('pf_vor_positions', { p_project: p, p_location: loc }),
+    async revisionBase(i) {
+      const r = await call<BaseRow[]>('pf_vor_revision_base', { p_import: i });
+      return r.ok ? { ok: true, value: Array.isArray(r.value) ? r.value.map((x) => ({ ...x, qty: x.qty === null ? null : Number(x.qty),
+        position_qty: x.position_qty === null ? null : Number(x.position_qty), fact_qty: Number(x.fact_qty || 0), pending_qty: Number(x.pending_qty || 0) })) : [] } : r;
+    },
+    acceptRevision: (i, items, red) => call<AcceptResult>('pf_vor_accept_revision', { p_import: i, p_items: items, p_red: red }),
+    revisionChanges: (i) => rows<RevisionChange>('pf_vor_revision_changes', { p_import: i })
   };
 }

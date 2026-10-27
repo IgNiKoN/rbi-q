@@ -16,6 +16,8 @@ export interface Brigade { id: string; name: string; leader_name: string | null;
 export interface FactPosition {
   position_id: string; location_id: string; location_path: string; location_type: string; work_type_id: string; work_name: string;
   unit_code: string; plan_qty: number; fact_qty: number; pending_qty: number; pending_count: number; last_rejected_note: string | null;
+  /** P2-0006b: позиция снята в новой редакции ВОР — факт виден, новый не вносится (сервер откажет). */
+  withdrawn?: boolean;
 }
 export type FactStatus = 'accepted' | 'pending_approval' | 'rejected' | 'superseded';
 export interface FactHistoryRow {

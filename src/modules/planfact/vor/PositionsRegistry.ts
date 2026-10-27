@@ -22,6 +22,8 @@ export interface PositionRow {
   id: string; corp: string; place: string; placeType: string; work: string; unit: string;
   plan: number; fact: number; pct: number | null; rest: number; fact14: number; pendingQty: number; pendingCount: number;
   rejectedNote: string | null; st: PositionStatus;
+  /** P2-0006b: снята в новой редакции ВОР; факт больше действующего объёма. */
+  withdrawn?: boolean; over?: boolean;
   /** Прогноз с сервера (030) и пороги светофора объекта. */
   forecast: string | null; deltaDays: number | null; planPctToday: number | null; devPp: number | null; th: { yellow: number; red: number };
 }
@@ -48,6 +50,7 @@ export async function loadPositionRows(summary: SummaryApi, fact: FactApi, proje
       id: p.position_id, corp: corpOf(p.location_path), place: p.location_path, placeType: f ? f.location_type : '', work: p.work_name, unit: p.unit_code,
       plan: p.plan_qty, fact: p.fact_qty, pct: p.pct, rest: p.rest_qty, fact14: p.fact14, pendingQty: p.pending_qty, pendingCount, rejectedNote,
       forecast: p.forecast_finish, deltaDays: p.delta_days, planPctToday: p.plan_pct_today, devPp: p.dev_pp, th,
+      withdrawn: !!p.withdrawn, over: !p.withdrawn && p.plan_qty > 0 && p.fact_qty > p.plan_qty + 1e-9,
       st: positionStatus({ plan_qty: p.plan_qty, fact_qty: p.fact_qty, fact14: p.fact14, pending_qty: p.pending_qty, pending_count: pendingCount, last_rejected_note: rejectedNote }, { today, plannedFinish: finish }),
     };
   });
@@ -66,7 +69,9 @@ export const POSITION_COLUMNS: RegistryColumn<PositionRow>[] = [
     h('span', { className: 'vr-bar', 'aria-hidden': 'true' }, h('span', { className: 'vr-bar-fill' + (r.st.state === 'done' ? ' vr-bar-fill--done' : ''), style: { width: `${Math.min(100, Math.max(0, r.pct || 0))}%` } })),
     h('b', null, r.pct === null ? '—' : fmtPct(r.pct))) },
   { id: 'rest', label: 'Остаток', value: (r) => r.rest, align: 'right', numFmt: QTY },
-  { id: 'status', label: 'Статус', value: (r) => r.st.label + (r.st.overdue && r.st.state !== 'done' ? ', просрочено' : ''), render: (r) => statusCell(r.st) },
+  { id: 'status', label: 'Статус', value: (r) => r.withdrawn ? 'Снята в новой редакции ВОР' : r.st.label + (r.st.overdue && r.st.state !== 'done' ? ', просрочено' : '') + (r.over ? ', факт больше объёма' : ''),
+    render: (r) => r.withdrawn ? h(StatusBadge, { status: 'red', label: 'Снята в новой редакции', title: 'Факт сохранён, в план не считается; новый факт не вносится', testId: 'vr-withdrawn' })
+      : h('span', { className: 'vr-status' }, statusCell(r.st), r.over ? h(StatusBadge, { status: 'red', label: 'Факт больше объёма', testId: 'vr-over' }) : null) },
   { id: 'pace', label: 'Темп к сроку', value: (r) => r.st.paceText, hidden: true },
   { id: 'forecast', label: 'Прогноз окончания', value: (r) => forecastView(fcOf(r), r.th).finish, hidden: true },
   { id: 'fact14', label: 'Факт за 14 дн.', value: (r) => r.fact14, align: 'right', hidden: true, numFmt: QTY },
