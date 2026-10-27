@@ -13,8 +13,9 @@
  * Темы [data-theme=…] в css/style.css могут переопределять те же имена для режима.
  * Каскад: этот файл → style.css → … → rbi-ui.css
  *
- * Дефолт инсталляции = RBI light v3 (портал), совпадает с DEFAULT_SETTINGS.theme
- * `rbi-auto-v3` → `rbi-light-v3` — чтобы первый кадр не мигал indigo.
+ * :root ниже = RBI light v3 (основа «Светлая · индиго» и прежних тем — не менять).
+ * Дефолт инсталляции с P2-0051 — «Стандартная · Авто» (`std-auto`): тема ставится до первой
+ * отрисовки скриптом js/shared/theme.utils.js в <head>, поэтому вспышки старой темы нет.
  */
 
 :root {
@@ -45,10 +46,12 @@
   --rbi-font-sans: 'Inter', system-ui, sans-serif;
 }
 
-/* Тема портала (rbi-light-v3/rbi-dark-v3, дефолт инсталляции) — осознанный
+/* Тема портала (rbi-light-v3/rbi-dark-v3) и «Стандартная» (std-*, дефолт с P2-0051) — осознанный
    бренд-акцент на IBM Plex Sans вместо базового Inter. Источник истины для
    font-family темы — этот токен (используется в style.css вместо литерала). */
 html[data-theme="rbi-light-v3"],
-html[data-theme="rbi-dark-v3"] {
+html[data-theme="rbi-dark-v3"],
+html[data-theme="std-light"],
+html[data-theme="std-dark"] {
   --rbi-font-sans: 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }

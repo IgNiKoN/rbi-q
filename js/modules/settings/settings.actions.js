@@ -15,12 +15,24 @@
 
     // ─── Вспомогательные константы ───────────────────────────────────────────
 
-    var RBI_ALLOWED_THEMES_LOCAL = [
+    // P2-0051: единый список — js/shared/theme.utils.js (window.RBI_THEME); здесь запасной.
+    var RBI_ALLOWED_THEMES_LOCAL = (window.RBI_THEME && window.RBI_THEME.ALLOWED) || [
+        'std-auto', 'std-light', 'std-dark',
         'auto', 'light', 'dark',
         'rbi-light', 'rbi-dark', 'rbi-auto',
         'rbi-light-v2', 'rbi-dark-v2', 'rbi-auto-v2',
         'rbi-light-v3', 'rbi-dark-v3', 'rbi-auto-v3'
     ];
+    var RBI_DEFAULT_THEME = 'std-auto';
+
+    /** P2-0051: прежняя тема по умолчанию (rbi-auto-v3, не менял сам) → «Стандартная · Авто», один раз на устройстве. */
+    function _rbiMigrateTheme(theme, updatedAt) {
+        var T = window.RBI_THEME;
+        if (!T) return theme;
+        var next = T.migrate(theme, updatedAt);
+        T.markMigrated();
+        return next;
+    }
 
     // ─── Вспомогательные функции изоляции ────────────────────────────────────
 
@@ -72,7 +84,7 @@
     }
 
     function _rbiSaveThemePreference(value) {
-        var theme = RBI_ALLOWED_THEMES_LOCAL.includes(value) ? value : 'rbi-auto-v3';
+        var theme = RBI_ALLOWED_THEMES_LOCAL.includes(value) ? value : RBI_DEFAULT_THEME;
         localStorage.setItem('rbi_theme_preference', theme);
         return theme;
     }
@@ -89,13 +101,24 @@
                 _rbiSaveThemePreference(window.appSettings.theme);
             } else {
                 var savedTheme = _rbiGetSavedThemePreference();
-                window.appSettings.theme = savedTheme || 'rbi-auto-v3';
+                window.appSettings.theme = savedTheme || RBI_DEFAULT_THEME;
                 _rbiSaveThemePreference(window.appSettings.theme);
+            }
+
+            // P2-0051: перенос со старой темы по умолчанию. Метку settingsUpdatedAt не меняем — это не выбор
+            // пользователя (явный выбор темы на другом устройстве при синхронизации важнее).
+            var migratedTheme = _rbiMigrateTheme(window.appSettings.theme, window.appSettings.settingsUpdatedAt);
+            if (migratedTheme !== window.appSettings.theme) {
+                window.appSettings.theme = migratedTheme;
+                _rbiSaveThemePreference(migratedTheme);
+                try {
+                    await _storage().put(_storage().stores().SETTINGS, Object.assign({}, window.appSettings, { key: 'user_prefs' }));
+                } catch (_eMig) { /* ignore */ }
             }
 
         } catch (e) {
             console.error('Ошибка загрузки настроек', e);
-            window.appSettings.theme = _rbiGetSavedThemePreference() || 'rbi-auto-v3';
+            window.appSettings.theme = _rbiMigrateTheme(_rbiGetSavedThemePreference() || RBI_DEFAULT_THEME, 0);
         }
     }
 
@@ -184,7 +207,7 @@
         var defaults = (svc && typeof svc.getDefaults === 'function')
             ? svc.getDefaults()
             : {
-                theme: 'rbi-auto-v3', fontSize: 'medium', navPosition: 'auto', dashboardMode: 'compact',
+                theme: RBI_DEFAULT_THEME, fontSize: 'medium', navPosition: 'auto', dashboardMode: 'compact',
                 autoCollapseFilters: 'manual', uiMotionEnabled: true, swipeEnabled: false
             };
 
@@ -210,11 +233,11 @@
         // Мутируем существующий объект, чтобы не разрывать ссылку с app.js (let appSettings)
         Object.keys(window.appSettings).forEach(function (k) { delete window.appSettings[k]; });
         Object.assign(window.appSettings, defaults, preserved);
-        window.appSettings.theme = 'rbi-auto-v3';
+        window.appSettings.theme = RBI_DEFAULT_THEME;
         window.appSettings.settingsUpdatedAt = Date.now();
-        _rbiSaveThemePreference('rbi-auto-v3');
+        _rbiSaveThemePreference(RBI_DEFAULT_THEME);
 
-        _saveSettings('theme', 'rbi-auto-v3');
+        _saveSettings('theme', RBI_DEFAULT_THEME);
         if (typeof window.renderSettingsTab === 'function') window.renderSettingsTab();
         if (typeof window.applySettingsToUI === 'function') window.applySettingsToUI();
 
@@ -622,6 +645,7 @@
     window.downloadOfflineCacheScope = _downloadOfflineCacheScope;
     window.rbiGetSavedThemePreference = _rbiGetSavedThemePreference;
     window.rbiSaveThemePreference = _rbiSaveThemePreference;
+    window.rbiMigrateTheme = _rbiMigrateTheme;
     window.showAboutApp = _showAboutApp;
     window.clearHistory = _clearHistory;
     window.fullFactoryReset = _fullFactoryReset;

@@ -156,6 +156,12 @@ body.nav-pos-auto.rbi-audit-desktop-wide .audit-desk-topbar-strip,
   transition: none !important;
 }
 
+/* Осмотр: оболочка лежит в <main> с полем 0.5rem (px-2), а не 1rem — полоса выходит только на это поле (иначе +8 px вбок) */
+body.rbi-audit-desktop-wide #audit-desktop-shell > .audit-desk-topbar-strip {
+  width: calc(100% + 1rem) !important;
+  margin: 0 -0.5rem !important;
+}
+
 body.rbi-analytics-desktop-wide.has-desk-topbar #analytics-subtabs-block,
 body.nav-pos-bottom.rbi-analytics-desktop-wide.has-desk-topbar #analytics-subtabs-block,
 body.nav-pos-top.rbi-analytics-desktop-wide.has-desk-topbar #analytics-subtabs-block,

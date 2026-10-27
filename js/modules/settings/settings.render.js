@@ -118,6 +118,12 @@ var SettingsRender = {
                                 <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.interface.theme_hint">Цветовая схема</div>
                             </div>
                             <select id="set-theme" class="input-base w-52" data-settings-action="toggleSetting" data-settings-action-key="theme" data-settings-action-val-type="element" data-action-event="change">
+                                <optgroup label="Стандартная" data-i18n="settings.opt.theme.group_std" data-i18n-attr="label">
+                                <option value="std-auto" data-i18n="settings.opt.theme.std_auto">Стандартная · Авто</option>
+                                <option value="std-light" data-i18n="settings.opt.theme.std_light">Стандартная · Светлая</option>
+                                <option value="std-dark" data-i18n="settings.opt.theme.std_dark">Стандартная · Тёмная</option>
+                                </optgroup>
+                                <optgroup label="Прежние темы" data-i18n="settings.opt.theme.group_legacy" data-i18n-attr="label">
                                 <option value="rbi-auto-v3" data-i18n="settings.opt.theme.rbi_auto_v3">RBI · Авто</option>
                                 <option value="rbi-light-v3" data-i18n="settings.opt.theme.rbi_light_v3">RBI · Светлая</option>
                                 <option value="rbi-dark-v3" data-i18n="settings.opt.theme.rbi_dark_v3">RBI · Тёмная</option>
@@ -130,6 +136,7 @@ var SettingsRender = {
                                 <option value="rbi-auto-v2" data-i18n="settings.opt.theme.rbi_auto_v2">RBI v2 · Авто</option>
                                 <option value="rbi-light-v2" data-i18n="settings.opt.theme.rbi_light_v2">RBI v2 · Светлая</option>
                                 <option value="rbi-dark-v2" data-i18n="settings.opt.theme.rbi_dark_v2">RBI v2 · Тёмная</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="p-4 border-b border-[var(--card-border)] flex justify-between items-center">
@@ -2171,7 +2178,7 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             _mountAdminOpsContent();
         }
         // 1. Базовые селекторы оформления
-        if (document.getElementById('set-theme')) document.getElementById('set-theme').value = _getSetting('theme') || 'rbi-auto-v3';
+        if (document.getElementById('set-theme')) document.getElementById('set-theme').value = _getSetting('theme') || 'std-auto';
         var localeSelect = document.getElementById('set-locale');
         if (localeSelect) {
             var i18n = window.RBI && window.RBI.services && window.RBI.services.i18n;
@@ -2446,10 +2453,16 @@ console.log('[SettingsRender] settings.render.js markup mounted');
     }
 
     function _applySettingsToUI() {
-        var theme = _getSetting('theme') || 'rbi-auto-v3';
+        var theme = _getSetting('theme') || 'std-auto';
         var prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-        if (theme === 'auto') {
+        // P2-0051: единое разрешение и применение темы — js/shared/theme.utils.js; ниже — запасной путь.
+        if (window.RBI_THEME) {
+            window.RBI_THEME.apply(theme);
+            theme = null;
+        } else if (theme === 'std-auto') {
+            theme = prefersDark ? 'std-dark' : 'std-light';
+        } else if (theme === 'auto') {
             theme = prefersDark ? 'dark' : 'light';
         } else if (theme === 'rbi-auto') {
             theme = prefersDark ? 'rbi-dark' : 'rbi-light';
@@ -2459,20 +2472,22 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             theme = prefersDark ? 'rbi-dark-v3' : 'rbi-light-v3';
         }
 
-        if (!['light', 'dark', 'rbi-light', 'rbi-dark', 'rbi-light-v2', 'rbi-dark-v2', 'rbi-light-v3', 'rbi-dark-v3'].includes(theme)) {
-            theme = 'light';
-        }
+        if (theme !== null) {
+            if (!['std-light', 'std-dark', 'light', 'dark', 'rbi-light', 'rbi-dark', 'rbi-light-v2', 'rbi-dark-v2', 'rbi-light-v3', 'rbi-dark-v3'].includes(theme)) {
+                theme = 'std-light';
+            }
 
-        document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.classList.remove('light', 'dark', 'rbi-light', 'rbi-dark', 'rbi-light-v2', 'rbi-dark-v2', 'rbi-light-v3', 'rbi-dark-v3');
-        document.documentElement.classList.add(theme);
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.classList.remove('std-light', 'std-dark', 'light', 'dark', 'rbi-light', 'rbi-dark', 'rbi-light-v2', 'rbi-dark-v2', 'rbi-light-v3', 'rbi-dark-v3');
+            document.documentElement.classList.add(theme);
 
-        if (theme === 'dark' || theme === 'rbi-dark' || theme === 'rbi-dark-v2' || theme === 'rbi-dark-v3') {
-            document.documentElement.classList.add('dark');
-            document.documentElement.classList.remove('light');
-        } else {
-            document.documentElement.classList.add('light');
-            document.documentElement.classList.remove('dark');
+            if (theme === 'std-dark' || theme === 'dark' || theme === 'rbi-dark' || theme === 'rbi-dark-v2' || theme === 'rbi-dark-v3') {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+            } else {
+                document.documentElement.classList.add('light');
+                document.documentElement.classList.remove('dark');
+            }
         }
 
         if (_getSetting('fastMode')) document.body.classList.add('fast-mode');
@@ -2540,8 +2555,8 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         }
 
         var themeSelect = document.getElementById('set-theme');
-        if (themeSelect && themeSelect.value !== (_getSetting('theme') || 'rbi-auto-v3')) {
-            themeSelect.value = _getSetting('theme') || 'rbi-auto-v3';
+        if (themeSelect && themeSelect.value !== (_getSetting('theme') || 'std-auto')) {
+            themeSelect.value = _getSetting('theme') || 'std-auto';
         }
     }
 
@@ -2563,13 +2578,13 @@ console.log('[SettingsRender] settings.render.js markup mounted');
         });
     }
 
-    // auto / rbi-auto / rbi-auto-v2 / rbi-auto-v3 — следим за системной светлой/тёмной
+    // std-auto / auto / rbi-auto / rbi-auto-v2 / rbi-auto-v3 — следим за системной светлой/тёмной
     if (window.matchMedia) {
         try {
             var _schemeMq = window.matchMedia('(prefers-color-scheme: dark)');
             var _onSchemeChange = function () {
-                var t = _getSetting('theme') || 'rbi-auto-v3';
-                if (t === 'auto' || t === 'rbi-auto' || t === 'rbi-auto-v2' || t === 'rbi-auto-v3') {
+                var t = _getSetting('theme') || 'std-auto';
+                if (t === 'std-auto' || t === 'auto' || t === 'rbi-auto' || t === 'rbi-auto-v2' || t === 'rbi-auto-v3') {
                     _applySettingsToUI();
                 }
             };

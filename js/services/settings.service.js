@@ -8,12 +8,15 @@
     window.RBI.services = window.RBI.services || {};
 
     var SETTINGS_KEY = 'user_prefs';
-    var ALLOWED_THEMES = [
+    /* P2-0051: список тем и разрешение «Авто» — js/shared/theme.utils.js (window.RBI_THEME); здесь — запасной список. */
+    var ALLOWED_THEMES = (window.RBI_THEME && window.RBI_THEME.ALLOWED) || [
+        'std-auto', 'std-light', 'std-dark',
         'auto', 'light', 'dark',
         'rbi-light', 'rbi-dark', 'rbi-auto',
         'rbi-light-v2', 'rbi-dark-v2', 'rbi-auto-v2',
         'rbi-light-v3', 'rbi-dark-v3', 'rbi-auto-v3'
     ];
+    var DEFAULT_THEME = 'std-auto';
 
     /* Владение appSettings (Реальная изоляция модулей, часть 3, Группа B):
        перенесено 1:1 из js/core/bootstrap.js — сервис теперь единственный
@@ -32,7 +35,7 @@
         autoReportDay: '1', // Число месяца
         autoReportType: 'global_onepager', // Тип отчета
         contractorName: '',
-        theme: 'rbi-auto-v3',
+        theme: DEFAULT_THEME, // P2-0051: «Стандартная · Авто»
         engineerName: '',
         defaultProject: '',
         fontSize: 'medium',
@@ -176,7 +179,7 @@
             }
 
             if (key === 'theme') {
-                value = ALLOWED_THEMES.includes(value) ? value : 'rbi-auto-v3';
+                value = ALLOWED_THEMES.includes(value) ? value : DEFAULT_THEME;
                 try { localStorage.setItem('rbi_theme_preference', value); } catch (e) { /* ignore */ }
             }
 
@@ -260,11 +263,13 @@
         },
 
         /**
-         * Получить текущую тему (с учётом auto / rbi-auto / rbi-auto-v2 / rbi-auto-v3).
+         * Получить текущую тему (с учётом std-auto / auto / rbi-auto / rbi-auto-v2 / rbi-auto-v3).
          */
         getResolvedTheme: function () {
-            var theme = (window.appSettings && window.appSettings.theme) || 'rbi-auto-v3';
+            var theme = (window.appSettings && window.appSettings.theme) || DEFAULT_THEME;
+            if (window.RBI_THEME) return window.RBI_THEME.resolve(theme);
             var prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (theme === 'std-auto') return prefersDark ? 'std-dark' : 'std-light';
             if (theme === 'auto') return prefersDark ? 'dark' : 'light';
             if (theme === 'rbi-auto') return prefersDark ? 'rbi-dark' : 'rbi-light';
             if (theme === 'rbi-auto-v2') return prefersDark ? 'rbi-dark-v2' : 'rbi-light-v2';

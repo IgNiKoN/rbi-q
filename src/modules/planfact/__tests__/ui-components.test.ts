@@ -53,6 +53,35 @@ test('токены: светлая и тёмная реализация для �
   }
 });
 
+test('P2-0051: «Стандартная» — основные пары и подписи бейджей ≥ 4,5:1, графики ≥ 3:1', () => {
+  const css = ui.P2_UI_CSS;
+  const hexRgb = (c: string) => rgb(c);
+  for (const mode of ['light', 'dark'] as const) {
+    const p = ui.STD_THEME[mode];
+    const card = hexRgb(p.card);
+    const pairs: [string, string, string][] = [['текст/фон', p.text, p.bg], ['текст/карточка', p.text, p.card], ['текст/карточка-2', p.text, p.card2],
+      ['приглушённый/фон', p.muted, p.bg], ['приглушённый/карточка', p.muted, p.card], ['акцент-текст/карточка', p.accentText, p.card],
+      ['кнопка', p.btnText, p.gold], ['кнопка/наведение', p.btnText, p.goldHover],
+      ['хорошо-текст', p.okText, p.card], ['внимание-текст', p.warnText, p.card], ['плохо-текст', p.badText, p.card]];
+    for (const [name, fg, bg] of pairs) {
+      const c = contrast(hexRgb(fg), hexRgb(bg));
+      assert.ok(c >= 4.5, `${mode} ${name}: ${c.toFixed(2)}`);
+    }
+    const block = css.slice(css.indexOf(`html[data-theme="std-${mode}"]{`));
+    const sb = block.slice(0, block.indexOf('}'));
+    for (const s of ['green', 'yellow', 'red', 'grey', 'blue']) {
+      const fg = tok(sb, `p2-status-${s}-fg`); const bg = tok(sb, `p2-status-${s}-bg`);
+      if (!fg) continue; // серый тёмной — общий тёмный
+      const c = contrast(rgb(fg, card), rgb(bg, card));
+      assert.ok(c >= 4.5, `${mode} бейдж ${s}: ${c.toFixed(2)}`);
+    }
+    for (const n of ['p2-chart-fact', 'p2-chart-plan']) {
+      const c = contrast(hexRgb(tok(sb, n)), card);
+      assert.ok(c >= 3, `${mode} ${n}: ${c.toFixed(2)}`);
+    }
+  }
+});
+
 test('KpiTile, ProgressBar (отметка плана), StatusBadge — слово и иконка', () => {
   const box = mount(h('div', null,
     h(ui.KpiTile, { label: 'Сделано', value: '1,57 млн ₽', hint: 'по плану 16,9 %', tone: 'red', metric: 'done' },
