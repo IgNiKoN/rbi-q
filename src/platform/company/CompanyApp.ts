@@ -15,7 +15,7 @@ import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { AuthApi } from '../auth/auth.service.ts';
 import { openPlatformLogin, platformSignOut } from '../auth/shell-user.ts';
-import { CompanyRoles } from './CompanyRoles.ts';
+import { CompanyRoles, COMPANY_ROLES_CSS } from './CompanyRoles.ts';
 import { CompanyMembers, COMPANY_MEMBERS_CSS } from './CompanyMembers.ts';
 import { CompanyAudit, COMPANY_AUDIT_CSS } from './CompanyAudit.ts';
 import { SETTINGS_UI_CSS } from '../ui/settings.ts';
@@ -191,7 +191,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
 
   const tabs = visibleTabs(rights);
   const cur: Tab = tab && tabs.includes(tab) ? tab : tabs[0];
-  const body = cur === 'members' ? h(CompanyMembers, { api, companyId, me: who, key: companyId })
+  const body = cur === 'members' ? h(CompanyMembers, { api, companyId, me: who, projects: projects || null, key: companyId })
     : cur === 'roles' ? h(CompanyRoles, { api, companyId, key: companyId })
     : cur === 'objects' && projects ? h(CompanyScope, { api: projects, render: (c) => h(ProjectsTab, { api: projects, company: c, core: core || null, people: () => peopleOf(api, c.company_id) }) })
     : cur === 'counterparties' && core ? h(CounterpartiesTab, { core, companyId, key: companyId })
@@ -241,4 +241,4 @@ export const COMPANY_CSS = SETTINGS_UI_CSS + PATTERNS_CSS + COMPANY_MEMBERS_CSS 
 .co-check input{margin-top:2px;accent-color:var(--primary)}
 .co-check input:disabled+span{color:var(--text-muted)}
 .co-danger{background:var(--color-red);border-color:var(--color-red)}
-`;
+`+ COMPANY_ROLES_CSS;

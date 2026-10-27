@@ -78,7 +78,8 @@ var SettingsRender = {
                 <div id="settings-home-body">
                     <div id="settings-home-attention"></div>
                     <div class="stv-bar" id="settings-home-actions" hidden>
-                        <button type="button" class="stv-btn stv-btn--p" data-settings-go="company/members">${settingsIcon('plus', 18)}Сотрудник</button>
+                        <button type="button" class="stv-btn stv-btn--p" data-settings-go="company/members" data-company-intent="assign">${settingsIcon('plus', 18)}Назначить</button>
+                        <button type="button" class="stv-btn" data-settings-go="company/members" data-company-intent="add">${settingsIcon('plus', 18)}Сотрудник</button>
                     </div>
                     ${_homeGroupsHtml()}
                 </div>
@@ -2227,6 +2228,9 @@ console.log('[SettingsRender] settings.render.js markup mounted');
             var goBtn = ev.target.closest('[data-settings-go]');
             if (goBtn && root.contains(goBtn)) {
                 ev.preventDefault();
+                // P2-0048 этап 4: «+ Назначить» / «+ Сотрудник» с главной — экран сотрудников откроет мастер / форму (CompanyMembers, takeIntent)
+                var intent = goBtn.getAttribute('data-company-intent');
+                if (intent) { window.RBI = window.RBI || {}; window.RBI.companyIntent = intent; }
                 _goNav(goBtn.getAttribute('data-settings-go'));
                 return;
             }

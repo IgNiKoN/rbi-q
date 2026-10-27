@@ -47,7 +47,10 @@ function fakeApi(opts: { fail?: string } = {}) {
     async myAdminCompanies() { return [{ company_id: 'c1', company_name: 'Альфа' }]; },
     async catalog() { return CATALOG; },
     async listRoles() { return roles; },
-    async listMembers() { return []; },
+    async listMembers() { return [
+      { user_id: 'u1', email: 'a@x', assignment_id: 'a1', role_id: 'tpl-for', role_name: 'Прораб / мастер', project_id: 'p1', project_name: 'А', valid_from: null, valid_to: null, is_active: true },
+      { user_id: 'u1', email: 'a@x', assignment_id: 'a2', role_id: 'tpl-for', role_name: 'Прораб / мастер', project_id: 'p1', project_name: 'А', valid_from: null, valid_to: null, is_active: true },
+      { user_id: 'u2', email: 'b@x', assignment_id: 'a3', role_id: 'tpl-for', role_name: 'Прораб / мастер', project_id: null, project_name: null, valid_from: null, valid_to: null, is_active: false }]; },
     async addMember() { return { ok: false, message: 'нет' }; }, async resetPassword() { return { ok: false, message: 'нет' }; }, async disableMember() { return res(null); }, async setFullName() { return res(0); },
     async listProjects() { return []; },
     async listAudit() { return []; },
@@ -62,6 +65,7 @@ function fakeApi(opts: { fail?: string } = {}) {
     async setRoleActions(id, actions) { calls.push(`actions:${id}:${[...actions].sort().join(',')}`); if (!opts.fail) roles = roles.map((r) => r.id === id ? { ...r, actions: [...actions].sort() } : r); return res(null); },
     async deleteRole(id) { calls.push(`delete:${id}`); if (!opts.fail) roles = roles.filter((r) => r.id !== id); return res(null); },
     async assignRole() { return res('a1'); },
+    async setParticipation() { return { ok: true, value: { added: 0, changed: 0, revoked: 0 } }; },
     async revoke() { return res(null); }
   };
   return { api, calls };
@@ -87,7 +91,7 @@ test('шаблон: пометка «только копия», галочки �
 test('галочки сгруппированы по-русски, подписи — из каталога сервера', async () => {
   const el = mountRoles(fakeApi().api);
   await tick();
-  const legends = Array.from(el.querySelectorAll('legend')).map((l: N) => l.textContent);
+  const legends = Array.from(el.querySelectorAll('.cr-group summary b')).map((l: N) => l.textContent);
   assert.deepEqual(legends, ['Работы и план', 'Факт', 'Безопасность']);
   assert.match(el.textContent, /Добавление и правка работ/);
 });
@@ -238,4 +242,24 @@ test('без права управлять ролями, но с правом н
   assert.equal((el as N).querySelector('[data-testid=co-members]'), null, 'сотрудников не видно');
   assert.equal(win.location.hash, '#/settings/company/objects', 'прямой адрес закрытой вкладки → доступная');
   flushSync(() => root.unmount());
+});
+
+test('P2-0048: строка роли «что может · у N чел.» (люди, не назначения); группы — счётчик «k из n»; телефон — список → роль и «‹ Роли»', async () => {
+  const el = mountRoles(fakeApi().api);
+  await tick();
+  const metas = Array.from(el.querySelectorAll('[data-testid=co-role-meta]')).map((m: N) => m.textContent);
+  assert.deepEqual(metas, ['Работы и план, Факт · у 1 чел.', 'Работы и план · не назначена']);
+  assert.equal(el.querySelector('[data-testid=co-roles]').dataset.detail, '0', 'сначала список');
+  click(el.querySelector('[data-role-id=own]')); await tick();
+  assert.equal(el.querySelector('[data-testid=co-roles]').dataset.detail, '1', 'выбрана роль — её панель');
+  const counts = Array.from(el.querySelectorAll('[data-testid=co-group-count]')).map((c: N) => c.textContent);
+  assert.deepEqual(counts, ['1 из 2', '0 из 1', '0 из 1']);
+  box(el, 'planfact.fact.create').click(); await tick();
+  assert.equal(el.querySelectorAll('[data-testid=co-group-count]')[1].textContent, '1 из 1');
+  assert.match(el.querySelector('[data-testid=co-role-sum]').textContent, /Может: Работы и план, Факт/);
+  assert.ok(el.querySelector('[data-testid=co-cancel-actions]'));
+  click(el.querySelector('[data-testid=co-cancel-actions]')); await tick();
+  assert.equal(el.querySelectorAll('[data-testid=co-group-count]')[1].textContent, '0 из 1', '«Отменить изменения» вернул галочки');
+  click(el.querySelector('[data-testid=co-roles-back]')); await tick();
+  assert.equal(el.querySelector('[data-testid=co-roles]').dataset.detail, '0');
 });
