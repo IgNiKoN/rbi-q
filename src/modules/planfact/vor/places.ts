@@ -14,6 +14,7 @@
  *  - «блок N» (корпус в файле не указан, номера секций пошли заново) — ПТО выбирает корпус блока; до выбора место не привязано.
  */
 import type { RowContext } from './parse.ts';
+import { isTopPlace } from '../../../services/locations/types.ts';
 
 export type PlaceType = 'building' | 'section' | 'floor' | 'other';
 export interface TreeNode { id: string; parent_id: string | null; node_type: string; name: string; path: string }
@@ -72,7 +73,8 @@ const canon = (s: string): string => s.trim().replace(/\s+/g, ' ').toLowerCase()
 export function matchChild(children: TreeNode[], step: PlaceStep): TreeNode | null {
   const byName = children.find((c) => canon(c.name) === canon(step.name));
   if (step.type === 'other') return byName || null;
-  const same = children.filter((c) => c.node_type === step.type);
+  // корпус в ВОР — объект верхнего уровня (P2-0047); старые деревья — «корпус»
+  const same = children.filter((c) => c.node_type === step.type || (step.type === 'building' && isTopPlace(c.node_type)));
   return same.find((c) => nodeNumber(c.name) === step.value.toLowerCase()) || byName || null;
 }
 
@@ -94,7 +96,7 @@ export async function bindPlaces(places: Place[], load: LoadChildren): Promise<B
       const step = pl.steps[i];
       let found = matchChild(await kids(parent), step);
       if (!found && parent === null && step.type === 'section') {
-        const buildings = (await kids(null)).filter((c) => c.node_type === 'building');
+        const buildings = (await kids(null)).filter((c) => isTopPlace(c.node_type));
         if (buildings.length === 1) { parent = buildings[0].id; node = buildings[0]; found = matchChild(await kids(parent), step); }
       }
       if (!found) break;

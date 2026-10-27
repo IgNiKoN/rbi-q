@@ -19,3 +19,5 @@ export { buildRegistryXlsx, registryFileName, saveXlsx } from './registry/export
 export { P2_REGISTRY_CSS } from './registry/styles.ts';
 export { PageTabs, Sheet, MoreMenu, RecordFields, StageBadge, StageStrip, P2_PAGE_CSS } from './page.ts';
 export type { MoreItem } from './page.ts';
+export { PlaceTree, P2_TREE_CSS } from './tree.ts';
+export type { TreeItem } from './tree.ts';

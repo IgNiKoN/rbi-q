@@ -37,6 +37,21 @@ export interface Division { id: string; name: string; head_user_id: string | nul
 export interface DictItem { code: string; name: string; sort_order: number }
 export interface ProjectDicts { stages: DictItem[]; objectKinds: DictItem[]; roles: DictItem[] }
 
+/** P2-0047: место дерева проекта (pf_project_places): верх — объект с видом; у помещения — строительный номер и номер БТИ. */
+export interface PlaceNode {
+  id: string; parent_id: string | null; node_type: PlanNodeType; object_kind: string | null; name: string; build_no: string | null; bti_no: string | null;
+  sort_order: number; depth: number; path: string; child_count: number; apartment_count: number | null;
+}
+/** P2-0047: мастер объекта (pf_fill_object) — секции × этажи × квартиры, нумерация, подвал и кровля. */
+export interface FillParams {
+  objectId: string; sections: number; floors: number; apartmentsPerFloor: number; firstFloor: number;
+  numbering: 'through' | 'per_section'; startNo: number; basement: boolean; roof: boolean;
+}
+/** Сколько мест создаст мастер объекта: секции · (секция + подвал + кровля + этажи · (этаж + квартиры)). Та же формула, что на сервере. */
+export function fillNodeCount(sections: number, floors: number, apartmentsPerFloor: number, basement: boolean, roof: boolean): number {
+  return sections * (1 + (basement ? 1 : 0) + (roof ? 1 : 0) + floors * (1 + apartmentsPerFloor));
+}
+
 export interface UnitItem { id: string; company_id: string | null; code: string; name: string; is_common: boolean }
 export interface GenerateParams {
   projectId: string; parentId: string | null; name: string;
@@ -62,6 +77,13 @@ export interface ProjectsApi {
   listDivisions?(companyId: string): Promise<Division[]>;
   saveDivision?(companyId: string, id: string, name: string, headUserId: string | null, archived: boolean | null): Promise<Result<string>>;
   dicts?(): Promise<ProjectDicts>;
+  /** P2-0047: «Объекты и места» — права ядра, модуль не нужен; id нового места даёт приложение. */
+  projectPlaces?(projectId: string, parentId: string | null): Promise<PlaceNode[]>;
+  savePlace?(projectId: string, id: string, parentId: string | null, type: PlanNodeType, name: string, kind?: string | null, buildNo?: string | null, btiNo?: string | null): Promise<Result<string>>;
+  removePlace?(id: string): Promise<Result<number>>;
+  fillObject?(p: FillParams): Promise<Result<number>>;
+  addFloors?(sectionIds: string[], from: number, to: number, apartmentsPerFloor: number): Promise<Result<number>>;
+  copyPlace?(sourceId: string, newId: string, name: string): Promise<Result<string>>;
   addUnit(companyId: string, code: string, name: string): Promise<Result<string>>;
   deleteUnit(unitId: string): Promise<Result>;
 }
@@ -129,6 +151,14 @@ export function createProjectsService(): ProjectsApi | null {
       const v = r.ok && r.value ? r.value : {};
       return { stages: v.stages || [], objectKinds: v.object_kinds || [], roles: v.roles || [] };
     },
+    projectPlaces: (project, parent) => rows<PlaceNode>('pf_project_places', { p_project: project, p_parent: parent }),
+    savePlace: (project, id, parent, type, name, kind, buildNo, btiNo) => call<string>('pf_save_place', { p_project: project, p_id: id, p_parent: parent, p_type: type,
+      p_name: name, p_object_kind: kind ?? null, p_build_no: buildNo ?? null, p_bti_no: btiNo ?? null }),
+    removePlace: (id) => call<number>('pf_remove_place', { p_location: id }),
+    fillObject: (p) => call<number>('pf_fill_object', { p_object: p.objectId, p_sections: p.sections, p_floors: p.floors, p_apartments_per_floor: p.apartmentsPerFloor,
+      p_first_floor: p.firstFloor, p_numbering: p.numbering, p_start_no: p.startNo, p_basement: p.basement, p_roof: p.roof }),
+    addFloors: (sections, from, to, apf) => call<number>('pf_add_floors', { p_sections: sections, p_from: from, p_to: to, p_apartments_per_floor: apf }),
+    copyPlace: (source, id, name) => call<string>('pf_copy_place', { p_source: source, p_new_id: id, p_name: name }),
     addUnit: (company, code, name) => call<string>('pf_add_unit', { p_company: company, p_code: code, p_name: name }),
     deleteUnit: (id) => call('pf_delete_unit', { p_unit: id })
   };

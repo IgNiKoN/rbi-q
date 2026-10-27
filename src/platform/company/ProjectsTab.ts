@@ -1,13 +1,13 @@
 /**
  * «Компания → Проекты» (P2-0047, утверждённые макеты reports/P2-0047/compare/): справочник проектов с поиском, стадиями-кнопками
  * и группами по подразделениям; строка открывает карточку проекта (стадия, код, подразделение, адрес, сроки, руководитель,
- * заказчик, генподрядчик, наша роль, пояс, страна) со вкладками «Карточка · Объекты и места». Одна главная кнопка на экране,
+ * заказчик, генподрядчик, наша роль, пояс, страна) со вкладками «Карточка · Объекты и места» (ObjectsPlaces). Одна главная кнопка на экране,
  * редкое — в «⋯» (архив, подразделения). Права ядра — без включённых модулей (pf_project_catalog / pf_save_project, MODULES 1а).
  * id новой записи создаёт приложение (newId): повтор после обрыва связи не создаёт дубль. Права и проверки — на сервере.
  */
 import { createElement as h, useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { LocationsTree } from './LocationsTree.ts';
+import { ObjectsPlaces } from './ObjectsPlaces.ts';
 import { newId } from '../core/projects.service.ts';
 import type { CompanyAccess, Division, DictItem, ProjectCard, ProjectCardInput, ProjectDicts, ProjectsApi } from '../core/projects.service.ts';
 import type { CoreApi } from '../core/core.service.ts';
@@ -183,7 +183,7 @@ export function ProjectsTab(props: { api: ProjectsApi; company: CompanyAccess; c
       h(PageTabs, { testId: 'pj-card-tabs', active: view.tab, onPick: (id) => setView({ kind: 'card', id: p.id, tab: id === 'tree' ? 'tree' : 'card' }),
         items: [{ id: 'card', label: ['Карточка'] }, { id: 'tree', label: ['Объекты и места'] }] }));
     const body = view.tab === 'tree'
-      ? h(LocationsTree, { api, project: p, canManage: p.can_manage && !p.archived_at })
+      ? h(ObjectsPlaces, { api, project: p, kinds: dicts.objectKinds, onChanged: () => { void load(); } })
       : h('div', { className: 'pj-cardbody' },
           dicts.stages.length ? h(StageStrip, { testId: 'pj-stages', items: dicts.stages, current: p.stage }) : null,
           h(RecordFields, { testId: 'pj-fields', fields: [

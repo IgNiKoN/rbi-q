@@ -4,7 +4,7 @@
  */
 import { createElement as h, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { EMPTY_STATE, KpiTile, MoreMenu, PageTabs, ProgressBar, RecordFields, RegistryTable, Sheet, StageBadge, StageStrip, StatusBadge } from '../ui/index.ts';
+import { EMPTY_STATE, KpiTile, MoreMenu, PageTabs, PlaceTree, ProgressBar, RecordFields, RegistryTable, Sheet, StageBadge, StageStrip, StatusBadge } from '../ui/index.ts';
 import type { RegistryColumn, RegistryFilter, RegistryState } from '../ui/index.ts';
 
 interface Row { id: string; name: string; stage: string; group: string; n: number }
@@ -14,6 +14,11 @@ const ROWS: Row[] = [
   { id: 'a', name: 'ЖК Образец, 1 очередь', stage: 'construction', group: 'Дирекция «Север»', n: 3 },
   { id: 'b', name: 'ЖК Образец, 2 очередь', stage: 'design', group: 'Дирекция «Север»', n: 1 },
   { id: 'c', name: 'Школа на 600 мест', stage: 'warranty', group: 'Без подразделения', n: 1 }];
+interface TNode { id: string; name: string; hasKids: boolean; kind: string; meta: string }
+const T = (id: string, name: string, kind: string, meta = '', hasKids = false): TNode => ({ id, name, kind, meta, hasKids });
+const TREE_ROOTS = [T('s1', 'Секция 1', 'секция', 'кв. 24', true), T('s2', 'Секция 2', 'секция', 'кв. 24', true)];
+const TREE_KIDS: Record<string, TNode[]> = { s1: [T('f1', 'эт. 1', 'этаж', 'мест 4', true), T('f2', 'эт. 2', 'этаж', 'мест 4', true)],
+  f1: [T('a1', 'кв. 1', 'квартира', 'стр. № 1 · БТИ 101'), T('a2', 'кв. 2', 'квартира', 'стр. № 2')], f2: [], s2: [] };
 const label = (c: string): string => (STAGES.find((s) => s.code === c) || { name: c }).name;
 
 function Block(props: { id: string; title: string; note: string; children?: ReactNode }): ReactElement {
@@ -27,6 +32,8 @@ export function Patterns(): ReactElement {
   const [sheet, setSheet] = useState(false);
   const [state, setState] = useState<RegistryState>(EMPTY_STATE);
   const [picked, setPicked] = useState('');
+  const [treeOpen, setTreeOpen] = useState<Record<string, boolean>>({ s1: true, f1: true });
+  const [treeSel, setTreeSel] = useState<string | null>('a1');
   const columns: RegistryColumn<Row>[] = [
     { id: 'name', label: 'Название', fixed: true, value: (r) => r.name, render: (r) => h('b', null, r.name) },
     { id: 'stage', label: 'Стадия', value: (r) => label(r.stage), render: (r) => h(StageBadge, { label: label(r.stage), tone: r.stage === 'construction' ? 'blue' : r.stage === 'warranty' ? 'green' : 'grey' }) },
@@ -52,6 +59,10 @@ export function Patterns(): ReactElement {
       h(RecordFields, { testId: 'pt-fields', fields: [{ id: 'a', label: 'Код', value: 'OBR-1' }, { id: 'b', label: 'Подразделение', value: 'Дирекция «Север»' },
         { id: 'c', label: 'Адрес', value: 'Санкт-Петербург, ул. Образцовая, 1' }, { id: 'd', label: 'Сроки (план)', value: '01.03.2026 — 31.12.2027' },
         { id: 'e', label: 'Руководитель проекта', value: 'Иванов И. И.' }, { id: 'f', label: 'Наша роль', value: 'Генподрядчик' }, { id: 'g', label: 'Заказчик', value: null }, { id: 'h', label: 'Часовой пояс · страна', value: 'Moscow · RU' }] })),
+    h(Block, { id: 'tree', title: 'Дерево мест', note: 'Раскрытие ▸/▾, вид и короткая сводка, нажатие — карточка места, «⋯» — действия строки. Длинный список — «ещё N».' },
+      h(PlaceTree<TNode>, { testId: 'pt-tree', roots: TREE_ROOTS, kids: TREE_KIDS, open: treeOpen, onToggle: (n) => setTreeOpen({ ...treeOpen, [n.id]: !treeOpen[n.id] }),
+        selected: treeSel, onSelect: (n) => setTreeSel(n.id), kind: (n) => n.kind, meta: (n) => n.meta,
+        menu: (n) => [{ id: 'add', label: 'Добавить внутрь', onClick: () => setPicked('добавить внутрь: ' + n.name) }, { id: 'edit', label: 'Изменить', onClick: () => setPicked('изменить: ' + n.name) }] })),
     h(Block, { id: 'badges', title: 'Метки', note: 'Цвет и слово вместе: цвет не единственный признак.' },
       h('div', { className: 'pt-row' }, STAGES.map((s, i) => h(StageBadge, { key: s.code, label: s.name, tone: (['grey', 'grey', 'blue', 'yellow', 'green', 'grey'] as const)[i] })),
         h(StatusBadge, { status: 'red', label: 'Просрочено' }))),

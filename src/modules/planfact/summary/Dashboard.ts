@@ -13,6 +13,7 @@ import type { SummaryLinks } from './Attention.ts';
 import { LIGHT_LABEL, dateOr, lagDaysText, lightText, pctText, rub, rubDay, verdictText } from './model.ts';
 import { BarChart, ChartCard, KpiTile, LineChart, ProgressBar, StatusBadge, compactNumber, compactRub, dayMonth, daysBetween } from '../../../platform/ui/index.ts';
 import { fmtQty, todayMoscow } from '../fact/fact.ts';
+import { isTopPlace } from '../../../services/locations/types.ts';
 
 export const PERIODS = [4, 8, 12] as const;
 export type Period = (typeof PERIODS)[number];
@@ -177,7 +178,7 @@ function PlacesPanel(props: { api: SummaryApi; p: SummaryProject; places: Summar
           h('span', { className: 'pf-muted p2-num db-place-sub' }, p.can_money && x.plan_money !== null
             ? `${compactRub(x.done_money)} из ${compactRub(x.plan_money)} · ${x.positions} поз.`
             : x.units.map((u) => `${fmtQty(u.fact)} из ${fmtQty(u.plan)} ${u.unit}`).join(' · ') || 'позиций нет'))),
-    node && node.here && node.node_type === 'building'
+    node && node.here && isTopPlace(node.node_type)
       ? h('div', { className: 'ft-warn', 'data-testid': 'sm-not-split' }, `Объёмы не разнесены по этажам: ${node.here} поз. записаны на корпус целиком. Разнесение по этажам — в блоке прораба.`)
       : null,
     node && pos && pos.length ? h('div', { className: 'db-pos', 'data-testid': 'sm-place-positions' },

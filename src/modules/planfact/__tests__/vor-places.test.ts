@@ -102,3 +102,12 @@ test('корпус листа (P2-0009, К1): угадывается по наз
   const missing = await bindPlaces([placeOf({}, {}, { value: '2', name: 'Корпус 2' })], t.load);
   assert.deepEqual(missingList(missing, [placeOf({}, {}, { value: '2', name: 'Корпус 2' })]), ['Корпус 2'], 'корпуса нет в дереве — в «недостающие»');
 });
+
+test('P2-0047: верх дерева — «объект» (бывший корпус): привязка «Корпус 1 · Секция 1» и единственный корпус работают как раньше', async () => {
+  const t = tree([N('o', null, 'object', 'Корпус 1', 'Корпус 1'), N('s', 'o', 'section', 'Секция 1', 'Корпус 1 · Секция 1'),
+    N('f', 's', 'floor', 'эт. 2', 'Корпус 1 · Секция 1 · эт. 2'), N('o2', null, 'object', 'Паркинг', 'Паркинг')]);
+  const b = await bindPlaces([placeOf({ building: '1', section: '1' }), placeOf({ building: '1' })], t.load);
+  assert.deepEqual(b.map((x) => x.path), ['Корпус 1 · Секция 1', 'Корпус 1']);
+  const one = tree([N('o', null, 'object', 'Корпус 1', 'Корпус 1'), N('s', 'o', 'section', 'Секция 1', 'Корпус 1 · Секция 1')]);
+  assert.equal((await bindPlaces([placeOf({ section: '1' })], one.load))[0].path, 'Корпус 1 · Секция 1', 'секция без корпуса — в единственном объекте');
+});

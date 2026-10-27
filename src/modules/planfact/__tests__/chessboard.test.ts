@@ -177,3 +177,11 @@ test('замер: 5 000 позиций — разнесение и обе сет
   assert.ok(ms <= 100, `расчёт ${ms.toFixed(1)} мс`);
   console.log(`  замер: 5 000 позиций → ${ms.toFixed(1)} мс`);
 });
+
+test('P2-0047: объект верхнего уровня — колонка корпуса шахматки; этажи знают свой объект', () => {
+  const o = node(null, 'object', 'Корпус 1', 1, 1);
+  const s = node(o, 'section', 'Секция 1', 1, 1), f = node(s, 'floor', 'эт. 1', 1, 0);
+  const idx = indexPlaces([o, s, f]);
+  assert.deepEqual(buildingsOf(idx).map((x) => x.name), ['Корпус 1']);
+  assert.equal(idx.floors[0].building?.id, o.id);
+});

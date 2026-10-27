@@ -19,9 +19,10 @@ import { FloorClose } from './FloorClose.ts';
 import { ChessboardTab } from './ChessboardTab.ts';
 import { FactWindow, FACT_WINDOW_CSS } from './FactWindow.ts';
 import { initialProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
+import { isTopPlace } from '../../../services/locations/types.ts';
 
 const PAGE = 100;
-const NODE_LABEL: Record<string, string> = { building: 'Корпус', section: 'Секция', floor: 'Этаж', apartment: 'Квартира', other: 'Место' };
+const NODE_LABEL: Record<string, string> = { object: 'Объект', building: 'Корпус', section: 'Секция', floor: 'Этаж', apartment: 'Квартира', other: 'Место' };
 const lastKey = (company: string): string => `pf-last-brigade:${company}`;
 /** Последняя бригада на устройстве (общая для «Факта» и закрытия из реестра позиций). */
 export function readLast(company: string): string { try { return window.localStorage.getItem(lastKey(company)) || ''; } catch { return ''; } }
@@ -182,7 +183,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
         h('button', { type: 'button', className: 'ft-titem' + (cur ? ' ft-titem--cur' : '') + (on ? ' ft-titem--on' : ''), style: { paddingLeft: `${10 + above.length * 16}px` },
           'aria-current': cur ? 'true' : undefined, 'data-location-id': n.id, onClick: () => { void enterPlace(projectId, [...above, n]); } },
           // стрелка — у узлов, где ещё есть уровни (корпус, секция) или уже открытые дети; этаж — без стрелки
-          n.node_type === 'building' || n.node_type === 'section' || open ? h('span', { className: 'ft-tchev' + (open ? ' ft-tchev--open' : ''), 'aria-hidden': 'true' }) : h('span', { className: 'ft-tdot', 'aria-hidden': 'true' }), n.name),
+          isTopPlace(n.node_type) || n.node_type === 'section' || open ? h('span', { className: 'ft-tchev' + (open ? ' ft-tchev--open' : ''), 'aria-hidden': 'true' }) : h('span', { className: 'ft-tdot', 'aria-hidden': 'true' }), n.name),
         open ? h('div', { className: 'ft-tkids' }, treeNodes(kids[n.id], [...above, n])) : null);
     });
   }

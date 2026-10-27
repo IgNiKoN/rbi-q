@@ -52,14 +52,19 @@ export const CHILD_OF: Record<NodeType, NodeType | null> = {
 };
 
 /**
- * Уровни дерева проекта Platform 2.0 (planfact.locations, P2-0005): без 'object' (объект — это сам проект) + 'other'.
+ * Уровни дерева проекта Platform 2.0 (core.locations, P2-0005; P2-0047 — верх «объект») + 'other'.
  * Добавлено рядом, поведение Quality (NodeType, CHILD_OF) не менялось. Подсказка уровня мягкая: уровни можно пропускать.
  */
-export type PlanNodeType = Exclude<NodeType, 'object'> | 'other';
+export type PlanNodeType = NodeType | 'other';
 export const PLAN_NODE_TYPES: PlanNodeType[] = ['building', 'section', 'floor', 'apartment', 'other'];
 export const PLAN_NODE_LABELS: Record<PlanNodeType, string> = {
-  building: 'Корпус', section: 'Секция', floor: 'Этаж', apartment: 'Квартира', other: 'Другое'
+  building: 'Корпус', section: 'Секция', floor: 'Этаж', apartment: 'Квартира', other: 'Другое', object: 'Объект'
 };
+/**
+ * P2-0047: верх дерева проекта — «объект» (корпус, паркинг, сети…; вид — в карточке места). Старые корни «корпус» сервер
+ * переводит в объект; для План/Факта объект верхнего уровня — то же, что раньше корпус.
+ */
+export const isTopPlace = (t: string): boolean => t === 'object' || t === 'building';
 export const SUGGESTED_CHILD: Record<PlanNodeType | 'root', PlanNodeType> = {
-  root: 'building', building: 'section', section: 'floor', floor: 'apartment', apartment: 'other', other: 'other'
+  root: 'object', object: 'section', building: 'section', section: 'floor', floor: 'apartment', apartment: 'other', other: 'other'
 };

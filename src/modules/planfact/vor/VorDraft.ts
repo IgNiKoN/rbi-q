@@ -7,6 +7,7 @@ import { createElement as h, useEffect, useState } from 'react';
 import type { ChangeEvent, FocusEvent, KeyboardEvent, ReactElement } from 'react';
 import type { ProjectsApi } from '../../../platform/core/projects.service.ts';
 import type { PlanNodeType } from '../../../services/locations/types.ts';
+import { isTopPlace } from '../../../services/locations/types.ts';
 import { placeOf, placeNote, bindPlaces, missingList, createMissing, nodeNumber, sheetBuilding, WHOLE_OBJECT as WHOLE } from './places.ts';
 import type { Binding, BlockChoice, Place, TreeNode } from './places.ts';
 import type { Resolution, VorApi, VorImport, VorRow } from './vor.service.ts';
@@ -74,7 +75,7 @@ export function VorDraft(props: DraftProps): ReactElement {
     }
     setRows(list);
     setPlaces(infos);
-    setRoots((await loadChildren(null)).filter((n) => n.node_type === 'building'));
+    setRoots((await loadChildren(null)).filter((n) => isTopPlace(n.node_type)));
   }
 
   function chooseSheet(name: string): void {
@@ -109,7 +110,7 @@ export function VorDraft(props: DraftProps): ReactElement {
     const saved = list.find((r) => r.kind === 'work' && empty(r) && r.location_id);
     let sh = sheetBuilding(imp.sheet_name);
     if (saved) {
-      const b = (await loadChildren(null)).find((n) => n.id === saved.location_id && n.node_type === 'building');
+      const b = (await loadChildren(null)).find((n) => n.id === saved.location_id && isTopPlace(n.node_type));
       sh = b ? { value: nodeNumber(b.name) || b.name, name: b.name } : null;
     }
     setSheet(sh);
