@@ -165,6 +165,31 @@
         };
     }
 
+    // Коэффициент Стьюдента в зависимости от выборки N (включая малые)
+    function studentTCrit(N) {
+        if (N === 2) return 12.7;
+        if (N === 3) return 4.3;
+        if (N === 4) return 3.18;
+        if (N === 5) return 2.78;
+        if (N === 6) return 2.57;
+        if (N >= 7 && N <= 10) return 2.3;
+        if (N >= 11 && N <= 15) return 2.1;
+        if (N >= 16 && N <= 23) return 2.0;
+        if (N >= 24 && N <= 31) return 1.98;
+        if (N >= 32 && N <= 50) return 1.97;
+        return 1.96;
+    }
+
+    // Ступени достоверности по числу проверок N
+    function getConfidenceLevel(N) {
+        if (N >= 51) return { name: 'Эталонный', cls: 'conf-high' };
+        if (N >= 32) return { name: 'Стабильный', cls: 'conf-high' };
+        if (N >= 24) return { name: 'Уверенный', cls: 'conf-med' };
+        if (N >= 16) return { name: 'Базовый', cls: 'conf-med' };
+        if (N >= 7) return { name: 'Предварительный', cls: 'conf-low' };
+        return { name: 'Сбор данных (N<7)', cls: 'conf-low' };
+    }
+
     // Волатильность
     function calcVolatility(arr) {
         if (arr.length < 2) return 0;
@@ -281,30 +306,13 @@
             let variance = urkValues.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (N - 1);
             s = Math.sqrt(variance);
 
-            // Коэффициент Стьюдента в зависимости от выборки N (включая малые)
-            let t_crit = 1.96;
-            if (N === 2) t_crit = 12.7;
-            else if (N === 3) t_crit = 4.3;
-            else if (N === 4) t_crit = 3.18;
-            else if (N === 5) t_crit = 2.78;
-            else if (N === 6) t_crit = 2.57;
-            else if (N >= 7 && N <= 10) t_crit = 2.3;
-            else if (N >= 11 && N <= 15) t_crit = 2.1;
-            else if (N >= 16 && N <= 23) t_crit = 2.0;
-            else if (N >= 24 && N <= 31) t_crit = 1.98;
-            else if (N >= 32 && N <= 50) t_crit = 1.97;
-
-            E = t_crit * (s / Math.sqrt(N));
+            E = studentTCrit(N) * (s / Math.sqrt(N));
         }
 
         // Точная градация достоверности рейтинга
-        let confidenceLevel = 'Сбор данных (N<7)';
-        let confCls = 'conf-low';
-        if (N >= 51) { confidenceLevel = 'Эталонный'; confCls = 'conf-high'; }
-        else if (N >= 32) { confidenceLevel = 'Стабильный'; confCls = 'conf-high'; }
-        else if (N >= 24) { confidenceLevel = 'Уверенный'; confCls = 'conf-med'; }
-        else if (N >= 16) { confidenceLevel = 'Базовый'; confCls = 'conf-med'; }
-        else if (N >= 7) { confidenceLevel = 'Предварительный'; confCls = 'conf-low'; }
+        const conf = getConfidenceLevel(N);
+        const confidenceLevel = conf.name;
+        const confCls = conf.cls;
 
         // Новая формула индекса стабильности: MAX(0; 1 - S/50) * 100%
         let stabilityIndex = Math.max(0, 1 - (s / 50)) * 100;
@@ -732,6 +740,8 @@
     window.normalizeAnalyticsPeriod = normalizeAnalyticsPeriod;
     window.getAnalyticsPeriodDays = getAnalyticsPeriodDays;
     window.getAnalyticsPrevPeriodBounds = getAnalyticsPrevPeriodBounds;
+    window.studentTCrit = studentTCrit;
+    window.getConfidenceLevel = getConfidenceLevel;
 
     window.RBI.utils.math = {
         getProductMetrics: getProductMetrics,
@@ -747,6 +757,8 @@
         normalizeAnalyticsPeriod: normalizeAnalyticsPeriod,
         getAnalyticsPeriodDays: getAnalyticsPeriodDays,
         getAnalyticsPrevPeriodBounds: getAnalyticsPrevPeriodBounds,
+        studentTCrit: studentTCrit,
+        getConfidenceLevel: getConfidenceLevel,
         clearCache: function () { window.clearMetricsCache(); }
     };
 
