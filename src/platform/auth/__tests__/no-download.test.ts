@@ -17,6 +17,9 @@ test('sw.js: до решения входа файлы модулей можно
   assert.equal(sw.ctx.mayCachePut(`${BASE}/js/dist/planfact/planfact.js`), true);
   assert.equal(sw.ctx.mayCachePut(`${BASE}/js/dist/planfact/chunks/exceljs.min-x.js`), true);
   assert.equal(sw.ctx.mayCachePut(`${BASE}/js/dist/company/company.js`), false, 'прорабу «Компания» не кэшируется');
+  assert.equal(sw.ctx.mayCachePut(`${BASE}/js/dist/company/chunks/exceljs.min-x.js`), false, 'P2-0056: и её файл Excel — тоже');
+  await sw.message({ type: 'P2_SW_ALLOWLIST', modules: ['company'] });
+  assert.equal(sw.ctx.mayCachePut(`${BASE}/js/dist/company/chunks/exceljs.min-x.js`), true, 'P2-0056: с правом — файл Excel «Компании» кэшируется');
   assert.equal(sw.ctx.mayCachePut(`${BASE}/js/dist/platform-admin/platform-admin.js`), false);
   assert.equal(sw.ctx.mayCachePut(`${BASE}/js/dist/platform/platform.js`), true, 'вход платформы — всем');
 });
