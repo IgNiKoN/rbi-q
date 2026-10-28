@@ -47,12 +47,16 @@ window.triggerSync = async function (mode = 'silent') {
     // прежние ветки (демо, облако выключено, «нет интернета», «уже идёт» — запрос не теряется) — в самом проходе
     if (!NP || !net || (typeof isDemoMode !== 'undefined' && isDemoMode) || !window.isSyncEnabled() || !window.supabaseClient
         || !navigator.onLine || window.isSyncing) {
+        if (NP && net && !navigator.onLine && window.isSyncEnabled() && window.supabaseClient) {
+            if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'skip', net: 'no_network', why: 'no_network', mode });
+        }
         return rbiSyncPass(mode);
     }
     const probe = await net.probe();
     const go = NP.shouldStartSync({ onLine: navigator.onLine, probe });
     if (!go.start) {
         console.log('[Sync] Связи с сервером нет — проход не начат:', go.reason);
+        if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'skip', net: probe, why: go.reason, mode });
         if (mode === 'manual') {
             safeToast(go.reason === 'server_error'
                 ? 'Сервер временно не отвечает. Данные сохранены на устройстве — отправим позже.'
@@ -69,6 +73,7 @@ async function rbiWithSyncLock(mode, run) {
     const NP = window.RbiSyncNetPolicy;
     const net = window.RbiSyncNet;
     const busy = () => {
+        if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'skip', why: 'busy', mode });
         if (mode === 'manual') safeToast('🔄 Синхронизация уже идёт (в другой вкладке)…');
         if (!window._rbiSyncBusyRetry) {
             window._rbiSyncBusyRetry = setTimeout(() => { window._rbiSyncBusyRetry = null; window.triggerSync('silent'); }, 30000);
@@ -177,6 +182,7 @@ async function rbiSyncPass(mode = 'silent') {
     // Доработка 5: пауза автосинхронизации — только при сетевых/серверных ошибках отправки;
     // запись, которую сервер отклонил (права, данные), не останавливает синхронизацию остальных.
     let transientPushErrors = 0;
+    let passOk = false; // P2-0059: для журнала — проход без ошибок
     let serverErrSeen = false; // P2-0059 (С6): сервер ответил ошибкой (5xx) — пауза, а не проверка связи каждую минуту
     const rbiNoteErr = (err) => {
         if (!window.RbiSyncRetryPolicy || window.RbiSyncRetryPolicy.isTransientSyncError(err)) transientPushErrors++;
@@ -186,7 +192,8 @@ async function rbiSyncPass(mode = 'silent') {
     const rbiScheduleSyncRetryOnce = () => { if (!retryScheduled) { retryScheduled = true; rbiScheduleSyncRetry(serverErrSeen ? 'server' : 'net'); } };
 
     window.isSyncing = true;
-    const syncStartedAt = Date.now(); // P2-0025: черновик, изменённый после начала, снова «к отправке»
+    const syncStartedAt = Date.now();
+    if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'start', net: 'online', mode }); // P2-0025: черновик, изменённый после начала, снова «к отправке»
     // Доработка 2: подошедшие повторы «нужно внимание» уходят в этом проходе; неудача поставит новое время.
     try {
         const attAt = parseInt(localStorage.getItem('rbi_sync_attention_retry_at') || '0', 10) || 0;
@@ -222,6 +229,7 @@ async function rbiSyncPass(mode = 'silent') {
         if (!NPw || !netw || !netw.pass || netw.pass.signal.aborted) return;
         if (!NPw.passIdleTooLong(netw.activity, Date.now(), syncStartedAt)) return;
         netw.pass.abort();
+        if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'stop', ms: Date.now() - syncStartedAt });
         if (_syncProg()) _syncProg().fail();
         safeToast("⚠️ Синхронизация прервана (слабый интернет). Повторим, как только появится связь.");
         console.log("[Sync] 90 с без ответа — проход остановлен.");
@@ -937,6 +945,7 @@ async function rbiSyncPass(mode = 'silent') {
     // P2-0059 (С4, С5): свои осмотры уходят первыми в проходе — до скачивания чужого — и порциями по PUSH_CHUNK:
     // после каждой порции — отметка «отправлено»; обрыв — следующий проход продолжает с неотправленных.
     // Второй вызов на прежнем месте отправляет то, что записали за время загрузки (отправленное не повторяется).
+    const ownSeenThisPass = new Set(); // второй вызов — только записи, появившиеся за время прохода
     async function rbiPushOwnInspections() {
         if (!canPush) return;
         let currentHistory = [];
@@ -983,12 +992,15 @@ async function rbiSyncPass(mode = 'silent') {
             return !t || Number.isNaN(t) || t >= lastPushTime;
         });
 
+        currentHistory = currentHistory.filter(i => !ownSeenThisPass.has(String(i.id)));
+        currentHistory.forEach(i => ownSeenThisPass.add(String(i.id)));
         const NPc = window.RbiSyncNetPolicy;
         const histChunks = NPc ? NPc.chunks(currentHistory, NPc.PUSH_CHUNK) : (currentHistory.length ? [currentHistory] : []);
         for (const chunkHist of histChunks) {
             // остановленный проход (90 с без ответа) — следующие порции не начинаем
             if (window.RbiSyncNet && window.RbiSyncNet.pass && window.RbiSyncNet.pass.signal.aborted) break;
             let chunkFailed = false;
+            let chunkError = null;
             const inspectionsBatch = [];
             const itemsBatch = [];
             const photosBatch = [];
@@ -1221,6 +1233,7 @@ async function rbiSyncPass(mode = 'silent') {
                     // (фото уже на сервере — их ссылки сохраняются, повторно не грузятся)
                     console.warn('[Sync] Осмотры не отправлены (связь/сервер), повторим:', error.message);
                     pushErrors++; rbiNoteErr(error);
+                    chunkError = error;
                     const sentIds = new Set(inspectionsBatch.map(x => String(x.id)));
                     localHistoryToUpdate.forEach(c => {
                         if (!sentIds.has(String(c.id))) return;
@@ -1231,8 +1244,14 @@ async function rbiSyncPass(mode = 'silent') {
                     chunkFailed = true;
                 } else if (error) {
                     console.warn('[Sync] Ошибка RLS: нет прав на отправку некоторых проверок', error.message);
-                    // Помечаем их локально как заблокированные
+                    chunkError = error;
+                    // Помечаем их локально как заблокированные — только отправленные в этой пачке
+                    // (P2-0059: «нужно внимание» и уже отклонённые по роли в пачку не входили — их статус не трогаем)
+                    const rejIds = new Set(inspectionsBatch.map(x => String(x.id)));
+                    itemsBatch.length = 0;
+                    photosBatch.length = 0;
                     localHistoryToUpdate.forEach(c => {
+                        if (!rejIds.has(String(c.id))) return;
                         c.syncStatus = 'blocked';
                         c.sync_status = 'blocked';
                         c.syncBlockReason = 'Ошибка прав доступа (RLS)';
@@ -1253,6 +1272,7 @@ async function rbiSyncPass(mode = 'silent') {
                 // P2-0059: пункты или фото порции не дошли — её осмотры остаются «не отправлено» (повтор без дубля: по id)
                 console.warn('[Sync] Порция осмотров не дошла целиком, повторим:', chunkErr && chunkErr.message);
                 pushErrors++; rbiNoteErr(chunkErr);
+                chunkError = chunkErr;
                 const sentIds = new Set(inspectionsBatch.map(x => String(x.id)));
                 localHistoryToUpdate.forEach(c => {
                     if (!sentIds.has(String(c.id))) return;
@@ -1270,6 +1290,11 @@ async function rbiSyncPass(mode = 'silent') {
                         if (idx >= 0) contractorArray[idx] = window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten(updatedC) : updatedC;
                     });
                 }
+            }
+            if (window.RbiSyncJournal && inspectionsBatch.length) {
+                window.RbiSyncJournal.add(chunkError
+                    ? { k: 'error', err: chunkError, rejected: chunkFailed ? 0 : inspectionsBatch.length, ids: inspectionsBatch.map(x => ({ type: 'inspection', id: x.id })) }
+                    : { k: 'chunk', pushed: inspectionsBatch.length, ids: inspectionsBatch.map(x => ({ type: 'inspection', id: x.id })) });
             }
             if (chunkFailed) break;
         }
@@ -4303,6 +4328,7 @@ async function rbiSyncPass(mode = 'silent') {
             localStorage.removeItem('rbi_force_full_pull');
             localStorage.removeItem('rbi_force_remote_poll');
         }
+        passOk = !!(flags.pullOk && flags.pushOk);
         if (flags.pullOk && flags.pushOk) {
             localStorage.setItem('rbi_cloud_dirty', '0');
             localStorage.removeItem('rbi_sync_fail_count');
@@ -4552,6 +4578,7 @@ async function rbiSyncPass(mode = 'silent') {
 
         const totalPushed = pushedChecks + actuallyPushedTasks + actuallyPushedProfiles;
         const hasChanges = pulledChecks > 0 || totalPushed > 0;
+        if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'end', ok: passOk, pushed: totalPushed, pulled: pulledChecks, attention: syncAttentionCount, ms: Date.now() - syncStartedAt, mode });
 
         // Включаем флаги "Грязных данных", чтобы вкладки обновились при переходе на них
         window.syncDirtyFlags.templates = true;
@@ -4754,7 +4781,8 @@ async function rbiSyncPass(mode = 'silent') {
         console.error("[Sync] Ошибка:", e);
         pushErrors++;
         if (window.RbiSyncNetPolicy && window.RbiSyncNetPolicy.retryKindOf(e) === 'server') serverErrSeen = true;
-        rbiScheduleSyncRetryOnce(); // P2-0023: не повторять каждую минуту (доработка 5: не дважды за проход)
+        rbiScheduleSyncRetryOnce();
+        if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'error', err: e, ms: Date.now() - syncStartedAt, mode }); // P2-0023: не повторять каждую минуту (доработка 5: не дважды за проход)
         const errMsg = e.message ? e.message.substring(0, 80) : 'Сбой сети';
         if (_syncProg()) {
             _syncProg().fail({ summary: 'Ошибка синхронизации', detail: errMsg, hideAfterMs: 3500 });

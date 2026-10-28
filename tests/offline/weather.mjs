@@ -148,6 +148,74 @@ export function weatherTable(list) {
   return head + list.map((r) => `| ${r.title} | ${r.delivered}/${N} · ${r.photoRows}/${N} | ${r.lost} | ${r.minutesToZero === null ? '> ' + MINUTES : r.minutesToZero} | ${r.unsentLeft}${r.unsentWhy.length ? ' (' + r.unsentWhy.join('; ') + ')' : ''} | ${r.taps} | ${r.maxSendsPerRecord} | ${yes(r.concurrentPasses > 1 || r.concurrentInspectionPosts > 1)} (проходов ${r.concurrentPasses}, запросов ${r.concurrentInspectionPosts}) | ${r.longestSyncingSec} | ${r.hungRequests} |`).join('\n') + '\n';
 }
 
+/** P2-0059 этап 5: «Данные на устройстве» — что не ушло и почему (нет связи, нет фото, отклонено), журнал, «Скопировать отчёт»,
+ *  свой журнал у другого пользователя на том же телефоне. */
+async function reasons(width, scheme) {
+  const tag = 'reasons' + width + (scheme === 'dark' ? '-dark' : '');
+  note(`== ${tag}: что не ушло и почему, журнал`);
+  freshProfile(out(), tag);
+  resetNet();
+  net.reject = /REJECT-MARK/;
+  await start();
+  const { ctx, page } = await launch(out(), tag, { width, height: width < 768 ? 812 : 900, scheme });
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+  await signIn(page);
+  await open(page, 6000);
+  // с сетью: осмотр без файла фото (→ «нужно внимание») и осмотр, который сервер отклонит (→ «отклонено»)
+  await page.evaluate(async () => {
+    const S = window.RBI.services;
+    await S.inspections.save({ id: 'att-' + Date.now(), date: new Date().toISOString(), object: 'ЖК Тестовый', template: 'Монолит', templateTitle: 'Монолит', status: 'done',
+      engineer: 'Иванов Иван', state: { '1': 'bad' }, details: { '1': { name: 'Армирование' } }, photos: { '1': ['local://нет-такого-фото'] } });
+    await S.inspections.save({ id: 'rej-' + Date.now(), date: new Date().toISOString(), object: 'ЖК Тестовый', location: 'REJECT-MARK', template: 'Фасад', templateTitle: 'Фасад', status: 'done', engineer: 'Иванов Иван' });
+  });
+  await page.evaluate(() => window.triggerSync('manual')).catch(() => {});
+  for (let k = 0; k < 30; k++) { await page.waitForTimeout(1000); if (!(await page.evaluate(() => !!window.isSyncing))) break; }
+  await ctx.setOffline(true);
+  for (const m of ['Секция 2, этаж 5', 'Секция 1']) await page.evaluate((m) => window.RBI.services.inspections.save({ id: 'net-' + Math.random().toString(36).slice(2), date: new Date().toISOString(),
+    object: 'ЖК Тестовый', section: m, template: 'Кладка', templateTitle: 'Кладка', status: 'done', engineer: 'Иванов Иван' }), m);
+  await page.evaluate(() => { location.hash = '#/settings/my/device'; });
+  await page.waitForTimeout(5000);
+  const chips = await page.locator('[data-testid=p2-sync-item]').evaluateAll((els) => els.map((e) => e.dataset.chip));
+  const head = await page.locator('[data-testid=p2-net-device]').innerText().catch(() => '');
+  note('причины: ' + JSON.stringify(chips) + ' записи: ' + JSON.stringify(await page.evaluate(async () => (await window.RBI.services.inspections.getActive())
+    .map((r) => [String(r.id).slice(0, 4), r.syncStatus, r.source, r.syncBlockReason || '']))) + ' 403: ' + flow.rejected);
+  ok(/Нет связи · не отправлено: 3/.test(head), `${tag}: «Нет связи · не отправлено: 3»`, head.split('\n')[0]);
+  ok(chips.filter((c) => c === 'net').length === 2 && chips.includes('photo') && chips.includes('bad'), `${tag}: причины — «нет связи» ×2, «нет фото», «отклонено»`, JSON.stringify(chips));
+  ok(/Нет фото пункта «Армирование»/.test(head) && /Отправить без этого фото/.test(head), `${tag}: «Нет фото пункта «Армирование»» и «Отправить без этого фото»`);
+  ok(/Отклонено сервером: 1/i.test(head) && /Сервер отклонил: нет прав/i.test(head), `${tag}: «Отклонено сервером: 1 — нет прав»`);
+  const chipLabel = await page.locator('[data-testid=p2-net]').getAttribute('aria-label').catch(() => '');
+  ok(chipLabel === 'Нет связи, не отправлено: 3', `${tag}: значок в шапке — то же число, что в карточке`, String(chipLabel));
+  const jEnd = await page.evaluate(() => window.RbiSyncJournal.list().filter((e) => e.k === 'end').pop() || null);
+  ok(!!jEnd && jEnd.attention === 1, `${tag}: «нужно внимание» за проход посчитано один раз`, JSON.stringify(jEnd));
+  const jRej = await page.evaluate(() => window.RbiSyncJournal.list().some((e) => e.k === 'error' && e.rejected === 1 && /нет прав/.test(e.err || '')));
+  ok(jRej, `${tag}: в журнале — «ошибка · нет прав · отклонено 1»`);
+  ok(/Последняя успешная отправка: (сегодня \d\d:\d\d|ещё не было)/.test(head), `${tag}: строка «Последняя успешная отправка»`);
+  await page.locator('[data-testid=p2-sync-journal] summary').click();
+  await page.waitForTimeout(500);
+  const jl = await page.locator('[data-testid=p2-sync-journal-list] li').count();
+  ok(jl > 0, `${tag}: журнал показывает события`, String(jl));
+  const journal = await page.evaluate(() => JSON.stringify(window.RbiSyncJournal.list()));
+  ok(JSON.parse(journal).length <= 500 && !/Иванов|REJECT-MARK|ЖК Тестовый|Армирование|Кладка/.test(journal), `${tag}: в журнале нет текста записей и ФИО`);
+  await page.locator('[data-testid=p2-sync-copy]').click();
+  await page.waitForTimeout(800);
+  const copied = await page.evaluate(() => navigator.clipboard.readText()).catch(() => '');
+  const btn = await page.locator('[data-testid=p2-sync-copy]').innerText().catch(() => '');
+  ok(/Журнал синхронизации RBI-Q/.test(copied) || /Отчёт скопирован/.test(btn), `${tag}: «Скопировать отчёт» даёт текст отчёта`, copied ? copied.split('\n')[0] : btn);
+  ok(!/Иванов|REJECT-MARK|Армирование/.test(copied), `${tag}: в отчёте нет данных записей и ФИО`);
+  const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  ok(wide <= 0, `${tag}: без прокрутки вбок`, String(wide));
+  await page.screenshot({ path: join(out(), tag + '.jpg'), fullPage: true, type: 'jpeg', quality: 80 });
+  // другой пользователь на том же телефоне — свой журнал
+  await ctx.setOffline(false);
+  const mine = await page.evaluate(() => window.RbiSyncJournal.list().length);
+  await page.evaluate(() => window.RBI.platform2.signOut()).catch(() => {});
+  await page.waitForTimeout(5000);
+  await signIn(page, 'other@stand.local');
+  const theirs = await page.evaluate(() => window.RbiSyncJournal.list().length).catch(() => -1);
+  ok(mine > 0 && theirs >= 0 && theirs < mine, `${tag}: другой пользователь на том же телефоне не видит чужой журнал`, `свой ${mine}, у другого ${theirs}`);
+  await ctx.close(); await stop();
+}
+
 let OUT = null;
 const out = () => OUT;
 const set = (o) => (ctx) => Object.assign(net, o);
@@ -177,6 +245,8 @@ export function weatherScenarios(outDir) {
     'w-5xx': () => weather('w-5xx', { title: 'ответы 503 три минуты → сервер здоров',
       apply: async (m, ctx) => { await offline(false)(ctx); net.failLeft = m < 3 ? 100000 : 0; } }),
     // две вкладки одного устройства
+    'reasons375': () => reasons(375, 'light'),
+    'reasons1440-dark': () => reasons(1440, 'dark'),
     'w-tabs': () => weather('w-tabs', { title: 'две вкладки, сеть есть', tabs: 2, apply: (m, ctx) => offline(false)(ctx),
       check: (r) => ok(r.maxSendsPerRecord === 1, 'w-tabs: две вкладки — запись ушла один раз', String(r.maxSendsPerRecord)) })
   };

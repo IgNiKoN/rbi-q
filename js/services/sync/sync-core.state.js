@@ -2,6 +2,7 @@
 import { pullPagedByIds } from './sync-pull.policy.js';
 import './sync-retry.policy.js';
 import './sync-net.policy.js'; // window.RbiSyncNetPolicy (P2-0059)
+import './sync-journal.policy.js'; // window.RbiSyncJournalPolicy (P2-0059)
 import './sync-merge.policy.js'; // window.RbiSyncMergePolicy (P2-0023 этап 5) // window.RbiSyncRetryPolicy для sync-engine/sync-auth (P2-0023 этап 4)
 /* Файл: js/sync.js (Исправленная версия сборки объектов) */
 console.log("✅ SYNC.JS загружен браузером!");
@@ -451,6 +452,36 @@ const rbiSyncNet = (function () {
 }());
 
 window.RbiSyncNet = rbiSyncNet;
+
+// P2-0059 (С9): журнал синхронизации на устройстве — у базы «компания + пользователь», последние 500 событий,
+// без содержимого записей и персональных данных (sync-journal.policy.js). Подряд одинаковое «не начат» — одна строка «×N».
+const rbiSyncJournal = (function () {
+    const JP = window.RbiSyncJournalPolicy;
+    const key = () => JP.journalKey(window.RBI_DB_NAME || '');
+    const read = () => {
+        try { const v = JSON.parse(localStorage.getItem(key()) || '[]'); return Array.isArray(v) ? v : []; } catch (_e) { return []; }
+    };
+    return {
+        list: read,
+        add(ev) {
+            try {
+                let list = read();
+                const e = JP.sanitizeEvent(ev);
+                const last = list[list.length - 1];
+                if (last && e.k === 'skip' && last.k === 'skip' && last.why === e.why && last.net === e.net) {
+                    last.t = e.t; last.n = (last.n || 1) + 1;
+                } else {
+                    list = JP.journalAppend(list, e);
+                }
+                localStorage.setItem(key(), JSON.stringify(list));
+                window.dispatchEvent(new Event('rbi:sync-journal'));
+            } catch (_e) { /* журнал не мешает отправке */ }
+        },
+        lastOkAt() { return JP.lastOkAt(read()); },
+        report(meta) { return JP.journalReport(read(), meta); }
+    };
+}());
+window.RbiSyncJournal = rbiSyncJournal;
 window.simpleHash = simpleHash;
 window.safeToast = safeToast;
 window.rbiEnqueueCloudFilesForCache = rbiEnqueueCloudFilesForCache;

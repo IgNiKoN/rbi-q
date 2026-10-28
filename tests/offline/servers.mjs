@@ -22,7 +22,8 @@ export const mode = { refresh: 'ok' };
 
 /** P2-0059: «погода» подставного сервера. mode: 'ok' | 'hang' (принял запрос и молчит); latencyMs + kbps — медленная сеть;
  *  failLeft — столько следующих запросов ответят failCode; drops — [{ re, left }]: запрос «МЕТОД путь» под re принят и выполнен, ответ потерян (обрыв), left раз. */
-export const net = { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [] };
+export const net = { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [], reject: null };
+/** reject — RegExp: запись осмотра с таким текстом сервер отклоняет (403, нет прав RLS). */
 /** Что лежит на сервере: таблица → (id → строка); файлы хранилища «бакет/путь»; отправки rbi_inspections (id → сколько раз пришло). */
 export const rows = new Map();
 export const files = new Set();
@@ -31,7 +32,7 @@ export const flow = { inflight: 0, maxInflight: 0, hung: 0 };
 const held = [];
 /** Сбросить погоду и содержимое сервера перед сценарием. */
 export function resetNet() {
-  Object.assign(net, { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [] });
+  Object.assign(net, { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [], reject: null });
   rows.clear(); files.clear(); sends.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
 }
 /** «Зависшие» запросы обрываются (связь пропала окончательно). */
@@ -102,6 +103,10 @@ function api(req, res) {
 function respond(req, res, u, body) {
   {
     const mk = body.match(/[A-Z]+-MARK/g); if (mk && req.method !== 'GET') marks.push(req.method + ' ' + u.pathname + ' ' + [...new Set(mk)].join(','));
+    if (net.reject && req.method === 'POST' && u.pathname === '/rest/v1/rbi_inspections' && net.reject.test(body)) {
+      flow.rejected = (flow.rejected || 0) + 1;
+      return json(res, 403, { code: '42501', message: 'new row violates row-level security policy for table "rbi_inspections"' });
+    }
     if (req.method === 'POST' && u.pathname === '/rest/v1/rbi_inspections') {
       let data = []; try { data = [].concat(JSON.parse(body || '[]')); } catch { /* не JSON */ }
       for (const r of data) if (r && r.id !== undefined) sends.set(String(r.id), (sends.get(String(r.id)) || 0) + 1);

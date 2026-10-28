@@ -5,7 +5,8 @@
  * N — записи работы текущей базы Качества / СК по правилу движка (isUnsentLocal); сама отправка — движок синхронизации.
  * Макет утверждён владельцем 28.10.2026 (reports/P2-0058/stage3/mockups/compare.html).
  */
-import { countUnsent } from './offline-rescue.ts';
+import { countUnsent, listPending } from './offline-rescue.ts';
+import { statusHtml, toItems, SYNC_CSS, SYNC_STYLE_ID } from './sync-status.ts';
 import type { IsUnsent } from './offline-rescue.ts';
 
 export const NET_STATUS_EVENT = 'rbi:net-status';
@@ -94,7 +95,24 @@ interface Deps {
   navigate: (path: string) => void;
 }
 
-type W = Window & { RBI?: Record<string, unknown>; RBI_DB_NAME?: string; RbiSyncMergePolicy?: { isUnsentLocal?: IsUnsent } };
+type JournalEvent = Record<string, unknown> & { t: string };
+type W = Window & { RBI?: Record<string, unknown>; RBI_DB_NAME?: string; RbiSyncMergePolicy?: { isUnsentLocal?: IsUnsent };
+  // P2-0059: сеть, журнал синхронизации и действия (js/services/sync/*, История)
+  RbiSyncNet?: { lastProbe: string | null; lastProbeAt: number };
+  RbiSyncJournal?: { list: () => JournalEvent[]; lastOkAt: () => string; report: (meta: Record<string, unknown>) => string };
+  RbiSyncJournalPolicy?: { eventLine: (e: JournalEvent) => string; eventTone: (e: JournalEvent) => string };
+  triggerSync?: (mode: string) => unknown;
+  HistoryActions?: { resolveSyncAttention?: (id: string) => unknown };
+  APP_VERSION?: string; SW_VERSION?: string };
+
+/** Время события журнала: «14:05», вчера и раньше — «27.10 14:05». */
+function shortTime(iso: string, now: number): string {
+  const t = Date.parse(iso || '');
+  if (!Number.isFinite(t)) return '';
+  const d = new Date(t); const p = (n: number): string => String(n).padStart(2, '0');
+  const sameDay = new Date(now).toDateString() === d.toDateString();
+  return (sameDay ? '' : p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ') + p(d.getHours()) + ':' + p(d.getMinutes());
+}
 
 let started = false;
 /** Запустить значок, плашку и строку «Данные на устройстве» (один раз на страницу). */
@@ -148,17 +166,66 @@ export function startNetStatus(deps: Deps): void {
     chip.title = v.label;
   }
 
-  function fillDevice(): void {
+  // P2-0059 (С8, С9): «Данные на устройстве» — карточка «Отправка» (что не ушло и почему) и «Журнал синхронизации» (sync-status.ts)
+  let devBusy = false;
+  let devWired = false;
+  async function fillDevice(): Promise<void> {
     const slot = doc.getElementById('p2-net-status-slot');
-    if (!slot) return;
-    const line = deviceLine(st);
-    if (!line) { slot.replaceChildren(); return; }
-    if (slot.dataset.p2 === line.title + line.text) return;
-    slot.dataset.p2 = line.title + line.text;
-    slot.innerHTML = '<div class="p2-dev-unsent" role="status" data-testid="p2-net-device"><div class="p2-need__ico">' + (st.offline ? ICON_OFF : ICON_UP) +
-      '</div><div><b></b><span></span></div></div>';
-    (slot.querySelector('b') as HTMLElement).textContent = line.title;
-    (slot.querySelector('span:not(.p2-need__ico)') as HTMLElement).textContent = line.text;
+    if (!slot || devBusy) return;
+    if (deps.platform().mode !== 'email') { slot.replaceChildren(); return; }
+    if (!String(location.hash || '').startsWith(DEVICE_PATH)) return;
+    devBusy = true;
+    try {
+      if (!doc.getElementById(SYNC_STYLE_ID)) {
+        const css = doc.createElement('style'); css.id = SYNC_STYLE_ID; css.textContent = SYNC_CSS; doc.head.appendChild(css);
+      }
+      const isUnsent = win.RbiSyncMergePolicy?.isUnsentLocal;
+      const db = win.RBI_DB_NAME || '';
+      const rows = isUnsent && db && typeof indexedDB !== 'undefined' ? await listPending(indexedDB, db, isUnsent).catch(() => []) : [];
+      const now = Date.now();
+      const ls = (k: string): string => { try { return window.localStorage.getItem(k) || ''; } catch { return ''; } };
+      const net = win.RbiSyncNet;
+      const probeFresh = !!net && !!net.lastProbeAt && now - net.lastProbeAt < 120000;
+      const ctx = { offline: st.offline || (probeFresh && net!.lastProbe === 'offline'), now, retryAfter: Number(ls('rbi_sync_retry_after')) || 0, retryKind: ls('rbi_sync_retry_kind') };
+      const J = win.RbiSyncJournal; const JP = win.RbiSyncJournalPolicy;
+      const events = J ? J.list() : [];
+      const journal = JP ? events.slice(-20).reverse().map((e) => ({ t: shortTime(e.t, now), text: JP.eventLine(e), tone: JP.eventTone(e) })) : [];
+      const items = toItems(rows, ctx);
+      // счётчик в шапке — то же число, что в карточке (раньше обновлялся раз в 15 с)
+      const unsentNow = items.filter((i) => !i.rejected).length;
+      if (unsentNow !== st.unsent) { st = { ...st, unsent: unsentNow }; placeChip(); }
+      const html = statusHtml({ ...ctx, items, lastOkAt: J ? J.lastOkAt() : '', probe: net?.lastProbe ?? null, probeAt: net?.lastProbeAt || 0,
+        journal, journalTotal: events.length }, !!slot.querySelector('details[open]'));
+      if (slot.dataset.p2 !== html) { slot.dataset.p2 = html; slot.innerHTML = html; }
+      if (!devWired) { devWired = true; slot.addEventListener('click', onDeviceClick); }
+    } finally {
+      devBusy = false;
+    }
+  }
+  function onDeviceClick(e: Event): void {
+    const b = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
+    if (!b) return;
+    const act = b.dataset.act;
+    if (act === 'sync' && typeof win.triggerSync === 'function') void win.triggerSync('manual');
+    if (act === 'drop' && b.dataset.id && win.HistoryActions?.resolveSyncAttention) void Promise.resolve(win.HistoryActions.resolveSyncAttention(b.dataset.id)).then(() => fillDevice());
+    if (act === 'copy') void copyReport(b);
+  }
+  async function copyReport(btn: HTMLElement): Promise<void> {
+    const J = win.RbiSyncJournal;
+    if (!J) return;
+    const text = J.report({ now: new Date().toISOString(), version: win.APP_VERSION || win.SW_VERSION || '', ua: navigator.userAgent, onLine: navigator.onLine,
+      unsent: st.unsent, lastOk: J.lastOkAt() || '' });
+    let done = false;
+    try { await navigator.clipboard.writeText(text); done = true; } catch { done = false; }
+    if (!done) {
+      const ta = doc.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      doc.body.appendChild(ta); ta.select();
+      try { done = doc.execCommand('copy'); } catch { done = false; }
+      ta.remove();
+    }
+    const label = btn.textContent;
+    btn.textContent = done ? 'Отчёт скопирован' : 'Не удалось скопировать';
+    setTimeout(() => { btn.textContent = label; }, 2500);
   }
 
   function banner(): void {
@@ -177,7 +244,7 @@ export function startNetStatus(deps: Deps): void {
   }
 
   function render(): void {
-    placeChip(); fillDevice(); banner();
+    placeChip(); void fillDevice(); banner();
     (win.RBI = win.RBI || {}).netStatus = {
       get: (): NetStatus => ({ ...st }),
       isOffline,
@@ -212,6 +279,7 @@ export function startNetStatus(deps: Deps): void {
   window.addEventListener('offline', () => { void recount(true); });
   window.addEventListener('rbi:platform-access', () => { void recount(); });
   window.addEventListener('hashchange', () => { setTimeout(render, 300); });
+  window.addEventListener('rbi:sync-journal', () => { void fillDevice(); });
   setInterval(() => { void recount(); }, 15000);
   setInterval(placeChip, 1500);   // шапку перерисовывают разделы — значок возвращается на место
   void recount(true);

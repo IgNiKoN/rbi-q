@@ -172,6 +172,38 @@ export async function countUnsent(idb: IDBFactory, name: string, isUnsent: IsUns
   return n;
 }
 
+/** P2-0059 (С8): запись «отклонена сервером» (нет прав) — сама не уйдёт; в счётчик «не отправлено» не входит. */
+export function isRejected(r: Rec): boolean {
+  return String(r.syncStatus ?? r.sync_status ?? '') === 'blocked';
+}
+
+/** P2-0059 (С8): неотправленные и отклонённые записи работы в базе — для списка «что не ушло и почему» (то же правило, что у счётчика). */
+export async function listPending(idb: IDBFactory, name: string, isUnsent: IsUnsent, limit = 200): Promise<{ store: string; rec: Rec; rejected: boolean }[]> {
+  const db = await openExisting(idb, name);
+  if (!db) return [];
+  const out: { store: string; rec: Rec; rejected: boolean }[] = [];
+  const either: IsUnsent = (r) => isUnsent(r) || isRejected(r);
+  try {
+    for (const store of Array.from(db.objectStoreNames)) {
+      if (!(store in RECORD_STORES) || out.length >= limit) continue;
+      await new Promise<void>((resolve, reject) => {
+        const rq = db.transaction(store, 'readonly').objectStore(store).openCursor();
+        rq.onsuccess = () => {
+          const c = rq.result;
+          if (!c || out.length >= limit) return resolve();
+          const r = c.value as Rec;
+          if (pickOrphans(store, [r], either).length) out.push({ store, rec: r, rejected: !isUnsent(r) && isRejected(r) });
+          c.continue();
+        };
+        rq.onerror = () => reject(rq.error);
+      });
+    }
+  } finally {
+    db.close();
+  }
+  return out;
+}
+
 /** Перенести найденное из from в to; в from — пометка. Возвращает число перенесённых записей (без вложений). */
 export async function moveOrphans(idb: IDBFactory, from: string, to: string, found: Found,
   opts: { slot: string; projectCode: string; author?: string; now?: string }): Promise<number> {

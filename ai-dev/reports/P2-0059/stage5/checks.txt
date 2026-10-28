@@ -1,0 +1,48 @@
+  == reasons375: что не ушло и почему, журнал
+  причины: ["photo","net","net","bad"] записи: [["att-","needs_attention","local","Не отправлено: нет фото пункта «Армирование»"],["net-","not_synced","local",""],["net-","not_synced","local",""],["rej-","blocked","cloud","Ошибка прав доступа (RLS)"]] 403: 1
+PASS reasons375: «Нет связи · не отправлено: 3» — Нет связи · не отправлено: 3
+PASS reasons375: причины — «нет связи» ×2, «нет фото», «отклонено» — ["photo","net","net","bad"]
+PASS reasons375: «Нет фото пункта «Армирование»» и «Отправить без этого фото»
+PASS reasons375: «Отклонено сервером: 1 — нет прав»
+PASS reasons375: значок в шапке — то же число, что в карточке — Нет связи, не отправлено: 3
+PASS reasons375: «нужно внимание» за проход посчитано один раз — {"t":"2026-10-28T20:04:52.239Z","k":"end","pushed":2,"pulled":0,"ms":126,"attention":1,"mode":"manual","ok":true}
+PASS reasons375: в журнале — «ошибка · нет прав · отклонено 1»
+PASS reasons375: строка «Последняя успешная отправка»
+PASS reasons375: журнал показывает события — 5
+PASS reasons375: в журнале нет текста записей и ФИО
+PASS reasons375: «Скопировать отчёт» даёт текст отчёта — Журнал синхронизации RBI-Q
+PASS reasons375: в отчёте нет данных записей и ФИО
+PASS reasons375: без прокрутки вбок — 0
+PASS reasons375: другой пользователь на том же телефоне не видит чужой журнал — свой 5, у другого 0
+  == reasons1440-dark: что не ушло и почему, журнал
+  причины: ["photo","net","net","bad"] записи: [["att-","needs_attention","local","Не отправлено: нет фото пункта «Армирование»"],["net-","not_synced","local",""],["net-","not_synced","local",""],["rej-","blocked","cloud","Ошибка прав доступа (RLS)"]] 403: 2
+PASS reasons1440-dark: «Нет связи · не отправлено: 3» — Нет связи · не отправлено: 3
+PASS reasons1440-dark: причины — «нет связи» ×2, «нет фото», «отклонено» — ["photo","net","net","bad"]
+PASS reasons1440-dark: «Нет фото пункта «Армирование»» и «Отправить без этого фото»
+PASS reasons1440-dark: «Отклонено сервером: 1 — нет прав»
+PASS reasons1440-dark: значок в шапке — то же число, что в карточке — Нет связи, не отправлено: 3
+PASS reasons1440-dark: «нужно внимание» за проход посчитано один раз — {"t":"2026-10-28T20:05:30.101Z","k":"end","pushed":2,"pulled":0,"ms":125,"attention":1,"mode":"manual","ok":true}
+PASS reasons1440-dark: в журнале — «ошибка · нет прав · отклонено 1»
+PASS reasons1440-dark: строка «Последняя успешная отправка»
+PASS reasons1440-dark: журнал показывает события — 5
+PASS reasons1440-dark: в журнале нет текста записей и ФИО
+PASS reasons1440-dark: «Скопировать отчёт» даёт текст отчёта — Журнал синхронизации RBI-Q
+PASS reasons1440-dark: в отчёте нет данных записей и ФИО
+PASS reasons1440-dark: без прокрутки вбок — 0
+PASS reasons1440-dark: другой пользователь на том же телефоне не видит чужой журнал — свой 5, у другого 0
+  == w-drop: обрыв посреди фото и посреди пачки (сервер принял, ответ потерян)
+PASS w-drop: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-drop","title":"обрыв посреди фото и посреди пачки (сервер принял, ответ потерян)","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":1.1,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":2,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":3,"hungRequests":0}
+PASS w-drop: погода прошла до конца
+PASS w-drop: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-drop: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-drop: не хуже, чем до исправлений — минут 1.1 (было 1.1), отправок записи 2 (было 2)
+  == w-tabs: две вкладки, сеть есть
+PASS w-tabs: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-tabs","title":"две вкладки, сеть есть","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":2.1,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":1,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":3,"hungRequests":0}
+PASS w-tabs: погода прошла до конца
+PASS w-tabs: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-tabs: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-tabs: две вкладки — запись ушла один раз — 1
+PASS w-tabs: не хуже, чем до исправлений — минут 2.1 (было 2.1), отправок записи 1 (было 2)
+Итог: PASS 39, FAIL 0
