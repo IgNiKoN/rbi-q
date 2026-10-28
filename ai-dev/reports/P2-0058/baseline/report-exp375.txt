@@ -1,0 +1,36 @@
+  [0 с] страница загружается заново
+  [1 с] страница загружается заново
+  [4 с] страница загружается заново
+  [4 с] страница загружается заново
+  [10 с] страница загружается заново
+  [10 с] страница загружается заново
+  [13 с] страница загружается заново
+  [0 с] страница загружается заново
+  [0 с] страница загружается заново
+  [5 с] {"db":"PLATFORM2_DB_<компания>","mode":"ещё грузится","login":false,"records":["ONLINE-MARK"],"authKept":true}
+  [10 с] {"db":"PLATFORM2_DB_<компания>","mode":"ещё грузится","login":false,"records":["ONLINE-MARK"],"authKept":true}
+  [15 с] {"db":"PLATFORM2_DB_<компания>","mode":"ещё грузится","login":false,"records":["ONLINE-MARK"],"authKept":true}
+  [20 с] {"db":"PLATFORM2_DB_<компания>","mode":"ещё грузится","login":false,"records":["ONLINE-MARK"],"authKept":true}
+  [25 с] {"db":"PLATFORM2_DB_<компания>","mode":"ещё грузится","login":false,"records":["ONLINE-MARK"],"authKept":true}
+  [26 с] страница загружается заново
+  [30 с] {"db":"PLATFORM2_DB","mode":"ещё грузится","login":false,"records":[],"authKept":true}
+  [35 с] {"db":"PLATFORM2_DB","mode":"ещё грузится","login":false,"records":[],"authKept":true}
+  [40 с] {"db":"PLATFORM2_DB","mode":"ещё грузится","login":false,"records":[],"authKept":true}
+  [45 с] {"db":"PLATFORM2_DB","mode":"ещё грузится","login":false,"records":[],"authKept":true}
+  [50 с] {"db":"PLATFORM2_DB","mode":"ещё грузится","login":false,"records":[],"authKept":true}
+  [55 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [61 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [66 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [71 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [76 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [81 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [86 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [91 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [96 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [101 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [106 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [111 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [116 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [121 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [126 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
+  [131 с] {"db":"PLATFORM2_DB","mode":"none","login":true,"records":[],"authKept":true}
