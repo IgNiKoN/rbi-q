@@ -134,6 +134,7 @@ type CreateClient = (url: string, key: string, opts: Record<string, unknown>) =>
 
 /** Клиент раздела quality: токен — сессия платформы; .auth — Auth платформы (старый код вызывает auth.getUser). */
 /** P2-0059 (С2): запросы Качества — через fetch синхронизации с ограничением времени (js/services/sync/sync-net.policy.js), если он загружен. */
+export const ACCESS_TOKEN_TIMEOUT_MS = 15000;
 export const syncFetch: typeof fetch = (input, init) => {
   const f = (globalThis as { RbiSyncNet?: { fetch?: typeof fetch } }).RbiSyncNet?.fetch;
   return f ? f(input, init) : fetch(input, init);
@@ -142,7 +143,12 @@ export const syncFetch: typeof fetch = (input, init) => {
 export function createQualityClient(createClient: CreateClient, cfg: { url: string; anonKey: string }, companyId: string,
   platformClient: SupabaseClient): SupabaseClient {
   const qc = createClient(cfg.url, cfg.anonKey, {
-    accessToken: async () => (await platformClient.auth.getSession()).data.session?.access_token ?? null,
+    // P2-0059 доработка (З2): пропуск — не дольше 15 с (обновление входа на слабой сети), иначе запрос — «нет ответа», а не «без входа»
+    accessToken: async () => {
+      let t: ReturnType<typeof setTimeout> | undefined;
+      const late = new Promise<never>((_r, rej) => { t = setTimeout(() => rej(Object.assign(new Error('Нет ответа сервера (вход) за 15 с'), { code: 'RBI_REQUEST_TIMEOUT' })), ACCESS_TOKEN_TIMEOUT_MS); });
+      try { return (await Promise.race([platformClient.auth.getSession(), late])).data.session?.access_token ?? null; } finally { clearTimeout(t); }
+    },
     db: { schema: 'quality' },
     global: { headers: { 'x-company-id': companyId }, fetch: syncFetch }
   });

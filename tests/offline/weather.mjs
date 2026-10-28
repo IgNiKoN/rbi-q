@@ -5,8 +5,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { start, stop, net, rows, files, sends, flow, resetNet, releaseHeld } from './servers.mjs';
-import { freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
+import { start, stop, net, rows, files, sends, flow, resetNet, releaseHeld, marks } from './servers.mjs';
+import { count, freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
 
 const N = 5;               // осмотров с фото в каждой погоде
 const PHOTO_BYTES = 60000; // размер фото (≈ сжатое фото пункта)
@@ -216,6 +216,71 @@ async function reasons(width, scheme) {
   await ctx.close(); await stop();
 }
 
+/** P2-0059 доработка (З1): правка осмотра во время прохода уходит в том же проходе. */
+async function editMid() {
+  const tag = 'edit-mid';
+  note(`== ${tag}: правка осмотра, пока идёт загрузка, уходит в том же проходе`);
+  freshProfile(out(), tag);
+  resetNet();
+  await start();
+  const { ctx, page } = await launch(out(), tag, { width: 375, height: 812 });
+  await signIn(page);
+  await open(page, 6000);
+  for (let k = 0; k < 30 && await page.evaluate(() => !!window.isSyncing || !!window._rbiSyncEntering); k++) await page.waitForTimeout(1000);
+  await watchPasses(page);
+  const id = await page.evaluate(() => window.RBI.services.inspections.save({ id: 'edit-' + Date.now(), date: new Date().toISOString(), object: 'ЖК Тестовый',
+    location: 'FIRST-MARK', template: 'Кладка', status: 'done', engineer: 'Иванов Иван' }).then((r) => r.id));
+  net.latencyMs = 1200;   // загрузка чужого идёт долго — есть время поправить
+  await page.evaluate(() => { window.__p2w.passes = 0; window.triggerSync('manual'); });
+  let edited = false;
+  for (let k = 0; k < 120 && !edited; k++) {
+    await page.waitForTimeout(300);
+    const st = await page.evaluate(async (id) => { const r = (await window.RBI.services.inspections.getActive()).find((x) => x.id === id); return { syncing: !!window.isSyncing, status: r && (r.syncStatus || r.sync_status) }; }, id);
+    if (st.syncing && st.status === 'synced') {
+      await page.evaluate(async (id) => { const r = (await window.RBI.services.inspections.getActive()).find((x) => x.id === id); await window.RBI.services.inspections.save({ ...r, location: 'EDIT-MARK' }); }, id);
+      edited = true;
+    }
+  }
+  ok(edited, `${tag}: осмотр ушёл в начале прохода, правка сделана, пока проход шёл`);
+  for (let k = 0; k < 120 && await page.evaluate(() => !!window.isSyncing); k++) await page.waitForTimeout(500);
+  const row = rows.get('rbi_inspections')?.get(id);
+  const passes = await page.evaluate(() => window.__p2w.passes);
+  ok(!!row && row.location === 'EDIT-MARK' && passes === 1, `${tag}: правка на сервере после того же прохода`, `на сервере «${row && row.location}», проходов ${passes}`);
+  await ctx.close(); await stop();
+}
+
+/** P2-0059 доработка (З2): три запуска подряд в одной вкладке — один проход за раз, без «идёт в другой вкладке»; без Web Locks — тоже. */
+async function doubleStart(locks) {
+  const tag = 'double-start' + (locks ? '' : '-nolocks');
+  note(`== ${tag}: три запуска подряд в одной вкладке${locks ? '' : ' (браузер без Web Locks)'}`);
+  freshProfile(out(), tag);
+  resetNet();
+  await start();
+  const { ctx, page } = await launch(out(), tag, { width: 375, height: 812 });
+  await signIn(page);
+  await open(page, 6000);
+  for (let k = 0; k < 30 && await page.evaluate(() => !!window.isSyncing || !!window._rbiSyncEntering); k++) await page.waitForTimeout(1000);
+  if (!locks) await page.evaluate(() => Object.defineProperty(Navigator.prototype, 'locks', { get: () => undefined, configurable: true }));
+  await watchPasses(page);
+  await page.evaluate(() => window.RBI.services.inspections.save({ id: 'dbl-' + Date.now(), date: new Date().toISOString(), object: 'ЖК Тестовый', location: 'DOUBLE-MARK',
+    template: 'Кладка', status: 'done', engineer: 'Иванов Иван' }));
+  net.latencyMs = 300;
+  await page.evaluate(() => { const w = window.__p2w; w.passes = 0; w.max = 0; window.triggerSync('silent'); window.triggerSync('manual'); window.triggerSync('silent'); });
+  // ждём тишины 3 с подряд (между проходом и отложенным повтором — пауза 0,3 с)
+  for (let k = 0, quiet = 0; k < 240 && quiet < 6; k++) {
+    await page.waitForTimeout(500);
+    quiet = (await page.evaluate(() => !!window.isSyncing || !!window._rbiSyncEntering || !!window._rbiPendingSyncRetryMode)) ? 0 : quiet + 1;
+  }
+  const r = await page.evaluate(() => ({ max: window.__p2w.max, passes: window.__p2w.passes, busy: window.RbiSyncJournal.list().filter((e) => e.why === 'busy').length,
+    lease: localStorage.getItem('rbi_sync_lease'), pass: !!(window.RbiSyncNet && window.RbiSyncNet.pass), syncing: !!window.isSyncing }));
+  note('итог: ' + JSON.stringify(r));
+  ok(r.max === 1 && r.passes >= 1, `${tag}: проходы — по одному (одновременно ${r.max}, всего ${r.passes})`);
+  ok(r.busy === 0, `${tag}: нет ложного «идёт в другой вкладке»`);
+  ok(!r.syncing && !r.pass && !r.lease, `${tag}: после прохода — «идёт синхронизация», отмена прохода и аренда сняты`, JSON.stringify({ syncing: r.syncing, pass: r.pass, lease: r.lease }));
+  ok(count(marks, 'DOUBLE-MARK') >= 1 && (sends.size === 0 || Math.max(...sends.values()) === 1), `${tag}: запись ушла один раз`, String(Math.max(0, ...sends.values())));
+  await ctx.close(); await stop();
+}
+
 let OUT = null;
 const out = () => OUT;
 const set = (o) => (ctx) => Object.assign(net, o);
@@ -245,6 +310,9 @@ export function weatherScenarios(outDir) {
     'w-5xx': () => weather('w-5xx', { title: 'ответы 503 три минуты → сервер здоров',
       apply: async (m, ctx) => { await offline(false)(ctx); net.failLeft = m < 3 ? 100000 : 0; } }),
     // две вкладки одного устройства
+    'edit-mid': editMid,
+    'double-start': () => doubleStart(true),
+    'double-start-nolocks': () => doubleStart(false),
     'reasons375': () => reasons(375, 'light'),
     'reasons1440-dark': () => reasons(1440, 'dark'),
     'w-tabs': () => weather('w-tabs', { title: 'две вкладки, сеть есть', tabs: 2, apply: (m, ctx) => offline(false)(ctx),

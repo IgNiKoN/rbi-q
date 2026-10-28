@@ -378,3 +378,19 @@ test('P2-0059: syncFetch — через RbiSyncNet.fetch, без него — о
   assert.deepEqual(calls, ['https://x/rest/v1/a']);
   delete g.RbiSyncNet;
 });
+
+// P2-0059 доработка (З2): пропуск клиента Качества — не дольше 15 с, иначе ошибка «нет ответа» (а не запрос без входа)
+import { createQualityClient, ACCESS_TOKEN_TIMEOUT_MS } from '../quality-bridge.ts';
+test('P2-0059: accessToken при зависшем обновлении входа — «нет ответа» через 15 с', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let opts: { accessToken?: () => Promise<string | null> } = {};
+  const fakeCreate = ((_u: string, _k: string, o: typeof opts) => { opts = o; return { storage: {}, from: () => ({}) }; }) as never;
+  const hang = { auth: { getSession: () => new Promise(() => {}) } } as never;
+  createQualityClient(fakeCreate, { url: 'https://x', anonKey: 'k' }, 'c1', hang);
+  const p = opts.accessToken!();
+  t.mock.timers.tick(ACCESS_TOKEN_TIMEOUT_MS);
+  await assert.rejects(p, (e: { code?: string }) => e.code === 'RBI_REQUEST_TIMEOUT');
+  const ok = { auth: { getSession: async () => ({ data: { session: { access_token: 'tok' } } }) } } as never;
+  createQualityClient(fakeCreate, { url: 'https://x', anonKey: 'k' }, 'c1', ok);
+  assert.equal(await opts.accessToken!(), 'tok');
+});

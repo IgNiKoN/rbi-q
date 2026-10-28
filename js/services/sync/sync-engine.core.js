@@ -45,6 +45,13 @@ window.triggerSync = async function (mode = 'silent') {
     const NP = window.RbiSyncNetPolicy;
     const net = window.RbiSyncNet;
     // прежние ветки (демо, облако выключено, «нет интернета», «уже идёт» — запрос не теряется) — в самом проходе
+    // P2-0059 доработка (З2): запуск, пока эта вкладка уже входит в проход (проверка связи, замок), — как «уже идёт»:
+    // запрос не теряется (отложенный повтор после прохода), второй вход в замок не начинается
+    if (window._rbiSyncEntering && !window.isSyncing) {
+        window._rbiPendingSyncRetryMode = (mode === 'manual' || window._rbiPendingSyncRetryMode === 'manual') ? 'manual' : 'silent';
+        if (mode === 'manual') safeToast("🔄 Синхронизация уже идет...");
+        return;
+    }
     if (!NP || !net || (typeof isDemoMode !== 'undefined' && isDemoMode) || !window.isSyncEnabled() || !window.supabaseClient
         || !navigator.onLine || window.isSyncing) {
         if (NP && net && !navigator.onLine && window.isSyncEnabled() && window.supabaseClient) {
@@ -52,9 +59,21 @@ window.triggerSync = async function (mode = 'silent') {
         }
         return rbiSyncPass(mode);
     }
+    window._rbiSyncEntering = true;
+    try {
+        return await rbiProbeAndRun(mode);
+    } finally {
+        window._rbiSyncEntering = false;
+    }
+};
+
+async function rbiProbeAndRun(mode) {
+    const NP = window.RbiSyncNetPolicy;
+    const net = window.RbiSyncNet;
     const probe = await net.probe();
     const go = NP.shouldStartSync({ onLine: navigator.onLine, probe });
     if (!go.start) {
+        window._rbiPendingSyncRetryMode = null; // связи нет — отложенный повтор не нужен, таймер проверит снова
         console.log('[Sync] Связи с сервером нет — проход не начат:', go.reason);
         if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'skip', net: probe, why: go.reason, mode });
         if (mode === 'manual') {
@@ -65,7 +84,7 @@ window.triggerSync = async function (mode = 'silent') {
         return;
     }
     return rbiWithSyncLock(mode, () => rbiSyncPass(mode));
-};
+}
 
 // P2-0059 (С3): замок прохода — Web Locks (все вкладки); без них — аренда в localStorage. Замок держится, пока проход
 // действительно не закончился; остановленный проход, который не закончился за 60 с, отпускает замок.
@@ -80,20 +99,23 @@ async function rbiWithSyncLock(mode, run) {
         }
     };
     const guarded = async () => {
-        net.pass = new AbortController();
+        const ctl = new AbortController();
+        net.pass = ctl;
         let abandon = null;
         const stuck = new Promise((r) => { abandon = r; });
-        net.pass.signal.addEventListener('abort', () => setTimeout(() => abandon('abandoned'), 60000), { once: true });
+        ctl.signal.addEventListener('abort', () => setTimeout(() => abandon('abandoned'), 60000), { once: true });
         try {
             const r = await Promise.race([run(), stuck]);
             if (r === 'abandoned') {
+                // брошенный проход больше не «текущий»: его finally не тронет следующий (rbiSyncPass, __rbiSyncPassId)
+                window.__rbiSyncPassId = null;
                 window.isSyncing = false;
                 if (typeof window.renderSyncUI === 'function') window.renderSyncUI();
                 console.warn('[Sync] Остановленный проход не закончился за 60 с — замок снят.');
             }
             return r;
         } finally {
-            net.pass = null;
+            if (net.pass === ctl) net.pass = null;
         }
     };
     if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
@@ -192,8 +214,13 @@ async function rbiSyncPass(mode = 'silent') {
     const rbiScheduleSyncRetryOnce = () => { if (!retryScheduled) { retryScheduled = true; rbiScheduleSyncRetry(serverErrSeen ? 'server' : 'net'); } };
 
     window.isSyncing = true;
-    const syncStartedAt = Date.now();
-    if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'start', net: 'online', mode }); // P2-0025: черновик, изменённый после начала, снова «к отправке»
+    const syncStartedAt = Date.now(); // P2-0025: черновик, изменённый после начала, снова «к отправке»
+    // P2-0059 доработка (З2): свой признак прохода и своя отмена — проход, брошенный после «стопа», в finally
+    // не снимает «идёт синхронизация» и «стоп» у следующего
+    const passId = {};
+    window.__rbiSyncPassId = passId;
+    const myPass = window.RbiSyncNet ? window.RbiSyncNet.pass : null;
+    if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'start', net: 'online', mode });
     // Доработка 2: подошедшие повторы «нужно внимание» уходят в этом проходе; неудача поставит новое время.
     try {
         const attAt = parseInt(localStorage.getItem('rbi_sync_attention_retry_at') || '0', 10) || 0;
@@ -223,17 +250,18 @@ async function rbiSyncPass(mode = 'silent') {
     // через AbortController; «идёт синхронизация» и замок снимаются, когда проход действительно закончился (раньше —
     // сразу по 90 с, а проход шёл дальше: следующий таймер начинал второй).
     if (window.syncTimeout) clearInterval(window.syncTimeout);
-    window.syncTimeout = setInterval(() => {
+    const myWatchdog = setInterval(() => {
         const NPw = window.RbiSyncNetPolicy;
         const netw = window.RbiSyncNet;
-        if (!NPw || !netw || !netw.pass || netw.pass.signal.aborted) return;
+        if (!NPw || !netw || !myPass || myPass.signal.aborted) return;
         if (!NPw.passIdleTooLong(netw.activity, Date.now(), syncStartedAt)) return;
-        netw.pass.abort();
+        myPass.abort();
         if (window.RbiSyncJournal) window.RbiSyncJournal.add({ k: 'stop', ms: Date.now() - syncStartedAt });
         if (_syncProg()) _syncProg().fail();
         safeToast("⚠️ Синхронизация прервана (слабый интернет). Повторим, как только появится связь.");
         console.log("[Sync] 90 с без ответа — проход остановлен.");
     }, 5000);
+    window.syncTimeout = myWatchdog;
 
     const pCode = window.syncConfig.projectCode;
     const iName = window.syncConfig.engineerName;
@@ -945,7 +973,9 @@ async function rbiSyncPass(mode = 'silent') {
     // P2-0059 (С4, С5): свои осмотры уходят первыми в проходе — до скачивания чужого — и порциями по PUSH_CHUNK:
     // после каждой порции — отметка «отправлено»; обрыв — следующий проход продолжает с неотправленных.
     // Второй вызов на прежнем месте отправляет то, что записали за время загрузки (отправленное не повторяется).
-    const ownSeenThisPass = new Set(); // второй вызов — только записи, появившиеся за время прохода
+    // P2-0059 доработка (З1): id → updatedAt после первого вызова; второй вызов берёт новые записи и изменённые за время прохода
+    const ownSeenThisPass = new Map();
+    const recStamp = (r) => String((r && (r.updatedAt || r.updated_at)) || '');
     async function rbiPushOwnInspections() {
         if (!canPush) return;
         let currentHistory = [];
@@ -992,13 +1022,20 @@ async function rbiSyncPass(mode = 'silent') {
             return !t || Number.isNaN(t) || t >= lastPushTime;
         });
 
-        currentHistory = currentHistory.filter(i => !ownSeenThisPass.has(String(i.id)));
-        currentHistory.forEach(i => ownSeenThisPass.add(String(i.id)));
+        currentHistory = currentHistory.filter(i => {
+            const seen = ownSeenThisPass.get(String(i.id));
+            return seen === undefined || seen !== recStamp(i);
+        });
+        currentHistory.forEach(i => ownSeenThisPass.set(String(i.id), recStamp(i)));
         const NPc = window.RbiSyncNetPolicy;
         const histChunks = NPc ? NPc.chunks(currentHistory, NPc.PUSH_CHUNK) : (currentHistory.length ? [currentHistory] : []);
         for (const chunkHist of histChunks) {
             // остановленный проход (90 с без ответа) — следующие порции не начинаем
-            if (window.RbiSyncNet && window.RbiSyncNet.pass && window.RbiSyncNet.pass.signal.aborted) break;
+            if (myPass && myPass.signal.aborted) {
+                // ТД №317: остановка — сбой связи: отметка «есть что отправить» и пауза-проверка, а не «всё ок»
+                pushErrors++; rbiNoteErr(window.RbiSyncNetPolicy ? window.RbiSyncNetPolicy.makeTimeoutError(window.RbiSyncNetPolicy.PASS_IDLE_LIMIT_MS) : new Error('aborted'));
+                break;
+            }
             let chunkFailed = false;
             let chunkError = null;
             const inspectionsBatch = [];
@@ -1291,6 +1328,7 @@ async function rbiSyncPass(mode = 'silent') {
                     });
                 }
             }
+            chunkHist.forEach(c => ownSeenThisPass.set(String(c.id), recStamp(c))); // отметка после записи на устройство
             if (window.RbiSyncJournal && inspectionsBatch.length) {
                 window.RbiSyncJournal.add(chunkError
                     ? { k: 'error', err: chunkError, rejected: chunkFailed ? 0 : inspectionsBatch.length, ids: inspectionsBatch.map(x => ({ type: 'inspection', id: x.id })) }
@@ -4790,18 +4828,21 @@ async function rbiSyncPass(mode = 'silent') {
             safeToast('❌ Ошибка: ' + errMsg);
         } // <-- ВОТ ЭТОЙ СКОБКИ НЕ ХВАТАЛО
     } finally {
-        if (window.syncTimeout) clearInterval(window.syncTimeout);
-        window.isSyncing = false;
+        clearInterval(myWatchdog);
+        if (window.syncTimeout === myWatchdog) window.syncTimeout = null;
+        const stillCurrent = window.__rbiSyncPassId === passId;
+        if (stillCurrent) { window.__rbiSyncPassId = null; window.isSyncing = false; }
         window.syncChannel.postMessage('sync_done');
         window.renderSyncUI();
 
         // Safety: если done/fail не вызвали (ранний выход) — спрятать тост.
-        if (_syncProg() && _syncProg().isActive && _syncProg().isActive()) {
+        if (stillCurrent && _syncProg() && _syncProg().isActive && _syncProg().isActive()) {
             _syncProg().hide();
         }
 
         // Снимаем defer после тика: sync:completed-хендлеры и late UI уже отработали.
-        if (typeof window.rbiEndSyncUiDefer === 'function') window.rbiEndSyncUiDefer(400);
+        if (!stillCurrent) { /* брошенный проход: отрисовкой и повтором управляет текущий */ }
+        else if (typeof window.rbiEndSyncUiDefer === 'function') window.rbiEndSyncUiDefer(400);
         else {
             setTimeout(function () { window._rbiDeferActiveViewFullRender = false; }, 400);
         }
@@ -4809,7 +4850,7 @@ async function rbiSyncPass(mode = 'silent') {
         // Если во время этого цикла sync был запрошен повторно (и отброшен из-за isSyncing),
         // не теряем его — запускаем отложенный повторный проход.
         // Но не во время полного автокэша: иначе второй sync уйдёт параллельно с докачкой.
-        if (window._rbiPendingSyncRetryMode) {
+        if (stillCurrent && window._rbiPendingSyncRetryMode) {
             const cacheBlocks = typeof window.rbiIsOfflineCacheBlockingSync === 'function'
                 && window.rbiIsOfflineCacheBlockingSync();
             if (cacheBlocks) {

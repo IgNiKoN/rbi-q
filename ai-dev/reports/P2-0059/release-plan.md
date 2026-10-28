@@ -7,7 +7,7 @@
 | Часть | Что | Как |
 |---|---|---|
 | Сервер | **ничего** — миграций нет; проверка связи — стандартный `GET /auth/v1/health` (Supabase Auth, ключ `anon`) | — |
-| Приложение | ветка `task/P2-0059-weak-network-sync` → `main` → `git pull --ff-only` в `/var/www/rbi-quality`; SW `18.104.0`; новые файлы `js/services/sync/sync-net.policy.js`, `sync-journal.policy.js` (в кэше SW), пересобранный `js/dist/platform/platform.js` | владелец на сервере |
+| Приложение | ветка `task/P2-0059-weak-network-sync` → `main` → `git pull --ff-only` в `/var/www/rbi-quality`; SW `18.104.1`; новые файлы `js/services/sync/sync-net.policy.js`, `sync-journal.policy.js` (в кэше SW), пересобранный `js/dist/platform/platform.js` | владелец на сервере |
 | Служебное | `tests/offline/` (стенд «погод»), `ai-dev/reports/P2-0059/` | nginx `rbi-router` их не отдаёт (`tests`, `ai-dev` уже в правиле) |
 
 ## 2. Совместимость
@@ -21,7 +21,7 @@
 1. Свежий `main` в ветку (если `main` ушёл вперёд); `npm run test:unit`, `npx tsc --noEmit`, `npm run build:platform`; `npm run test:offline` (≈ 25 мин; минимум — `w-hang w-tabs w-flap reasons375 screen375 cold375`).
 2. Слияние в `main`, push в `IgNiKoN/rbi-q` (по разрешению).
 3. Владелец: `cd /var/www/rbi-quality && git rev-parse HEAD` (запомнить) → `git pull --ff-only`.
-4. Обновить страницу дважды (SW 18.104.0). Проверка — ниже.
+4. Обновить страницу дважды (SW 18.104.1). Проверка — ниже.
 
 **Откат:** владелец — `git reset --hard <запомненный HEAD>` в `/var/www/rbi-quality`, обновить страницу дважды. Данные на устройствах не теряются.
 

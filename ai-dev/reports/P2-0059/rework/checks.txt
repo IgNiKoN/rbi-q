@@ -1,0 +1,75 @@
+  == w-hang: сеть есть, ничего не грузится 5 мин → сервер ответил
+PASS w-hang: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-hang","title":"сеть есть, ничего не грузится 5 мин → сервер ответил","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":6.6,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":1,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":2,"hungRequests":7}
+PASS w-hang: погода прошла до конца
+PASS w-hang: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-hang: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-hang: «лже-сеть» не вешает «Синхронизация…» дольше ограничения — 2 с
+PASS w-hang: не хуже, чем до исправлений — минут 6.6 (было 6.6), отправок записи 1 (было 1)
+  == w-tabs: две вкладки, сеть есть
+PASS w-tabs: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-tabs","title":"две вкладки, сеть есть","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":2.1,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":1,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":3,"hungRequests":0}
+PASS w-tabs: погода прошла до конца
+PASS w-tabs: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-tabs: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-tabs: две вкладки — запись ушла один раз — 1
+PASS w-tabs: не хуже, чем до исправлений — минут 2.1 (было 2.1), отправок записи 1 (было 2)
+  == w-slow: медленная: задержка 2 с, 100 кбит/с
+PASS w-slow: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-slow","title":"медленная: задержка 2 с, 100 кбит/с","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":4.9,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":1,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":159,"hungRequests":0}
+PASS w-slow: погода прошла до конца
+PASS w-slow: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-slow: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-slow: не хуже, чем до исправлений — минут 4.9 (было 17.3), отправок записи 1 (было 2)
+  == w-drop: обрыв посреди фото и посреди пачки (сервер принял, ответ потерян)
+PASS w-drop: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-drop","title":"обрыв посреди фото и посреди пачки (сервер принял, ответ потерян)","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":1.1,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":2,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":0,"hungRequests":0}
+PASS w-drop: погода прошла до конца
+PASS w-drop: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-drop: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-drop: не хуже, чем до исправлений — минут 1.1 (было 1.1), отправок записи 2 (было 2)
+  == reasons375: что не ушло и почему, журнал
+  причины: ["photo","net","net","bad"] записи: [["att-","needs_attention","local","Не отправлено: нет фото пункта «Армирование»"],["net-","not_synced","local",""],["net-","not_synced","local",""],["rej-","blocked","cloud","Ошибка прав доступа (RLS)"]] 403: 1
+PASS reasons375: «Нет связи · не отправлено: 3» — Нет связи · не отправлено: 3
+PASS reasons375: причины — «нет связи» ×2, «нет фото», «отклонено» — ["photo","net","net","bad"]
+PASS reasons375: «Нет фото пункта «Армирование»» и «Отправить без этого фото»
+PASS reasons375: «Отклонено сервером: 1 — нет прав»
+PASS reasons375: значок в шапке — то же число, что в карточке — Нет связи, не отправлено: 3
+PASS reasons375: «нужно внимание» за проход посчитано один раз — {"t":"2026-10-28T20:50:21.088Z","k":"end","pushed":2,"pulled":0,"ms":109,"attention":1,"mode":"manual","ok":true}
+PASS reasons375: в журнале — «ошибка · нет прав · отклонено 1»
+PASS reasons375: строка «Последняя успешная отправка»
+PASS reasons375: журнал показывает события — 5
+PASS reasons375: в журнале нет текста записей и ФИО
+PASS reasons375: «Скопировать отчёт» даёт текст отчёта — Журнал синхронизации RBI-Q
+PASS reasons375: в отчёте нет данных записей и ФИО
+PASS reasons375: без прокрутки вбок — 0
+PASS reasons375: другой пользователь на том же телефоне не видит чужой журнал — свой 5, у другого 0
+  == screen375: без сети — значок и экраны по макету (light)
+PASS screen375: с сетью и без неотправленного значка нет (облачко как раньше)
+PASS screen375: плашка при запуске без связи
+PASS screen375: плашка скрылась сама
+PASS screen375: значок «Нет связи, не отправлено: 0» — Нет связи, не отправлено: 0
+PASS screen375: без прокрутки вбок — 0
+PASS screen375: записал осмотр — «не отправлено: 1» — Нет связи, не отправлено: 1
+PASS screen375: «Компания» — «Нужен интернет»
+PASS screen375: План/Факт — «Нужен интернет»
+PASS screen375: нажатие на значок — «Данные на устройстве», строка «не отправлено: 1»
+  после возврата сети значок: null; дошло: ["POST /rest/v1/rbi_inspections SCREEN-MARK"]
+PASS screen375: сеть вернулась — значок исчез (не отправлено: 0)
+PASS screen375: осмотр дошёл до сервера ровно 1 раз — 1
+  == edit-mid: правка осмотра, пока идёт загрузка, уходит в том же проходе
+PASS edit-mid: осмотр ушёл в начале прохода, правка сделана, пока проход шёл
+PASS edit-mid: правка на сервере после того же прохода — на сервере «EDIT-MARK», проходов 1
+  == double-start: три запуска подряд в одной вкладке
+  итог: {"max":1,"passes":2,"busy":0,"lease":null,"pass":false,"syncing":false}
+PASS double-start: проходы — по одному (одновременно 1, всего 2)
+PASS double-start: нет ложного «идёт в другой вкладке»
+PASS double-start: после прохода — «идёт синхронизация», отмена прохода и аренда сняты — {"syncing":false,"pass":false,"lease":null}
+PASS double-start: запись ушла один раз — 1
+  == double-start-nolocks: три запуска подряд в одной вкладке (браузер без Web Locks)
+  итог: {"max":1,"passes":2,"busy":0,"lease":null,"pass":false,"syncing":false}
+PASS double-start-nolocks: проходы — по одному (одновременно 1, всего 2)
+PASS double-start-nolocks: нет ложного «идёт в другой вкладке»
+PASS double-start-nolocks: после прохода — «идёт синхронизация», отмена прохода и аренда сняты — {"syncing":false,"pass":false,"lease":null}
+PASS double-start-nolocks: запись ушла один раз — 1
+Итог: PASS 57, FAIL 0
