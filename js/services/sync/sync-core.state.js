@@ -1,6 +1,7 @@
 /* Файл: js/services/sync/sync-core.state.js — перенесено из js/sync.js; P2-0023: постраничная загрузка пунктов/фото */
 import { pullPagedByIds } from './sync-pull.policy.js';
 import './sync-retry.policy.js';
+import './sync-net.policy.js'; // window.RbiSyncNetPolicy (P2-0059)
 import './sync-merge.policy.js'; // window.RbiSyncMergePolicy (P2-0023 этап 5) // window.RbiSyncRetryPolicy для sync-engine/sync-auth (P2-0023 этап 4)
 /* Файл: js/sync.js (Исправленная версия сборки объектов) */
 console.log("✅ SYNC.JS загружен браузером!");
@@ -416,6 +417,40 @@ async function rbiUpsertBatches(tableName, rows, batchSize = 500, options = { on
     return pushed;
 }
 
+// P2-0059: сеть синхронизации — fetch клиента Качества с ограничением времени (С2), проверка связи по делу (С1),
+// текущий проход (его AbortController — «стоп» прохода, С3). Правила — sync-net.policy.js.
+const rbiSyncNet = (function () {
+    const NP = window.RbiSyncNetPolicy;
+    const activity = { inflight: 0, lastSettledAt: 0 };
+    const api = { activity, pass: null, lastProbe: null, lastProbeAt: 0 };
+    api.fetch = NP.makeTimedFetch((input, init) => window.fetch(input, init), {
+        activity,
+        passSignal: () => (api.pass ? api.pass.signal : null)
+    });
+    /** Короткий запрос к своему серверу: 'online' | 'offline' | 'server'. */
+    api.probe = async function () {
+        const cfg = window.APP_CONFIG || {};
+        const url = String(cfg.P2_SUPABASE_URL || '').replace(/\/$/, '');
+        if (!url) return 'online'; // проверять нечего — как раньше
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), NP.PROBE_TIMEOUT_MS);
+        let r;
+        try {
+            const res = await window.fetch(url + '/auth/v1/health', { headers: cfg.P2_SUPABASE_ANON_KEY ? { apikey: cfg.P2_SUPABASE_ANON_KEY } : {}, signal: ctl.signal, cache: 'no-store' });
+            r = { status: res.status };
+        } catch (e) {
+            r = { error: e, timedOut: ctl.signal.aborted };
+        } finally {
+            clearTimeout(t);
+        }
+        api.lastProbe = NP.probeVerdict(r);
+        api.lastProbeAt = Date.now();
+        return api.lastProbe;
+    };
+    return api;
+}());
+
+window.RbiSyncNet = rbiSyncNet;
 window.simpleHash = simpleHash;
 window.safeToast = safeToast;
 window.rbiEnqueueCloudFilesForCache = rbiEnqueueCloudFilesForCache;

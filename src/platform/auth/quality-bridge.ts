@@ -133,12 +133,18 @@ export function pinAccess(settings: Record<string, unknown>, values: Record<stri
 type CreateClient = (url: string, key: string, opts: Record<string, unknown>) => SupabaseClient;
 
 /** Клиент раздела quality: токен — сессия платформы; .auth — Auth платформы (старый код вызывает auth.getUser). */
+/** P2-0059 (С2): запросы Качества — через fetch синхронизации с ограничением времени (js/services/sync/sync-net.policy.js), если он загружен. */
+export const syncFetch: typeof fetch = (input, init) => {
+  const f = (globalThis as { RbiSyncNet?: { fetch?: typeof fetch } }).RbiSyncNet?.fetch;
+  return f ? f(input, init) : fetch(input, init);
+};
+
 export function createQualityClient(createClient: CreateClient, cfg: { url: string; anonKey: string }, companyId: string,
   platformClient: SupabaseClient): SupabaseClient {
   const qc = createClient(cfg.url, cfg.anonKey, {
     accessToken: async () => (await platformClient.auth.getSession()).data.session?.access_token ?? null,
     db: { schema: 'quality' },
-    global: { headers: { 'x-company-id': companyId } }
+    global: { headers: { 'x-company-id': companyId }, fetch: syncFetch }
   });
   const storage = companyStorage(qc.storage as unknown as StorageLike, companyId);
   return new Proxy(qc, {

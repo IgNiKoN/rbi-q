@@ -37,7 +37,76 @@ function rbiNoteAttentionRetry(at) {
     } catch (_e) { /* ignore */ }
 }
 
+// P2-0059: перед проходом — проверка связи по делу (С1); один проход за раз на всё устройство, в том числе в двух вкладках (С3).
 window.triggerSync = async function (mode = 'silent') {
+    const NP = window.RbiSyncNetPolicy;
+    const net = window.RbiSyncNet;
+    // прежние ветки (демо, облако выключено, «нет интернета», «уже идёт» — запрос не теряется) — в самом проходе
+    if (!NP || !net || (typeof isDemoMode !== 'undefined' && isDemoMode) || !window.isSyncEnabled() || !window.supabaseClient
+        || !navigator.onLine || window.isSyncing) {
+        return rbiSyncPass(mode);
+    }
+    const probe = await net.probe();
+    const go = NP.shouldStartSync({ onLine: navigator.onLine, probe });
+    if (!go.start) {
+        console.log('[Sync] Связи с сервером нет — проход не начат:', go.reason);
+        if (mode === 'manual') {
+            safeToast(go.reason === 'server_error'
+                ? 'Сервер временно не отвечает. Данные сохранены на устройстве — отправим позже.'
+                : 'Нет связи с сервером. Данные сохранены на устройстве — отправим, как только связь появится.');
+        }
+        return;
+    }
+    return rbiWithSyncLock(mode, () => rbiSyncPass(mode));
+};
+
+// P2-0059 (С3): замок прохода — Web Locks (все вкладки); без них — аренда в localStorage. Замок держится, пока проход
+// действительно не закончился; остановленный проход, который не закончился за 60 с, отпускает замок.
+async function rbiWithSyncLock(mode, run) {
+    const NP = window.RbiSyncNetPolicy;
+    const net = window.RbiSyncNet;
+    const busy = () => {
+        if (mode === 'manual') safeToast('🔄 Синхронизация уже идёт (в другой вкладке)…');
+        if (!window._rbiSyncBusyRetry) {
+            window._rbiSyncBusyRetry = setTimeout(() => { window._rbiSyncBusyRetry = null; window.triggerSync('silent'); }, 30000);
+        }
+    };
+    const guarded = async () => {
+        net.pass = new AbortController();
+        let abandon = null;
+        const stuck = new Promise((r) => { abandon = r; });
+        net.pass.signal.addEventListener('abort', () => setTimeout(() => abandon('abandoned'), 60000), { once: true });
+        try {
+            const r = await Promise.race([run(), stuck]);
+            if (r === 'abandoned') {
+                window.isSyncing = false;
+                if (typeof window.renderSyncUI === 'function') window.renderSyncUI();
+                console.warn('[Sync] Остановленный проход не закончился за 60 с — замок снят.');
+            }
+            return r;
+        } finally {
+            net.pass = null;
+        }
+    };
+    if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
+        return navigator.locks.request('rbi-sync-pass', { ifAvailable: true }, (lock) => (lock ? guarded() : busy()));
+    }
+    const owner = window.__rbiSyncTabId || (window.__rbiSyncTabId = Math.random().toString(36).slice(2));
+    const read = () => { try { return JSON.parse(localStorage.getItem('rbi_sync_lease') || 'null'); } catch (_e) { return null; } };
+    const write = () => { try { localStorage.setItem('rbi_sync_lease', JSON.stringify({ owner, until: Date.now() + NP.LEASE_MS })); } catch (_e) { /* ignore */ } };
+    if (!NP.leaseFree(read(), Date.now(), owner)) return busy();
+    write();
+    const hb = setInterval(write, NP.LEASE_MS / 3);
+    try {
+        return await guarded();
+    } finally {
+        clearInterval(hb);
+        const l = read();
+        if (l && l.owner === owner) { try { localStorage.removeItem('rbi_sync_lease'); } catch (_e) { /* ignore */ } }
+    }
+}
+
+async function rbiSyncPass(mode = 'silent') {
     // ЖЕСТКАЯ ЗАЩИТА: Запрещаем синхронизацию в демо-режиме
     if (typeof isDemoMode !== 'undefined' && isDemoMode) {
         if (mode === 'manual') safeToast("⚠️ В демо-режиме синхронизация отключена!");
@@ -138,23 +207,36 @@ window.triggerSync = async function (mode = 'silent') {
 
     window.renderSyncUI();
 
-    if (window.syncTimeout) clearTimeout(window.syncTimeout);
-    window.syncTimeout = setTimeout(() => {
-        window.isSyncing = false;
-        if (typeof window.rbiEndSyncUiDefer === 'function') window.rbiEndSyncUiDefer(0);
-        else window._rbiDeferActiveViewFullRender = false;
-        window.renderSyncUI();
+    // P2-0059 (С3): «стоп» — только если 90 с ничего не происходит (ни запроса в пути, ни ответа). Проход прерывается
+    // через AbortController; «идёт синхронизация» и замок снимаются, когда проход действительно закончился (раньше —
+    // сразу по 90 с, а проход шёл дальше: следующий таймер начинал второй).
+    if (window.syncTimeout) clearInterval(window.syncTimeout);
+    window.syncTimeout = setInterval(() => {
+        const NPw = window.RbiSyncNetPolicy;
+        const netw = window.RbiSyncNet;
+        if (!NPw || !netw || !netw.pass || netw.pass.signal.aborted) return;
+        if (!NPw.passIdleTooLong(netw.activity, Date.now(), syncStartedAt)) return;
+        netw.pass.abort();
         if (_syncProg()) _syncProg().fail();
-        safeToast("⚠️ Синхронизация прервана (слабый интернет). Попробуйте позже.");
-        console.log("[Sync] Timeout. Снята блокировка.");
-    }, 90000);
+        safeToast("⚠️ Синхронизация прервана (слабый интернет). Повторим, как только появится связь.");
+        console.log("[Sync] 90 с без ответа — проход остановлен.");
+    }, 5000);
 
     const pCode = window.syncConfig.projectCode;
     const iName = window.syncConfig.engineerName;
     const stableInspectorId = `${pCode}_${iName}`.replace(/\s+/g, '_');
     // P2-0035b (ADR-070): «своё» (проверки, черновик, задачи, профиль, рейтинг) — по номеру учётки; ФИО — только подпись
     let myAuthId = null;
-    try { const { data: me } = await window.supabaseClient.auth.getUser(); myAuthId = (me && me.user && me.user.id) || null; } catch (e) { myAuthId = null; }
+    // P2-0059: номер учётки — из сохранённого входа (без запроса); сеть — только если входа на устройстве нет, с ограничением времени
+    try {
+        const upTo = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
+        const ses = await upTo(window.supabaseClient.auth.getSession(), 10000);
+        myAuthId = (ses && ses.data && ses.data.session && ses.data.session.user && ses.data.session.user.id) || null;
+        if (!myAuthId) {
+            const got = await upTo(window.supabaseClient.auth.getUser(), 15000);
+            myAuthId = (got && got.data && got.data.user && got.data.user.id) || null;
+        }
+    } catch (e) { myAuthId = null; }
     const own = (q, col) => (myAuthId ? q.eq(col, myAuthId) : q.eq('engineer_name', iName));   // без входа — как раньше
     // P2-0023: догрузка «с прошлого раза» — с запасом 15 мин назад (запись, отправленная во время
     // прошлой синхронизации или с отстающими часами, иначе не приходила никогда).
@@ -2622,7 +2704,19 @@ window.triggerSync = async function (mode = 'silent') {
                 // 🚀 ПАКЕТНАЯ ОТПРАВКА В БАЗУ (Вжух и готово!)
                 if (inspectionsBatch.length > 0) {
                     const { error } = await window.supabaseClient.from('rbi_inspections').upsert(inspectionsBatch, { onConflict: 'id' });
-                    if (error) {
+                    if (error && (!window.RbiSyncRetryPolicy || window.RbiSyncRetryPolicy.isTransientSyncError(error))) {
+                        // P2-0059: сбой связи или сервера — не «нет прав»: осмотры остаются «не отправлено» и уйдут повтором
+                        // (фото уже на сервере — их ссылки сохраняются, повторно не грузятся)
+                        console.warn('[Sync] Осмотры не отправлены (связь/сервер), повторим:', error.message);
+                        pushErrors++; rbiNoteErr(error);
+                        const sentIds = new Set(inspectionsBatch.map(x => String(x.id)));
+                        localHistoryToUpdate.forEach(c => {
+                            if (!sentIds.has(String(c.id))) return;
+                            c.source = 'local'; c.syncStatus = 'not_synced'; c.sync_status = 'not_synced';
+                        });
+                        itemsBatch.length = 0;
+                        photosBatch.length = 0;
+                    } else if (error) {
                         console.warn('[Sync] Ошибка RLS: нет прав на отправку некоторых проверок', error.message);
                         // Помечаем их локально как заблокированные
                         localHistoryToUpdate.forEach(c => {
@@ -4631,7 +4725,7 @@ window.triggerSync = async function (mode = 'silent') {
             safeToast('❌ Ошибка: ' + errMsg);
         } // <-- ВОТ ЭТОЙ СКОБКИ НЕ ХВАТАЛО
     } finally {
-        if (window.syncTimeout) clearTimeout(window.syncTimeout);
+        if (window.syncTimeout) clearInterval(window.syncTimeout);
         window.isSyncing = false;
         window.syncChannel.postMessage('sync_done');
         window.renderSyncUI();
@@ -4662,5 +4756,5 @@ window.triggerSync = async function (mode = 'silent') {
             }
         }
     }
-};
-// === КОНЕЦ ФУНКЦИИ triggerSync ===
+}
+// === КОНЕЦ ФУНКЦИИ rbiSyncPass (triggerSync) ===

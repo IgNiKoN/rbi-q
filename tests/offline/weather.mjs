@@ -23,20 +23,35 @@ const savePhotoMark = (page, tag, i) => page.evaluate(async ([tag, i, size]) => 
   return r && r.id;
 }, [tag, i, PHOTO_BYTES]);
 
-/** Счётчик проходов синхронизации: сколько начато и сколько шло одновременно (после «стопа» 90 с — тоже). */
+/** Счётчик проходов синхронизации: проход сам рассылает «sync_started» / «sync_done» (window.syncChannel) — считаем, сколько
+ *  начато и сколько шло одновременно (одинаково для кода до и после P2-0059); и сколько дольше всего горит «идёт синхронизация». */
 const watchPasses = (page) => page.evaluate(() => {
-  if (window.__p2w) return;
+  if (window.__p2w || !window.syncChannel) return;
   const w = window.__p2w = { passes: 0, active: 0, max: 0, syncingSince: 0, longest: 0 };
-  const orig = window.triggerSync;
-  window.triggerSync = async function () {
-    if (window.isSyncing) return orig.apply(this, arguments);
-    w.passes++; w.active++; w.max = Math.max(w.max, w.active);
-    try { return await orig.apply(this, arguments); } finally { w.active--; }
+  const ch = window.syncChannel;
+  const post = ch.postMessage.bind(ch);
+  ch.postMessage = (m) => {
+    if (m === 'sync_started') { w.passes++; w.active++; w.max = Math.max(w.max, w.active); }
+    if (m === 'sync_done') w.active = Math.max(0, w.active - 1);
+    return post(m);
   };
   setInterval(() => {
     if (window.isSyncing) { if (!w.syncingSince) w.syncingSince = Date.now(); w.longest = Math.max(w.longest, Date.now() - w.syncingSince); } else w.syncingSince = 0;
   }, 1000);
 });
+
+/** Минута телефона: пока идёт синхронизация или запрос в пути, время идёт по-настоящему (прыжок сработал бы как ограничение
+ *  времени запроса, которого на настоящем телефоне не было бы); остаток минуты, когда всё стихло, — проматываем. */
+const minute = async (p) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < 60000) {
+    const busy = await p.evaluate(() => !!window.isSyncing || ((window.RbiSyncNet && window.RbiSyncNet.activity.inflight) || 0) > 0).catch(() => false);
+    if (!busy) break;
+    await p.waitForTimeout(1000);
+  }
+  const left = 60000 - (Date.now() - t0);
+  if (left > 0) await p.clock.fastForward(left).catch(() => {});
+};
 
 const unsentOf = (page, ids) => page.evaluate(async (ids) => {
   const all = await window.RBI.services.inspections.getActive();
@@ -74,7 +89,7 @@ async function weather(tag, w) {
   let doneAt = null; let left = u0;
   for (let m = 0; m < MINUTES; m++) {
     await w.apply(m, ctx, page);
-    for (const p of pages) await p.clock.fastForward(60000).catch(() => {});
+    for (const p of pages) await minute(p);
     await page.waitForTimeout((w.real || 6) * 1000);
     left = await unsentOf(page, ids);
     const onServer = ids.filter((id) => rows.get('rbi_inspections')?.has(id)).length;
@@ -105,6 +120,10 @@ async function weather(tag, w) {
   measures.push(r);
   note('замер: ' + JSON.stringify(r));
   ok(true, `${tag}: погода прошла до конца`);
+  // P2-0059 этап 2: всё дошло, без потерь, двух отправок одновременно нет
+  ok(r.delivered === N && r.photoRows === N && r.lost === 0, `${tag}: на сервере все ${N} осмотров с фото, потерь нет`, `${r.delivered}/${r.photoRows}/${r.lost}`);
+  ok(r.concurrentPasses <= 1 && r.concurrentInspectionPosts <= 1, `${tag}: двух отправок одновременно нет`, `проходов ${r.concurrentPasses}, запросов ${r.concurrentInspectionPosts}`);
+  if (w.check) w.check(r);
   releaseHeld();
   await ctx.close(); await stop();
   writeFileSync(join(out(), 'weather.json'), JSON.stringify(measures, null, 2));
@@ -134,6 +153,7 @@ export function weatherScenarios(outDir) {
       apply: async (m, ctx) => { await offline(false)(ctx); set({ latencyMs: 2000, kbps: 100 })(); } }),
     // «Wi-Fi без интернета»: сеть «есть», сервер принимает и молчит 5 минут, потом отвечает
     'w-hang': () => weather('w-hang', { title: 'сеть есть, ничего не грузится 5 мин → сервер ответил',
+      check: (r) => ok(r.longestSyncingSec <= 100, 'w-hang: «лже-сеть» не вешает «Синхронизация…» дольше ограничения', r.longestSyncingSec + ' с'),
       apply: async (m, ctx) => { await offline(false)(ctx); net.mode = m < 5 ? 'hang' : 'ok'; } }),
     // мигание: в каждой минуте 10 с есть / 20 с нет (реальное окно связи — 3 с из 9)
     'w-flap': () => weather('w-flap', { title: 'мигание: 10 с есть / 20 с нет', real: 1,
@@ -146,6 +166,7 @@ export function weatherScenarios(outDir) {
     'w-5xx': () => weather('w-5xx', { title: 'ответы 503 три минуты → сервер здоров',
       apply: async (m, ctx) => { await offline(false)(ctx); net.failLeft = m < 3 ? 100000 : 0; } }),
     // две вкладки одного устройства
-    'w-tabs': () => weather('w-tabs', { title: 'две вкладки, сеть есть', tabs: 2, apply: (m, ctx) => offline(false)(ctx) })
+    'w-tabs': () => weather('w-tabs', { title: 'две вкладки, сеть есть', tabs: 2, apply: (m, ctx) => offline(false)(ctx),
+      check: (r) => ok(r.maxSendsPerRecord === 1, 'w-tabs: две вкладки — запись ушла один раз', String(r.maxSendsPerRecord)) })
   };
 }

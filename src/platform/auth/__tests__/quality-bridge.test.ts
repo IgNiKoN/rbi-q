@@ -366,3 +366,15 @@ test('P2-0035b: мост пишет номер учётки в настройк�
   assert.equal(win.syncConfig.authUserId, '55555555-5555-4555-8555-555555555555');
   assert.equal(companyConflict('auth_user_id'), 'core_company_id,auth_user_id');
 });
+
+// P2-0059 (С2): клиент Качества ходит через fetch синхронизации с ограничением времени, если он загружен
+import { syncFetch } from '../quality-bridge.ts';
+test('P2-0059: syncFetch — через RbiSyncNet.fetch, без него — обычный fetch', async () => {
+  const g = globalThis as { RbiSyncNet?: { fetch?: typeof fetch } };
+  const calls: string[] = [];
+  g.RbiSyncNet = { fetch: (async (u: unknown) => { calls.push(String(u)); return new Response('ok'); }) as typeof fetch };
+  const r = await syncFetch('https://x/rest/v1/a');
+  assert.equal(await r.text(), 'ok');
+  assert.deepEqual(calls, ['https://x/rest/v1/a']);
+  delete g.RbiSyncNet;
+});

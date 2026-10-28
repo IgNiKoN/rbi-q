@@ -157,6 +157,7 @@ const urlsToCache = [
   './libs/supabase-js.min.js',
   './js/services/sync/sync-pull.policy.js',
   './js/services/sync/sync-retry.policy.js',
+  './js/services/sync/sync-net.policy.js',
   './js/services/sync/sync-merge.policy.js',
   './js/services/sync/sync-core.state.js',
   './js/services/sync/sync-cloud-prepare.utils.js',

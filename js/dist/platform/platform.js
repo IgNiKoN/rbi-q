@@ -18011,42 +18011,47 @@ function sn(t, e) {
     Object.defineProperty(t, r, { configurable: !0, enumerable: !0, get: () => n, set: () => {
     } });
 }
-function bo(t, e, r, n) {
+const bo = (t, e) => {
+  var n;
+  const r = (n = globalThis.RbiSyncNet) == null ? void 0 : n.fetch;
+  return r ? r(t, e) : fetch(t, e);
+};
+function So(t, e, r, n) {
   const s = t(e.url, e.anonKey, {
     accessToken: async () => {
       var a;
       return ((a = (await n.auth.getSession()).data.session) == null ? void 0 : a.access_token) ?? null;
     },
     db: { schema: "quality" },
-    global: { headers: { "x-company-id": r } }
-  }), i = Ao(s.storage, r);
+    global: { headers: { "x-company-id": r }, fetch: bo }
+  }), i = Ro(s.storage, r);
   return new Proxy(s, {
     get(a, o, l) {
-      return o === "auth" ? n.auth : o === "storage" ? i : o === "from" ? (c) => ko(a.from(c)) : Reflect.get(a, o, l);
+      return o === "auth" ? n.auth : o === "storage" ? i : o === "from" ? (c) => Eo(a.from(c)) : Reflect.get(a, o, l);
     }
   });
 }
-function So(t) {
+function ko(t) {
   if (!t) return t;
   const e = t.split(",").map((r) => r.trim()).filter(Boolean);
   return (e.includes("core_company_id") ? e : ["core_company_id", ...e]).join(",");
 }
-function ko(t) {
+function Eo(t) {
   return new Proxy(t, {
     get(e, r, n) {
       const s = Reflect.get(e, r, n);
-      return r !== "upsert" || typeof s != "function" ? s : (i, a) => s.call(e, i, a != null && a.onConflict ? { ...a, onConflict: So(a.onConflict) } : a);
+      return r !== "upsert" || typeof s != "function" ? s : (i, a) => s.call(e, i, a != null && a.onConflict ? { ...a, onConflict: ko(a.onConflict) } : a);
     }
   });
 }
-function Eo(t) {
+function To(t) {
   return t.startsWith("quality-") ? t : "quality-" + t;
 }
 function $t(t, e) {
   const r = String(e || "").replace(/^\/+/, "");
   return r === t || r.startsWith(t + "/") ? r : t + "/" + r;
 }
-const To = {
+const Ao = {
   upload: "first",
   update: "first",
   download: "first",
@@ -18062,13 +18067,13 @@ const To = {
   remove: "list",
   createSignedUrls: "list"
 };
-function Ao(t, e) {
+function Ro(t, e) {
   return {
     from(r) {
-      const n = t.from(Eo(r));
+      const n = t.from(To(r));
       return new Proxy(n, {
         get(s, i, a) {
-          const o = Reflect.get(s, i, a), l = typeof i == "string" ? To[i] : void 0;
+          const o = Reflect.get(s, i, a), l = typeof i == "string" ? Ao[i] : void 0;
           return typeof o != "function" || !l ? typeof o == "function" ? o.bind(s) : o : (...c) => {
             const u = c.slice();
             return l === "list" ? u[0] = Array.isArray(u[0]) ? u[0].map((h) => $t(e, h)) : u[0] : (u[0] = $t(e, u[0] ?? ""), l === "two" && (u[1] = $t(e, u[1]))), o.apply(s, u);
@@ -18078,9 +18083,9 @@ function Ao(t, e) {
     }
   };
 }
-const Ro = "rbi:quality-access";
+const Oo = "rbi:quality-access";
 let an = !1;
-function Oo(t) {
+function xo(t) {
   const e = t.serviceWorker, r = t.platformClient;
   if (!e || !r || an) return;
   an = !0;
@@ -18096,7 +18101,7 @@ function Oo(t) {
     n();
   }), n();
 }
-async function xo(t, e) {
+async function Co(t, e) {
   var N;
   if (t.mode === "none" && !e.store.getItem(se)) return null;
   const r = _o(t), n = r && t.email ? vt(t.email) : "";
@@ -18122,8 +18127,8 @@ async function xo(t, e) {
     }
     return a;
   }
-  Oo(e);
-  const o = bo(e.createClient, e.cfg, r, e.platformClient);
+  xo(e);
+  const o = So(e.createClient, e.cfg, r, e.platformClient);
   e.win.supabaseClient = o;
   const l = yo + r + ":" + n;
   let c = { access: {}, projects: null };
@@ -18155,7 +18160,7 @@ async function xo(t, e) {
     const ge = e.win.syncConfig;
     ge && (T.role === "manager" || T.role === "director") && ge.syncMode !== "full" && (ge.syncMode = "full", e.store.setItem("rbi_sync_config", JSON.stringify(ge)));
     const me = e.win.dispatchEvent;
-    typeof me == "function" && me.call(e.win, new Event(Ro));
+    typeof me == "function" && me.call(e.win, new Event(Oo));
   }, A = (E) => {
     const P = e.win.syncConfig = e.win.syncConfig || {};
     P.enabled = !!E, P.engineerName = k, P.authUserId = t.userId || null, P.projectCode = E || "", P.pinHash = null, P.syncMode || (P.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(P));
@@ -18179,7 +18184,7 @@ function on(t) {
   const e = t && t.message || "";
   return /[А-Яа-яЁё]/.test(e) ? e : /cannot assign a role to yourself/i.test(e) ? "Нельзя назначить роль самому себе" : /failed to fetch|network|load failed/i.test(e) ? "Нет связи с сервером. Попробуйте позже" : t && t.code === "42501" || /forbidden|permission denied/i.test(e) ? "Нет права на это действие" : "Не удалось выполнить. Попробуйте ещё раз";
 }
-function Co(t) {
+function Po(t) {
   const e = t.created || {}, r = (s) => typeof s == "number" ? s : Number(s) || 0, n = (s) => Array.isArray(s) ? s : [];
   return {
     ok: t.ok === !0,
@@ -18192,7 +18197,7 @@ function Co(t) {
     roots: n(t.roots)
   };
 }
-function Po() {
+function Io() {
   const t = Rt();
   if (!t) return null;
   async function e(n, s) {
@@ -18276,7 +18281,7 @@ function Po() {
     nextBuildNo: (n) => r("pf_next_build_no", { p_location: n }),
     importPlaces: async (n, s, i, a) => {
       const o = await r("pf_import_places", { p_project: n, p_batch: s, p_rows: i, p_dry_run: a });
-      return o.ok ? { ok: !0, value: Co(o.value || {}) } : o;
+      return o.ok ? { ok: !0, value: Po(o.value || {}) } : o;
     },
     importUndo: (n) => r("pf_import_undo", { p_batch: n }),
     savePlaceInfo: (n, s, i) => r("pf_save_place_info", { p_location: n, p_area: s, p_rooms: i }),
@@ -18284,8 +18289,8 @@ function Po() {
     deleteUnit: (n) => r("pf_delete_unit", { p_unit: n })
   };
 }
-const st = "platform2_entry", Ut = "platform2_company", er = "platform2_device_access_", Io = 14, jo = 24 * 3600 * 1e3;
-function No(t, e) {
+const st = "platform2_entry", Ut = "platform2_company", er = "platform2_device_access_", jo = 14, No = 24 * 3600 * 1e3;
+function Lo(t, e) {
   try {
     const r = JSON.parse(tr(t, er + vt(e)) || "null");
     return r && typeof r.at == "string" ? r : null;
@@ -18293,15 +18298,15 @@ function No(t, e) {
     return null;
   }
 }
-function Lo(t, e) {
+function $o(t, e) {
   const r = t ? Date.parse(t.at) : NaN, n = e ? e * 1e3 : NaN, s = Math.max(Number.isNaN(r) ? -1 / 0 : r, Number.isNaN(n) ? -1 / 0 : n);
   return Number.isFinite(s) ? s : null;
 }
 function ln(t) {
   return !!t.error && (!t.status || t.status >= 500);
 }
-function $o(t, e) {
-  return t === null || e - t > Io * jo;
+function Uo(t, e) {
+  return t === null || e - t > jo * No;
 }
 const ae = { mode: "none", email: null, isPlatformAdmin: !1, companies: [], companyId: null };
 function tr(t, e) {
@@ -18340,7 +18345,7 @@ function Bt(t) {
     userId: typeof e.user_id == "string" ? e.user_id : null
   };
 }
-function Uo(t) {
+function Do(t) {
   const e = t.companies.find((n) => n.id === t.companyId) || null, r = {
     company: t.mode === "email" && t.companies.some((n) => n.can_manage_company),
     platformAdmin: t.mode === "email" && t.isPlatformAdmin
@@ -18348,13 +18353,13 @@ function Uo(t) {
   if (t.mode === "email" && e) for (const n of e.modules) r[n] = !0;
   return r;
 }
-const Do = "rbi_last_module_hash";
-function Bo(t, e) {
+const Bo = "rbi_last_module_hash";
+function Mo(t, e) {
   const r = String(e || ""), n = [[/^#\/planfact(\/|$)/, "planfact"], [/^#\/quality(\/|$)/, "quality"], [/^#\/construction(-v2)?(\/|$)/, "construction"]];
   for (const [s, i] of n) if (s.test(r) && t[i] === !0) return r;
   return t.planfact ? "#/planfact" : "#/settings";
 }
-function Mo(t) {
+function qo(t) {
   let e = { ...ae };
   const r = /* @__PURE__ */ new Set(), n = () => {
     for (const u of r) u(e);
@@ -18365,7 +18370,7 @@ function Mo(t) {
     return { mode: "email", email: u, isPlatformAdmin: h.isPlatformAdmin, companies: h.companies, companyId: p, ...f };
   }
   function a(u, h) {
-    const f = No(t.storage, u), d = Lo(f, h);
+    const f = Lo(t.storage, u), d = $o(f, h);
     return { ...f ? i(u, Dt(f.platform), Bt(f.profile)) : i(u, { isPlatformAdmin: !1, companies: [] }, { fullName: null, mustChangePassword: !1, userId: null }), offline: !0, confirmedAt: d === null ? null : new Date(d).toISOString() };
   }
   async function o(u, h) {
@@ -18386,7 +18391,7 @@ function Mo(t) {
   }
   async function c() {
     const u = await l();
-    return u.email ? (e = u.offline ? a(u.email, u.issuedAt) : await o(u.email, u.issuedAt), u.offline && $o(e.confirmedAt ? Date.parse(e.confirmedAt) : null, s()) && (e = { ...ae, offline: !0, loginReason: "stale" }), oe(t.storage, st, null)) : t.pinActive() ? e = { ...ae, mode: "pin" } : tr(t.storage, st) === "demo" ? e = { ...ae, mode: "demo" } : e = { ...ae }, n(), e;
+    return u.email ? (e = u.offline ? a(u.email, u.issuedAt) : await o(u.email, u.issuedAt), u.offline && Uo(e.confirmedAt ? Date.parse(e.confirmedAt) : null, s()) && (e = { ...ae, offline: !0, loginReason: "stale" }), oe(t.storage, st, null)) : t.pinActive() ? e = { ...ae, mode: "pin" } : tr(t.storage, st) === "demo" ? e = { ...ae, mode: "demo" } : e = { ...ae }, n(), e;
   }
   return {
     boot: c,
@@ -18423,7 +18428,7 @@ function Mo(t) {
       e.mode !== "email" || !e.companies.some((h) => h.id === u) || e.companyId === u || (oe(t.storage, Ut, u), e = { ...e, companyId: u }, n());
     },
     getState: () => e,
-    access: () => Uo(e),
+    access: () => Do(e),
     subscribe(u) {
       return r.add(u), () => {
         r.delete(u);
@@ -18431,7 +18436,7 @@ function Mo(t) {
     }
   };
 }
-const qo = `
+const Fo = `
 .p2-login{width:100%;max-width:380px;background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:24px;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:14px;max-height:calc(100dvh - 32px);overflow-y:auto}
 .p2-login h2{margin:0;text-align:center;font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
 .p2-login-sub{margin:-8px 0 0;text-align:center;font-size:12px;color:var(--text-muted)}
@@ -18454,7 +18459,7 @@ function cn(t, e, r) {
   const n = K(t, "label", {}, e);
   return n.appendChild(K(t, "input", r)), n;
 }
-function Fo(t, e) {
+function Ho(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = K(r, "div", { class: "p2-login", "data-testid": "p2-login", role: "dialog", "aria-label": "Вход" });
@@ -18483,7 +18488,7 @@ function Fo(t, e) {
   const o = K(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-login-demo" }, "Посмотреть без входа (демо)");
   return o.addEventListener("click", () => e.onDemo()), n.append(s, o), t.appendChild(n), () => t.replaceChildren();
 }
-const Ho = `
+const Wo = `
 .p2-profile{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .p2-profile [hidden]{display:none!important}
 .p2-profile-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)}
@@ -18528,7 +18533,7 @@ function Gn(t, e) {
     });
   }), r;
 }
-function Wo(t, e) {
+function Ko(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = x(r, "div", { class: "p2-login", "data-testid": "p2-new-password", role: "dialog", "aria-label": "Придумайте пароль" });
@@ -18547,7 +18552,7 @@ function Wo(t, e) {
   }), i = x(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-new-password-signout" }, "Выйти");
   return i.addEventListener("click", () => e.signOut()), n.append(s, i), t.appendChild(n), () => t.replaceChildren();
 }
-function Ko(t, e) {
+function zo(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = x(r, "div", { class: "p2-profile", "data-testid": "p2-profile" });
@@ -18602,7 +18607,7 @@ function Ko(t, e) {
 }
 const Jn = ["desk-user-name", "desk-user-avatar", "header-user-block"];
 let fe = null;
-function zo(t, e) {
+function Vo(t, e) {
   var n, s;
   if (typeof document > "u") return;
   const r = (s = (n = window.RBI) == null ? void 0 : n.services) == null ? void 0 : s.shell;
@@ -18617,7 +18622,7 @@ function zo(t, e) {
     r.renderUserBlock({ name: t, role: e || "нет роли" });
   }
 }
-function Vo() {
+function Go() {
   if (!(!fe || typeof document > "u")) {
     for (const t of Jn) {
       const e = document.getElementById(t);
@@ -18626,8 +18631,8 @@ function Vo() {
     fe = null;
   }
 }
-const hn = "platform2_legacy_cleanup_v1", Go = "RBI_QUALITY_DB", Jo = "platform2_quality_state_";
-async function Yo(t) {
+const hn = "platform2_legacy_cleanup_v1", Jo = "RBI_QUALITY_DB", Yo = "platform2_quality_state_";
+async function Xo(t) {
   const e = t.store;
   if (!e) return "retry";
   try {
@@ -18638,13 +18643,13 @@ async function Yo(t) {
   try {
     if (!e.getItem(se)) {
       for (const r of Zt) e.removeItem(r);
-      e.removeItem(Jo);
+      e.removeItem(Yo);
     }
   } catch {
     return "retry";
   }
   try {
-    t.deleteDatabase && await t.deleteDatabase(Go);
+    t.deleteDatabase && await t.deleteDatabase(Jo);
   } catch {
     return "retry";
   }
@@ -18655,7 +18660,7 @@ async function Yo(t) {
   }
   return "done";
 }
-function Xo(t, e, r = 5e3) {
+function Qo(t, e, r = 5e3) {
   return new Promise((n, s) => {
     let i;
     try {
@@ -18672,7 +18677,7 @@ function Xo(t, e, r = 5e3) {
     };
   });
 }
-const ar = "p2_moved_to", Qo = "p2_moved_at", dn = "platform2_quality_state_", Ve = {
+const ar = "p2_moved_to", Zo = "p2_moved_at", dn = "platform2_quality_state_", Ve = {
   app_history: "Осмотр",
   rbi_tasks: "Задача",
   rbi_meetings: "Совещание",
@@ -18691,18 +18696,18 @@ const ar = "p2_moved_to", Qo = "p2_moved_at", dn = "platform2_quality_state_", V
   construction_acceptance_v2: "Приёмка",
   construction_units: "Помещение",
   construction_units_v2: "Помещение"
-}, Zo = ["app_photos", "checklist_snapshots"];
-function el(t) {
+}, el = ["app_photos", "checklist_snapshots"];
+function tl(t) {
   return /^demo[_-]/i.test(String(t.id ?? "")) || t.isDemo === !0 || t.is_demo === !0 || t.demo === !0;
 }
-function tl(t) {
+function rl(t) {
   return t.type === "auto" || t.source === "ai" || t.source === "system" || t.contractor === "Системная";
 }
 function Yn(t, e, r) {
-  return t in Ve ? e.filter((n) => n && n.id != null && !n[ar] && !String(n.id).startsWith("sys_") && !el(n) && !tl(n) && r(n)) : [];
+  return t in Ve ? e.filter((n) => n && n.id != null && !n[ar] && !String(n.id).startsWith("sys_") && !tl(n) && !rl(n) && r(n)) : [];
 }
 const pe = (t) => typeof t == "string" ? t.trim() : typeof t == "number" ? String(t) : "";
-function rl(t, e) {
+function nl(t, e) {
   const r = e.data && typeof e.data == "object" ? e.data : {}, n = (...s) => {
     for (const i of s) {
       const a = pe(e[i]) || pe(r[i]);
@@ -18718,20 +18723,20 @@ function rl(t, e) {
     object: n("object", "objectName", "projectName", "project_display_name", "project", "title", "name")
   };
 }
-function nl(t, e, r) {
+function sl(t, e, r) {
   if (t[ar]) return !1;
   const n = String(t.id ?? ""), s = pe(t.entityId) || pe(t.entity_id);
   return !!s && e.has(s) || n.length > 3 && r.includes(n);
 }
-const sl = "Инженер", il = ["inspectorName", "engineerName", "engineer_name", "owner", "created_by"];
-function al(t, e, r = "") {
+const il = "Инженер", al = ["inspectorName", "engineerName", "engineer_name", "owner", "created_by"];
+function ol(t, e, r = "") {
   const n = { ...t }, s = pe(n.project_code);
   if ((!s || s === "LOCAL") && (n.project_code = e), r)
-    for (const i of il) i in n && (!pe(n[i]) || pe(n[i]) === sl) && (n[i] = r);
+    for (const i of al) i in n && (!pe(n[i]) || pe(n[i]) === il) && (n[i] = r);
   return n;
 }
-function ol(t, e, r) {
-  return { ...t, [ar]: e, [Qo]: r };
+function ll(t, e, r) {
+  return { ...t, [ar]: e, [Zo]: r };
 }
 function rr(t) {
   return new Promise((e, r) => {
@@ -18750,7 +18755,7 @@ function wt(t, e) {
     }, s.onerror = () => r(null), s.onblocked = () => r(null);
   });
 }
-async function ll(t, e, r) {
+async function cl(t, e, r) {
   const n = { orphans: [], rows: /* @__PURE__ */ new Map(), attachments: /* @__PURE__ */ new Map() }, s = await wt(t, e);
   if (!s) return n;
   try {
@@ -18760,14 +18765,14 @@ async function ll(t, e, r) {
       const o = Yn(a, await rr(s.transaction(a, "readonly").objectStore(a).getAll()), r);
       if (o.length) {
         n.rows.set(a, o);
-        for (const l of o) n.orphans.push(rl(a, l));
+        for (const l of o) n.orphans.push(nl(a, l));
       }
     }
     if (n.orphans.length) {
       const a = new Set(n.orphans.map((l) => l.id)), o = JSON.stringify([...n.rows.values()]);
-      for (const l of Zo) {
+      for (const l of el) {
         if (!i.includes(l)) continue;
-        const u = (await rr(s.transaction(l, "readonly").objectStore(l).getAll())).filter((h) => nl(h, a, o));
+        const u = (await rr(s.transaction(l, "readonly").objectStore(l).getAll())).filter((h) => sl(h, a, o));
         u.length && n.attachments.set(l, u);
       }
     }
@@ -18776,7 +18781,7 @@ async function ll(t, e, r) {
   }
   return n.orphans.sort((i, a) => i.date < a.date ? -1 : i.date > a.date ? 1 : 0), n;
 }
-async function cl(t, e, r) {
+async function ul(t, e, r) {
   const n = await wt(t, e);
   if (!n) return 0;
   let s = 0;
@@ -18795,7 +18800,7 @@ async function cl(t, e, r) {
   }
   return s;
 }
-async function ul(t, e, r, n, s) {
+async function hl(t, e, r, n, s) {
   const i = s.now || (/* @__PURE__ */ new Date()).toISOString(), a = await wt(t, r), o = await wt(t, e);
   if (!a || !o)
     throw a == null || a.close(), o == null || o.close(), new Error("База устройства недоступна");
@@ -18809,12 +18814,12 @@ async function ul(t, e, r, n, s) {
       if (!a.objectStoreNames.contains(u)) continue;
       const d = a.transaction(u, "readwrite"), p = d.objectStore(u), g = p.keyPath, m = [];
       for (const _ of h)
-        await rr(p.getKey(_[g])) === void 0 && p.put(u in Ve ? al(_, s.projectCode, s.author) : _), m.push(_), f && l++;
+        await rr(p.getKey(_[g])) === void 0 && p.put(u in Ve ? ol(_, s.projectCode, s.author) : _), m.push(_), f && l++;
       await new Promise((_, v) => {
         d.oncomplete = () => _(), d.onerror = () => v(d.error), d.onabort = () => v(d.error);
       });
       const y = o.transaction(u, "readwrite");
-      for (const _ of m) y.objectStore(u).put(ol(_, s.slot, i));
+      for (const _ of m) y.objectStore(u).put(ll(_, s.slot, i));
       await new Promise((_, v) => {
         y.oncomplete = () => _(), y.onerror = () => v(y.error), y.onabort = () => v(y.error);
       });
@@ -18824,7 +18829,7 @@ async function ul(t, e, r, n, s) {
   }
   return l;
 }
-const hl = `
+const dl = `
 .p2-rescue-wrap{position:fixed;inset:0;z-index:1300}
 .p2-rescue-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
 .p2-rescue{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;
@@ -18846,30 +18851,30 @@ const hl = `
 .p2-rescue__foot button[data-primary]{border:0;background:var(--accent,var(--primary));color:#fff}
 .p2-rescue__foot button:disabled{opacity:.6;cursor:default}
 @media (min-width:768px){.p2-rescue{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:540px;border-radius:20px}
-  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`, Mt = 50, dl = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
-function fl(t) {
+  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`, Mt = 50, fl = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
+function pl(t) {
   const e = new Date(t);
   if (!t || Number.isNaN(e.getTime())) return [t || "без даты", ""];
   const r = (n) => String(n).padStart(2, "0");
   return [r(e.getDate()) + "." + r(e.getMonth() + 1) + "." + e.getFullYear(), r(e.getHours()) + ":" + r(e.getMinutes())];
 }
-function pl(t, e) {
+function gl(t, e) {
   const r = (m, y = {}, _) => {
     const v = t.createElement(m);
     for (const [k, R] of Object.entries(y)) v.setAttribute(k, R);
     return _ !== void 0 && (v.textContent = _), v;
   }, n = r("div", { class: "p2-rescue-wrap", "data-testid": "p2-rescue" }), s = r("div", { class: "p2-rescue-backdrop", "aria-hidden": "true" }), i = r("div", { class: "p2-rescue", role: "dialog", "aria-modal": "true", "aria-label": "Записи, сделанные без связи" }), a = e.orphans.length, o = r("div", { class: "p2-rescue__ico" });
-  o.innerHTML = dl;
+  o.innerHTML = fl;
   const l = r("div");
   l.append(
-    r("b", {}, "Найдено " + a + " " + gl(a, "запись", "записи", "записей") + ", " + (a % 10 === 1 && a % 100 !== 11 ? "сделанная" : "сделанные") + " без связи"),
+    r("b", {}, "Найдено " + a + " " + ml(a, "запись", "записи", "записей") + ", " + (a % 10 === 1 && a % 100 !== 11 ? "сделанная" : "сделанные") + " без связи"),
     r("span", {}, (a === 1 ? "Она осталась" : "Они остались") + " на этом телефоне и не отправлены. Перенести в «" + e.companyName + "» и отправить?")
   );
   const c = r("div", { class: "p2-rescue__head" });
   c.append(o, l);
   const u = r("ul", { "data-testid": "p2-rescue-list" });
   for (const m of e.orphans.slice(0, Mt)) {
-    const [y, _] = fl(m.date), v = r("li"), k = r("i", {}, y);
+    const [y, _] = pl(m.date), v = r("li"), k = r("i", {}, y);
     _ && (k.append(r("br")), k.append(t.createTextNode(_))), v.append(k, r("strong", {}, m.type), r("em", {}, m.object || "без объекта")), u.append(v);
   }
   a > Mt && u.append(r("li", {}, "и ещё " + (a - Mt)));
@@ -18888,11 +18893,11 @@ function pl(t, e) {
     });
   }), n;
 }
-function gl(t, e, r, n) {
+function ml(t, e, r, n) {
   const s = t % 10, i = t % 100;
   return s === 1 && i !== 11 ? e : s >= 2 && s <= 4 && (i < 12 || i > 14) ? r : n;
 }
-const ml = "rbi:net-status", yl = "#/settings/my/device", fn = "p2-net-style", _l = 6e3, vl = `
+const yl = "rbi:net-status", _l = "#/settings/my/device", fn = "p2-net-style", vl = 6e3, wl = `
 .p2-offline #desk-sync-status,.p2-offline #header-sync-status{display:none!important}
 .p2-net{display:inline-flex;align-items:center;gap:6px;margin-left:6px;height:26px;padding:0 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;cursor:pointer;
   color:var(--warning,#b8844a);background:color-mix(in srgb,var(--warning,#b8844a) 14%,transparent);border:1px solid color-mix(in srgb,var(--warning,#b8844a) 35%,transparent)}
@@ -18918,7 +18923,7 @@ const ml = "rbi:net-status", yl = "#/settings/my/device", fn = "p2-net-style", _
 function Qn(t) {
   if (t.getElementById(fn)) return;
   const e = t.createElement("style");
-  e.id = fn, e.textContent = vl, t.head.appendChild(e);
+  e.id = fn, e.textContent = wl, t.head.appendChild(e);
 }
 function pn(t, e) {
   const r = (t.offline ? "Нет связи, " : "") + "не отправлено: " + t.unsent;
@@ -18926,13 +18931,13 @@ function pn(t, e) {
   const n = t.offline ? bt : Xn;
   return e ? { show: !0, label: r, html: n + "<b>" + t.unsent + "</b>" } : { show: !0, label: r, html: n + (t.offline ? '<span>Нет связи</span><span class="p2-net__sep">·</span>' : "") + "<span>не отправлено: <b>" + t.unsent + "</b></span>" };
 }
-function wl(t) {
+function bl(t) {
   return !t.offline && t.unsent <= 0 ? null : {
     title: (t.offline ? "Нет связи · " : "") + "не отправлено: " + t.unsent,
     text: t.offline ? "Записи сохранены на этом телефоне и уйдут на сервер сами, когда появится связь." : "Записи уйдут на сервер при ближайшей синхронизации."
   };
 }
-function bl(t, e, r) {
+function Sl(t, e, r) {
   const n = t.ownerDocument;
   Qn(n);
   const s = n.createElement("div");
@@ -18944,7 +18949,7 @@ function bl(t, e, r) {
   r.quality && a("Открыть Качество", !0, () => r.go("#/quality")), a("Повторить", !r.quality, () => window.dispatchEvent(new Event("platform2:refresh"))), t.replaceChildren(s);
 }
 let gn = !1;
-function Sl(t) {
+function kl(t) {
   if (gn || typeof window > "u") return;
   gn = !0;
   const e = window, r = document;
@@ -18953,7 +18958,7 @@ function Sl(t) {
   const a = () => {
     const d = t.platform();
     return d.mode === "email" && (!!d.offline || navigator.onLine === !1);
-  }, o = () => t.navigate(yl);
+  }, o = () => t.navigate(_l);
   function l() {
     const d = pn(n, window.innerWidth < 768);
     r.body.classList.toggle("p2-offline", n.offline);
@@ -18970,7 +18975,7 @@ function Sl(t) {
   function c() {
     const d = r.getElementById("p2-net-status-slot");
     if (!d) return;
-    const p = wl(n);
+    const p = bl(n);
     if (!p) {
       d.replaceChildren();
       return;
@@ -18987,7 +18992,7 @@ function Sl(t) {
     const m = () => {
       d.remove();
     };
-    d.querySelector("button").addEventListener("click", m), r.body.appendChild(d), setTimeout(m, _l);
+    d.querySelector("button").addEventListener("click", m), r.body.appendChild(d), setTimeout(m, vl);
   }
   function h() {
     l(), c(), u(), (e.RBI = e.RBI || {}).netStatus = {
@@ -18995,9 +19000,9 @@ function Sl(t) {
       isOffline: a,
       needInternet: (d, p) => {
         const g = (e.RBI || {}).platformMenuAccess || {};
-        bl(d, p, { quality: g.quality === !0 || g.construction === !0, go: t.navigate });
+        Sl(d, p, { quality: g.quality === !0 || g.construction === !0, go: t.navigate });
       }
-    }, window.dispatchEvent(new Event(ml));
+    }, window.dispatchEvent(new Event(yl));
   }
   async function f(d = !1) {
     var R;
@@ -19009,7 +19014,7 @@ function Sl(t) {
       v = !1;
     }
     const k = d || p || _ > 0 || v || Date.now() - s > 6e4;
-    g.mode !== "email" || !m || !y || typeof indexedDB > "u" ? _ = 0 : k && (s = Date.now(), _ = await cl(indexedDB, y, m).catch(() => _)), n = { offline: p, unsent: _ }, h();
+    g.mode !== "email" || !m || !y || typeof indexedDB > "u" ? _ = 0 : k && (s = Date.now(), _ = await ul(indexedDB, y, m).catch(() => _)), n = { offline: p, unsent: _ }, h();
   }
   window.addEventListener("online", () => {
     f(!0);
@@ -19023,7 +19028,7 @@ function Sl(t) {
     f();
   }, 15e3), setInterval(l, 1500), f(!0);
 }
-const kl = "auth-gate-overlay", mn = "p2-login-style";
+const El = "auth-gate-overlay", mn = "p2-login-style";
 let te = null, Ie = null;
 function Ot() {
   return window;
@@ -19035,13 +19040,13 @@ function xt() {
 function Ge() {
   if (document.getElementById(mn)) return;
   const t = document.createElement("style");
-  t.id = mn, t.textContent = qo + Ho + `
+  t.id = mn, t.textContent = Fo + Wo + `
 .p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}`, document.head.appendChild(t);
 }
 function j() {
   if (te) return te;
   const t = zn(), e = t ? mo(t) : null, r = e ? Rt() : null;
-  return te = Mo({
+  return te = qo({
     auth: e,
     rpc: r ? async (n, s) => {
       const i = await r.rpc(n, s || {});
@@ -19056,7 +19061,7 @@ function j() {
     })(),
     // P2-0016: в Платформе 2.0 вход только почтой (+ демо); PIN — в старом приложении РБИ.
     pinActive: () => !1
-  }), te.subscribe(Ol), e && e.onAuthChange && e.onAuthChange(() => {
+  }), te.subscribe(xl), e && e.onAuthChange && e.onAuthChange(() => {
     te.refresh();
   }), window.addEventListener("platform2:refresh", () => {
     te.refresh();
@@ -19065,16 +19070,16 @@ function j() {
   }), te;
 }
 function or() {
-  return document.getElementById(kl);
+  return document.getElementById(El);
 }
-const El = "Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены";
+const Tl = "Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены";
 function lr() {
   const t = or();
   if (!t) return;
   Ge();
   const e = t.querySelector("[data-p2-login-host]") || t, r = j();
-  Fo(e, {
-    notice: r.getState().loginReason === "stale" ? El : void 0,
+  Ho(e, {
+    notice: r.getState().loginReason === "stale" ? Tl : void 0,
     signIn: async (n, s) => {
       const i = await r.signIn(n, s);
       return i.ok && Zn(), i;
@@ -19085,12 +19090,12 @@ function lr() {
   }), t.classList.remove("hidden");
 }
 let St = !1;
-function Tl(t) {
+function Al(t) {
   const e = or();
   if (!e) return;
   Ge();
   const r = e.querySelector("[data-p2-login-host]") || e, n = j();
-  St || (Wo(r, {
+  St || (Ko(r, {
     email: t,
     change: async (s) => {
       const i = await n.changePassword(s);
@@ -19101,7 +19106,7 @@ function Tl(t) {
     }
   }), St = !0), e.classList.remove("hidden");
 }
-function Al() {
+function Rl() {
   St = !1;
   const t = or();
   t && t.classList.add("hidden");
@@ -19109,16 +19114,16 @@ function Al() {
 function Zn() {
   let t = null;
   try {
-    t = window.localStorage.getItem(Do);
+    t = window.localStorage.getItem(Bo);
   } catch {
   }
-  cr(Bo(j().access(), t));
+  cr(Mo(j().access(), t));
 }
 function cr(t) {
   const e = Ot().AppRouter;
   e && typeof e.navigate == "function" ? e.navigate(t, !0) : window.location.hash = t;
 }
-function Rl(t) {
+function Ol(t) {
   if (!t) return;
   const e = j().getState();
   Ge();
@@ -19132,26 +19137,26 @@ function Rl(t) {
     return s.value = n.id, s.textContent = "Компания: " + n.name, s;
   })), r.value = e.companyId || "";
 }
-function Ol(t) {
+function xl(t) {
   var s;
   const e = xt();
-  e.platformMenuAccess = j().access(), e.platform2 = Ll, window.dispatchEvent(new Event("rbi:platform-access"));
+  e.platformMenuAccess = j().access(), e.platform2 = $l, window.dispatchEvent(new Event("rbi:platform-access"));
   const r = (s = e.services) == null ? void 0 : s.shell;
   r && typeof r.renderSidebar == "function" && r.renderSidebar(), r && typeof r.renderMobileModuleMenu == "function" && r.renderMobileModuleMenu();
   const n = Ot().AppModeManager;
   if (n && typeof n.renderBottomNav == "function" && n.renderBottomNav(), t.mode === "email" && t.email) {
     const i = t.companies.find((a) => a.id === t.companyId);
-    zo(t.fullName || t.email, i ? i.name + (i.roles[0] ? " · " + i.roles[0] : "") : t.isPlatformAdmin ? "администратор платформы" : "");
+    Vo(t.fullName || t.email, i ? i.name + (i.roles[0] ? " · " + i.roles[0] : "") : t.isPlatformAdmin ? "администратор платформы" : "");
   } else
-    Vo();
+    Go();
   if (t.mode === "email" && t.mustChangePassword && t.email) {
-    Tl(t.email);
+    Al(t.email);
     return;
   }
-  t.mode === "none" ? (St = !1, lr()) : Al(), (!t.offline || t.companies.length > 0) && Il(), xl(t), Cl(t);
+  t.mode === "none" ? (St = !1, lr()) : Rl(), (!t.offline || t.companies.length > 0) && jl(), Cl(t), Pl(t);
 }
 let je = null;
-function xl(t) {
+function Cl(t) {
   je && (clearTimeout(je), je = null), t.offline && t.mode === "email" && (je = setTimeout(() => {
     je = null, j().refresh();
   }, 6e4));
@@ -19161,11 +19166,11 @@ function nr() {
   const t = window.localStorage, e = t.getItem(se) || "";
   return e ? e + ":" + (t.getItem(De) || "") : "";
 }
-async function Cl(t) {
+async function Pl(t) {
   var e;
   try {
     const r = zn(), n = Rt();
-    await xo(t, {
+    await Co(t, {
       win: window,
       store: window.localStorage,
       reload: () => window.location.reload(),
@@ -19180,7 +19185,7 @@ async function Cl(t) {
         }
       },
       listProjects: async (a) => {
-        const o = Po();
+        const o = Io();
         return (o ? await o.listProjects(a) : []).filter((c) => !c.archived_at).map((c) => ({ id: c.id, name: c.name }));
       }
     });
@@ -19193,36 +19198,36 @@ async function Cl(t) {
       }));
     }
     const i = (e = xt().services) == null ? void 0 : e.shell;
-    i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu(), !t.offline && t.mode === "email" && Pl();
+    i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu(), !t.offline && t.mode === "email" && Il();
   } catch (r) {
     console.warn("[Platform2] Качество: подключение к хранилищу компании не удалось", r);
   }
 }
 let _n = !1;
-async function Pl() {
+async function Il() {
   var i, a;
   const t = Ot(), e = xt().qualitySync, r = (i = t.RbiSyncMergePolicy) == null ? void 0 : i.isUnsentLocal, n = ((a = t.APP_CONFIG) == null ? void 0 : a.LOCAL_DB_NAME) || "PLATFORM2_DB", s = t.RBI_DB_NAME || "";
   if (!(_n || !e || !e.projectId || !r || !s || s === n || typeof indexedDB > "u")) {
     _n = !0;
     try {
-      const o = await ll(indexedDB, n, r), l = window.localStorage;
+      const o = await cl(indexedDB, n, r), l = window.localStorage;
       if (!o.orphans.length) {
         l.removeItem(dn);
         return;
       }
       if (Ge(), !document.getElementById("p2-rescue-style")) {
         const u = document.createElement("style");
-        u.id = "p2-rescue-style", u.textContent = hl, document.head.appendChild(u);
+        u.id = "p2-rescue-style", u.textContent = dl, document.head.appendChild(u);
       }
       const c = e.projectId;
-      document.body.appendChild(pl(document, {
+      document.body.appendChild(gl(document, {
         companyName: e.companyName || "компанию",
         orphans: o.orphans,
         onLater: () => {
         },
         onMove: async () => {
           try {
-            await ul(indexedDB, n, s, o, { slot: nr(), projectCode: c, author: e.engineerName || "" });
+            await hl(indexedDB, n, s, o, { slot: nr(), projectCode: c, author: e.engineerName || "" });
           } catch {
             return "Не удалось перенести. Попробуйте ещё раз";
           }
@@ -19234,7 +19239,7 @@ async function Pl() {
     }
   }
 }
-function Il() {
+function jl() {
   var n;
   const t = (n = xt().services) == null ? void 0 : n.shell, e = j().access(), r = [];
   t && typeof t.isPlatformModuleAllowed == "function" && t.isPlatformModuleAllowed("planfact") && r.push("planfact"), e.company && r.push("company"), e.platformAdmin && r.push("platform-admin");
@@ -19244,26 +19249,26 @@ function Il() {
   } catch {
   }
 }
-function jl() {
+function Nl() {
   let t = null;
   try {
     t = window.localStorage;
   } catch {
     t = null;
   }
-  Yo({
+  Xo({
     store: t,
-    deleteDatabase: typeof indexedDB < "u" ? (e) => Xo(indexedDB, e) : null
+    deleteDatabase: typeof indexedDB < "u" ? (e) => Qo(indexedDB, e) : null
   }).catch(() => {
   });
 }
-function Nl() {
+function Ll() {
   return Ie ? Ie.then((t) => {
     t.mode === "none" && lr();
-  }) : (jl(), Ie = j().boot(), Ie.then(() => Sl({ platform: () => j().getState(), navigate: (t) => cr(t) }))), Ie;
+  }) : (Nl(), Ie = j().boot(), Ie.then(() => kl({ platform: () => j().getState(), navigate: (t) => cr(t) }))), Ie;
 }
-const Ll = {
-  start: Nl,
+const $l = {
+  start: Ll,
   getState: () => j().getState(),
   access: () => j().access(),
   setCompany: (t) => j().setCompany(t),
@@ -19273,7 +19278,7 @@ const Ll = {
     await j().signOut();
   },
   showLogin: lr,
-  renderCompanySwitch: Rl,
+  renderCompanySwitch: Ol,
   /** P2-0028: «Настройки → Платформа → Мой профиль» (вызывают Настройки при показе). Не вошёл почтой — пусто. */
   renderMyProfile: (t) => {
     if (!t) return;
@@ -19283,7 +19288,7 @@ const Ll = {
       return;
     }
     const r = e.email + "|" + (e.fullName || "");
-    t.dataset.p2Profile === r && t.firstChild || (t.dataset.p2Profile = r, Ge(), Ko(t, {
+    t.dataset.p2Profile === r && t.firstChild || (t.dataset.p2Profile = r, Ge(), zo(t, {
       email: e.email,
       fullName: e.fullName || null,
       change: (n) => j().changePassword(n),
@@ -19300,8 +19305,8 @@ const Ll = {
   }
 };
 export {
-  El as STALE_LOGIN_TEXT,
-  Ll as api,
-  Nl as start
+  Tl as STALE_LOGIN_TEXT,
+  $l as api,
+  Ll as start
 };
 //# sourceMappingURL=platform.js.map
