@@ -1,13 +1,13 @@
 // P2-0066: стенд «выкладка во время работы». Две версии приложения (A — как есть, B — «новая выкладка») собираются из файлов
 // этой папки; в каждый .js дописывается метка версии (self.__REL[путь] = 'A' | 'B'), в index.html — self.__HTML. Смесь версий —
-// в одной вкладке файлы разных версий. Сценарии: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow (+ r-size — опись).
+// в одной вкладке файлы разных версий. Сценарии: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow, r-launch, r-return, r-queue, r-transition (+ r-size — опись).
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listAppFiles } from '../../scripts/app-files.mjs';
-import { start, stop, site, resetSite, COMPANY } from './servers.mjs';
-import { freshProfile, go, launch, note, ok, signIn } from './lib.mjs';
+import { start, stop, site, resetSite, COMPANY, marks, net } from './servers.mjs';
+import { freshProfile, go, launch, note, ok, saveMark, signIn } from './lib.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '');
 export const releaseMeasures = [];
@@ -90,6 +90,7 @@ const fetchUpdate = (page, ms = 60000) => page.evaluate(async (ms) => {
 /** Включить новую версию так, как сейчас делает кнопка «Обновить» (SKIP_WAITING → перезагрузка). */
 async function applyUpdate(page) {
   await page.evaluate(async () => {
+    if (typeof window.restartToNewVersion === 'function') { window.restartToNewVersion(); return; }   // P2-0066: «Перезапустить сейчас»
     const btn = document.getElementById('pwa-update-btn');
     if (btn) { btn.click(); return; }
     const r = await navigator.serviceWorker.getRegistration(); if (r && r.waiting) r.waiting.postMessage('SKIP_WAITING');
@@ -300,6 +301,145 @@ export function releaseScenarios(outDir) {
     } finally { COMPANY.modules.splice(0, COMPANY.modules.length, ...saved); }
   }
 
+  /** Строка версии: что видно в «Помощь и о программе». */
+  const row = (page) => page.evaluate(() => {
+    const el = document.querySelector('[data-testid=p2-app-version]');
+    return el ? { state: el.getAttribute('data-state'), text: el.innerText.replace(/\s+/g, ' ').trim(), restart: !!el.querySelector('[data-testid=p2-app-restart]') } : null;
+  }).catch(() => null);
+  const navCount = (page) => { let n = 0; page.on('framenavigated', (f) => { if (f === page.mainFrame()) n++; }); return () => n; };
+
+  /** Этап 5: новая версия скачана → закрыть и открыть приложение → одна перезагрузка на заставке, без петли. */
+  async function launchSwitch() {
+    const tag = 'r-launch'; build();
+    note(`== ${tag}: версия B скачана → открыть приложение заново → включилась при запуске`);
+    const { ctx, page } = await warm(outDir, tag, A);
+    site.root = B;
+    const st = await fetchUpdate(page);
+    await go(page, '#/settings/my/help', 3000);
+    const r1 = await row(page);
+    note(`установка: ${st}; строка: ${r1 && r1.text}`);
+    ok(st === 'waiting' && r1 && r1.state === 'ready' && r1.restart && /включится при следующем запуске/.test(r1.text), `${tag}: строка — «Новая версия скачана — включится при следующем запуске» + «Перезапустить сейчас»`, r1 && r1.state);
+    const v0 = await versions(page);
+    ok(v0.html === 'A', `${tag}: до перезапуска работает A (ничего не перезагрузилось само)`, fmt(v0));
+    await page.goto('about:blank');
+    const navs = navCount(page);
+    await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+    const v = await versions(page);
+    note(`после запуска: ${fmt(v)}; переходов страницы: ${navs()}`);
+    ok(v.html === 'B' && !mixed(v) && navs() <= 2, `${tag}: при запуске включилась B целиком, одна перезагрузка`, `${v.html}; переходов ${navs()}`);
+    await page.waitForTimeout(5000);
+    ok(navs() <= 2, `${tag}: петли перезагрузок нет`, String(navs()));
+    await go(page, '#/settings/my/help', 3000);
+    const r2 = await row(page);
+    ok(r2 && r2.state !== 'ready' && /Версия 20\d\d\./.test(r2.text), `${tag}: строка — номер новой версии`, r2 && r2.text.slice(0, 80));
+    measure(tag, { install: st, rowBefore: r1, after: v, navs: navs(), rowAfter: r2 });
+    await ctx.close(); await stop();
+  }
+
+  /** Этап 5: возврат из фона ≥ 30 мин — включается, только если всё отправлено и ничего не вводится. */
+  async function returnSwitch() {
+    const tag = 'r-return'; build();
+    note(`== ${tag}: версия B скачана → возврат из фона: с открытым полем ввода — нет; без — включилась`);
+    const { ctx, page } = await warm(outDir, tag, A);
+    site.root = B;
+    const st = await fetchUpdate(page);
+    await go(page, '#/settings/my/help', 3000);
+    // идёт ввод: поле в фокусе
+    await page.evaluate(() => { const i = document.createElement('input'); i.id = 'p2-busy-probe'; document.body.appendChild(i); i.focus(); });
+    await page.evaluate(() => window.RBI.appUpdate.simulateReturn(31 * 60 * 1000));
+    await page.waitForTimeout(5000);
+    const v1 = await versions(page);
+    ok(v1.html === 'A', `${tag}: открыт ввод — не перезагрузилось`, fmt(v1));
+    await page.evaluate(() => { const i = document.getElementById('p2-busy-probe'); if (i) { i.blur(); i.remove(); } });
+    await page.evaluate(() => window.RBI.appUpdate.simulateReturn(10 * 60 * 1000));
+    await page.waitForTimeout(5000);
+    ok((await versions(page)).html === 'A', `${tag}: в фоне меньше 30 минут — не перезагрузилось`);
+    await page.evaluate(() => window.RBI.appUpdate.simulateReturn(31 * 60 * 1000));
+    await page.waitForTimeout(9000);
+    const v2 = await versions(page);
+    note(`установка: ${st}; после возврата: ${fmt(v2)}`);
+    ok(st === 'waiting' && v2.html === 'B' && !mixed(v2), `${tag}: возврат через 30+ минут, всё отправлено, нет ввода — включилась B целиком`, fmt(v2));
+    measure(tag, { install: st, busy: v1.html, after: v2 });
+    await ctx.close(); await stop();
+  }
+
+  /** Этап 5: неотправленное старой версии — уходит из новой; при неотправленном возврат из фона не переключает. */
+  async function queue() {
+    const tag = 'r-queue'; build();
+    note(`== ${tag}: на A осмотр не ушёл (сервер отказывает) → B скачана → возврат из фона — не переключилось → запуск → B → ушло ровно 1 раз`);
+    const { ctx, page } = await warm(outDir, tag, A);
+    marks.length = 0;
+    net.failLeft = 100000;
+    await saveMark(page, 'QUEUE-MARK');
+    await page.evaluate(() => typeof window.triggerSync === 'function' && window.triggerSync('manual')).catch(() => {});
+    await page.waitForTimeout(16000);   // счётчик «не отправлено» пересчитывается раз в 15 с
+    const unsent = await page.evaluate(() => (window.RBI.netStatus && window.RBI.netStatus.get().unsent) || 0).catch(() => -1);
+    site.root = B;
+    const st = await fetchUpdate(page);
+    await page.evaluate(() => window.RBI.appUpdate.simulateReturn(31 * 60 * 1000));
+    await page.waitForTimeout(6000);
+    const v1 = await versions(page);
+    ok(unsent > 0 && v1.html === 'A', `${tag}: есть неотправленное (${unsent}) — возврат из фона не переключает`, fmt(v1));
+    await page.goto('about:blank');
+    await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+    const v2 = await versions(page);
+    net.failLeft = 0;
+    await page.evaluate(() => typeof window.triggerSync === 'function' && window.triggerSync('manual')).catch(() => {});
+    await page.waitForTimeout(15000);
+    const sent = marks.filter((m) => m.includes('QUEUE-MARK') && m.includes('rbi_inspections')).length;
+    note(`установка: ${st}; после запуска: ${fmt(v2)}; отправок QUEUE-MARK: ${sent}`);
+    ok(st === 'waiting' && v2.html === 'B' && !mixed(v2), `${tag}: при запуске включилась B`, fmt(v2));
+    ok(sent === 1, `${tag}: осмотр старой версии ушёл из новой ровно 1 раз`, String(sent));
+    measure(tag, { unsent, install: st, after: v2.html, sent });
+    await ctx.close(); await stop();
+  }
+
+  /** Этап 5: переход с нынешнего боевого кэша приложения (main 4eee56a, SW 18.104.1) на новый механизм — как у людей после выкладки. */
+  async function transition() {
+    const tag = 'r-transition'; build();
+    note(`== ${tag}: работает боевая 18.104.1 → выкладка новой → открыть приложение до 3 раз → новая версия целиком, без сети всё открывается`);
+    const OLD = join(outDir, 'rel-OLD');
+    rmSync(OLD, { recursive: true, force: true }); mkdirSync(OLD, { recursive: true });
+    execFileSync('sh', ['-c', `git -C "${ROOT}" archive 4eee56a | tar -x -C "${OLD}"`]);
+    freshProfile(outDir, tag);
+    resetSite(); site.root = OLD;
+    await start();
+    let { ctx, page } = await launch(outDir, tag, { width: 375, height: 812 });
+    await signIn(page);
+    for (const h of sections) await go(page, h, 4000);
+    await page.reload(); await page.waitForTimeout(6000);
+    site.root = A;
+    const opens = [];
+    for (let i = 1; i <= 3; i++) {
+      await page.goto('about:blank');
+      await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+      const v = await versions(page);
+      const sw = await page.evaluate(() => new Promise((res) => {
+        const c = navigator.serviceWorker.controller; if (!c) return res('');
+        const h = (e) => { if (e.data && e.data.type === 'P2_APP_VERSION') { navigator.serviceWorker.removeEventListener('message', h); res(e.data.version); } };
+        navigator.serviceWorker.addEventListener('message', h); c.postMessage({ type: 'P2_APP_VERSION' }); setTimeout(() => res('старый кэш'), 3000);
+      })).catch(() => '');
+      opens.push({ open: i, html: v.html, mixed: mixed(v), sw });
+      note(`открытие ${i}: ${fmt(v)}; кэш приложения: ${sw}`);
+      if (v.html === 'A' && !mixed(v) && /^20\d\d\./.test(sw)) break;
+    }
+    const last = opens[opens.length - 1];
+    ok(last.html === 'A' && !last.mixed && /^20\d\d\./.test(last.sw), `${tag}: за ${opens.length} открыт. — новая версия целиком на новом кэше приложения`, JSON.stringify(last));
+    for (const h of sections) await go(page, h, 3000);
+    await page.waitForTimeout(4000);
+    await ctx.close(); await stop();
+    ({ ctx, page } = await launch(outDir, tag, { width: 375, height: 812, offline: true }));
+    const failed = [];
+    page.on('response', (r) => { const u = new URL(r.url()); if (u.port === '8891' && r.status() >= 400) failed.push(u.pathname); });
+    page.on('requestfailed', (r) => { const u = new URL(r.url()); if (u.port === '8891') failed.push(u.pathname); });
+    await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+    for (const h of sections) await go(page, h, 3000);
+    const v = await versions(page);
+    ok(v.html === 'A' && !mixed(v) && failed.length === 0, `${tag}: без сети после перехода всё открывается`, `${fmt(v)}; не загрузилось ${failed.length}`);
+    measure(tag, { opens, offline: { html: v.html, failed } });
+    await ctx.close();
+  }
+
   /** Размер описи: всё приложение, оболочка и модули. */
   async function size() {
     const tag = 'r-size';
@@ -317,5 +457,5 @@ export function releaseScenarios(outDir) {
     measure(tag, { files: files.length, totalMB: mb(total), byGroupMB: Object.fromEntries(Object.entries(by).map(([g, b]) => [g, mb(b)])) });
   }
 
-  return { 'r-deploy': deploy, 'r-middeploy': midDeploy, 'r-partial': partial, 'r-tabs': tabs, 'r-chunk': chunk, 'r-requests': requests, 'r-delta': delta, 'r-allow': allow, 'r-size': size };
+  return { 'r-deploy': deploy, 'r-middeploy': midDeploy, 'r-partial': partial, 'r-tabs': tabs, 'r-chunk': chunk, 'r-requests': requests, 'r-delta': delta, 'r-allow': allow, 'r-launch': launchSwitch, 'r-return': returnSwitch, 'r-queue': queue, 'r-transition': transition, 'r-size': size };
 }

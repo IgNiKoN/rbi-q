@@ -13,6 +13,24 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
+    <!-- P2-0066: при запуске — включить уже скачанную новую версию до загрузки приложения (одна перезагрузка на заставке) -->
+    <script>
+        (function () {
+            try {
+                var sw = navigator.serviceWorker;
+                if (!sw || !sw.controller) return;
+                var key = 'p2-switch-at';
+                if (Date.now() - (Number(sessionStorage.getItem(key)) || 0) < 60000) return;   // без петли: не чаще раза в минуту на вкладку
+                sw.getRegistration().then(function (r) {
+                    if (!r || !r.waiting) return;
+                    sessionStorage.setItem(key, String(Date.now()));
+                    sw.addEventListener('controllerchange', function () { location.reload(); });
+                    r.waiting.postMessage('SKIP_WAITING');
+                }).catch(function () {});
+            } catch (e) { /* без кэша приложения — как есть */ }
+        })();
+    </script>
+
     <!-- P2-0051: тема ставится до первой отрисовки (по умолчанию «Стандартная · Авто») -->
     <script src="./js/shared/theme.utils.js"></script>
     <script src="./libs/tailwindcdn.js"></script>
@@ -632,7 +650,7 @@
     <!-- === МОДАЛКА ПРОСМОТРА ИНСТРУКЦИЙ (УНИВЕРСАЛЬНАЯ ЧИТАЛКА) === -->
     <!-- twi-viewer-overlay: перенесено в js/modules/knowledge/knowledge.module.js (JS-рендер, mount в #app-modals) -->
     <!-- === УВЕДОМЛЕНИЕ ОБ ОБНОВЛЕНИИ PWA === -->
-    <!-- pwa-update-banner: перенесено в js/shared/pwa-update.utils.js (JS-рендер, mount в #app-modals) -->
+    <!-- P2-0066: плашки «Доступно обновление» нет — строка версии в «Настройки → Помощь и о программе» -->
     <!-- === ДИНАМИЧЕСКОЕ МЕНЮ ЭКСПОРТА (БЕЗ ЭМОДЗИ, 2 РЕЖИМА) === -->
     <!-- fab-export-menu-overlay: перенесено в js/shared/fab-export.utils.js (JS-рендер, mount в #app-modals) -->
     <!-- === КОНТЕКСТНОЕ МЕНЮ TWI КАРТОЧЕКИ === -->
@@ -740,13 +758,7 @@
 
 
     <!-- === ПОДКЛЮЧЕНИЕ МОДУЛЕЙ JS === -->
-    <script>
-        window.RBI_APP_VERSION = {
-            app: '18.59.0',
-            sw: '18.59.58',
-            buildDate: '2026-08-12'
-        };
-    </script>
+    <!-- P2-0066: номер версии — из описи версии (sw.js), его выставляет js/shared/pwa-update.utils.js -->
     <!-- === ПОДКЛЮЧЕНИЕ МОДУЛЕЙ JS === -->
     <!-- 1. Сначала облако и конфигурация -->
     <script src="./libs/supabase-js.min.js"></script>

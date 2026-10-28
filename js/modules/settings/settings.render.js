@@ -990,6 +990,8 @@ var SettingsRender = {
 
             </div>
             <div id="settings-panel-my-help" data-settings-panel="my-help" class="space-y-3" hidden>
+                <!-- P2-0066: строка версии (js/shared/pwa-update.utils.js) — номер, ход скачивания, «Перезапустить сейчас», «Проверить обновления» -->
+                <p2-app-version></p2-app-version>
                 <!-- P2-0038: «По умолчанию» — была кнопкой в шапке Настроек -->
                 <div class="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-sm p-4 flex items-center justify-between gap-3">
                     <div class="min-w-0">
@@ -1078,11 +1080,7 @@ var SettingsRender = {
                 <!-- Миграция перенесена в Настройки → Администрирование -->
 
                 <div class="flex flex-col gap-3 items-center mt-4 mb-6">
-                    <button data-shell-action="checkForUpdates"
-                        class="text-rbi-caption font-bold text-brand bg-brand-soft px-4 py-2 rounded-lg hover:bg-brand-soft border border-brand-soft transition-colors uppercase shadow-sm flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        <span data-i18n="settings.body.feedback.check_updates">Проверить обновления</span>
-                    </button>
+                    <!-- P2-0066: «Проверить обновления» — в строке версии вверху -->
                     <button data-settings-action="fullFactoryReset"
                         class="text-rbi-caption font-bold text-danger bg-danger-soft px-4 py-2 rounded-lg hover:bg-danger-soft border border-danger-soft transition-colors uppercase shadow-sm" data-i18n="settings.body.feedback.factory_reset">⚠️ Полный сброс (Удалить всё)</button>
                 </div>

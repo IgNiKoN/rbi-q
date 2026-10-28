@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.29-9f5a8d91',
+  version: '2026.10.29-1b0f2f2a',
   date: '2026-10-29',
-  digest: '9f5a8d91',
+  digest: '1b0f2f2a',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -61,7 +61,7 @@ const APP_RELEASE = {
     "icons/icon-512-2.png": ["aa778ccd441d82cf",1886769,""],
     "icons/icon-512.png": ["3f52301ac96dcf24",254500,""],
     "icons/icon-maskable-512.png": ["fa2a6ac20c30f623",202332,""],
-    "index.html": ["ce644086ebefa7b8",67764,""],
+    "index.html": ["4599f6bf5aae01e8",68884,""],
     "js/core/app-shell.desktop.js": ["d56e70c14d119cc6",8092,""],
     "js/core/app-shell.js": ["abf1812fb2554ee7",52085,""],
     "js/core/app.entry.js": ["27ff777222446034",11218,""],
@@ -225,7 +225,7 @@ const APP_RELEASE = {
     "js/modules/settings/settings.manifest.js": ["cb8fb906246cb924",752,""],
     "js/modules/settings/settings.module.js": ["9acc04e635d95ffc",13540,""],
     "js/modules/settings/settings.nav.js": ["ddad8284ba2f443c",14161,""],
-    "js/modules/settings/settings.render.js": ["2c74637f110c9e3b",211853,""],
+    "js/modules/settings/settings.render.js": ["9236a163189149a0",211527,""],
     "js/modules/settings/settings.routes.js": ["03a11c3b25a05c68",6753,""],
     "js/services/ai.service.js": ["81319b59599cf8c6",3352,""],
     "js/services/analytics.service.js": ["c3713abe691ce61d",5827,""],
@@ -275,6 +275,7 @@ const APP_RELEASE = {
     "js/services/task.service.js": ["11d44c8e1c004c53",6752,""],
     "js/services/template.service.js": ["b9d302fbf672dfe3",8593,""],
     "js/services/user-context.service.js": ["a7802f0d38615604",2742,""],
+    "js/shared/app-update.policy.js": ["927633d26da6f3fb",3649,""],
     "js/shared/checklist-runner.js": ["016a9bac9031365f",34049,""],
     "js/shared/error-log.utils.js": ["34a211d8496e89fd",2381,""],
     "js/shared/fab-export.utils.js": ["475d6847652a1cd9",16867,""],
@@ -286,7 +287,7 @@ const APP_RELEASE = {
     "js/shared/photo-editor.utils.js": ["658b4356bd1d565e",27484,""],
     "js/shared/photo-viewer-zoom.utils.js": ["0e61ef104ea46f48",7009,""],
     "js/shared/plan-panzoom.utils.js": ["6ee5e0acbc8e06a9",3409,""],
-    "js/shared/pwa-update.utils.js": ["9f2cabfaf7d867fe",8130,""],
+    "js/shared/pwa-update.utils.js": ["bc6e56086c2673fb",14048,""],
     "js/shared/smart-input.utils.js": ["33f5f1aafaf56e61",23171,""],
     "js/shared/snake-game.utils.js": ["16c5fe2f47acf098",7191,""],
     "js/shared/splash-screen.utils.js": ["bb4a3e44e9ca1217",1986,""],

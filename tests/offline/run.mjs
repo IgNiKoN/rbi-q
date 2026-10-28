@@ -4,7 +4,7 @@
 // invalid — сервер отозвал вход; cache — код План/Факта и «Компании» без сети не удаляется; otheruser — чужие права на устройстве;
 // screen375, screen768, screen1440 — значок «Нет связи · не отправлено: N» 0 → 1 → 0, плашка, «Нужен интернет», «Данные на устройстве».
 // P2-0059: w-offline, w-slow, w-hang, w-flap, w-drop, w-5xx, w-tabs — «погоды» плохой связи (weather.mjs), замер в weather.json.
-// P2-0066: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow, r-size — «выкладка во время работы» (release.mjs), замер в release.json.
+// P2-0066: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow, r-launch, r-return, r-queue, r-transition, r-size — «выкладка во время работы» (release.mjs), замер в release.json.
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
