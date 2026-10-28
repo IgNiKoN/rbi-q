@@ -41,6 +41,22 @@ export interface ProjectDicts { stages: DictItem[]; objectKinds: DictItem[]; rol
 export interface PlaceNode {
   id: string; parent_id: string | null; node_type: PlanNodeType; object_kind: string | null; name: string; build_no: string | null; bti_no: string | null;
   sort_order: number; depth: number; path: string; child_count: number; apartment_count: number | null;
+  /** P2-0056: площадь, м² и комнат (0 — студия) — у помещения. */
+  area?: number | null; rooms?: number | null;
+}
+/** P2-0056: строка загрузки списка помещений (названия уже приведены: «Корпус 1», «Секция 1», «эт. 3», «кв. 45»). */
+export interface ImportRow {
+  row_no: number; object: string | null; section: string | null; floor: string | null; name: string | null;
+  build_no: string | null; bti_no: string | null; area: string | null; rooms: string | null;
+}
+/** P2-0056: ответ pf_import_places — одинаковый для предпросмотра и загрузки. */
+export interface ImportResult {
+  ok: boolean; dryRun: boolean; repeat: boolean;
+  created: { objects: number; sections: number; floors: number; apartments: number };
+  existingRows: number[];
+  differs: { row_no: number; name: string; fields: { field: 'build_no' | 'bti_no' | 'area' | 'rooms'; now: string | number | null; file: string | number | null }[] }[];
+  errors: { row_no: number; msg: string }[];
+  roots: string[];
 }
 /** P2-0047: мастер объекта (pf_fill_object) — секции × этажи × квартиры, нумерация, подвал и кровля. */
 export interface FillParams {
@@ -94,6 +110,12 @@ export interface ProjectsApi {
   restorePlace?(id: string): Promise<Result<number>>;
   /** P2-0055: следующий строительный номер помещения в объекте места («+ Кв.» без окна). */
   nextBuildNo?(id: string): Promise<Result<number>>;
+  /** P2-0056: загрузка списка помещений; dryRun — предпросмотр без записи; batch — метка (повтор — прежний ответ, «Отменить»). */
+  importPlaces?(projectId: string, batch: string, rows: ImportRow[], dryRun: boolean): Promise<Result<ImportResult>>;
+  /** P2-0056: снять загрузку (места этой загрузки и добавленное внутрь потом). */
+  importUndo?(batch: string): Promise<Result<number>>;
+  /** P2-0056: площадь и комнаты помещения (null — стереть). */
+  savePlaceInfo?(id: string, area: number | null, rooms: number | null): Promise<Result<string>>;
   addUnit(companyId: string, code: string, name: string): Promise<Result<string>>;
   deleteUnit(unitId: string): Promise<Result>;
 }
@@ -129,6 +151,19 @@ export function newId(): string {
   const cr = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (cr && cr.randomUUID) return cr.randomUUID();
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => { const r = Math.random() * 16 | 0; return (ch === 'x' ? r : (r & 3) | 8).toString(16); });
+}
+
+/** P2-0056: ответ pf_import_places → ImportResult (пустые части — пустые списки). */
+export function importResult(v: Record<string, unknown>): ImportResult {
+  const c = (v.created || {}) as Record<string, unknown>;
+  const n = (x: unknown): number => (typeof x === 'number' ? x : Number(x) || 0);
+  const list = <T>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : []);
+  return {
+    ok: v.ok === true, dryRun: v.dry_run === true, repeat: v.repeat === true,
+    created: { objects: n(c.objects), sections: n(c.sections), floors: n(c.floors), apartments: n(c.apartments) },
+    existingRows: list<number>(v.existing_rows), differs: list<ImportResult['differs'][number]>(v.differs),
+    errors: list<ImportResult['errors'][number]>(v.errors), roots: list<string>(v.roots)
+  };
 }
 
 export function createProjectsService(): ProjectsApi | null {
@@ -190,6 +225,13 @@ export function createProjectsService(): ProjectsApi | null {
     },
     restorePlace: (id) => call<number>('pf_restore_place', { p_location: id }),
     nextBuildNo: (id) => call<number>('pf_next_build_no', { p_location: id }),
+    importPlaces: async (project, batch, list, dryRun) => {
+      const r = await call<Record<string, unknown> | null>('pf_import_places', { p_project: project, p_batch: batch, p_rows: list, p_dry_run: dryRun });
+      if (!r.ok) return r;
+      return { ok: true, value: importResult(r.value || {}) };
+    },
+    importUndo: (batch) => call<number>('pf_import_undo', { p_batch: batch }),
+    savePlaceInfo: (id, area, rooms) => call<string>('pf_save_place_info', { p_location: id, p_area: area, p_rooms: rooms }),
     addUnit: (company, code, name) => call<string>('pf_add_unit', { p_company: company, p_code: code, p_name: name }),
     deleteUnit: (id) => call('pf_delete_unit', { p_unit: id })
   };
