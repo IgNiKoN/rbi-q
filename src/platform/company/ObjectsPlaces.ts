@@ -6,7 +6,7 @@
  * вырезанное и перетаскиваемое мышью на ПК — только внутри своего объекта), удаление с плашкой «Отменить». Пакетно — как раньше, листом: мастер объекта, «Добавить этажи»,
  * «Добавить другое…» (поштучно, с выбором вида и номерами). Карточка места — панель справа на ПК (от 900 px), лист снизу на
  * телефоне. Права и проверки — на сервере (049: перенос только внутри объекта); экран заранее показывает, что нельзя.
- * Без сети правка недоступна. Дети грузятся при раскрытии. id нового места даёт приложение.
+ * У объекта с секциями — переключатель «Дерево / Шахматка» (PlacesChess: те же места, карточка и «+»). Без сети правка недоступна. Дети грузятся при раскрытии. id нового места даёт приложение.
  */
 import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from 'react';
@@ -19,6 +19,7 @@ import type { MoreItem } from '../ui/index.ts';
 import { CHILD_TYPE, clipSummary, dropPlace, MOVE_OTHER_OBJECT, nextChildName, pasteCheck, pasteName, pushUndo, stepBefore } from './places-editor.ts';
 import type { Check, Clip, UndoEntry } from './places-editor.ts';
 import type { DropWhere } from '../ui/tree.ts';
+import { PlacesChess } from './PlacesChess.ts';
 
 const TYPE_LABEL: Record<string, string> = { object: 'объект', building: 'корпус', section: 'секция', floor: 'этаж', apartment: 'квартира', other: 'прочее' };
 const INNER: PlanNodeType[] = ['section', 'floor', 'apartment', 'other'];
@@ -102,6 +103,7 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   const [toast, setToast] = useState<{ key: number; text: string; canUndo: boolean } | null>(null);
   const [nextNo, setNextNo] = useState<Record<string, number>>({});
   const [clip, setClip] = useState<Clip | null>(null);
+  const [view, setView] = useState<'tree' | 'chess'>('tree');
   const [drag, setDrag] = useState<PlaceNode | null>(null);
   const [hint, setHint] = useState<{ id: string; where: DropWhere; ok: boolean; reason?: string } | null>(null);
   const pc = useWide('(min-width: 900px)');   // ПК: мышь, клавиши, перетаскивание
@@ -193,7 +195,16 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     if (next && !kids[n.id]) await load(n.id);
   }
   function select(n: PlaceNode): void { setSelId(n.id); if (n.child_count && !kids[n.id]) void load(n.id); }
-  function pickObject(o: PlaceNode): void { setObjId(o.id); setSelId(null); setEditing(null); if (!kids[o.id]) void load(o.id); }
+  /** Шахматке нужен весь объект: секции → этажи → помещения (этажи без мест не грузятся). */
+  async function loadDeep(o: PlaceNode): Promise<void> {
+    const secs = kidsRef.current[o.id] || await load(o.id);
+    await Promise.all(secs.map(async (sc) => {
+      const fl = kidsRef.current[sc.id] || (sc.child_count ? await load(sc.id) : []);
+      await Promise.all(fl.filter((f) => f.child_count && !kidsRef.current[f.id]).map((f) => load(f.id)));
+    }));
+  }
+  function showView(v: 'tree' | 'chess'): void { setView(v); if (v === 'chess' && obj) void loadDeep(obj); }
+  function pickObject(o: PlaceNode): void { setObjId(o.id); setSelId(null); setEditing(null); if (view === 'chess') void loadDeep(o); else if (!kids[o.id]) void load(o.id); }
 
   // ---------- правка без окон ----------
   /** Подпись «+»: что появится («эт. 6»); у помещения — со следующим строительным номером. */
@@ -605,10 +616,15 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     h('button', { type: 'button', className: 'op-clip__x', 'aria-label': 'Очистить буфер', 'data-testid': 'op-clip-clear', onClick: () => setClip(null) }, '✕')) : null;
   const inner = obj ? kids[obj.id] : undefined;
   const objPlus = obj ? plusName(obj) : null;
+  const hasSections = !!inner && inner.some((n) => n.node_type === 'section');
+  const chessOn = view === 'chess' && hasSections;
   const objBox = obj ? h('div', { className: 'op-obj-box', 'data-testid': 'op-object', 'data-object-id': obj.id },
     h('div', { className: 'op-obj-head' },
       h('button', { type: 'button', className: 'op-obj-title', onClick: () => select(obj) }, h('b', null, obj.name), h('span', null, kindName(obj.object_kind))),
       h('div', { className: 'op-obj-actions' },
+        hasSections ? h('div', { className: 'op-seg', role: 'group', 'aria-label': 'Вид' },
+          h('button', { type: 'button', 'aria-pressed': !chessOn, 'data-testid': 'op-view-tree', onClick: () => showView('tree') }, 'Дерево'),
+          h('button', { type: 'button', 'aria-pressed': chessOn, 'data-testid': 'op-view-chess', onClick: () => showView('chess') }, 'Шахматка')) : null,
         edit && clip ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'op-obj-paste', disabled: busy || !canPaste(obj).ok,
           title: canPaste(obj).ok ? undefined : (canPaste(obj) as { reason: string }).reason, onClick: () => { void paste(obj); } }, 'Вставить сюда') : null,
         edit && api.fillObject && !obj.child_count ? h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'op-fill-open', onClick: () => { setFill(FILL0); openDialog({ kind: 'fill', obj }); } }, 'Заполнить объект') : null,
@@ -617,6 +633,8 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
         h(MoreMenu, { testId: 'op-obj-more', items: menu(obj, obj).filter((m) => m.id !== 'plus'), label: 'Действия: ' + obj.name }))),
     clipBar,
     inner === undefined ? h('div', { className: 'pf-muted' }, 'Загрузка…')
+      : chessOn ? h(PlacesChess, { sections: inner, kids, selected: selId, onSelect: (n) => select(n), busy,
+          onPlus: edit ? (p) => { void addNext(p); } : null, plusTitle: (p) => 'Добавить ' + (plusName(p) ? `«${plusName(p)}»` : TYPE_LABEL[CHILD_TYPE[p.node_type] as string]) })
       : inner.length ? h(PlaceTree<PlaceNode & { hasKids: boolean }>, {
           testId: 'op-tree', roots: inner.map((n) => ({ ...n, hasKids: n.child_count > 0 })),
           kids: Object.fromEntries(Object.entries(kids).map(([k, l]) => [k, l ? l.map((n) => ({ ...n, hasKids: n.child_count > 0 })) : l])),
@@ -686,9 +704,9 @@ export const OBJECTS_CSS = `
 .op-bad{color:var(--bad-text,var(--color-red,#9f4c45))}
 .op-keys{font-size:12px;line-height:1.45;color:var(--text-muted)}
 .op-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:1200;display:flex;align-items:center;gap:6px;
-  background:var(--text-main);color:var(--card-bg);border-radius:12px;padding:6px 6px 6px 16px;box-shadow:0 10px 30px rgba(0,0,0,.28);font-size:14px;width:max-content;min-width:min(320px,calc(100vw - 32px));max-width:min(560px,calc(100vw - 32px));box-sizing:border-box}
+  background:#172330;color:#f7f4ee;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:6px 6px 6px 16px;box-shadow:0 10px 30px rgba(0,0,0,.28);font-size:14px;width:max-content;min-width:min(320px,calc(100vw - 32px));max-width:min(560px,calc(100vw - 32px));box-sizing:border-box}
 .op-toast span{flex:1;min-width:0;overflow-wrap:anywhere}
-.op-toast button{font:inherit;font-weight:700;color:var(--gold-2,#d8bd91);background:transparent;border:0;padding:8px 10px;border-radius:8px;min-height:40px;cursor:pointer}
+.op-toast button{font:inherit;font-weight:700;color:#d8bd91;background:transparent;border:0;padding:8px 10px;border-radius:8px;min-height:40px;cursor:pointer}
 .op-toast .op-toast__x{font-weight:400;opacity:.7;color:inherit}
 .op-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .op-form .pf-field{min-width:0}

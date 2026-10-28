@@ -421,3 +421,29 @@ test('перетаскивание — только на широком экра
   w.root.unmount();
   (g.window as N).matchMedia = mm;
 });
+
+test('шахматка: «Дерево / Шахматка» у корпуса с секциями; клетка → карточка; «+» в строке = то же, что в дереве; не по шаблону — подпись', async () => {
+  const s = fakeServer(); const k1 = s.ins(null, 'object', 'Корпус 1', { kind: 'building' });
+  const s1 = s.ins(k1, 'section', 'Секция 1'), s2 = s.ins(k1, 'section', 'Секция 2');
+  const f11 = s.ins(s1, 'floor', 'эт. 1'); s.ins(s1, 'floor', 'эт. 2'); s.ins(s2, 'floor', 'эт. 1');
+  s.ins(f11, 'apartment', 'кв. 1', { build: '1' }); s.ins(f11, 'apartment', 'кв. 2', { build: '2' });
+  const k2 = s.ins(null, 'object', 'Паркинг', { kind: 'parking' }); s.ins(k2, 'other', 'Уровень -1');
+  const { el, root } = mount(s.api); await tick(); await tick();
+  click(q(el, 'op-view-chess')); await tick(); await tick(); await tick();
+  const ch = q(el, 'op-chess'); assert.ok(ch, 'шахматка видна');
+  assert.deepEqual([...ch.querySelectorAll('[role="rowheader"]')].map((x: N) => x.textContent), ['эт. 2', 'эт. 1'], 'верхний этаж сверху');
+  assert.deepEqual([...ch.querySelectorAll('.op-chess__sec')].map((x: N) => x.textContent), ['Секция 1', 'Секция 2']);
+  assert.equal(ch.querySelectorAll('.op-chess__none').length, 1, 'у Секции 2 нет эт. 2 — пустая клетка');
+  click(ch.querySelector('[data-place-id]')); await tick();
+  assert.equal(q(el, 'op-place').querySelector('b').textContent, 'кв. 1', 'клетка → карточка места');
+  click(ch.querySelector(`[data-floor-id="${f11}"] [data-testid="op-chess-plus-place"]`)); await tick(); await tick(); await tick();
+  assert.ok(s.calls.some((c) => c === `save:${f11}:apartment:кв. 3::3:`), '«+» в строке — следующее помещение (кв. 3)');
+  assert.ok([...q(el, 'op-chess').querySelectorAll('[data-place-id] b')].some((x: N) => x.textContent === 'кв. 3'), 'клетка появилась');
+  click(q(el, 'op-chess').querySelector('[data-testid="op-chess-plus-floor"]')); await tick(); await tick(); await tick();
+  assert.ok(s.calls.some((c) => c === `save:${s1}:floor:эт. 3:::`), '«+ эт.» над секцией — следующий этаж');
+  click(q(el, 'op-view-tree')); await tick();
+  assert.ok(q(el, 'op-tree') && !q(el, 'op-chess'), 'обратно в дерево');
+  click(el.querySelector(`[data-object-id="${k2}"]`)); await tick(); await tick();
+  assert.ok(!q(el, 'op-view-chess'), 'у объекта без секций переключателя нет');
+  root.unmount();
+});
