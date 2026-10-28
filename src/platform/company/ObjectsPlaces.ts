@@ -2,7 +2,8 @@
  * «Проект → Объекты и места» — редактор структуры (P2-0055, утверждённый макет reports/P2-0055/mockups/compare.html; основа — P2-0047).
  * Верх дерева — объекты (корпус, паркинг, сети…; вид — справочник сервера), под ними секции, этажи, помещения со строительным
  * номером и номером БТИ. Правка без окон: название — в строке, «+» сразу создаёт следующее по номеру («эт. 6», «Секция 2»,
- * «кв. 21»), «Выше / Ниже», удаление с плашкой «Отменить». Пакетно — как раньше, листом: мастер объекта, «Добавить этажи»,
+ * «кв. 21»), «Выше / Ниже», копировать / вырезать / вставить (меню, карточка, Ctrl/⌘ + C / X / V; копию — в любое место проекта,
+ * вырезанное и перетаскиваемое мышью на ПК — только внутри своего объекта), удаление с плашкой «Отменить». Пакетно — как раньше, листом: мастер объекта, «Добавить этажи»,
  * «Добавить другое…» (поштучно, с выбором вида и номерами). Карточка места — панель справа на ПК (от 900 px), лист снизу на
  * телефоне. Права и проверки — на сервере (049: перенос только внутри объекта); экран заранее показывает, что нельзя.
  * Без сети правка недоступна. Дети грузятся при раскрытии. id нового места даёт приложение.
@@ -15,8 +16,9 @@ import type { PlanNodeType } from '../../services/locations/types.ts';
 import type { Result } from './company.service.ts';
 import { MoreMenu, PlaceTree, RecordFields, Sheet } from '../ui/index.ts';
 import type { MoreItem } from '../ui/index.ts';
-import { CHILD_TYPE, nextChildName, pushUndo, stepBefore } from './places-editor.ts';
-import type { UndoEntry } from './places-editor.ts';
+import { CHILD_TYPE, clipSummary, dropPlace, MOVE_OTHER_OBJECT, nextChildName, pasteCheck, pasteName, pushUndo, stepBefore } from './places-editor.ts';
+import type { Check, Clip, UndoEntry } from './places-editor.ts';
+import type { DropWhere } from '../ui/tree.ts';
 
 const TYPE_LABEL: Record<string, string> = { object: 'объект', building: 'корпус', section: 'секция', floor: 'этаж', apartment: 'квартира', other: 'прочее' };
 const INNER: PlanNodeType[] = ['section', 'floor', 'apartment', 'other'];
@@ -99,7 +101,15 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   const [undo, setUndo] = useState<UndoEntry[]>([]);
   const [toast, setToast] = useState<{ key: number; text: string; canUndo: boolean } | null>(null);
   const [nextNo, setNextNo] = useState<Record<string, number>>({});
-  const wide = useWide('(min-width: 900px)');
+  const [clip, setClip] = useState<Clip | null>(null);
+  const [drag, setDrag] = useState<PlaceNode | null>(null);
+  const [hint, setHint] = useState<{ id: string; where: DropWhere; ok: boolean; reason?: string } | null>(null);
+  const pc = useWide('(min-width: 900px)');   // ПК: мышь, клавиши, перетаскивание
+  // панель карточки справа — когда самой области хватает места: от 760 px — 340 px, от 600 — узкая 280 px; иначе — лист снизу
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [boxW, setBoxW] = useState(0);
+  const wide = pc && (boxW === 0 || boxW >= 600);
+  const slim = wide && boxW > 0 && boxW < 760;
   const kidsRef = useRef(kids); kidsRef.current = kids;
   const openRef = useRef(open); openRef.current = open;
   const seq = useRef(0);
@@ -110,6 +120,14 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     return list;
   };
   useEffect(() => { void load(null).then((l) => { if (l.length) { setObjId(l[0].id); void load(l[0].id); } }); }, []);
+  useEffect(() => {
+    const el = rootRef.current;
+    const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    if (!el || !RO) return undefined;
+    const ro = new RO((es) => { const w = es[0] ? es[0].contentRect.width : 0; if (w) setBoxW(Math.round(w)); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [kids[''] === undefined]);
   useEffect(() => {
     if (!toast) return undefined;
     const t = setTimeout(() => setToast((x) => (x && x.key === toast.key ? null : x)), TOAST_MS);
@@ -124,6 +142,11 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   const kindName = (code: string | null): string => (kinds.find((k) => k.code === code) || { name: code || 'прочее' }).name;
   const typeOf = (n: PlaceNode): string => (n.node_type === 'object' ? kindName(n.object_kind).toLowerCase() : TYPE_LABEL[n.node_type] || n.node_type);
   const siblings = (n: PlaceNode): PlaceNode[] => kids[n.parent_id || ''] || [];
+  /** id мест от n вверх до объекта (включая n) и сам объект. */
+  const lineage = (n: PlaceNode): string[] => { const out: string[] = []; let x: PlaceNode | null = n; while (x) { out.push(x.id); x = byId(x.parent_id); } return out; };
+  const objectOf = (n: PlaceNode): string => { const l = lineage(n); return l[l.length - 1]; };
+  const canPaste = (target: PlaceNode): Check => (clip ? pasteCheck(clip, target, lineage(target), objectOf(target))
+    : { ok: false, reason: 'Буфер пуст — сначала «Копировать» или «Вырезать»' });
 
   // следующий строительный номер для «+ кв.» — когда выбран этаж (подпись кнопки)
   useEffect(() => {
@@ -236,6 +259,65 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     const r = await act(api.copyPlace(n.id, id, name), `Скопировано: «${name}»`, api.removePlace ? () => () => api.removePlace!(id) : null, [n.parent_id]);
     if (r.ok) setSelId(id);
   }
+  function toClip(n: PlaceNode, mode: 'copy' | 'cut'): void {
+    if (n.node_type === 'object') return;
+    setClip({ mode, node: n, objectId: objectOf(n) }); setError('');
+  }
+  /** «Вставить сюда»: скопированное — копией (название — свободное на новом уровне, номера квартир — объекта-получателя),
+   *  вырезанное — переносом внутри объекта; «Отменить» — удалить копию / вернуть на прежнее место. */
+  async function paste(target: PlaceNode): Promise<void> {
+    if (!clip || busy) return;
+    const c = canPaste(target);
+    if (!c.ok) { setError(c.reason); return; }
+    const src = clip.node;
+    setOpen((o) => ({ ...o, [target.id]: true }));
+    if (clip.mode === 'copy') {
+      if (!api.copyPlace) return;
+      const list = kidsRef.current[target.id] || await load(target.id);
+      const id = newId(), name = pasteName(list, src);
+      const r = await act(api.copyPlace(src.id, id, name, target.id), `Вставлено в «${target.name}»: «${name}»`,
+        api.removePlace ? () => () => api.removePlace!(id) : null, [target.id, target.parent_id]);
+      if (r.ok) setSelId(id);
+      return;
+    }
+    if (!api.movePlace) return;
+    const mv = api.movePlace;
+    const r = await act(mv(src.id, target.id, null), `Перенесено в «${target.name}»: «${src.name}»`,
+      (v: MovePlaceResult) => (v.changed ? () => mv(src.id, v.oldParentId, v.oldBeforeId) : null), [target.id, src.parent_id]);
+    if (r.ok) { setClip(null); setSelId(src.id); }
+  }
+  // ---------- перетаскивание мышью (ПК): только внутри своего объекта ----------
+  function dropCheck(over: PlaceNode, where: DropWhere): Check {
+    if (!drag || over.id === drag.id) return { ok: false, reason: '' };
+    const parent = where === 'inside' ? over : byId(over.parent_id);
+    if (!parent) return { ok: false, reason: 'Верхний уровень — только объект' };
+    const c = pasteCheck({ mode: 'cut', node: drag, objectId: objectOf(drag) }, parent, lineage(parent), objectOf(parent));
+    if (!c.ok && where !== 'inside' && parent.id === drag.parent_id && c.reason.startsWith('Место уже здесь')) return { ok: true };
+    return c;
+  }
+  const treeDrag = {
+    can: (n: PlaceNode) => edit && pc && !busy && n.node_type !== 'object',
+    start: (n: PlaceNode) => { setDrag(n); setHint(null); },
+    end: () => { setDrag(null); setHint(null); },
+    over: (n: PlaceNode, where: DropWhere) => {
+      const c = dropCheck(n, where);
+      const reason = c.ok ? undefined : c.reason;
+      if (!hint || hint.id !== n.id || hint.where !== where || hint.ok !== c.ok) setHint({ id: n.id, where, ok: c.ok, reason });
+      return c.ok;
+    },
+    drop: (n: PlaceNode, where: DropWhere) => {
+      const d = drag;
+      setDrag(null); setHint(null);
+      if (!d || !api.movePlace || !dropCheck(n, where).ok) return;
+      const t = dropPlace(n, where, siblings(n), d.id);
+      const sibs = siblings(d), next = sibs[sibs.findIndex((x) => x.id === d.id) + 1];
+      if (t.parent === d.parent_id && (t.before === d.id || t.before === (next ? next.id : null))) return;   // бросили на прежнее место
+      const mv = api.movePlace;
+      if (where === 'inside') setOpen((o) => ({ ...o, [n.id]: true }));
+      void act(mv(d.id, t.parent, t.before), `«${d.name}» перенесено`, (v: MovePlaceResult) => (v.changed ? () => mv(d.id, v.oldParentId, v.oldBeforeId) : null),
+        [t.parent, d.parent_id]).then((r) => { if (r.ok) setSelId(d.id); });
+    }
+  };
   async function remove(n: PlaceNode): Promise<void> {
     if (!api.removePlace || busy) return;
     if (n.node_type === 'object') { openDialog({ kind: 'remove', node: n }); return; }
@@ -253,7 +335,10 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     const mod = e.ctrlKey || e.metaKey;
     if (mod && (e.code === 'KeyZ' || e.key.toLowerCase() === 'z')) { if (undo.length) { e.preventDefault(); void doUndo(); } return; }
     if (!sel) return;
-    if (e.key === 'F2') { e.preventDefault(); startRename(sel); }
+    if (mod && (e.code === 'KeyC' || e.key.toLowerCase() === 'c')) { if (sel.node_type !== 'object') { e.preventDefault(); toClip(sel, 'copy'); } }
+    else if (mod && (e.code === 'KeyX' || e.key.toLowerCase() === 'x')) { if (sel.node_type !== 'object') { e.preventDefault(); toClip(sel, 'cut'); } }
+    else if (mod && (e.code === 'KeyV' || e.key.toLowerCase() === 'v')) { if (clip) { e.preventDefault(); void paste(sel); } }
+    else if (e.key === 'F2') { e.preventDefault(); startRename(sel); }
     else if (e.key === 'Delete' && sel.node_type !== 'object') { e.preventDefault(); void remove(sel); }
   }
 
@@ -396,11 +481,20 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   // ---------- меню, «+» в строке, карточка ----------
   function menu(n: PlaceNode, o: PlaceNode | null): MoreItem[] {
     if (!edit) return [];
-    const items: MoreItem[] = [{ id: 'rename', label: 'Переименовать', hint: wide ? 'F2 или двойной щелчок' : undefined, onClick: () => startRename(n) }];
+    const items: MoreItem[] = [{ id: 'rename', label: 'Переименовать', hint: pc ? 'F2 или двойной щелчок' : undefined, onClick: () => startRename(n) }];
     const child = CHILD_TYPE[n.node_type];
     if (child) { const nm = plusName(n); items.push({ id: 'plus', label: nm ? `+ ${nm}` : `+ ${TYPE_LABEL[child]}`, hint: 'следующий по номеру, без окна', onClick: () => { void addNext(n); } }); }
     if (n.node_type !== 'apartment') items.push({ id: 'add', label: 'Добавить другое…', hint: 'вид, название и номера — вручную', onClick: () => openDialog({ kind: 'add', parent: n }) });
     if (n.node_type === 'section' && o && api.addFloors) items.push({ id: 'floors', label: 'Добавить этажи…', hint: 'в одну или несколько секций', onClick: () => openDialog({ kind: 'floors', obj: o, section: n }) });
+    if (n.node_type !== 'object') {
+      if (api.copyPlace) items.push({ id: 'copy', label: 'Копировать', hint: pc ? 'Ctrl/⌘ + C' : undefined, onClick: () => toClip(n, 'copy') });
+      if (api.movePlace) items.push({ id: 'cut', label: 'Вырезать', hint: pc ? 'Ctrl/⌘ + X — перенести внутри объекта' : 'перенести внутри объекта', onClick: () => toClip(n, 'cut') });
+    }
+    if (clip || n.node_type !== 'apartment') {
+      const c = canPaste(n);
+      items.push({ id: 'paste', label: clip ? `Вставить сюда: ${clipSummary(clip.node)}` : 'Вставить сюда', disabled: !c.ok, hint: c.ok ? (pc ? 'Ctrl/⌘ + V' : undefined) : c.reason,
+        onClick: () => { void paste(n); } });
+    }
     if (n.node_type !== 'object' && api.copyPlace) items.push({ id: 'dup', label: 'Дублировать рядом', hint: `«${nextName(siblings(n), n.name)}» — со всем, что внутри`, onClick: () => { void duplicate(n); } });
     if (api.movePlace) {
       const sibs = siblings(n);
@@ -465,11 +559,14 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
         api.movePlace ? btn('up', '↑ Выше', () => { void step(n, -1); }, { disabled: !up }) : null,
         api.movePlace ? btn('down', '↓ Ниже', () => { void step(n, 1); }, { disabled: !down }) : null,
         btn('rename', 'Переименовать', () => startRename(n), { wide: n.node_type === 'object' || !api.copyPlace }),
+        n.node_type !== 'object' && api.copyPlace ? btn('copy', 'Копировать', () => toClip(n, 'copy')) : null,
+        n.node_type !== 'object' && api.movePlace ? btn('cut', 'Вырезать', () => toClip(n, 'cut')) : null,
+        clip && n.node_type !== 'apartment' ? btn('paste', 'Вставить сюда', () => { void paste(n); }, { wide: true, disabled: !canPaste(n).ok, title: canPaste(n).ok ? clipSummary(clip.node) : (canPaste(n) as { reason: string }).reason }) : null,
         n.node_type !== 'object' && api.copyPlace ? btn('dup', 'Дублировать рядом', () => { void duplicate(n); }, { title: `Копия «${nextName(sibs, n.name)}» рядом` }) : null,
         n.node_type === 'section' && o && api.addFloors ? btn('floors', 'Добавить этажи…', () => openDialog({ kind: 'floors', obj: o, section: n }), { wide: true }) : null,
         !apt ? btn('other', 'Добавить другое…', () => openDialog({ kind: 'add', parent: n }), { wide: true }) : null,
         api.removePlace ? btn('remove', 'Удалить', () => { void remove(n); }, { wide: true, cls: 'pf-btn--ghost op-bad' }) : null) : null,
-      manage && wide ? h('div', { className: 'op-keys' }, 'На выбранной строке: F2 — переименовать, Delete — удалить, Ctrl/⌘ + Z — отменить.') : null);
+      manage && pc ? h('div', { className: 'op-keys' }, 'На выбранной строке: Ctrl/⌘ + C — копировать, X — вырезать, V — вставить, Z — отменить; F2 — переименовать, Delete — удалить. Строку можно перетащить мышью за ⋮⋮ — внутри объекта.') : null);
   }
 
   // ---------- экран ----------
@@ -487,25 +584,38 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     toast.canUndo && undo.length ? h('button', { type: 'button', 'data-testid': 'op-undo', disabled: busy, onClick: () => { void doUndo(); } }, 'Отменить') : null,
     h('button', { type: 'button', className: 'op-toast__x', 'aria-label': 'Скрыть', onClick: () => setToast(null) }, '✕')) : null;
 
-  if (objects === undefined) return h('div', { className: 'op-root' }, head, h('div', { className: 'pf-muted' }, 'Загрузка…'));
-  if (!objects.length) return h('div', { className: 'op-root', 'data-testid': 'op-root' }, head, ...notes,
+  if (objects === undefined) return h('div', { className: 'op-root', ref: rootRef }, head, h('div', { className: 'pf-muted' }, 'Загрузка…'));
+  if (!objects.length) return h('div', { className: 'op-root', 'data-testid': 'op-root', ref: rootRef }, head, ...notes,
     h('div', { className: 'pf-card op-empty', 'data-testid': 'op-empty' }, manage ? 'Объектов пока нет — нажмите «+ Объект»: корпус можно сразу заполнить секциями, этажами и квартирами.'
       : project.places_led_by_quality ? 'Мест пока нет — добавьте корпус в Качестве.' : 'Объектов пока нет.'), sheet(), toastEl);
 
   const cards = h('div', { className: 'op-objs', role: 'list', 'data-testid': 'op-objects' }, objects.map((o) => h('button', {
-    key: o.id, type: 'button', role: 'listitem', className: 'op-obj' + (o.id === objId ? ' is-on' : ''), 'aria-pressed': o.id === objId, 'data-object-id': o.id, onClick: () => pickObject(o) },
+    key: o.id, type: 'button', role: 'listitem', className: 'op-obj' + (o.id === objId ? ' is-on' : '') + (hint && hint.id === 'obj:' + o.id ? ' is-no' : ''),
+    'aria-pressed': o.id === objId, 'data-object-id': o.id, onClick: () => pickObject(o),
+    // перетаскивание над другим объектом — «нельзя» и подсказка (бросить нельзя: dragover без preventDefault)
+    onDragOver: drag ? () => { if (o.id !== objectOf(drag) && (!hint || hint.id !== 'obj:' + o.id)) setHint({ id: 'obj:' + o.id, where: 'inside', ok: false, reason: MOVE_OTHER_OBJECT }); } : undefined,
+    onDragLeave: drag ? () => { if (hint && hint.id === 'obj:' + o.id) setHint(null); } : undefined },
     h('b', null, o.name), h('span', { className: 'op-obj__k' }, kindName(o.object_kind)),
-    h('span', { className: 'op-obj__m' }, o.apartment_count ? `квартир ${o.apartment_count}` : o.child_count ? `мест внутри ${o.child_count}` : 'пока пусто'))));
+    h('span', { className: 'op-obj__m' }, o.apartment_count ? `квартир ${o.apartment_count}` : o.child_count ? `мест внутри ${o.child_count}` : 'пока пусто'),
+    hint && hint.id === 'obj:' + o.id ? h('span', { className: 'op-obj__no', role: 'status', 'data-testid': 'op-obj-no' }, '⦸ ' + MOVE_OTHER_OBJECT) : null)));
+  const clipBar = clip && edit ? h('div', { className: 'op-clip', role: 'status', 'data-testid': 'op-clip' },
+    h('span', null, clip.mode === 'copy' ? 'Скопировано: ' : 'Вырезано: ', h('b', null, clipSummary(clip.node))),
+    h('span', { className: 'op-clip__hint' }, clip.mode === 'copy' ? 'Выберите корпус, секцию или этаж и нажмите «Вставить сюда»' + (pc ? ' (Ctrl/⌘ + V)' : '')
+      : `Вставить можно только внутри объекта «${byId(clip.objectId)?.name || ''}»`),
+    h('button', { type: 'button', className: 'op-clip__x', 'aria-label': 'Очистить буфер', 'data-testid': 'op-clip-clear', onClick: () => setClip(null) }, '✕')) : null;
   const inner = obj ? kids[obj.id] : undefined;
   const objPlus = obj ? plusName(obj) : null;
   const objBox = obj ? h('div', { className: 'op-obj-box', 'data-testid': 'op-object', 'data-object-id': obj.id },
     h('div', { className: 'op-obj-head' },
       h('button', { type: 'button', className: 'op-obj-title', onClick: () => select(obj) }, h('b', null, obj.name), h('span', null, kindName(obj.object_kind))),
       h('div', { className: 'op-obj-actions' },
+        edit && clip ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'op-obj-paste', disabled: busy || !canPaste(obj).ok,
+          title: canPaste(obj).ok ? undefined : (canPaste(obj) as { reason: string }).reason, onClick: () => { void paste(obj); } }, 'Вставить сюда') : null,
         edit && api.fillObject && !obj.child_count ? h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'op-fill-open', onClick: () => { setFill(FILL0); openDialog({ kind: 'fill', obj }); } }, 'Заполнить объект') : null,
         edit && obj.child_count ? h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'op-obj-plus', disabled: busy, onClick: () => { void addNext(obj); } },
           objPlus ? `+ ${objPlus}` : '+ Секция') : null,
         h(MoreMenu, { testId: 'op-obj-more', items: menu(obj, obj).filter((m) => m.id !== 'plus'), label: 'Действия: ' + obj.name }))),
+    clipBar,
     inner === undefined ? h('div', { className: 'pf-muted' }, 'Загрузка…')
       : inner.length ? h(PlaceTree<PlaceNode & { hasKids: boolean }>, {
           testId: 'op-tree', roots: inner.map((n) => ({ ...n, hasKids: n.child_count > 0 })),
@@ -513,12 +623,13 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
           open, onToggle: (n) => { void toggle(n); }, selected: selId, onSelect: (n) => select(n),
           kind: (n) => typeOf(n), meta, menu: (n) => menu(n, obj), limit: 30, more, onMore: (id) => setMore((m) => ({ ...m, [id]: true })),
           action: (n) => plusBtn(n), onRename: edit ? (n) => startRename(n) : undefined,
+          drag: edit && pc ? { ...treeDrag, hint } : undefined,
           editing: editing && byId(editing.id) ? { id: editing.id, node: renameBox(byId(editing.id) as PlaceNode) } : null })
       : h('div', { className: 'pf-muted op-empty' }, edit ? 'Внутри пока пусто — «Заполнить объект» создаст секции, этажи и квартиры одной формой.' : 'Внутри пока пусто.')) : null;
 
-  return h('div', { className: 'op-root', 'data-testid': 'op-root', onKeyDown: onKey }, head, ...notes, cards,
+  return h('div', { className: 'op-root', 'data-testid': 'op-root', ref: rootRef, onKeyDown: onKey }, head, ...notes, cards,
     // на ПК место под карточку есть всегда — выбор строки не сдвигает дерево под мышью
-    h('div', { className: 'op-split' + (wide && obj ? ' has-side' : '') }, objBox, wide && obj ? h('aside', { className: 'op-side' }, sel ? placeCard(sel)
+    h('div', { className: 'op-split' + (wide && obj ? ' has-side' : '') + (slim ? ' is-slim' : '') }, objBox, wide && obj ? h('aside', { className: 'op-side' }, sel ? placeCard(sel)
       : h('div', { className: 'op-side__empty', 'data-testid': 'op-place-empty' }, 'Выберите место в дереве — здесь появятся его данные и действия.')) : null),
     !wide && sel && !dialog && !editing ? h(Sheet, { title: sel.name, sub: sel.path.split(' · ').slice(0, -1).join(' › ') || 'верхний уровень', testId: 'op-place-sheet', onClose: () => setSelId(null) }, placeCard(sel, true)) : null,
     sheet(), toastEl);
@@ -536,7 +647,16 @@ export const OBJECTS_CSS = `
 .op-obj:focus-visible{outline:2px solid var(--accent,var(--primary));outline-offset:2px}
 .op-split{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
 .op-split.has-side{grid-template-columns:minmax(0,1fr) 340px}
+.op-split.has-side.is-slim{grid-template-columns:minmax(0,1fr) 280px}
+.op-split.is-slim .op-side{padding:12px}
+.op-split.is-slim .op-card__nums{grid-template-columns:1fr}
 .op-side{position:sticky;top:80px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:14px}
+.op-clip{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 8px 8px 12px;border-radius:12px;background:var(--card-bg-2,var(--card-bg));border:1px dashed var(--line-strong,var(--card-border));font-size:13px}
+.op-clip b{font-weight:600}
+.op-clip__hint{flex:1 1 220px;color:var(--text-muted)}
+.op-clip__x{font:inherit;min-width:36px;min-height:36px;border:0;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer}
+.op-obj.is-no{border-style:dashed;border-color:var(--color-red,#9f4c45)}
+.op-obj__no{position:absolute;left:8px;right:8px;top:calc(100% + 6px);z-index:5;background:var(--text-main);color:var(--card-bg);font-size:12.5px;border-radius:10px;padding:8px 10px;pointer-events:none}
 .op-side__empty{font-size:13.5px;color:var(--text-muted);line-height:1.5}
 .op-obj-box{display:flex;flex-direction:column;gap:8px;min-width:0}
 .op-obj-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}

@@ -63,7 +63,7 @@
       for (var u = t; u; u = u.parent_id ? byId(u.parent_id) : null) if (u.id === src.id) return err('Нельзя вставить место внутрь самого себя');
       if (taken(src.project, t.id, a.p_name)) return err('Место с таким названием уже есть на этом уровне', '23505');
       var no = nextNo(top(t));
-      var copy = function (x, parent, name, newId) { var r = ins(x.project, parent, x.node_type, name, { id: newId || undefined, object_kind: null });
+      var copy = function (x, parent, name, newId) { var r = ins(x.project, parent, x.node_type, name, newId ? { id: newId } : {});
         live(x.project, x.id).forEach(function (c) { if (c.node_type === 'apartment' && c.build_no) { copy(c, r.id, 'кв. ' + no, null); store[store.length - 1].build_no = String(no); no++; } else copy(c, r.id, c.name, null); }); return r.id; };
       copy(src, t.id, a.p_name, a.p_new_id); return a.p_new_id; }
   };

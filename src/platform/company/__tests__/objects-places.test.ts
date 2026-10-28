@@ -340,3 +340,84 @@ test('отказ сервера показан текстом сервера', a
   assert.equal(el.querySelector('[role="alert"]').textContent, 'Нет права управлять проектами');
   root.unmount();
 });
+
+test('копировать секцию → вставить в другой корпус: копия с названием, свободным там; «Отменить» удаляет копию', async () => {
+  const s = fakeServer(); const k1 = s.ins(null, 'object', 'Корпус 1', { kind: 'building' }); const k2 = s.ins(null, 'object', 'Корпус 2', { kind: 'building' });
+  const s1 = s.ins(k1, 'section', 'Секция 1'); s.ins(k2, 'section', 'Секция 1');
+  const { el, root } = mount(s.api); await tick(); await tick();
+  await openMenu(el, 'Секция 1', 'copy');
+  assert.match(q(el, 'op-clip').textContent, /Скопировано: Секция 1/);
+  click(el.querySelector(`[data-object-id="${k2}"]`)); await tick(); await tick();
+  assert.equal(q(el, 'op-obj-paste').disabled, false);
+  click(q(el, 'op-obj-paste')); await tick(); await tick();
+  assert.ok(s.calls.includes(`copy:${s1}:Секция 2:${k2}`), 'копия в Корпус 2 под именем «Секция 2» (' + s.calls.filter((c) => c.startsWith('copy')).join(';') + ')');
+  assert.ok(rowOf(el, 'Секция 2'));
+  assert.ok(q(el, 'op-clip'), 'скопированное можно вставлять ещё раз');
+  click(q(el, 'op-undo')); await tick(); await tick();
+  assert.ok(!rowOf(el, 'Секция 2'), 'отмена удалила копию');
+  root.unmount();
+});
+
+test('вырезать этаж → вставить в другую секцию того же корпуса = перенос; в другой корпус — нельзя, с причиной; «Отменить» возвращает', async () => {
+  const s = fakeServer(); const k1 = s.ins(null, 'object', 'Корпус 1', { kind: 'building' }); const k2 = s.ins(null, 'object', 'Корпус 2', { kind: 'building' });
+  const s1 = s.ins(k1, 'section', 'Секция 1'), s2 = s.ins(k1, 'section', 'Секция 2'); const f = s.ins(s1, 'floor', 'эт. 9'); s.ins(k2, 'section', 'Секция 1');
+  const { el, root } = mount(s.api); await tick(); await tick();
+  click(rowOf(el, 'Секция 1').querySelector('[data-testid="p2-tree-toggle"]')); await tick();
+  await openMenu(el, 'эт. 9', 'cut');
+  assert.match(q(el, 'op-clip').textContent, /Вырезано: эт\. 9/);
+  click(rowOf(el, 'Секция 1').querySelector('[data-testid="p2-tree-more"]')); await tick();
+  const same = rowOf(el, 'Секция 1').querySelector('[data-item="paste"]');
+  assert.equal(same.disabled, true, 'в ту же секцию — неактивно');
+  assert.match(same.textContent, /уже здесь/);
+  click(rowOf(el, 'Секция 1').querySelector('[data-testid="p2-tree-more"]')); await tick();
+  await openMenu(el, 'Секция 2', 'paste'); await tick();
+  assert.ok(s.calls.includes(`move:${f}:${s2}:null`));
+  assert.equal(s.rows.find((r) => r.id === f)!.parent, s2);
+  assert.ok(!q(el, 'op-clip'), 'после переноса буфер пуст');
+  click(q(el, 'op-undo')); await tick(); await tick();
+  assert.equal(s.rows.find((r) => r.id === f)!.parent, s1, 'отмена — этаж на прежнем месте');
+  // вырезать и выбрать другой корпус — вставка неактивна с причиной
+  await openMenu(el, 'эт. 9', 'cut');
+  click(el.querySelector(`[data-object-id="${k2}"]`)); await tick(); await tick();
+  assert.equal(q(el, 'op-obj-paste').disabled, true);
+  assert.match(q(el, 'op-obj-paste').title, /только внутри объекта; в другой объект — копировать и вставить/);
+  await openMenu(el, 'Секция 1', 'paste');
+  assert.ok(!s.calls.some((c) => c.startsWith(`move:${f}:`) && !c.includes(s2) && !c.includes(s1)), 'на сервер не ушло');
+  root.unmount();
+});
+
+test('клавиши на выбранной строке: Ctrl+C, Ctrl+V (вставка внутрь выбранного), Ctrl+Z; в поле ввода — не перехватываются', async () => {
+  const s = fakeServer(); const k1 = s.ins(null, 'object', 'Корпус 1', { kind: 'building' });
+  const s1 = s.ins(k1, 'section', 'Секция 1'); const f = s.ins(s1, 'floor', 'эт. 1'); s.ins(k1, 'section', 'Секция 2');
+  const { el, root } = mount(s.api); await tick(); await tick();
+  const key = (target: N, k: string, code: string) => target.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, code, ctrlKey: true, bubbles: true }));
+  click(rowOf(el, 'Секция 1').querySelector('[data-testid="p2-tree-toggle"]')); await tick();
+  click(rowOf(el, 'эт. 1').querySelector('[data-testid="p2-tree-open"]')); await tick();
+  key(rowOf(el, 'эт. 1').querySelector('[data-testid="p2-tree-open"]'), 'с', 'KeyC'); await tick();
+  assert.match(q(el, 'op-clip').textContent, /Скопировано: эт\. 1/, 'русская раскладка: Ctrl+С тоже копирует');
+  click(rowOf(el, 'Секция 2').querySelector('[data-testid="p2-tree-open"]')); await tick();
+  key(rowOf(el, 'Секция 2').querySelector('[data-testid="p2-tree-open"]'), 'v', 'KeyV'); await tick(); await tick();
+  assert.ok(s.calls.some((c) => c.startsWith(`copy:${f}:эт. 1:`)), 'Ctrl+V — копия в «Секция 2»');
+  key(el.querySelector('[data-testid="op-root"]'), 'z', 'KeyZ'); await tick(); await tick();
+  assert.equal(s.live(s.rows.find((r) => r.name === 'Секция 2')!.id).length, 0, 'Ctrl+Z — копия удалена');
+  const bti = el.querySelector('input'); if (bti) { key(bti, 'v', 'KeyV'); await tick(); }
+  root.unmount();
+});
+
+test('перетаскивание — только на широком экране: строки с ⋮⋮ на ПК, на телефоне нет', async () => {
+  const s = fakeServer(); const k1 = s.ins(null, 'object', 'Корпус 1', { kind: 'building' }); s.ins(k1, 'section', 'Секция 1');
+  const mm = (g.window as N).matchMedia;
+  const as = (wide: boolean) => { (g.window as N).matchMedia = () => ({ matches: wide, addEventListener() {}, removeEventListener() {} }); };
+  as(false);
+  const narrow = mount(s.api); await tick(); await tick();
+  assert.equal(narrow.el.querySelectorAll('[draggable="true"]').length, 0);
+  assert.ok(!narrow.el.querySelector('.p2-tree__grip'));
+  narrow.root.unmount();
+  as(true);
+  const w = mount(s.api); await tick(); await tick();
+  assert.equal(w.el.querySelectorAll('[draggable="true"]').length, 1, 'секция берётся мышью');
+  assert.ok(w.el.querySelector('.p2-tree__grip'));
+  assert.ok(q(w.el, 'op-place-empty'), 'место под карточку есть до выбора');
+  w.root.unmount();
+  (g.window as N).matchMedia = mm;
+});
