@@ -1,6 +1,7 @@
 // P2-0058: стенд «без сети» — статика приложения из этой папки (config → подставной сервер) + подставной Supabase.
 // Боевой сервер не трогается: в браузере rbi-q.ru отрезан (lib.mjs). Основа — reports/P2-0058/baseline/servers.mjs.
 import http from 'node:http';
+import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -160,13 +161,22 @@ async function app(req, res) {
   try {
     if (!(await stat(f)).isFile()) throw new Error('dir');
     let data = await readFile(f);
-    if (p === '/js/services/config.service.js') data = Buffer.from(data.toString('utf8').replace("P2_SUPABASE_URL: 'https://api.rbi-q.ru'", `P2_SUPABASE_URL: '${API}'`));
+    if (p === '/js/services/config.service.js') data = standConfig(data);
+    // P2-0066: в описи версии — отпечаток подменённого стендом config.service.js (иначе версия честно не ставится: «файл другой версии»)
+    if (p === '/sw.js') {
+      const cfg = await readFile(join(base, 'js/services/config.service.js')).catch(() => null);
+      if (cfg) data = Buffer.from(data.toString('utf8').replace(/("js\/services\/config\.service\.js": \[")[0-9a-f]{16}(",)\d+/,
+        (m, a, b) => a + createHash('sha256').update(standConfig(cfg)).digest('hex').slice(0, 16) + b + standConfig(cfg).length));
+    }
     res.writeHead(200, { 'Content-Type': MIME[extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
     res.end(data);
   } catch {
     res.writeHead(404); res.end('not found');
   }
 }
+
+/** config.service.js стенда: адрес сервера платформы → подставной сервер. */
+const standConfig = (buf) => Buffer.from(buf.toString('utf8').replace("P2_SUPABASE_URL: 'https://api.rbi-q.ru'", `P2_SUPABASE_URL: '${API}'`));
 
 let servers = [];
 export async function start() {

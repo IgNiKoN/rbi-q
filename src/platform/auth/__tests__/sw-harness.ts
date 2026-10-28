@@ -8,14 +8,17 @@ import { runInNewContext } from 'node:vm';
 type N = any;
 const CONFIG = readFileSync(new URL('../../../../js/services/config.service.js', import.meta.url), 'utf8');
 
-export function loadSw(cached: string[]) {
+export function loadSw(cached: string[], scope = 'https://ignikon.github.io/platform-2-core') {
   const store = new Map(cached.map((u) => [u, true]));
   const handlers: Record<string, (e: N) => void> = {};
-  const cache = { keys: async () => [...store.keys()].map((url) => ({ url })), delete: async (r: N) => store.delete(r.url), put: async () => {}, addAll: async () => {} };
+  const cache = { keys: async () => [...store.keys()].map((url) => ({ url })), delete: async (r: N) => store.delete(r.url), put: async () => {}, addAll: async () => {},
+    match: async () => undefined };
+  // P2-0066: одна версия в кэше приложения (её кэш — этот), область — адрес приложения
   const ctx: N = {
-    self: { addEventListener: (t: string, fn: (e: N) => void) => { handlers[t] = fn; }, skipWaiting: () => {}, clients: { claim: async () => {} } },
-    caches: { open: async () => cache, keys: async () => [], delete: async () => true, match: async () => undefined },
-    console: { log: () => {}, warn: () => {}, error: () => {} }, URL, Promise, fetch: async () => ({})
+    self: { addEventListener: (t: string, fn: (e: N) => void) => { handlers[t] = fn; }, skipWaiting: () => {}, clients: { claim: async () => {}, matchAll: async () => [] },
+      registration: { scope: scope + '/', active: null, installing: null, waiting: null, update: async () => {} } },
+    caches: { open: async () => cache, keys: async () => [ctx.self.__cacheName], delete: async () => true, match: async () => undefined, has: async () => true },
+    console: { log: () => {}, warn: () => {}, error: () => {} }, URL, Promise, Response, crypto: globalThis.crypto, fetch: async () => ({})
   };
   ctx.importScripts = (path: string) => {
     assert.equal(path, './js/services/config.service.js');

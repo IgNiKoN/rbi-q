@@ -1,0 +1,121 @@
+[
+  {
+    "tag": "r-size",
+    "files": 311,
+    "totalMB": 31.8,
+    "byGroupMB": {
+      "оболочка": 19.7,
+      "company": 2.6,
+      "planfact": 2.9,
+      "platform-admin": 0,
+      "construction-v2": 0,
+      "construction": 0.3,
+      "quality": 6.3
+    }
+  },
+  {
+    "tag": "r-deploy",
+    "mixedLoads": 0,
+    "loads": [
+      {
+        "load": 1,
+        "mixed": false,
+        "html": "A",
+        "tags": {
+          "A": 238
+        }
+      },
+      {
+        "load": 2,
+        "mixed": false,
+        "html": "A",
+        "tags": {
+          "A": 239
+        }
+      },
+      {
+        "load": 3,
+        "mixed": false,
+        "html": "A",
+        "tags": {
+          "A": 239
+        }
+      }
+    ],
+    "waiting": true
+  },
+  {
+    "tag": "r-middeploy",
+    "install": "нет новой версии / установка не удалась",
+    "mixedLoads": 0,
+    "loads": [
+      {
+        "load": 1,
+        "mixed": false,
+        "html": "A",
+        "tags": {
+          "A": 238
+        }
+      },
+      {
+        "load": 2,
+        "mixed": false,
+        "html": "A",
+        "tags": {
+          "A": 238
+        }
+      }
+    ]
+  },
+  {
+    "tag": "r-partial",
+    "install": "нет новой версии / установка не удалась",
+    "failedOffline": [],
+    "cacheAfter": {
+      "caches": [
+        "p2-app-meta",
+        "platform2-v2026.10.29-99a93766",
+        "p2-storage-slot",
+        "platform2-v2026.10.29-e31848d7"
+      ],
+      "planfact": 8,
+      "company": 6
+    },
+    "shown": {
+      "#/planfact": 188,
+      "#/settings/company/objects": 432,
+      "#/quality/engineer": 492
+    }
+  },
+  {
+    "tag": "r-tabs",
+    "install": "waiting",
+    "tab1": {
+      "html": "A",
+      "tags": {
+        "A": 238,
+        "B": 1
+      },
+      "other": [
+        "/js/dist/planfact/chunks/exceljs.min-Cd0WKM3n.js"
+      ]
+    },
+    "tab1Load": "ok",
+    "tab2": {
+      "html": "A",
+      "tags": {
+        "A": 238
+      },
+      "other": []
+    }
+  },
+  {
+    "tag": "r-chunk",
+    "chunk": "xlsx-reader-CPcF3VtK.js",
+    "result": "ok"
+  },
+  {
+    "tag": "r-requests",
+    "requests": 2
+  }
+]

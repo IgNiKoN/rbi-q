@@ -48,17 +48,21 @@ export function buildManifest(root) {
     const buf = readFileSync(join(root, p));
     files[p] = [sha(buf).slice(0, 16), buf.length, groupOf(p)];
   }
-  const digest = sha(Object.entries(files).map(([p, [h, , g]]) => `${p}:${h}:${g}`).join('\n')).slice(0, 8);
+  // код самого sw.js (без участка описи) — тоже часть версии: правка кэша приложения = новая версия
+  let swCode = '';
+  try { const t = readFileSync(join(root, 'sw.js'), 'utf8'); const i = t.indexOf(BEGIN), j = t.indexOf(END); swCode = i >= 0 && j >= 0 ? t.slice(0, i) + t.slice(j + END.length) : t; } catch (e) { /* нет sw.js */ }
+  const digest = sha(Object.entries(files).map(([p, [h, , g]]) => `${p}:${h}:${g}`).concat('sw.js:' + sha(swCode)).join('\n')).slice(0, 8);
   return { digest, files };
 }
 
 /** Текст участка для `sw.js`. */
 export function renderBlock(m, date) {
   const kinds = Object.fromEntries(MODULE_PREFIXES.map((x) => [x.module, x.kind]));
+  const prefixes = MODULE_PREFIXES.map((x) => [x.prefix, x.module]);
   const lines = Object.entries(m.files).map(([p, v]) => `    ${JSON.stringify(p)}: ${JSON.stringify(v)}`);
   return `${BEGIN} — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править\n`
     + `const APP_RELEASE = {\n  version: '${date.replace(/-/g, '.')}-${m.digest}',\n  date: '${date}',\n  digest: '${m.digest}',\n`
-    + `  modules: ${JSON.stringify(kinds)},\n  files: {\n${lines.join(',\n')}\n  }\n};\n${END}`;
+    + `  modules: ${JSON.stringify(kinds)},\n  prefixes: ${JSON.stringify(prefixes)},\n  files: {\n${lines.join(',\n')}\n  }\n};\n${END}`;
 }
 
 /** Прежний участок в тексте `sw.js`: { digest, date } или null. */

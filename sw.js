@@ -2,10 +2,11 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.29-c7496664',
+  version: '2026.10.29-9f5a8d91',
   date: '2026-10-29',
-  digest: 'c7496664',
+  digest: '9f5a8d91',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
+  prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
     ".nojekyll": ["e3b0c44298fc1c14",0,""],
     "css/analytics.desktop.css": ["909efb47e2bdb9fa",118397,""],
@@ -285,7 +286,7 @@ const APP_RELEASE = {
     "js/shared/photo-editor.utils.js": ["658b4356bd1d565e",27484,""],
     "js/shared/photo-viewer-zoom.utils.js": ["0e61ef104ea46f48",7009,""],
     "js/shared/plan-panzoom.utils.js": ["6ee5e0acbc8e06a9",3409,""],
-    "js/shared/pwa-update.utils.js": ["5f1e1052298192c1",7828,""],
+    "js/shared/pwa-update.utils.js": ["9f2cabfaf7d867fe",8130,""],
     "js/shared/smart-input.utils.js": ["33f5f1aafaf56e61",23171,""],
     "js/shared/snake-game.utils.js": ["16c5fe2f47acf098",7191,""],
     "js/shared/splash-screen.utils.js": ["bb4a3e44e9ca1217",1986,""],
@@ -331,392 +332,223 @@ function hasLegacyCache() {
   return caches.keys().then((names) => names.some((n) => n.startsWith(LEGACY_CACHE_PREFIX))).catch(() => false);
 }
 
-/**
- * Business path prefix → shortId (app.entry allowSet / RBI_SW_ALLOWLIST).
- * Order: longer / more specific prefixes first (construction-v2 before construction).
- * *.manifest.js under these prefixes are NOT gated (declarative glue for modules.manifest.js).
- */
-const BUSINESS_PREFIX_TO_MODULE = [
-  { prefix: '/js/modules/construction-v2/', module: 'construction-v2' },
-  { prefix: '/js/modules/construction/', module: 'construction' },
-  { prefix: '/js/modules/quality/', module: 'quality' },
-  { prefix: '/js/dist/construction-v2.js', module: 'construction-v2' },
-  { prefix: '/js/dist/rbi-construction-', module: 'construction' }
-];
+// ==========================================
+// P2-0066: ВЕРСИЯ ЦЕЛИКОМ
+// ==========================================
+// Версия ставится в свой кэш `platform2-v<версия>` целиком: оболочка + допущенные модули (P2-0013) по описи APP_RELEASE.
+// Файл с тем же отпечатком берётся из прежней версии без сети, остальные скачиваются и сверяются с отпечатком. Любая ошибка —
+// установка не удалась, прежняя версия работает. Файлы приложения отдаются только из кэша той версии, на которой открыта
+// вкладка (вкладка = версия); сеть в фоне кэш не переписывает. Прежняя версия хранится, пока открыта хоть одна её вкладка.
+const SCOPE = self.registration.scope;
+const VERSION_PREFIX = CACHE_PREFIX + 'v';
+const META_CACHE = 'p2-app-meta';          // постоянная память: допуск модулей, вкладка → версия, устанавливаемая версия
+const HASH_HEADER = 'x-p2-hash';
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
-/** null = allowlist ещё не пришёл — временно разрешаем cache.put (первый paint). */
+/** Путь файла приложения внутри области (без ?…), корень → index.html; не файл приложения → null. */
+function appPath(url) {
+  if (!url.startsWith(SCOPE)) return null;
+  let p = url.slice(SCOPE.length).split(/[?#]/)[0];
+  try { p = decodeURIComponent(p); } catch (e) { return null; }
+  if (p === '') p = 'index.html';
+  return hasOwn(APP_RELEASE.files, p) ? p : null;
+}
+const keyOf = (path) => new URL(path, SCOPE).href;
+
+async function metaGet(key, dflt) {
+  try { const r = await (await caches.open(META_CACHE)).match('/__' + key); return r ? await r.json() : dflt; } catch (e) { return dflt; }
+}
+async function metaSet(key, value) {
+  try { await (await caches.open(META_CACHE)).put('/__' + key, new Response(JSON.stringify(value))); } catch (e) { /* память недоступна */ }
+}
+
+// --- Допуск модулей (P2-0013): RBI_SW_ALLOWLIST (Качество, СК) и P2_SW_ALLOWLIST (План/Факт, «Компания», Админка).
+// null — допуск ещё не приходил. Хранится в постоянной памяти: после перезапуска кэша приложения он на месте.
 let allowedModules = null;
-
-/**
- * P2-0013: бандлы модулей Platform 2.0 — в кэше только положенные этому входу (сообщение P2_SW_ALLOWLIST от входа платформы:
- * модуль компании ∩ права по ответу сервера); остальные не кэшируются и удаляются. Сам вход (js/dist/platform/) — всем.
- */
-const P2_PREFIX_TO_MODULE = [
-  { prefix: '/js/dist/planfact/', module: 'planfact' },
-  { prefix: '/js/dist/company/', module: 'company' },
-  { prefix: '/js/dist/platform-admin/', module: 'platform-admin' }
-];
 let p2AllowedModules = null;
-
-function resolveP2Module(url) {
-  try {
-    const path = new URL(url).pathname;
-    for (let i = 0; i < P2_PREFIX_TO_MODULE.length; i++) {
-      if (path.indexOf(P2_PREFIX_TO_MODULE[i].prefix) !== -1) return P2_PREFIX_TO_MODULE[i].module;
-    }
-  } catch (e) { /* ignore */ }
-  return null;
-}
-
-function purgeDisallowedP2Cache() {
-  if (p2AllowedModules === null) return Promise.resolve();
-  return caches.open(CACHE_NAME).then((cache) => cache.keys().then((keys) => Promise.all(keys.map((req) => {
-    const mod = resolveP2Module(req.url);
-    return mod && p2AllowedModules.indexOf(mod) === -1 ? cache.delete(req) : null;
-  }))));
-}
-
-function isManifestUrl(url) {
-  try {
-    const path = new URL(url).pathname;
-    return /(^|\/)[^/]*manifest\.js$/.test(path);
-  } catch (e) {
-    return false;
-  }
-}
-
-function resolveBusinessModule(url) {
-  try {
-    const path = new URL(url).pathname;
-    for (let i = 0; i < BUSINESS_PREFIX_TO_MODULE.length; i++) {
-      const { prefix, module } = BUSINESS_PREFIX_TO_MODULE[i];
-      if (prefix.endsWith('.js')) {
-        if (path === prefix || path.endsWith(prefix)) return module;
-      } else if (path.indexOf(prefix) !== -1) {
-        return module;
-      }
-    }
-  } catch (e) { /* ignore */ }
-  return null;
-}
-
-function mayCachePut(url) {
-  const p2 = resolveP2Module(url);
-  if (p2) return p2AllowedModules === null || p2AllowedModules.indexOf(p2) !== -1;
-  if (isManifestUrl(url)) return true;
-  const mod = resolveBusinessModule(url);
-  if (!mod) return true;
-  if (allowedModules === null) return true;
-  return allowedModules.indexOf(mod) !== -1;
-}
-
-function purgeDisallowedBusinessCache() {
-  if (allowedModules === null) return Promise.resolve();
-  return caches.open(CACHE_NAME).then((cache) => {
-    return cache.keys().then((keys) => {
-      return Promise.all(
-        keys.map((req) => {
-          if (isManifestUrl(req.url)) return null;
-          const mod = resolveBusinessModule(req.url);
-          if (mod && allowedModules.indexOf(mod) === -1) {
-            return cache.delete(req);
-          }
-          return null;
-        })
-      );
-    });
+let allowLoaded = null;
+function loadAllow() {
+  if (!allowLoaded) allowLoaded = metaGet('allow', {}).then((a) => {
+    if (allowedModules === null && Array.isArray(a.rbi)) allowedModules = a.rbi;
+    if (p2AllowedModules === null && Array.isArray(a.p2)) p2AllowedModules = a.p2;
   });
+  return allowLoaded;
+}
+/** Группа пути по правилу описи: '' — оболочка, иначе модуль (манифесты модулей — оболочка). Работает и для файлов прежних версий. */
+function groupOfPath(path) {
+  if (/(^|\/)[^/]*manifest\.js$/.test(path)) return '';
+  const m = APP_RELEASE.prefixes.find((x) => path.startsWith(x[0]));
+  return m ? m[1] : '';
+}
+const relPath = (url) => (url.startsWith(SCOPE) ? url.slice(SCOPE.length).split(/[?#]/)[0] : '');
+const allowListOf = (group) => (APP_RELEASE.modules[group] === 'p2' ? p2AllowedModules : allowedModules);
+/** Группа описи допущена: оболочка — всегда; модуль — если он в допуске. */
+function groupAllowed(group) {
+  if (!group) return true;
+  const list = allowListOf(group);
+  return Array.isArray(list) && list.indexOf(group) !== -1;
+}
+/** Группу можно класть в кэш: допущена или допуск ещё не приходил (первый запуск до ответа входа). */
+const groupMayCache = (group) => !group || allowListOf(group) === null || groupAllowed(group);
+/** P2-0013: файл можно держать в кэше приложения (модуль допущен или допуск ещё не приходил). */
+function mayCachePut(url) { return groupMayCache(groupOfPath(relPath(url))); }
+
+// --- Вкладка → версия (по id вкладки; задаётся при открытии вкладки): { id: [кэш версии, когда открыта] }.
+let clientMap = null;
+async function getClientMap() { if (!clientMap) clientMap = await metaGet('clients', {}); return clientMap; }
+async function recordClient(id) {
+  const m = await getClientMap();
+  m[id] = [CACHE_NAME, Date.now()];
+  await metaSet('clients', m);
+}
+const versionOfClient = async (id) => { const v = id && (await getClientMap())[id]; return v ? v[0] : null; };
+
+/** Удалить версии, которыми больше никто не пользуется: не текущая, не устанавливаемая, ни одной открытой вкладки.
+ *  Только что открытая вкладка (≤ 1 мин) может ещё не значиться среди открытых — её запись не трогаем. */
+async function cleanupVersions() {
+  const live = new Set((await self.clients.matchAll({ includeUncontrolled: true })).map((c) => c.id));
+  const m = await getClientMap();
+  let changed = false;
+  for (const [id, v] of Object.entries(m)) if (!live.has(id) && !(Array.isArray(v) && Date.now() - v[1] < 60000)) { delete m[id]; changed = true; }
+  if (changed) await metaSet('clients', m);
+  const keep = new Set([CACHE_NAME, ...Object.values(m).map((v) => v[0])]);
+  const reg = self.registration;
+  if (reg.installing || reg.waiting) keep.add(await metaGet('installing', ''));
+  for (const n of await caches.keys()) if (n.startsWith(VERSION_PREFIX) && !keep.has(n)) await caches.delete(n);
 }
 
-// 1. ПРЕ-КЭШ: shell + settings + locations (+ business *.manifest.js as declarations).
-// Business bundles (quality/construction/…) — runtime cache via fetch + RBI_SW_ALLOWLIST.
-const urlsToCache = [
-  './',
-  './index.html',
-  './report.html',
-  './css/brand/rbi.css',
-  './css/style.css',
-  './css/app-shell.desktop.css',
-  './css/rbi-ui.css',
-  './css/analytics.desktop.css',
-  './css/audit.desktop.css',
-  './css/engineer.desktop.css',
-  './css/knowledge.desktop.css',
-  './css/settings.desktop.css',
-  // PWA / сплэш / push (иначе офлайн без иконок и «Добавить на экран»)
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-512-2.png',
-  './icons/icon-maskable-512.png',
-  './data/system_docs.js',
-  './data/system_nodes.js',
-  './data/system_twi.js',
-  './js/shared/template.utils.js',
-  './data/system_templates.js',
-  './data/system_templates.en.js',
-  './data/system_templates.sr-Latn.js',
-  './data/system_templates.ka.js',
-  './js/shared/system-templates-locale.js',
-  './js/core/router.js',
-  './js/core/views.js',
-  './js/services/config.service.js',
-  './libs/tailwindcdn.js',
-  './libs/chart.umd.min.js',
-  './libs/xlsx.full.min.js',
-  './libs/html2pdf.bundle.min.js',
-  './libs/pptxgenjs.bundle.js',
-  './libs/pptxviewjs.min.js',
-  './libs/docx.bundle.js',
-  './libs/pdfjs/pdf.min.js',
-  './libs/pdfjs/pdf.worker.min.js',
-  './libs/qrcode.min.js',
-  './libs/panzoom.min.js',
-  './libs/Sortable.min.js',
-  './libs/supabase-js.min.js',
-  './js/services/sync/sync-pull.policy.js',
-  './js/services/sync/sync-retry.policy.js',
-  './js/services/sync/sync-net.policy.js',
-  './js/services/sync/sync-journal.policy.js',
-  './js/services/sync/sync-merge.policy.js',
-  './js/services/sync/sync-core.state.js',
-  './js/services/sync/sync-cloud-prepare.utils.js',
-  './js/services/sync/sync-auth.js',
-  './js/services/sync/sync-ui.render.js',
-  './js/services/sync/sync-connection.actions.js',
-  './js/services/sync/sync-push-pull.core.js',
-  './js/services/sync/sync-progress.ui.js',
-  './js/services/sync/sync-engine.core.js',
-  './js/services/sync/sync-post-actions.js',
-  './js/services/storage/storage-db.core.js',
-  './js/services/storage/checklist-snapshot.utils.js',
-  './js/services/storage/history-memory.utils.js',
-  './js/services/storage/storage-converters.utils.js',
-  './js/services/storage/storage-cache-manager.js',
-  './js/services/storage/storage-offline-cache.utils.js',
-  './js/services/storage/storage-diagnostics.render.js',
-  './js/services/storage/storage-photo-loader.js',
-  './js/services/storage/storage-photo-manager.js',
-  './js/services/storage/storage-file-queue.actions.js',
-  './js/shared/math.utils.js',
-  './js/shared/plan-panzoom.utils.js',
-  './js/shared/toast.utils.js',
-  './js/shared/form-draft.utils.js',
-  './js/shared/smart-input.utils.js',
-  './js/shared/photo-editor.utils.js',
-  './js/shared/photo-viewer-zoom.utils.js',
-  './js/shared/pdf-open.utils.js',
-  './js/shared/theme.utils.js',
-  './js/shared/splash-screen.utils.js',
-  './js/shared/pwa-update.utils.js',
-  './js/shared/fab-export.utils.js',
-  './js/shared/layout.utils.js',
-  './js/shared/sync-ui-defer.utils.js',
-  './js/shared/notify.utils.js',
-  './js/shared/error-log.utils.js',
-  './js/shared/touch-gestures.utils.js',
-  './js/shared/ui-motion.utils.js',
-  './js/shared/snake-game.utils.js',
-  './js/shared/checklist-runner.js',
-  './js/core/bootstrap.js',
-  './js/core/app-shell.js',
-  './js/core/app-shell.desktop.js',
+// --- Ход установки: страница показывает его в строке версии.
+let progress = { state: 'idle', version: SW_VERSION, done: 0, total: 0 };
+let notifyAt = 0;
+async function notify(force) {
+  const now = Date.now();
+  if (!force && now - notifyAt < 500) return;
+  notifyAt = now;
+  const list = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).catch(() => []);
+  list.forEach((c) => c.postMessage({ type: 'P2_APP_UPDATE', ...progress }));
+}
 
-  // Ядро модульной архитектуры
-  './js/core/rbi-core.js',
-  './js/core/app.entry.js',
-  './js/core/module-loader.js',
-  './js/modules/modules.manifest.js',
+const hex = (buf) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
+/** Скачать файл описи и сверить с отпечатком; ответ — с отпечатком в заголовке (по нему следующая версия возьмёт файл без сети). */
+async function fetchVerified(path, hash) {
+  let res;
+  try { res = await fetch(keyOf(path), { cache: 'reload' }); } catch (e) { throw Object.assign(new Error('нет связи: ' + path), { reason: 'network' }); }
+  if (!res.ok) throw Object.assign(new Error(`ответ ${res.status}: ${path}`), { reason: 'network' });
+  const buf = await res.arrayBuffer();
+  if (hex(await crypto.subtle.digest('SHA-256', buf)).slice(0, 16) !== hash) {
+    throw Object.assign(new Error('файл другой версии (выкладка ещё идёт?): ' + path), { reason: 'mismatch' });
+  }
+  return new Response(buf, { status: 200, headers: { 'Content-Type': res.headers.get('Content-Type') || '', [HASH_HEADER]: hash } });
+}
 
-  // Сервисы
-  './js/services/storage.service.js',
-  './js/services/permission.service.js',
-  './js/services/sync.service.js',
-  './js/services/inspection.service.js',
-  './js/services/file.service.js',
-  './js/services/report.service.js',
-  './js/services/contractor-directory.service.js',
-  './js/services/contractor-metrics.service.js',
-  './js/services/object-directory.service.js',
-  './js/services/task.service.js',
-  './js/services/sk.service.js',
-  './js/services/game.service.js',
-  './js/services/knowledge.service.js',
-  './js/services/analytics.service.js',
+/** Тот же файл (по отпечатку) в другой версии — копия без сети. */
+async function findCopy(names, path, hash) {
+  for (const n of names) {
+    const r = await (await caches.open(n)).match(keyOf(path));
+    if (r && r.headers.get(HASH_HEADER) === hash) return r;
+  }
+  return null;
+}
 
-  // Фаза 21 — AI Service
-  './js/services/ai.service.js',
-
-  // Фаза 22/23 — Master Data Service
-  './js/services/masterData.service.js',
-
-  // Фаза 29 — Template Service
-  './js/services/template.service.js',
-
-  // Фаза 8 — Settings
-  './js/services/settings.service.js',
-  // i18n v1 — каркас локализации оболочки
-  './js/services/i18n.service.js',
-  './locales/ru.json',
-  './locales/en.json',
-  './locales/sr-Latn.json',
-  './locales/ka.json',
-  './js/services/app-mode.service.js',
-  './js/services/company.service.js',
-  './js/services/user-context.service.js',
-  './js/services/session.service.js',
-  './js/modules/settings/settings.manifest.js',
-  './js/modules/settings/settings.routes.js',
-  './js/modules/settings/settings.nav.js',
-  './js/modules/settings/settings.render.js',
-  './js/modules/settings/settings.desktop.render.js',
-  './js/modules/settings/settings.actions.js',
-  './js/modules/settings/settings.module.js',
-  './js/modules/settings/features/tutorial.js',
-  './js/modules/settings/features/app-mode-utils.js',
-  './js/modules/settings/features/changelog.js',
-  './js/modules/settings/features/feedback.js',
-  './js/modules/settings/features/contractor-directory-ui.js',
-  './js/modules/settings/features/contractor-id-backfill-ui.js',
-  './js/modules/settings/features/project-id-backfill-ui.js',
-  './js/modules/settings/features/cloud-deleted-purge-ui.js',
-  './js/modules/settings/features/cloud-orphan-urls-ui.js',
-  './js/modules/settings/features/role-matrix-ui.js',
-  './js/modules/settings/features/official-templates-ui.js',
-  './js/modules/settings/features/location-directory-ui.js',
-  './js/modules/settings/index.js',
-  './js/dist/rbi-locations.js',
-
-  // Business manifests only (declarative; modules.manifest.js imports them)
-  './js/modules/quality/manifest.js',
-  './js/modules/quality/features/sk/sk.manifest.js',
-  './js/modules/knowledge/knowledge.manifest.js',
-  './js/modules/quality/features/gamification/game.manifest.js',
-  './js/modules/quality/features/ai/ai.manifest.js',
-  './js/modules/construction/construction.manifest.js',
-  './js/modules/construction-v2/construction-v2.manifest.js',
-
-  // Модули (legacy)
-  './manifest.webmanifest',
-  // Шрифты Inter (интерфейс)
-  './fonts/Inter-Regular.woff2',
-  './fonts/Inter-Medium.woff2',
-  './fonts/Inter-SemiBold.woff2',
-  './fonts/Inter-Bold.woff2',
-  './fonts/Inter-ExtraBold.woff2',
-  './fonts/Inter-Black.woff2',
-
-  // Шрифты IBM Plex Sans (темы rbi-*-v3)
-  './fonts/IBMPlexSans-Regular.woff2',
-  './fonts/IBMPlexSans-Medium.woff2',
-  './fonts/IBMPlexSans-SemiBold.woff2',
-  './fonts/IBMPlexSans-Bold.woff2',
-
-  // Шрифты Playfair Display (PDF – заголовки)
-  './fonts/PlayfairDisplay-Regular.woff2',
-  './fonts/PlayfairDisplay-Italic.woff2',
-  './fonts/PlayfairDisplay-Medium.woff2',
-  './fonts/PlayfairDisplay-MediumItalic.woff2',
-  './fonts/PlayfairDisplay-SemiBold.woff2',
-  './fonts/PlayfairDisplay-SemiBoldItalic.woff2',
-  './fonts/PlayfairDisplay-Bold.woff2',
-  './fonts/PlayfairDisplay-BoldItalic.woff2',
-  './fonts/PlayfairDisplay-ExtraBold.woff2',
-  './fonts/PlayfairDisplay-ExtraBoldItalic.woff2',
-  './fonts/PlayfairDisplay-Black.woff2',
-  './fonts/PlayfairDisplay-BlackItalic.woff2',
-
-  // Шрифты Bricolage Grotesque (PDF – основной текст)
-  './fonts/BricolageGrotesque-Light.woff2',
-  './fonts/BricolageGrotesque-Regular.woff2',
-  './fonts/BricolageGrotesque-Medium.woff2',
-  './fonts/BricolageGrotesque-SemiBold.woff2',
-  './fonts/BricolageGrotesque-Bold.woff2',
-  './fonts/BricolageGrotesque-ExtraBold.woff2'
-];
-
-// 2. УСТАНОВКА: Безопасное скачивание файлов в память
-// skipWaiting: только первая установка (нет active SW). Обновление ждёт
-// кнопку «Обновить» → postMessage('SKIP_WAITING'), иначе controllerchange
-// + location.reload на iPhone выглядят как внезапная перезагрузка.
-self.addEventListener('install', event => {
-  const legacyAtStart = hasLegacyCache();   // P2-0032: до скачивания — пока кэш старого приложения на месте
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW] Кэшируем ядро и библиотеки...');
-      // Безопасное кэширование: если одна ссылка недоступна, остальные всё равно скачаются
-      return Promise.all(
-
-        urlsToCache.map(url => {
-
-          // cache: 'reload' — принудительно обходит HTTP-кэш браузера (критично для
-          // iOS Safari: без этого fetch() мог вернуть старую версию файла из
-          // собственного кэша WebKit, даже если Cache API уже создаёт новую версию
-          // кэша под новым CACHE_NAME — из-за этого получалась смесь старых и новых
-          // файлов внутри "новой" версии и визуальные артефакты после обновления).
-          return fetch(url, { cache: 'reload' })
-
-            .then(response => {
-
-              if (
-                response &&
-                response.status === 200
-              ) {
-
-                return cache.put(
-                  url,
-                  response.clone()
-                );
-
-              }
-
-            })
-
-            .catch(err => {
-
-              console.log(
-                '[SW] Ошибка кэширования:',
-                url,
-                err
-              );
-
-            });
-
-        })
-
-      );
-    }).then(() => Promise.all([legacyAtStart, hasLegacyCache()])).then(([a, b]) => a || b).then((legacy) => {
-      // P2-0032: поверх старого приложения РБИ — сразу (его страница не знает новых файлов и может зависнуть)
-      if (!self.registration.active || legacy) {
-        return self.skipWaiting();
+/** Положить в кэш версии файлы описи (list — [путь, [отпечаток, размер, группа]]), по 6 сразу. */
+async function fillVersion(cache, list, onDone) {
+  const others = (await caches.keys()).filter((n) => n.startsWith(VERSION_PREFIX) && n !== CACHE_NAME);
+  let i = 0;
+  const worker = async () => {
+    while (i < list.length) {
+      const [path, [hash]] = list[i++];
+      const have = await cache.match(keyOf(path));
+      if (!have || have.headers.get(HASH_HEADER) !== hash) {
+        await cache.put(keyOf(path), (await findCopy(others, path, hash)) || (await fetchVerified(path, hash)));
       }
-    })
-  );
+      onDone();
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, worker));
+}
+
+async function installVersion() {
+  await loadAllow();
+  await metaSet('installing', CACHE_NAME);
+  const list = Object.entries(APP_RELEASE.files).filter(([, v]) => groupAllowed(v[2]));
+  progress = { state: 'downloading', version: SW_VERSION, done: 0, total: list.length };
+  await notify(true);
+  try {
+    await fillVersion(await caches.open(CACHE_NAME), list, () => { progress.done++; notify(); });
+  } catch (e) {
+    const reason = e && e.name === 'QuotaExceededError' ? 'space' : (e && e.reason) || 'network';
+    progress = { ...progress, state: 'failed', reason };
+    console.log('[SW] Версия не установлена:', SW_VERSION, e && e.message);
+    await notify(true);
+    throw e;
+  }
+  progress = { ...progress, state: 'ready' };
+  await notify(true);
+}
+
+/** Допуск пришёл: модули без допуска — из всех версий долой, допущенные — докачать той же версии (не вышло — догрузятся при открытии). */
+async function applyAllow() {
+  for (const n of await caches.keys()) {
+    if (!n.startsWith(VERSION_PREFIX)) continue;
+    const c = await caches.open(n);
+    for (const req of await c.keys()) if (!mayCachePut(req.url)) await c.delete(req);
+  }
+  const list = Object.entries(APP_RELEASE.files).filter(([, v]) => v[2] && groupAllowed(v[2]));
+  await fillVersion(await caches.open(CACHE_NAME), list, () => {}).catch((e) => console.log('[SW] Модули не докачаны:', e && e.message));
+}
+
+// 1. УСТАНОВКА — версия целиком (см. выше). Первая установка (нет действующей версии) и поверх старого приложения РБИ
+// (P2-0032: его страница не знает новых файлов и может зависнуть) включаются сразу; обновление ждёт переключения
+// (при запуске / при возврате из фона / «Перезапустить сейчас» → postMessage('SKIP_WAITING')).
+self.addEventListener('install', (event) => {
+  const legacyAtStart = hasLegacyCache();   // P2-0032: до скачивания — пока кэш старого приложения на месте
+  event.waitUntil(installVersion()
+    .then(() => Promise.all([legacyAtStart, hasLegacyCache()]))
+    .then(([a, b]) => { if (!self.registration.active || a || b) return self.skipWaiting(); }));
 });
 
-// 3. АКТИВАЦИЯ: Удаляем старые версии кэша
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      const legacy = cacheNames.some((n) => n.startsWith(LEGACY_CACHE_PREFIX));
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          // Platform 2.0: удаляем свои старые кэши и кэш старого приложения РБИ (P2-0032); прочие не трогаем
-          if ((cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME) || cacheName.startsWith(LEGACY_CACHE_PREFIX)) {
-            console.log('[SW] Удаляем старый кэш:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      ).then(() => self.clients.claim()).then(() => {
-        if (!legacy) return;
-        // окна, открытые старым приложением (или зависшие на смеси старых и новых файлов), — перезагрузить один раз
-        return self.clients.matchAll({ type: 'window' }).then((list) => Promise.all(list.map((c) =>
-          typeof c.navigate === 'function' ? c.navigate(c.url).catch(() => null) : null)));
-      });
-    })
-  );
+// 2. АКТИВАЦИЯ: кэш старого приложения РБИ — удалить; свои прежние версии — когда закрыта их последняя вкладка.
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    const legacy = names.some((n) => n.startsWith(LEGACY_CACHE_PREFIX));
+    await Promise.all(names.filter((n) => n.startsWith(LEGACY_CACHE_PREFIX)).map((n) => caches.delete(n)));
+    await self.clients.claim();
+    await cleanupVersions();
+    if (!legacy) return;
+    // окна, открытые старым приложением (или зависшие на смеси старых и новых файлов), — перезагрузить один раз
+    const list = await self.clients.matchAll({ type: 'window' });
+    await Promise.all(list.map((c) => (typeof c.navigate === 'function' ? c.navigate(c.url).catch(() => null) : null)));
+  })());
 });
 
-// 4. ПЕРЕХВАТ ЗАПРОСОВ
+/** Файл приложения — из кэша версии вкладки. Нет в кэше (модуль ещё не докачан): сеть; файл этой версии — в кэш. */
+async function serveApp(event, path) {
+  let name = CACHE_NAME;
+  if (event.request.mode === 'navigate') {
+    if (event.resultingClientId) event.waitUntil(recordClient(event.resultingClientId).then(cleanupVersions).catch(() => {}));
+  } else {
+    const v = await versionOfClient(event.clientId);
+    if (v && v !== CACHE_NAME && (await caches.has(v))) name = v;
+  }
+  const cache = await caches.open(name);
+  const hit = await cache.match(keyOf(path));
+  if (hit) return hit;
+  const res = await fetch(event.request).catch(() => null);
+  if (!res || !res.ok || name !== CACHE_NAME) return res || Response.error();
+  const hash = APP_RELEASE.files[path][0];
+  const buf = await res.clone().arrayBuffer();
+  if (hex(await crypto.subtle.digest('SHA-256', buf)).slice(0, 16) === hash) {
+    if (mayCachePut(event.request.url)) {
+      event.waitUntil(cache.put(keyOf(path), new Response(buf, { status: 200, headers: { 'Content-Type': res.headers.get('Content-Type') || '', [HASH_HEADER]: hash } })));
+    }
+  } else {
+    event.waitUntil(self.registration.update().catch(() => {}));   // на сервере уже другая версия — пусть ставится целиком
+  }
+  return res;
+}
+
+// 3. ПЕРЕХВАТ ЗАПРОСОВ
 // P2-0016 (ADR-068): файлы компаний — в закрытых бакетах quality-*. Ссылки в записях Качества остаются «публичного» вида
 // (…/object/public/quality-…); кэш приложения подставляет вход вошедшего (токен присылает страница — сообщение P2_STORAGE_TOKEN)
 // и берёт файл по …/object/authenticated/…. Только сервер платформы (APP_CONFIG.P2_SUPABASE_URL). Нет связи — офлайн-кэш.
@@ -780,53 +612,14 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ✅ НОВОЕ: Полностью пропускаем запросы к облачному хранилищу (Storage)
-  if (event.request.url.includes('/storage/v1/object/public/')) {
-    return;   // Браузер обработает запрос напрямую, без вмешательства SW
-  }
+  // Облачное хранилище (Storage) и API Supabase (база, авторизация, функции) — браузер напрямую, без кэша приложения
+  if (event.request.url.includes('/storage/v1/object/public/')) return;
+  if (/\/(rest|auth|functions|realtime)\/v1\//.test(event.request.url)) return;
 
-  // ✅ Пропускаем запросы к API Supabase (база, авторизация, функции) по пути, без привязки к хосту
-  const isApi = /\/(rest|auth|functions|realtime)\/v1\//.test(event.request.url);
-  if (isApi) return;
-
-  // P2-0032: только свой кэш — caches.match искал бы и в кэше старого приложения РБИ (смесь старых и новых файлов)
-  event.respondWith(
-    caches.open(CACHE_NAME).then((c) => c.match(event.request)).then((cachedResponse) => {
-      // Сеть (обновление кэша) запускаем всегда, но НЕ ждём её для ответа,
-      // если есть кэш — см. ветку ниже. .catch(() => null) не даёт упасть
-      // необработанным réjection'ом (сеть недоступна/CORS).
-      // P2-0032: с перепроверкой у сервера (ответ «не изменилось» дешёвый). Сервер не отдаёт Cache-Control для js/css —
-      // без этого браузер брал из своего кэша старый файл прежнего приложения (с тем же путём) рядом с новыми.
-      const netInit = event.request.mode === 'navigate' ? undefined : { cache: 'no-cache' };
-      const networkUpdate = fetch(event.request, netInit).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && mayCachePut(event.request.url)) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      }).catch(() => null);
-
-      // Cache-first + stale-while-revalidate: если есть закэшированная
-      // версия — отдаём её МГНОВЕННО, не дожидаясь сети. Раньше здесь был
-      // network-first (сначала fetch, кэш — только при явном сетевом
-      // сбое) — на iOS при смене сети на возврате из фона fetch() может
-      // «висеть» без явного reject, и запрос ядра приложения (bootstrap.js,
-      // router.js и т.п.) зависал вместо мгновенной отдачи из кэша. Плюс
-      // раньше не-200 ответ сети (гонка деплоя/CDN) шёл пользователю
-      // напрямую, даже если в кэше была валидная версия. Сеть обновляет
-      // кэш в фоне (event.waitUntil — чтобы браузер не убил SW раньше
-      // времени), результат уйдёт в дело при следующем обращении.
-      if (cachedResponse) {
-        event.waitUntil(networkUpdate);
-        return cachedResponse;
-      }
-
-      // В кэше нет записи — сеть остаётся единственным источником.
-      return networkUpdate.then((networkResponse) => networkResponse || Response.error());
-    }).catch(() => Response.error())
-  );
+  // P2-0066: файлы приложения — только из кэша версии вкладки (без фоновой перепроверки у сервера, ТД 227); прочее — сеть
+  const path = appPath(event.request.url);
+  if (!path) return;
+  event.respondWith(serveApp(event, path).catch(() => Response.error()));
 });
 
 // ==========================================
@@ -876,7 +669,7 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'RBI_SW_ALLOWLIST' && Array.isArray(event.data.modules)) {
     allowedModules = event.data.modules.slice();
     console.log('[SW] RBI_SW_ALLOWLIST:', allowedModules.join(','));
-    event.waitUntil(purgeDisallowedBusinessCache());
+    event.waitUntil(loadAllow().then(() => metaGet('allow', {})).then((a) => metaSet('allow', { ...a, rbi: allowedModules })).then(applyAllow));
   }
   if (event.data && event.data.type === 'P2_STORAGE_TOKEN') {
     const had = p2StorageToken;
@@ -895,6 +688,10 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'P2_SW_ALLOWLIST' && Array.isArray(event.data.modules)) {
     p2AllowedModules = event.data.modules.slice();
     console.log('[SW] P2_SW_ALLOWLIST:', p2AllowedModules.join(',') || '—');
-    event.waitUntil(purgeDisallowedP2Cache());
+    event.waitUntil(loadAllow().then(() => metaGet('allow', {})).then((a) => metaSet('allow', { ...a, p2: p2AllowedModules })).then(applyAllow));
+  }
+  // P2-0066: строка версии — номер, дата и ход установки этой версии
+  if (event.data && event.data.type === 'P2_APP_VERSION' && event.source) {
+    event.source.postMessage({ type: 'P2_APP_VERSION', version: SW_VERSION, date: APP_RELEASE.date, progress });
   }
 });

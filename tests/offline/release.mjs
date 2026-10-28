@@ -1,12 +1,12 @@
 // P2-0066: стенд «выкладка во время работы». Две версии приложения (A — как есть, B — «новая выкладка») собираются из файлов
 // этой папки; в каждый .js дописывается метка версии (self.__REL[путь] = 'A' | 'B'), в index.html — self.__HTML. Смесь версий —
-// в одной вкладке файлы разных версий. Сценарии: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests (+ r-size — опись).
+// в одной вкладке файлы разных версий. Сценарии: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow (+ r-size — опись).
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listAppFiles } from '../../scripts/app-files.mjs';
-import { start, stop, site, resetSite } from './servers.mjs';
+import { start, stop, site, resetSite, COMPANY } from './servers.mjs';
 import { freshProfile, go, launch, note, ok, signIn } from './lib.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '');
@@ -89,7 +89,11 @@ const fetchUpdate = (page, ms = 60000) => page.evaluate(async (ms) => {
 
 /** Включить новую версию так, как сейчас делает кнопка «Обновить» (SKIP_WAITING → перезагрузка). */
 async function applyUpdate(page) {
-  await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); if (r && r.waiting) r.waiting.postMessage('SKIP_WAITING'); }).catch(() => {});
+  await page.evaluate(async () => {
+    const btn = document.getElementById('pwa-update-btn');
+    if (btn) { btn.click(); return; }
+    const r = await navigator.serviceWorker.getRegistration(); if (r && r.waiting) r.waiting.postMessage('SKIP_WAITING');
+  }).catch(() => {});
   await page.waitForTimeout(6000);
 }
 
@@ -150,6 +154,8 @@ export function releaseScenarios(outDir) {
     const st = await fetchUpdate(page);
     note('установка: ' + st);
     site.pick = null; site.root = B;
+    const st2 = st === 'waiting' ? st : await fetchUpdate(page);
+    note('после выкладки — повтор установки: ' + st2);
     await applyUpdate(page);
     const loads = [];
     for (let k = 1; k <= 2; k++) {
@@ -160,7 +166,8 @@ export function releaseScenarios(outDir) {
     }
     const n = loads.filter((l) => l.mixed).length;
     ok(st !== 'waiting' || n === 0, `${tag}: смесь не установлена как новая версия`, `установка: ${st}; смесь в ${n} из 2`);
-    measure(tag, { install: st, mixedLoads: n, loads });
+    ok(st2 === 'waiting' && loads.every((l) => l.html === 'B' && !l.mixed), `${tag}: после выкладки версия B ставится целиком и включается`, `повтор: ${st2}; ${loads.map((l) => l.html).join(', ')}`);
+    measure(tag, { install: st, retry: st2, mixedLoads: n, loads });
     await ctx.close(); await stop();
   }
 
@@ -173,8 +180,10 @@ export function releaseScenarios(outDir) {
     site.fail = /^\/(libs\/xlsx\.full\.min\.js|js\/dist\/rbi-locations\.js|css\/rbi-ui\.css)$/;
     const st = await fetchUpdate(page);
     note('установка: ' + st);
-    if (st === 'waiting') await applyUpdate(page);
     site.fail = null;
+    const st2 = st === 'waiting' ? st : await fetchUpdate(page);
+    note('связь восстановилась — повтор установки: ' + st2);
+    if (st2 === 'waiting') await applyUpdate(page);
     const c = await census(page);
     note('кэш после обновления: ' + JSON.stringify(c));
     await ctx.close(); await stop();
@@ -192,9 +201,10 @@ export function releaseScenarios(outDir) {
     note('без сети: ' + fmt(v) + '; не загрузилось: ' + JSON.stringify([...new Set(failed)].slice(0, 12)));
     note('текст разделов без сети (символов): ' + JSON.stringify(shown));
     ok(st !== 'waiting', `${tag}: версия с недокачанными файлами не устанавливается`, st);
+    ok(st2 === 'waiting' && v.html === 'B' && !mixed(v), `${tag}: после повтора без сети работает версия B целиком`, `повтор: ${st2}; ${fmt(v)}`);
     ok(failed.length === 0, `${tag}: без сети после обновления все файлы на месте`, `не загрузилось ${new Set(failed).size}`);
     ok(c.planfact > 0 && c.company > 0, `${tag}: после обновления код План/Факта и «Компании» в кэше`, JSON.stringify({ planfact: c.planfact, company: c.company }));
-    measure(tag, { install: st, failedOffline: [...new Set(failed)], cacheAfter: c, shown });
+    measure(tag, { install: st, retry: st2, failedOffline: [...new Set(failed)], cacheAfter: c, shown });
     await ctx.close();
   }
 
@@ -250,6 +260,46 @@ export function releaseScenarios(outDir) {
     await ctx.close(); await stop();
   }
 
+  /** Выкладка с одним изменённым файлом: скачивается он один (остальное — копией из прежней версии). */
+  async function delta() {
+    const tag = 'r-delta'; build();
+    note(`== ${tag}: на сервере версия, где изменён один файл → что скачивается при установке`);
+    const C = join(outDir, 'rel-C');
+    rmSync(C, { recursive: true, force: true }); cpSync(A, C, { recursive: true });
+    const f = join(C, 'js/shared/theme.utils.js');
+    writeFileSync(f, readFileSync(f, 'utf8') + '\n// P2-0066 r-delta\n');
+    const gen = join(ROOT, 'scripts/app-version.mjs');
+    if (existsSync(gen)) execFileSync('node', [gen, '--root', C, '--date', '2026-10-30'], { stdio: 'ignore' });
+    const { ctx, page } = await warm(outDir, tag, A);
+    site.root = C; site.requests.length = 0;
+    const st = await fetchUpdate(page);
+    const got = site.requests.filter((p) => p !== '/sw.js' && p !== '/js/services/config.service.js');
+    note(`установка: ${st}; скачано файлов приложения: ${got.length} — ${got.slice(0, 6).join(' ')}`);
+    ok(st === 'waiting' && got.length === 1 && got[0] === '/js/shared/theme.utils.js', `${tag}: скачан только изменённый файл`, `${st}; ${got.length}`);
+    measure(tag, { install: st, downloaded: got });
+    await ctx.close(); await stop();
+  }
+
+  /** P2-0013: у компании только Качество — кода План/Факта и «Компании» в кэше нет (и после обновления). */
+  async function allow() {
+    const tag = 'r-allow'; build();
+    note(`== ${tag}: у компании только Качество → в кэше версии нет кода План/Факта`);
+    const saved = COMPANY.modules.slice();
+    COMPANY.modules.splice(0, COMPANY.modules.length, 'quality');
+    try {
+      const { ctx, page } = await warm(outDir, tag, A);
+      const c1 = await census(page);
+      site.root = B;
+      const st = await fetchUpdate(page);
+      await applyUpdate(page);
+      const c2 = await census(page);
+      note(`до обновления: ${JSON.stringify({ planfact: c1.planfact })}; обновление: ${st}; после: ${JSON.stringify({ planfact: c2.planfact })}`);
+      ok(c1.planfact === 0 && st === 'waiting' && c2.planfact === 0, `${tag}: код План/Факта не скачан ни до, ни после обновления`, `${c1.planfact} / ${c2.planfact}`);
+      measure(tag, { before: c1.planfact, install: st, after: c2.planfact });
+      await ctx.close(); await stop();
+    } finally { COMPANY.modules.splice(0, COMPANY.modules.length, ...saved); }
+  }
+
   /** Размер описи: всё приложение, оболочка и модули. */
   async function size() {
     const tag = 'r-size';
@@ -267,5 +317,5 @@ export function releaseScenarios(outDir) {
     measure(tag, { files: files.length, totalMB: mb(total), byGroupMB: Object.fromEntries(Object.entries(by).map(([g, b]) => [g, mb(b)])) });
   }
 
-  return { 'r-deploy': deploy, 'r-middeploy': midDeploy, 'r-partial': partial, 'r-tabs': tabs, 'r-chunk': chunk, 'r-requests': requests, 'r-size': size };
+  return { 'r-deploy': deploy, 'r-middeploy': midDeploy, 'r-partial': partial, 'r-tabs': tabs, 'r-chunk': chunk, 'r-requests': requests, 'r-delta': delta, 'r-allow': allow, 'r-size': size };
 }

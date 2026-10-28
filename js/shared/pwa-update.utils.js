@@ -26,6 +26,8 @@
 
 let newWorker;
 let swRegistration;
+// P2-0066: новую версию включила эта вкладка — перезагрузиться; другие вкладки остаются на своей версии (вкладка = версия)
+let switchRequested = false;
 
 function showUpdateBanner() {
     const banner = document.getElementById('pwa-update-banner');
@@ -88,6 +90,7 @@ window.checkForUpdates = function() {
         btn.disabled = true;
         btn.textContent = 'Обновляем…';
         if (worker) {
+            switchRequested = true;
             worker.postMessage('SKIP_WAITING');
         }
         // Страховка: если controllerchange по какой-то причине не пришёл
@@ -131,7 +134,7 @@ if ('serviceWorker' in navigator) {
                 console.log('Первая установка Service Worker — перезагрузка не требуется');
                 return;
             }
-            if (refreshing) return;
+            if (refreshing || !switchRequested) return;
             refreshing = true;
             window.location.reload();
         });
