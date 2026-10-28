@@ -13,6 +13,7 @@ end $$;
 drop function public.pf_save_place_info(uuid, numeric, int);
 drop function public.pf_import_undo(uuid);
 drop function public.pf_import_places(uuid, uuid, jsonb, boolean);
+drop function core.import_pattern(uuid, uuid, text);
 drop function core.import_find(uuid, uuid, text, text, text);
 drop function core.place_num(text);
 

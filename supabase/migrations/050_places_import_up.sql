@@ -42,24 +42,49 @@ $$;
 create function core.import_find(p_project uuid, p_parent uuid, p_type text, p_name text, p_build_no text default null)
 returns uuid language sql stable security definer set search_path = pg_catalog as $$
   select coalesce(
-    (select l.id from core.locations l where l.project_id = p_project and l.parent_id is not distinct from p_parent
+    (select l.id from core.locations l where l.project_id = p_project and coalesce(l.parent_id, '00000000-0000-0000-0000-000000000000'::uuid) = coalesce(p_parent, '00000000-0000-0000-0000-000000000000'::uuid)
         and l.canonical_key = planfact.canon_name(p_name) and l.deleted_at is null),
-    (select (array_agg(l.id))[1] from core.locations l where l.project_id = p_project and l.parent_id is not distinct from p_parent
+    (select (array_agg(l.id))[1] from core.locations l where l.project_id = p_project and coalesce(l.parent_id, '00000000-0000-0000-0000-000000000000'::uuid) = coalesce(p_parent, '00000000-0000-0000-0000-000000000000'::uuid)
         and l.deleted_at is null and l.node_type = p_type and core.place_num(p_name) is not null
         and core.place_num(l.name) = core.place_num(p_name) having count(*) = 1),
     (select (array_agg(l.id))[1] from core.locations l where p_type = 'apartment' and p_build_no is not null
-        and l.project_id = p_project and l.parent_id = p_parent and l.deleted_at is null and l.node_type = 'apartment'
+        and l.project_id = p_project and coalesce(l.parent_id, '00000000-0000-0000-0000-000000000000'::uuid) = coalesce(p_parent, '00000000-0000-0000-0000-000000000000'::uuid) and l.deleted_at is null and l.node_type = 'apartment'
         and l.build_no = p_build_no having count(*) = 1))
 $$;
+
+-- Образец названия новых мест вида p_type под p_parent — у соседей того же вида («1 этаж» → {'', ' этаж'}, «Кв. 1» → {'Кв. ', ''}):
+-- сначала соседи, затем места того же вида у соседей родителя, затем последнее такое место проекта; нет — null (как в файле).
+create function core.import_pattern(p_project uuid, p_parent uuid, p_type text)
+returns text[] language plpgsql stable security definer set search_path = pg_catalog as $$
+declare m text[]; v_gp uuid; re constant text := '^(.*?)(-?[0-9]+)(\s+[^0-9]*)?$';
+begin
+  select regexp_match(l.name, re) into m from core.locations l
+   where l.project_id = p_project and l.parent_id = p_parent and l.deleted_at is null and l.node_type = p_type and l.name ~ re
+   order by l.sort_order desc limit 1;
+  if m is null then
+    select parent_id into v_gp from core.locations where id = p_parent;
+    if v_gp is not null then
+      select regexp_match(l.name, re) into m
+        from core.locations c join core.locations l on l.project_id = p_project and l.parent_id = c.id
+       where c.project_id = p_project and c.parent_id = v_gp and c.deleted_at is null
+         and l.deleted_at is null and l.node_type = p_type and l.name ~ re order by l.created_at desc limit 1;
+    end if;
+  end if;
+  if m is null then
+    select regexp_match(l.name, re) into m from core.locations l
+     where l.project_id = p_project and l.deleted_at is null and l.node_type = p_type and l.name ~ re order by l.created_at desc limit 1;
+  end if;
+  return case when m is not null and (m[1] <> '' or m[3] is not null) then array[m[1], coalesce(m[3], '')] end;
+end $$;
 
 -- 3. Загрузка списка помещений. p_rows — [{row_no, object, section, floor, name, build_no, bti_no, area, rooms}] (названия
 --    приведены экраном: «Корпус 1», «Секция 1», «эт. 3», «кв. 45»). Ответ: {ok, created: {objects, sections, floors, apartments},
 --    existing_rows: [№], differs: [{row_no, name, fields}], errors: [{row_no, msg}], roots: [id]}.
 create function public.pf_import_places(p_project uuid, p_batch uuid, p_rows jsonb, p_dry_run boolean default false)
 returns jsonb language plpgsql security definer set search_path = pg_catalog as $$
-declare v_company uuid; v_res jsonb; v_err jsonb; v_map jsonb := '{}'::jsonb; r record;
+declare v_company uuid; v_res jsonb; v_err jsonb; v_map jsonb := '{}'::jsonb; v_bno jsonb := '{}'::jsonb; r record;
         v_o uuid; v_s uuid; v_f uuid; v_a uuid; v_par uuid; v_par_new boolean; v_new boolean; v_type text; v_found text;
-        v_depth int; v_no int; v_b text; v_diff jsonb; x core.locations;
+        v_depth int; v_no int; v_b text; v_diff jsonb; x core.locations; v_nm text; v_key text;
         n_obj int := 0; n_sec int := 0; n_flr int := 0; n_apt int := 0;
         v_existing int[] := '{}'; v_differs jsonb := '[]'; v_roots uuid[] := '{}'; v_loop_err jsonb := '[]';
 begin
@@ -146,10 +171,19 @@ begin
           if v_a is null then
             v_a := gen_random_uuid();
             select depth + 1 into v_depth from core.locations where id = v_par;
+            -- название — по образцу соседей (образец уровня считается один раз)
+            v_key := 'f|' || v_par || '|' || v_type;
+            if not v_map ? v_key then v_map := v_map || jsonb_build_object(v_key, to_jsonb(core.import_pattern(p_project, v_par, v_type))); end if;
+            v_nm := case when v_found ~ '^(Секция|эт\.|кв\.) -?[0-9]+$' and jsonb_typeof(v_map -> v_key) = 'array'
+                         then (v_map -> v_key ->> 0) || core.place_num(v_found)::text || (v_map -> v_key ->> 1) else v_found end;
+            if v_nm <> v_found and exists (select 1 from core.locations where project_id = p_project and coalesce(parent_id, '00000000-0000-0000-0000-000000000000'::uuid) = coalesce(v_par, '00000000-0000-0000-0000-000000000000'::uuid)
+                       and canonical_key = planfact.canon_name(v_nm) and deleted_at is null) then
+              raise exception using errcode = 'PI056', message = r.row_no || '|На этом уровне несколько мест с таким номером — уточните название в файле';
+            end if;
             insert into core.locations(id, company_id, project_id, parent_id, node_type, name, sort_order, canonical_key, depth, import_batch)
-            values (v_a, v_company, p_project, v_par, v_type, v_found,
-                    (select coalesce(max(sort_order), 0) + 1 from core.locations where parent_id = v_par and deleted_at is null),
-                    planfact.canon_name(v_found), v_depth, p_batch);
+            values (v_a, v_company, p_project, v_par, v_type, v_nm,
+                    (select coalesce(max(sort_order), 0) + 1 from core.locations where project_id = p_project and parent_id = v_par and deleted_at is null),
+                    planfact.canon_name(v_nm), v_depth, p_batch);
             if v_type = 'section' then n_sec := n_sec + 1; else n_flr := n_flr + 1; end if;
             if not v_new then v_roots := v_roots || v_a; end if;
             v_map := v_map || jsonb_build_object('n|' || v_a, true);
@@ -183,20 +217,29 @@ begin
       end if;
       v_b := r.build_no;
       if v_b is null then
-        v_no := (v_map ->> ('b|' || v_o))::int;
+        v_no := (v_bno ->> v_o::text)::int;
         if v_no is null then
           select greatest(core.next_build_no(v_o), coalesce(max(m.build_no::int) + 1, 1)) into v_no from pg_temp.m050_rows m
            where m.err is null and planfact.canon_name(m.obj) = planfact.canon_name(r.obj) and m.build_no ~ '^[0-9]{1,9}$';
         end if;
         v_b := v_no::text;
-        v_map := v_map || jsonb_build_object('b|' || v_o, v_no + 1);
+        v_bno := v_bno || jsonb_build_object(v_o::text, v_no + 1);
       end if;
       v_a := gen_random_uuid();
+      -- название — по образцу соседей (образец уровня считается один раз)
+      v_key := 'f|' || v_par || '|' || 'apartment';
+      if not v_map ? v_key then v_map := v_map || jsonb_build_object(v_key, to_jsonb(core.import_pattern(p_project, v_par, 'apartment'))); end if;
+      v_nm := case when r.name ~ '^(Секция|эт\.|кв\.) -?[0-9]+$' and jsonb_typeof(v_map -> v_key) = 'array'
+                   then (v_map -> v_key ->> 0) || core.place_num(r.name)::text || (v_map -> v_key ->> 1) else r.name end;
+      if v_nm <> r.name and exists (select 1 from core.locations where project_id = p_project and coalesce(parent_id, '00000000-0000-0000-0000-000000000000'::uuid) = coalesce(v_par, '00000000-0000-0000-0000-000000000000'::uuid)
+                 and canonical_key = planfact.canon_name(v_nm) and deleted_at is null) then
+        raise exception using errcode = 'PI056', message = r.row_no || '|На этом уровне несколько мест с таким номером — уточните название в файле';
+      end if;
       insert into core.locations(id, company_id, project_id, parent_id, node_type, name, sort_order, canonical_key, depth,
                                  build_no, bti_no, area, rooms, import_batch)
-      values (v_a, v_company, p_project, v_par, 'apartment', r.name,
-              (select coalesce(max(sort_order), 0) + 1 from core.locations where parent_id = v_par and deleted_at is null),
-              planfact.canon_name(r.name), (select depth + 1 from core.locations where id = v_par), v_b, r.bti_no, r.area, r.rooms, p_batch);
+      values (v_a, v_company, p_project, v_par, 'apartment', v_nm,
+              (select coalesce(max(sort_order), 0) + 1 from core.locations where project_id = p_project and parent_id = v_par and deleted_at is null),
+              planfact.canon_name(v_nm), (select depth + 1 from core.locations where id = v_par), v_b, r.bti_no, r.area, r.rooms, p_batch);
       n_apt := n_apt + 1;
       if not v_new then v_roots := v_roots || v_a; end if;
     end loop;
@@ -444,7 +487,8 @@ begin
 end $$;
 
 -- 8. Доступ: только вошедшим, права проверяет каждая функция; служебные — никому.
-revoke all on function core.place_num(text), core.import_find(uuid, uuid, text, text, text) from public, anon, authenticated;
+revoke all on function core.place_num(text), core.import_find(uuid, uuid, text, text, text), core.import_pattern(uuid, uuid, text)
+  from public, anon, authenticated;
 revoke all on function public.pf_import_places(uuid, uuid, jsonb, boolean), public.pf_import_undo(uuid),
   public.pf_save_place_info(uuid, numeric, int) from public, anon;
 grant execute on function public.pf_import_places(uuid, uuid, jsonb, boolean), public.pf_import_undo(uuid),

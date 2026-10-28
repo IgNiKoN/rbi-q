@@ -3,7 +3,8 @@
 -- «2 этаж» = «эт. 2»), «в файле иначе» — отдельно; повтор с той же меткой — прежний ответ; тот же файл новой меткой — «создано 0»;
 -- ошибка в строке — не пишется ничего; место другого вида на уровне — отказ; зеркало Качества; отмена загрузки (с добавленным
 -- внутрь потом) и восстановление; площадь и комнаты (pf_save_place_info, pf_project_places, копия переносит комнаты);
--- права: роль без права, чужая компания, аноним; проект 'quality' — отказ; без Качества; 5000 строк — время.
+-- названия новых мест — по образцу соседей; права: роль без права, чужая компания, аноним; проект 'quality' — отказ; без Качества;
+-- 5000 строк — время.
 -- Всё откатывается; отчёт — ERROR P0001 «FAIL всего: N». Запуск: после 050_places_import_up.sql.
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
@@ -50,7 +51,7 @@ declare
   uadm uuid := gen_random_uuid(); ueng uuid := gen_random_uuid(); ub uuid := gen_random_uuid(); uc uuid := gen_random_uuid();
   ca uuid := gen_random_uuid(); cb uuid := gen_random_uuid(); cc uuid := gen_random_uuid();
   r_adm uuid; r_eng uuid; r_b uuid; r_c uuid;
-  pn uuid := gen_random_uuid(); pc uuid := gen_random_uuid(); pq uuid; pbig uuid := gen_random_uuid();
+  pn uuid := gen_random_uuid(); pc uuid := gen_random_uuid(); pq uuid; pbig uuid := gen_random_uuid(); pnm uuid := gen_random_uuid(); km uuid := gen_random_uuid(); sm uuid := gen_random_uuid(); fm uuid := gen_random_uuid();
   k1 uuid := gen_random_uuid(); kc uuid := gen_random_uuid(); s1 uuid; f1 uuid; f2 uuid; f3 uuid; s2 uuid; k2 uuid; a1 uuid; a5 uuid;
   b1 uuid := gen_random_uuid(); b2 uuid := gen_random_uuid(); b3 uuid := gen_random_uuid(); bx uuid := gen_random_uuid();
   fa jsonb; fe jsonb; j jsonb; j2 jsonb; res text := ''; info text := ''; str text; n0 int; n1 int; v int; x core.locations;
@@ -299,6 +300,33 @@ begin
   res := res || pg_temp.t((j ->> 'ok')::boolean and (j -> 'created' ->> 'objects')::int = 2 and pg_temp.live(pc) = 16
                           and (select count(*) from quality.location_nodes where core_company_id = cc) = 0 and pg_temp.bad_depth(pc) = 0,
                           'без Качества: загрузка работает (' || (j -> 'created')::text || ', мест ' || pg_temp.live(pc) || ')');
+
+  -- 11б. Названия новых мест — по образцу соседей («1 этаж», «Кв. 1» как в Качестве); нестандартное название — как в файле
+  perform pg_temp.as_user(uadm, ca);
+  perform public.pf_save_project(ca, pnm, '{"name": "ЖК Названия 050"}');
+  perform public.pf_save_place(pnm, km, null, 'object', 'Корпус 1', 'building');
+  perform public.pf_save_place(pnm, sm, km, 'section', 'Секция 1');
+  perform public.pf_save_place(pnm, fm, sm, 'floor', '1 этаж');
+  perform public.pf_save_place(pnm, gen_random_uuid(), sm, 'floor', '2 этаж');
+  perform public.pf_save_place(pnm, gen_random_uuid(), fm, 'apartment', 'Кв. 1', null, '1');
+  j := public.pf_import_places(pnm, gen_random_uuid(), jsonb_build_array(pg_temp.rw(1, 'Корпус 1', 'Секция 1', 'эт. 3', 'кв. 9'),
+         pg_temp.rw(2, 'Корпус 1', 'Секция 1', 'эт. 1', 'кв. 2'), pg_temp.rw(3, 'Корпус 1', 'Секция 2', 'эт. 1', 'кв. 11'),
+         pg_temp.rw(4, 'Корпус 1', 'Секция 2', 'эт. 1', 'кв. 45а')));
+  reset role;
+  res := res || pg_temp.t(pg_temp.kid(pg_temp.kid(sm, '3 этаж'), 'Кв. 9') is not null and pg_temp.kid(fm, 'Кв. 2') is not null
+                          and pg_temp.kid(pg_temp.kid(pg_temp.kid(km, 'Секция 2'), '1 этаж'), 'Кв. 11') is not null
+                          and pg_temp.kid(pg_temp.kid(pg_temp.kid(km, 'Секция 2'), '1 этаж'), 'кв. 45а') is not null
+                          and pg_temp.kid(sm, 'эт. 3') is null,
+                          'названия по образцу соседей: «3 этаж», «Кв. 9», новая секция — «1 этаж», «Кв. 11»; «кв. 45а» — как в файле (' ||
+                          (select string_agg(name, ',' order by depth, name) from core.locations where project_id = pnm) || ')');
+
+  -- два места с одним номером на уровне: файл «эт. 2» — не угадываем, отказ строки
+  perform pg_temp.as_user(uadm, ca);
+  perform public.pf_save_place(pnm, gen_random_uuid(), sm, 'floor', '2 этаж (тех.)');
+  j := public.pf_import_places(pnm, gen_random_uuid(), jsonb_build_array(pg_temp.rw(1, 'Корпус 1', 'Секция 1', 'эт. 2', 'кв. 30')), true);
+  reset role;
+  res := res || pg_temp.t(not (j ->> 'ok')::boolean and j -> 'errors' -> 0 ->> 'msg' like 'На этом уровне несколько мест с таким номером%',
+                          'два места с номером 2 — отказ строки с понятной причиной (' || (j -> 'errors')::text || ')');
 
   -- 12. 5000 строк: 10 секций × 25 этажей × 20 кв. — время и зеркало
   perform pg_temp.as_user(uadm, ca);
