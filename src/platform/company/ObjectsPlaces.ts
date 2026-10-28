@@ -221,8 +221,11 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     const list = kidsRef.current[parent.id] || await load(parent.id);
     let no: number | null = null;
     if (type === 'apartment') {
-      const r = api.nextBuildNo ? await api.nextBuildNo(parent.id) : null;
-      no = r && r.ok ? r.value : list.filter((x) => x.node_type === 'apartment').reduce((m, x) => Math.max(m, Number(x.build_no) || 0), 0) + 1;
+      // номер — только от сервера (по всему объекту); иначе номера на разных этажах могли бы совпасть
+      if (!api.nextBuildNo) { openDialog({ kind: 'add', parent }); return; }
+      const r = await api.nextBuildNo(parent.id);
+      if (!r.ok) { setError(r.message || 'Не удалось получить следующий номер'); return; }
+      no = r.value;
     }
     const name = nextChildName(list, type, no);
     const id = newId();

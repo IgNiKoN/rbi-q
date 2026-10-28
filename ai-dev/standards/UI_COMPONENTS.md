@@ -77,14 +77,16 @@
 | --- | --- | --- | --- |
 | `PageTabs` (перенесён из `PlanfactApp` в `ui/page.ts`) | `items`, `active`, `onPick`, `testId` | `.pf-tabs`, `.pf-tab`, `.pf-tab--active`, `.pf-tab-n` | общий для Компании и План/Факта, CSS — `P2_PAGE_CSS` |
 | `Sheet` — лист / панель | `title`, `sub?`, `testId`, `onClose`, `footer?` | `.p2-sheet*` | телефон и планшет — снизу, ПК от 900 px — справа; Esc и нажатие мимо закрывают |
-| `MoreMenu` — меню «⋯» | `items: MoreItem[]` (`id`, `label`, `hint?`, `danger?`, `onClick`), `testId`, `label?` | `.p2-more*` | редкие действия экрана или строки; пустой список — кнопки нет |
+| `MoreMenu` — меню «⋯» | `items: MoreItem[]` (`id`, `label`, `hint?`, `danger?`, `onClick`, `disabled?` — P2-0055: пункт виден, неактивен, причина — в `hint`), `testId`, `label?` | `.p2-more*` | редкие действия экрана или строки; пустой список — кнопки нет |
 | `RecordFields` — карточка записи | `fields: { id, label, value }[]`, `cols?` | `.p2-rec*` | «подпись — значение»: ПК — `cols` (4), планшет — 2, телефон — 1; пустое — «—» |
 | `StageBadge` | `label`, `tone`, `testId?` | `StatusBadge` | метка стадии или вида: цвет и слово вместе |
 | `StageStrip` | `items: { code, name }[]`, `current` | `.p2-stages*` | пройденные / текущая / будущие стадии; подписи — из справочника сервера |
-| `PlaceTree` — дерево мест | `roots`, `kids`, `open`, `onToggle`, `selected?`, `onSelect?`, `kind`, `meta?`, `menu?`, `limit?`, `more?`, `onMore?`, `check?` (галочка у узла: `{checked, onChange, disabled?}` или null; P2-0048), `extra?` (строка под названием — метки), `action?` (кнопка справа, напр. «+») | `.p2-tree*`, `P2_TREE_CSS` | строка: ▸/▾, название, вид · сводка, «⋯»; дети грузит экран при раскрытии; длинный список — «ещё N» |
+| `PlaceTree` — дерево мест | `roots`, `kids`, `open`, `onToggle`, `selected?`, `onSelect?`, `kind`, `meta?`, `menu?`, `limit?`, `more?`, `onMore?`, `check?` (галочка у узла: `{checked, onChange, disabled?}` или null; P2-0048), `extra?` (строка под названием — метки), `action?` (кнопка справа, напр. «+»); P2-0055: `editing?` (`{id, node}` — поле правки названия вместо подписи строки), `onRename?` (двойной щелчок), `drag?` (`TreeDrag`: `can`, `start`, `end`, `over(n, where)`, `drop(n, where)`, `hint` — перетаскивание мышью за ⋮⋮; `where` — `before` / `after` / `inside`; подсветка `.is-drop-*`, «нельзя» — `.is-drop-no` с подсказкой) | `.p2-tree*`, `P2_TREE_CSS` | строка: ▸/▾, название, вид · сводка, «⋯»; дети грузит экран при раскрытии; длинный список — «ещё N» |
 | `RegistryTable` (доп.) | `noSelect?: boolean` | — | справочник без массовых действий: ни галочек, ни «Выбрать» |
 
 ### По мере появления спроса
+
+**Частные виды экрана «Объекты и места» (P2-0055), не общие компоненты:** `PlacesChess` (`src/platform/company/PlacesChess.ts`) — шахматка мест объекта «секции × этажи → помещения» на тех же данных и действиях, что `PlaceTree` (сетку строит `buildChess` из `places-editor.ts`); плашка «Сделано · Отменить» `.op-toast` (тёмная в обеих темах) и полоса буфера `.op-clip`. Общего `Toast` в `src/platform/ui` пока нет — при втором применении вынести.
 
 `DatePicker`, `FileUpload`, `LocationPicker` (выбор места на основе `PlaceTree`), `Breadcrumbs`, `Toolbar`, `FilterPanel`, `Pagination`, `Chart`, `Progress`, `Drawer`, `DataGrid` для больших объёмов, `MobileActionBar`, `DocumentPreview`, `TableColumnSettings`, `ThemePreview` и др. Добавляются только под конкретное утверждённое применение.
 
