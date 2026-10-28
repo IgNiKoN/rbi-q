@@ -6,6 +6,8 @@
 export interface LoginScreenOpts {
   signIn: (email: string, password: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   onDemo: () => void;
+  /** P2-0058: почему снова вход (например, без связи больше 14 дней) — текст над формой. */
+  notice?: string;
 }
 
 export const LOGIN_CSS = `
@@ -18,6 +20,7 @@ export const LOGIN_CSS = `
 .p2-login input{font-size:16px;min-height:44px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
 .p2-login-btn{min-height:46px;font-size:13px;font-weight:800;text-transform:uppercase;border-radius:12px;border:0;background:var(--accent,var(--primary));color:#fff;cursor:pointer}
 .p2-login-btn:disabled{opacity:.6;cursor:default}
+.p2-login-notice{margin:0;font-size:13px;line-height:1.4;padding:10px 12px;border-radius:12px;border:1px solid var(--card-border);color:var(--text-main);overflow-wrap:anywhere}
 .p2-login-error{font-size:13px;color:var(--color-red,#dc2626)}
 .p2-login-demo{align-self:center;min-height:40px;font-size:12px;border:0;background:transparent;color:var(--text-muted);text-decoration:underline;cursor:pointer}
 `;
@@ -41,6 +44,7 @@ export function renderLoginScreen(host: HTMLElement, opts: LoginScreenOpts): () 
   host.replaceChildren();
   const card = el(doc, 'div', { class: 'p2-login', 'data-testid': 'p2-login', role: 'dialog', 'aria-label': 'Вход' });
   card.append(el(doc, 'h2', {}, 'Вход'), el(doc, 'p', { class: 'p2-login-sub' }, 'RBI Platform'));
+  if (opts.notice) card.append(el(doc, 'p', { class: 'p2-login-notice', role: 'status', 'data-testid': 'p2-login-notice' }, opts.notice));
 
   // Почта и пароль
   const form = el(doc, 'form', { 'data-testid': 'p2-login-email', novalidate: '' });

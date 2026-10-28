@@ -56,10 +56,15 @@ function getPlatform(): Platform {
   platform.subscribe(apply);
   if (auth && auth.onAuthChange) auth.onAuthChange(() => { void platform!.refresh(); });
   window.addEventListener('platform2:refresh', () => { void platform!.refresh(); });
+  // P2-0058: связь вернулась — вход и права обновляются сами (без пароля)
+  window.addEventListener('online', () => { void platform!.refresh(); });
   return platform;
 }
 
 function overlay(): HTMLElement | null { return document.getElementById(OVERLAY_ID); }
+
+/** P2-0058: текст экрана «Вход» после долгой работы без связи (решение владельца 28.10.2026 — 14 дней). */
+export const STALE_LOGIN_TEXT = 'Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены';
 
 function showLogin(): void {
   const o = overlay();
@@ -68,6 +73,7 @@ function showLogin(): void {
   const host = o.querySelector('[data-p2-login-host]') as HTMLElement | null || o;
   const p = getPlatform();
   renderLoginScreen(host, {
+    notice: p.getState().loginReason === 'stale' ? STALE_LOGIN_TEXT : undefined,
     signIn: async (email, password) => {
       const res = await p.signIn(email, password);
       if (res.ok) goHome();
@@ -156,8 +162,17 @@ function apply(st: PlatformState): void {
   }
   if (st.mode === 'email' && st.mustChangePassword && st.email) { showPasswordScreen(st.email); return; }   // сначала свой пароль
   if (st.mode === 'none') { passwordShown = false; showLogin(); } else hideLogin();
-  postCacheAllowlist();
+  // P2-0058: без ответа сервера список модулей — по копии прав; копии нет — кэш не трогаем (не чистим по «пустоте»)
+  if (!st.offline || st.companies.length > 0) postCacheAllowlist();
+  scheduleRetry(st);
   void applyQuality(st);
+}
+
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+/** P2-0058: работа без связи — раз в минуту спросить сервер снова (сеть могла вернуться без события online). */
+function scheduleRetry(st: PlatformState): void {
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  if (st.offline && st.mode === 'email') retryTimer = setTimeout(() => { retryTimer = null; void getPlatform().refresh(); }, 60000);
 }
 
 let slotWired = false;

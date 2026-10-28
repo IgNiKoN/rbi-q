@@ -1,11 +1,13 @@
 // P2-0058: стенд «без сети» (npm run test:offline). node tests/offline/run.mjs [сценарий …] [--out <папка>]
-// Сценарии: cold375, cold1440 — холодный запуск без сети и запись без сети; rescue — «ничьи» записи общей базы PLATFORM2_DB.
+// Сценарии: cold375, cold1440 — холодный запуск без сети (меню, база компании) и запись без сети; rescue — «ничьи» записи общей
+// базы PLATFORM2_DB; expired — устаревший вход без сети (120 с) и тихое обновление; stale14 — без связи больше 14 дней;
+// invalid — сервер отозвал вход; cache — код План/Факта и «Компании» без сети не удаляется; otheruser — чужие права на устройстве.
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { start, stop, log as apiLog, marks, COMPANY } from './servers.mjs';
-import { count, freshProfile, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
+import { start, stop, log as apiLog, marks, mode, COMPANY } from './servers.mjs';
+import { count, freshProfile, go, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
 
 const args = process.argv.slice(2);
 const oi = args.indexOf('--out');
@@ -28,6 +30,8 @@ async function cold(width, height) {
   await page.reload(); await page.waitForTimeout(6000);
   const on = await state(page);
   ok(companyDb(on.db), `${tag}: с сетью база компании`, on.db);
+  note('меню с сетью: ' + JSON.stringify(on.menu));
+  await page.screenshot({ path: join(out, `${tag}-online.png`) });
   await ctx.close(); await stop();
 
   ({ ctx, page } = await launch(out, tag, { width, height, offline: true }));
@@ -37,6 +41,11 @@ async function cold(width, height) {
   ok(companyDb(s1.db), `${tag}: без сети база = база компании`, s1.db);
   ok(Array.isArray(s1.records) && s1.records.includes('ONLINE-MARK'), `${tag}: без сети прежние осмотры на месте`, JSON.stringify(s1.records));
   ok(!s1.login, `${tag}: без сети нет экрана «Вход»`);
+  note('меню без сети: ' + JSON.stringify(s1.menu));
+  await page.screenshot({ path: join(out, `${tag}-offline.png`) });
+  ok(!!s1.access && s1.access.quality === true && s1.access.construction === true && s1.access.planfact === true, `${tag}: без сети права меню — по копии (Качество, Стройконтроль, План/Факт)`, JSON.stringify(s1.access));
+  ok(s1.menu.length > 1 && JSON.stringify(s1.menu) === JSON.stringify(on.menu), `${tag}: без сети меню то же, что с сетью`);
+  ok(!!s1.platform && s1.platform.offline && s1.platform.companyId === COMPANY.id, `${tag}: состояние «без связи», компания из копии`);
   const id = await saveMark(page, 'OFFLINE-MARK');
   await page.waitForTimeout(1500);
   const s2 = await state(page);
@@ -94,7 +103,163 @@ async function rescue() {
   await ctx.close(); await stop();
 }
 
-const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue };
+
+/** Вход, осмотр с сетью, второй заход; затем правка сохранённого входа (как «прошло время») и выход из браузера. */
+async function prepare(tag, width, edit) {
+  freshProfile(out, tag);
+  marks.length = 0;
+  await start();
+  const { ctx, page } = await launch(out, tag, { width, height: 812 });
+  await signIn(page);
+  await saveMark(page, 'ONLINE-MARK');
+  await page.waitForTimeout(2000);
+  await page.reload(); await page.waitForTimeout(6000);
+  if (edit) await page.evaluate(edit);
+  await ctx.close(); await stop();
+}
+const expireAuth = () => { const a = JSON.parse(localStorage.getItem('platform2-auth')); a.expires_at = Math.floor(Date.now() / 1000) - 3600; localStorage.setItem('platform2-auth', JSON.stringify(a)); };
+
+/** Устаревший вход без сети: 120 с работы без экрана «Вход»; сеть вернулась — вход обновлён без пароля. */
+async function expired() {
+  const tag = 'expired';
+  note(`== ${tag}: вход устарел (час без приложения) → без сети открыть → 120 с → сеть`);
+  await prepare(tag, 375, expireAuth);
+  const { ctx, page } = await launch(out, tag, { width: 375, height: 812, offline: true });
+  await open(page, 5000);
+  let bad = 0, reloads = 0;
+  page.on('framenavigated', (f) => { if (f === page.mainFrame()) reloads++; });
+  for (let t = 0; t < 4; t++) {
+    await page.waitForTimeout(30000);
+    const s = await state(page);
+    note(`[${(t + 1) * 30} с] ` + JSON.stringify({ db: s.db, mode: s.platform && s.platform.mode, offline: s.platform && s.platform.offline, login: s.login, records: s.records }));
+    if (s.login || !companyDb(s.db) || !s.platform || s.platform.mode !== 'email') bad++;
+  }
+  ok(bad === 0, `${tag}: 120 с без сети — вошёл, база компании, экрана «Вход» нет`);
+  ok(reloads === 0, `${tag}: страница сама не перезагружалась`, String(reloads));
+  const s0 = await state(page);
+  ok(Array.isArray(s0.records) && s0.records.includes('ONLINE-MARK'), `${tag}: прежние осмотры видны`);
+  note('осмотр без сети: ' + await saveMark(page, 'EXPIRED-MARK'));
+  await start();
+  await ctx.setOffline(false);
+  const t0 = Date.now();
+  let s = null, exp = 0;
+  for (let i = 0; i < 18; i++) {   // до 90 с: событие «сеть есть» или повтор раз в минуту
+    await page.waitForTimeout(5000);
+    s = await state(page);
+    exp = await page.evaluate(() => JSON.parse(localStorage.getItem('platform2-auth') || '{"expires_at":0}').expires_at - Math.floor(Date.now() / 1000));
+    if (exp > 600 && s.platform && !s.platform.offline) break;
+  }
+  note(`сеть вернулась, через ${Math.round((Date.now() - t0) / 1000)} с: ` + JSON.stringify({ mode: s.platform && s.platform.mode, offline: s.platform && s.platform.offline, expiresIn: exp, login: s.login }));
+  ok(exp > 600 && s.platform && s.platform.mode === 'email' && !s.platform.offline && !s.login, `${tag}: сеть вернулась — вход обновлён без пароля, права с сервера`);
+  for (let i = 0; i < 12 && !count(marks, 'EXPIRED-MARK'); i++) await page.waitForTimeout(5000);
+  note('дошло: ' + JSON.stringify(marks));
+  ok(count(marks, 'EXPIRED-MARK') === 1, `${tag}: осмотр без сети ушёл на сервер ровно 1 раз в той же открытой странице`, String(count(marks, 'EXPIRED-MARK')));
+  await ctx.close(); await stop();
+}
+
+/** Без связи больше 14 дней — экран «Вход» с понятным текстом; данные на устройстве целы. */
+async function stale14() {
+  const tag = 'stale14';
+  note(`== ${tag}: последнее подтверждение сервером 15 дней назад → без сети открыть`);
+  await prepare(tag, 375, () => {
+    const day = 24 * 3600;
+    const a = JSON.parse(localStorage.getItem('platform2-auth')); a.expires_at = Math.floor(Date.now() / 1000) - 15 * day; a.expires_in = 3600;
+    localStorage.setItem('platform2-auth', JSON.stringify(a));
+    for (const k of Object.keys(localStorage)) if (k.startsWith('platform2_device_access_')) {
+      const c = JSON.parse(localStorage.getItem(k)); c.at = new Date(Date.now() - 15 * day * 1000).toISOString(); localStorage.setItem(k, JSON.stringify(c));
+    }
+  });
+  const { ctx, page } = await launch(out, tag, { width: 375, height: 812, offline: true });
+  await open(page, 10000);
+  const s = await state(page);
+  const notice = await page.locator('[data-testid=p2-login-notice]').innerText().catch(() => '');
+  note('без сети: ' + JSON.stringify({ login: s.login, notice, db: s.db, qualityCompany: s.qualityCompany }));
+  ok(s.login && /больше 14 дней/.test(notice) && /Данные на телефоне сохранены/.test(notice), `${tag}: экран «Вход» с текстом «Нет связи больше 14 дней…»`);
+  const kept = (await readStore(page, s.db && companyDb(s.db) ? s.db : `${BASE}_${COMPANY.id}_${(s.db || '').split('_').pop()}`, 'app_history')) || [];
+  ok(s.qualityCompany === COMPANY.id && companyDb(s.db), `${tag}: база компании не переключена`, s.db);
+  ok(kept.some((r) => r.object === 'ONLINE-MARK'), `${tag}: осмотры на устройстве целы`);
+  ok(s.authKept, `${tag}: сохранённый вход не стёрт (с сетью — без пароля, если сервер примет)`);
+  await page.screenshot({ path: join(out, 'stale14-375.png') });
+  await ctx.close();
+}
+
+/** Сервер отозвал вход (invalid_grant) — экран «Вход», как раньше. */
+async function invalid() {
+  const tag = 'invalid';
+  note(`== ${tag}: вход устарел, сервер отвечает «вход недействителен»`);
+  await prepare(tag, 375, expireAuth);
+  mode.refresh = 'invalid_grant';
+  await start();
+  const { ctx, page } = await launch(out, tag, { width: 375, height: 812 });
+  await open(page, 15000);
+  const s = await state(page);
+  note(JSON.stringify({ login: s.login, mode: s.platform && s.platform.mode, authKept: s.authKept }));
+  ok(s.login && s.platform && s.platform.mode === 'none', `${tag}: экран «Вход»`);
+  const notice = await page.locator('[data-testid=p2-login-notice]').count();
+  ok(notice === 0, `${tag}: без текста про 14 дней (обычный вход)`);
+  mode.refresh = 'ok';
+  await ctx.close(); await stop();
+}
+
+/** Кэш приложения: без сети код План/Факта и «Компании» не удаляется (два запуска подряд). */
+async function cache() {
+  const tag = 'cache';
+  note(`== ${tag}: с сетью открыть План/Факт и «Компанию» → два запуска без сети`);
+  freshProfile(out, tag);
+  await start();
+  let { ctx, page } = await launch(out, tag, { width: 375, height: 812 });
+  await signIn(page);
+  for (const h of ['#/planfact', '#/settings/company/objects', '#/quality/engineer']) await go(page, h, 4000);
+  await page.reload(); await page.waitForTimeout(6000);
+  const census = () => page.evaluate(async () => {
+    const r = { planfact: 0, company: 0 };
+    for (const n of await caches.keys()) for (const q of await (await caches.open(n)).keys()) {
+      if (/\/js\/dist\/planfact\//.test(q.url)) r.planfact++;
+      if (/\/js\/dist\/company\//.test(q.url)) r.company++;
+    }
+    return r;
+  }).catch(() => ({ planfact: -1, company: -1 }));
+  const c0 = await census();
+  note('с сетью в кэше: ' + JSON.stringify(c0));
+  ok(c0.planfact > 0 && c0.company > 0, `${tag}: с сетью код План/Факта и «Компании» в кэше`);
+  await ctx.close(); await stop();
+  for (const n of [1, 2]) {
+    ({ ctx, page } = await launch(out, tag, { width: 375, height: 812, offline: true }));
+    await open(page, 10000);
+    const c = await census();
+    note(`без сети, запуск ${n}: ` + JSON.stringify(c));
+    ok(c.planfact === c0.planfact && c.company === c0.company, `${tag}: без сети (запуск ${n}) код План/Факта и «Компании» на месте`);
+    await ctx.close();
+  }
+}
+
+/** Другой человек на том же устройстве: прежний вышел — его копия прав стёрта; у нового без сети — только своё. */
+async function otheruser() {
+  const tag = 'otheruser';
+  note(`== ${tag}: вошёл А → вышел → вошёл Б (без компаний) → без сети`);
+  freshProfile(out, tag);
+  await start();
+  let { ctx, page } = await launch(out, tag, { width: 1440, height: 900 });
+  await signIn(page);
+  const keysA = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('platform2_device_access_')));
+  await page.evaluate(() => window.RBI.platform2.signOut());
+  await page.waitForTimeout(6000);
+  const after = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('platform2_device_access_')));
+  ok(keysA.length === 1 && after.length === 0, `${tag}: «Выйти» стирает копию прав`, JSON.stringify({ keysA, after }));
+  await signIn(page, 'other@stand.local');
+  const b = await state(page);
+  ok(b.platform && b.platform.mode === 'email' && b.platform.companies === 0, `${tag}: Б вошёл, компаний нет`);
+  await ctx.close(); await stop();
+  ({ ctx, page } = await launch(out, tag, { width: 1440, height: 900, offline: true }));
+  await open(page);
+  const s = await state(page);
+  note('Б без сети: ' + JSON.stringify({ platform: s.platform, access: s.access, db: s.db }));
+  ok(!!s.platform && s.platform.companies === 0 && !(s.access && (s.access.quality || s.access.construction)), `${tag}: Б без сети не видит прав А`);
+  ok(!companyDb(s.db), `${tag}: Б без сети не открывает базу А`, s.db);
+  await ctx.close();
+}
+
+const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue, expired, stale14, invalid, cache, otheruser };
 const list = pick.length ? pick : Object.keys(SCENARIOS);
 for (const n of list) {
   if (!SCENARIOS[n]) { ok(false, 'нет сценария ' + n); continue; }

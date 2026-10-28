@@ -111,3 +111,102 @@ test('перенос: id тот же, объект синхронизации �
   assert.equal(isAttachmentOf({ id: 'ph-2', entityId: 'x' }, ids, text), false);
   assert.equal(isAttachmentOf({ id: 'ph-77', [MOVED_FIELD]: 'x' }, ids, text), false, 'уже перенесённое — нет');
 });
+
+// --- этап 2: права на устройстве, «вошёл без связи» до 14 дней ---
+import { resolveSession, readStoredSession } from '../auth.service.ts';
+import type { AuthApi, SessionState } from '../auth.service.ts';
+import { DEVICE_ACCESS_PREFIX, lastConfirmed, offlineExpired } from '../platform.service.ts';
+import { QUALITY_ACCESS_COPY_PREFIX } from '../quality-bridge.ts';
+
+const NOW = Date.parse('2026-10-28T12:00:00Z');
+const sec = (ms: number): number => Math.floor(ms / 1000);
+
+test('сохранённый вход: свежий — без сети; устарел и сети нет — «без связи» сразу; сервер отозвал — нет входа', async () => {
+  const fresh = { email: 'a@x', expiresAt: sec(NOW) + 1800, issuedAt: sec(NOW) - 1800 };
+  assert.deepEqual(await resolveSession({ stored: fresh, online: false, nowSec: sec(NOW), getSession: async () => 'a@x', stillStored: () => true }),
+    { email: 'a@x', offline: false, issuedAt: fresh.issuedAt });
+  const old = { email: 'a@x', expiresAt: sec(NOW) - 3600, issuedAt: sec(NOW) - 7200 };
+  let asked = 0;
+  assert.deepEqual(await resolveSession({ stored: old, online: false, nowSec: sec(NOW), getSession: async () => { asked++; return null; }, stillStored: () => true }),
+    { email: 'a@x', offline: true, issuedAt: old.issuedAt });
+  assert.equal(asked, 0, 'без сети обновление входа не ждём');
+  assert.deepEqual(await resolveSession({ stored: old, online: true, nowSec: sec(NOW), getSession: async () => 'a@x', stillStored: () => true }),
+    { email: 'a@x', offline: false, issuedAt: old.issuedAt }, 'сеть есть — вход обновлён');
+  assert.deepEqual(await resolveSession({ stored: old, online: true, nowSec: sec(NOW), getSession: async () => null, stillStored: () => true }),
+    { email: 'a@x', offline: true, issuedAt: old.issuedAt }, 'сервер не ответил, вход не стёрт — без связи');
+  assert.deepEqual(await resolveSession({ stored: old, online: true, nowSec: sec(NOW), getSession: async () => null, stillStored: () => false }),
+    { email: null, offline: false, issuedAt: null }, 'invalid_grant: supabase-js стёр вход — экран «Вход»');
+  const slow = await resolveSession({ stored: old, online: true, nowSec: sec(NOW), waitMs: 20, getSession: () => new Promise(() => {}), stillStored: () => true });
+  assert.equal(slow.offline, true, 'обновление не дождались — работа без связи, не «Вход»');
+  assert.deepEqual(readStoredSession({ getItem: () => JSON.stringify({ expires_at: 100, expires_in: 3600, user: { email: 'a@x' } }) }), { email: 'a@x', expiresAt: 100, issuedAt: -3500 });
+  assert.equal(readStoredSession({ getItem: () => null }), null);
+});
+
+function sessionAuth(ses: SessionState): AuthApi {
+  return { async signIn() { return { ok: true }; }, async signOut() {}, async getEmail() { return ses.email; }, async getAccess() { return []; }, async getSessionState() { return ses; } };
+}
+
+test('права на устройстве: ответ сервера сохраняется у вошедшего; без связи — меню по копии; «Выйти» стирает', async () => {
+  const store = memStore();
+  const online = createPlatform({ auth: sessionAuth({ email: 'tn@alfa.test', offline: false, issuedAt: sec(NOW) }), storage: store, pinActive: () => false, now: () => NOW,
+    rpc: async (fn) => ({ data: fn === 'pf_my_platform' ? { companies: [ALFA] } : { full_name: 'Иванов', user_id: 'u-1' }, error: null }) });
+  const s1 = await online.boot();
+  assert.equal(s1.confirmedAt, new Date(NOW).toISOString());
+  assert.ok(store.getItem(DEVICE_ACCESS_PREFIX + user), 'копия под ключом пользователя (без почты)');
+  const net = { calls: 0 };
+  const off = createPlatform({ auth: sessionAuth({ email: 'tn@alfa.test', offline: true, issuedAt: sec(NOW) }), storage: store, pinActive: () => false,
+    now: () => NOW + 3 * 24 * 3600 * 1000, rpc: async () => { net.calls++; return { data: null, error: { message: 'Failed to fetch' } }; } });
+  const s2 = await off.boot();
+  assert.equal(net.calls, 0, 'вход не подтверждён — сервер не спрашиваем (без долгих ожиданий)');
+  assert.equal(s2.mode, 'email');
+  assert.equal(s2.offline, true);
+  assert.equal(s2.companyId, A);
+  assert.equal(s2.fullName, 'Иванов');
+  assert.equal(off.access().quality, true, 'меню без сети — по копии');
+  const other = createPlatform({ auth: sessionAuth({ email: 'other@alfa.test', offline: true, issuedAt: sec(NOW) }), storage: store, pinActive: () => false,
+    now: () => NOW, rpc: async () => ({ data: null, error: { message: 'Failed to fetch' } }) });
+  const s3 = await other.boot();
+  assert.deepEqual(s3.companies, [], 'другой вошедший на устройстве чужих прав не видит');
+  await online.signOut();
+  assert.equal(store.getItem(DEVICE_ACCESS_PREFIX + user), null, '«Выйти» стирает копию');
+});
+
+test('«вошёл без связи» до 14 дней: дольше — экран «Вход» с причиной, база не трогается; подтверждение — копия или выдача входа', async () => {
+  const store = memStore({ [DEVICE_ACCESS_PREFIX + user]: JSON.stringify({ at: new Date(NOW - 15 * 24 * 3600 * 1000).toISOString(), platform: { companies: [ALFA] }, profile: {} }),
+    [QUALITY_COMPANY_KEY]: A, [QUALITY_USER_KEY]: user });
+  const p = createPlatform({ auth: sessionAuth({ email: 'tn@alfa.test', offline: true, issuedAt: sec(NOW - 16 * 24 * 3600 * 1000) }), storage: store, pinActive: () => false,
+    now: () => NOW, rpc: async () => ({ data: null, error: { message: 'Failed to fetch' } }) });
+  const s = await p.boot();
+  assert.equal(s.mode, 'none');
+  assert.equal(s.loginReason, 'stale');
+  assert.equal(s.offline, true);
+  const x = bridgeDeps(store);
+  await applyQualityBridge(s, x.d as N);
+  assert.equal(x.reloads(), 0, 'экран «Вход» без связи — база компании и записи на месте');
+  assert.equal(store.getItem(QUALITY_COMPANY_KEY), A);
+  const day13 = createPlatform({ auth: sessionAuth({ email: 'tn@alfa.test', offline: true, issuedAt: sec(NOW - 13 * 24 * 3600 * 1000) }), storage: store, pinActive: () => false,
+    now: () => NOW, rpc: async () => ({ data: null, error: { message: 'x' } }) });
+  assert.equal((await day13.boot()).mode, 'email', 'выдача входа 13 дней назад (копия старше) — ещё работает');
+  assert.equal(offlineExpired(null, NOW), true, 'ни копии, ни времени входа — только вход');
+  assert.equal(lastConfirmed(null, sec(NOW)), sec(NOW) * 1000);
+});
+
+test('мост без связи: права Качества и объекты — из копии последнего ответа; синхронизация не выключается', async () => {
+  const store = memStore({ [QUALITY_COMPANY_KEY]: A, [QUALITY_USER_KEY]: user });
+  const mk = (online: boolean) => {
+    const win: N = { RBI: {} };
+    return { win, d: { win, store, reload: () => { throw new Error('без перезагрузки'); }, cfg: { url: 'http://x', anonKey: 'k' },
+      platformClient: { auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange: () => ({}) } } as N,
+      createClient: (() => ({ rpc: async () => (online ? { data: { actions: ['quality.edit'], projects: null }, error: null } : { data: null, error: { message: 'Failed to fetch' } }), storage: { from: () => ({}) } })) as N,
+      listProjects: async () => { if (!online) throw new Error('нет связи'); return [{ id: 'p-1', name: 'ЖК' }]; } } };
+  };
+  const on = mk(true);
+  const s1 = await applyQualityBridge(st(), on.d as N);
+  assert.equal(s1!.projectId, 'p-1');
+  assert.ok(store.getItem(QUALITY_ACCESS_COPY_PREFIX + A + ':' + user));
+  const off = mk(false);
+  const s2 = await applyQualityBridge(st({ offline: true }), off.d as N);
+  assert.equal(s2!.projectId, 'p-1', 'объект — из копии');
+  assert.equal(s2!.role, 'engineer', 'роль — из копии прав, не «гость»');
+  assert.equal(JSON.parse(store.getItem('rbi_sync_config')!).enabled, true, 'синхронизация не выключена (запишется и уйдёт позже)');
+});

@@ -15,6 +15,8 @@ import type { PlatformState } from './platform.service.ts';
 export const QUALITY_COMPANY_KEY = 'platform2_quality_company';
 const STASH_PREFIX = 'platform2_quality_state_';
 const PROJECT_PREFIX = 'platform2_quality_project_';
+/** P2-0058: копия последних ответов сервера Качества (my_access по объектам, список объектов) — «компания:пользователь». */
+export const QUALITY_ACCESS_COPY_PREFIX = 'platform2_quality_access_';
 
 /** Ключи устройства со состоянием синхронизации Качества — у каждой компании свои. */
 export const SYNC_STATE_KEYS = [
@@ -310,17 +312,27 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
   wireStorageToken(deps);
   const client = createQualityClient(deps.createClient, deps.cfg, company, deps.platformClient);
   deps.win.supabaseClient = client;
+  // P2-0058: без ответа сервера — копия его последнего ответа этому человеку в этой компании (только для экрана; отправку проверяет сервер)
+  const copyKey = QUALITY_ACCESS_COPY_PREFIX + company + ':' + user;
+  let copy: { access: Record<string, unknown>; projects: QualityProject[] | null } = { access: {}, projects: null };
+  try { copy = { ...copy, ...(JSON.parse(deps.store.getItem(copyKey) || '{}') as typeof copy) }; } catch { /* нет копии */ }
+  const saveCopy = (): void => { try { deps.store.setItem(copyKey, JSON.stringify(copy)); } catch { /* приватный режим */ } };
   const loadAccess = async (pid: string | null): Promise<QualityAccess> => {
-    const { data, error } = await client.rpc('my_access', { p_project: pid });
-    return parseAccess(error ? null : data);
+    const { data, error } = await Promise.resolve(client.rpc('my_access', { p_project: pid })).catch((e: unknown) => ({ data: null, error: e || 'network' }));
+    const k = pid || '*';
+    if (!error) { copy.access[k] = data; saveCopy(); return parseAccess(data); }
+    return parseAccess(k in copy.access ? copy.access[k] : null);
   };
   // «Синхронизация команды» — только свои объекты (назначения роли); вся компания — все объекты.
   const first = await loadAccess(null);
   const scope = first.projects;
   const cur = st.companies.find((c) => c.id === company);
+  // объекты: с ответом сервера — список ядра (и его копия); без связи — копия (сервис ядра на ошибке отдаёт пустой список)
+  const listed = first.container ? null : st.offline ? copy.projects || []
+    : await deps.listProjects(company).then((list) => { copy.projects = list; saveCopy(); return list; }, () => copy.projects || ([] as QualityProject[]));
   // P2-0035: у компании с контейнером объекты ЖК — внутри него; список объектов ядра контейнера не содержит
   const projects = first.container ? [{ id: first.container, name: cur ? cur.name : '' }]
-    : (await deps.listProjects(company).catch(() => [] as QualityProject[])).filter((p) => scope === null || scope.includes(p.id));
+    : (listed || []).filter((p) => scope === null || scope.includes(p.id));
   const savedProject = deps.store.getItem(PROJECT_PREFIX + company);
   const projectId = first.container ? first.container
     : projects.some((p) => p.id === savedProject) ? savedProject

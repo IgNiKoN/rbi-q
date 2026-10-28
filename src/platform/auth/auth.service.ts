@@ -14,10 +14,16 @@ export interface AccessEntry {
 
 export type SignInResult = { ok: true } | { ok: false; message: string };
 
+/** P2-0058: кто вошёл на устройстве. offline — сервер не подтвердил вход (нет связи), но сохранённый вход не отозван;
+ *  issuedAt — когда сервер последний раз выдал вход (сек), для правила «без связи не дольше 14 дней». */
+export interface SessionState { email: string | null; offline: boolean; issuedAt: number | null }
+
 export interface AuthApi {
   signIn(email: string, password: string): Promise<SignInResult>;
   signOut(): Promise<void>;
   getEmail(): Promise<string | null>;
+  /** P2-0058: как getEmail, но различает «нет входа» и «вход есть, сервер недоступен» (без долгого ожидания без сети). */
+  getSessionState?(): Promise<SessionState>;
   getAccess(): Promise<AccessEntry[]>;
   /** P2-0028: сменить пароль вошедшего (GoTrue PUT /user). */
   changePassword?(password: string): Promise<SignInResult>;
@@ -62,13 +68,47 @@ export function checkNewPassword(password: string, repeat: string): string | nul
   return null;
 }
 
+const STORAGE_KEY = 'platform2-auth';
+/** Сколько ждать обновления устаревшего входа, прежде чем работать «без связи» (обновление продолжается в фоне). */
+export const REFRESH_WAIT_MS = 8000;
+
+interface StoredSession { email: string | null; expiresAt: number; issuedAt: number | null }
+/** Сохранённый вход на устройстве (без сети, без обновления). */
+export function readStoredSession(store: Pick<Storage, 'getItem'> | null): StoredSession | null {
+  try {
+    const s = JSON.parse((store && store.getItem(STORAGE_KEY)) || 'null') as { expires_at?: unknown; expires_in?: unknown; user?: { email?: unknown } } | null;
+    if (!s || typeof s.expires_at !== 'number') return null;
+    const email = s.user && typeof s.user.email === 'string' ? s.user.email : null;
+    return { email, expiresAt: s.expires_at, issuedAt: typeof s.expires_in === 'number' ? s.expires_at - s.expires_in : null };
+  } catch { return null; }
+}
+
+/** Решение по сохранённому входу без запроса к серверу: свежий вход — getSession (без сети); устарел и сети нет — «без связи». */
+export async function resolveSession(o: { stored: StoredSession | null; online: boolean; nowSec: number;
+  getSession: () => Promise<string | null>; stillStored: () => boolean; waitMs?: number }): Promise<SessionState> {
+  const st = o.stored;
+  if (!st) return { email: await o.getSession(), offline: false, issuedAt: null };
+  const issuedAt = st.issuedAt;
+  if (st.expiresAt > o.nowSec + 10) return { email: await o.getSession(), offline: false, issuedAt };
+  if (!o.online) return { email: st.email, offline: true, issuedAt };
+  // устарел, сеть «есть»: обновление входа; не дождались или сеть подвела — вход сохранён → работа без связи;
+  // сервер отозвал вход (invalid_grant) — supabase-js сам стирает сохранённый вход → «нет входа»
+  const TIMEOUT = Symbol('timeout');
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<typeof TIMEOUT>((r) => { timer = setTimeout(() => r(TIMEOUT), o.waitMs ?? REFRESH_WAIT_MS); });
+  const res = await Promise.race([o.getSession().catch(() => null), timeout]);
+  clearTimeout(timer);
+  if (typeof res === 'string') return { email: res, offline: false, issuedAt };
+  return o.stillStored() ? { email: st.email, offline: true, issuedAt } : { email: null, offline: false, issuedAt: null };
+}
+
 /** Один клиент на страницу: разделы Platform 2.0 (отдельные бандлы) делят сессию и не плодят клиентов Auth. */
 const GLOBAL_KEY = '__platform2SupabaseClient';
 const holder = globalThis as unknown as Record<string, SupabaseClient | undefined>;
 
 export function createAuthService(cfg: AuthConfig): AuthApi {
   const c = holder[GLOBAL_KEY] || (holder[GLOBAL_KEY] = createClient(cfg.url, cfg.anonKey, {
-    auth: { storageKey: 'platform2-auth', persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+    auth: { storageKey: STORAGE_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
   }));
   return {
     async signIn(email, password) {
@@ -93,6 +133,17 @@ export function createAuthService(cfg: AuthConfig): AuthApi {
     async getEmail() {
       const { data } = await c.auth.getSession();
       return data.session ? data.session.user.email || null : null;
+    },
+    async getSessionState() {
+      let store: Storage | null = null;
+      try { store = window.localStorage; } catch { store = null; }
+      return resolveSession({
+        stored: readStoredSession(store),
+        online: typeof navigator === 'undefined' || navigator.onLine !== false,
+        nowSec: Math.floor(Date.now() / 1000),
+        getSession: async () => { const { data } = await c.auth.getSession(); return data.session ? data.session.user.email || null : null; },
+        stillStored: () => readStoredSession(store) !== null
+      });
     },
     async getAccess() {
       const { data, error } = await c.rpc('pf_my_context');

@@ -4,7 +4,8 @@
  * (свой код sync-*.js, здесь только «вошёл ли»), демо без входа (выбор запоминается на устройстве).
  * Права здесь не решаются: модули и признаки приходят с сервера; меню и экраны только читают это состояние.
  */
-import type { AuthApi, SignInResult } from './auth.service.ts';
+import type { AuthApi, SessionState, SignInResult } from './auth.service.ts';
+import { deviceUserKey } from './quality-bridge.ts';
 
 export type EntryMode = 'none' | 'email' | 'pin' | 'demo';
 
@@ -27,8 +28,13 @@ export interface PlatformState {
   fullName?: string | null;
   mustChangePassword?: boolean;
   userId?: string | null;
-  /** P2-0058: сервер не ответил (нет связи / недоступен) — компании и права не с сервера; мост не меняет базу Качества. */
+  /** P2-0058: сервер не ответил (нет связи / недоступен) — компании и права из копии последнего ответа сервера на устройстве
+   *  (только для меню, выбора базы и кэша; права при отправке проверяет сервер); мост не меняет базу Качества. */
   offline?: boolean;
+  /** P2-0058: когда сервер последний раз подтвердил вход и права (ISO). */
+  confirmedAt?: string | null;
+  /** P2-0058: экран «Вход» показан не потому, что не входили: 'stale' — без связи больше 14 дней (данные на устройстве целы). */
+  loginReason?: 'stale';
 }
 
 /** Флаги для меню и Настроек (window.RBI.platformMenuAccess): модули выбранной компании, «Компания», «Администрирование платформы». */
@@ -40,11 +46,37 @@ export interface PlatformDeps {
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
   /** Вошёл ли человек по старому PIN-входу Quality (облако Quality включено и подключено). */
   pinActive: () => boolean;
+  now?: () => number;
 }
 
 /** Ключи устройства — только свои (platform2_*); ключи старого Quality не читаются и не пишутся. */
 export const ENTRY_KEY = 'platform2_entry';
 export const COMPANY_KEY = 'platform2_company';
+
+/** P2-0058: копия последнего ответа сервера (pf_my_platform + pf_my_profile) — у каждого вошедшего своя (ключ без почты). */
+export const DEVICE_ACCESS_PREFIX = 'platform2_device_access_';
+/** «Вошёл без связи» — не дольше 14 дней с последнего подтверждения сервером (решение владельца 28.10.2026). */
+export const OFFLINE_DAYS = 14;
+const DAY_MS = 24 * 3600 * 1000;
+
+interface DeviceCopy { at: string; platform: unknown; profile: unknown }
+export function readDeviceCopy(s: PlatformDeps['storage'], email: string): DeviceCopy | null {
+  try {
+    const c = JSON.parse(safeGet(s, DEVICE_ACCESS_PREFIX + deviceUserKey(email)) || 'null') as DeviceCopy | null;
+    return c && typeof c.at === 'string' ? c : null;
+  } catch { return null; }
+}
+
+/** Последнее подтверждение сервером: копия ответа или выдача входа (кто входил до P2-0058 — копии ещё нет). */
+export function lastConfirmed(copy: DeviceCopy | null, issuedAtSec: number | null): number | null {
+  const a = copy ? Date.parse(copy.at) : NaN;
+  const b = issuedAtSec ? issuedAtSec * 1000 : NaN;
+  const best = Math.max(Number.isNaN(a) ? -Infinity : a, Number.isNaN(b) ? -Infinity : b);
+  return Number.isFinite(best) ? best : null;
+}
+export function offlineExpired(confirmed: number | null, now: number): boolean {
+  return confirmed === null || now - confirmed > OFFLINE_DAYS * DAY_MS;
+}
 
 const EMPTY: PlatformState = { mode: 'none', email: null, isPlatformAdmin: false, companies: [], companyId: null };
 
@@ -120,26 +152,50 @@ export function createPlatform(deps: PlatformDeps): Platform {
   const subs = new Set<(st: PlatformState) => void>();
   const emit = (): void => { for (const cb of subs) cb(state); };
 
-  async function loadEmail(email: string): Promise<PlatformState> {
-    let parsed = { isPlatformAdmin: false, companies: [] as PlatformCompany[] };
-    let profile = { fullName: null as string | null, mustChangePassword: false, userId: null as string | null };
-    let offline = false;
-    if (deps.rpc) {
-      // P2-0058: ошибка запроса — не ответ «компаний нет» (нет связи, сервер недоступен): состояние помечается offline
-      const [pl, pr] = await Promise.all([deps.rpc('pf_my_platform'), deps.rpc('pf_my_profile')].map((q) => q.catch((e: unknown) => ({ data: null, error: e || 'network' }))));
-      if (!pl.error) parsed = parsePlatform(pl.data); else offline = true;
-      if (!pr.error) profile = parseProfile(pr.data); else offline = true;
-    }
+  const now = (): number => (deps.now ? deps.now() : Date.now());
+
+  function fromParts(email: string, parsed: { isPlatformAdmin: boolean; companies: PlatformCompany[] },
+    profile: { fullName: string | null; mustChangePassword: boolean; userId: string | null }): PlatformState {
     const saved = safeGet(deps.storage, COMPANY_KEY);
     const companyId = parsed.companies.some((c) => c.id === saved) ? saved
       : (parsed.companies.find((c) => c.modules.length > 0) || parsed.companies[0] || null)?.id || null;
-    return { mode: 'email', email, isPlatformAdmin: parsed.isPlatformAdmin, companies: parsed.companies, companyId, ...profile, ...(offline ? { offline } : {}) };
+    return { mode: 'email', email, isPlatformAdmin: parsed.isPlatformAdmin, companies: parsed.companies, companyId, ...profile };
+  }
+
+  /** Без ответа сервера: копия последнего ответа этого человека (нет копии — без компаний). */
+  function fromDevice(email: string, issuedAt: number | null): PlatformState {
+    const copy = readDeviceCopy(deps.storage, email);
+    const confirmed = lastConfirmed(copy, issuedAt);
+    const base = copy ? fromParts(email, parsePlatform(copy.platform), parseProfile(copy.profile))
+      : fromParts(email, { isPlatformAdmin: false, companies: [] }, { fullName: null, mustChangePassword: false, userId: null });
+    return { ...base, offline: true, confirmedAt: confirmed === null ? null : new Date(confirmed).toISOString() };
+  }
+
+  async function loadEmail(email: string, issuedAt: number | null): Promise<PlatformState> {
+    if (!deps.rpc) return fromParts(email, { isPlatformAdmin: false, companies: [] }, { fullName: null, mustChangePassword: false, userId: null });
+    // P2-0058: ошибка запроса — не ответ «компаний нет» (нет связи, сервер недоступен): копия последнего ответа сервера
+    const [pl, pr] = await Promise.all([deps.rpc('pf_my_platform'), deps.rpc('pf_my_profile')].map((q) => q.catch((e: unknown) => ({ data: null, error: e || 'network' }))));
+    if (pl.error || pr.error) return fromDevice(email, issuedAt);
+    const at = new Date(now()).toISOString();
+    safeSet(deps.storage, DEVICE_ACCESS_PREFIX + deviceUserKey(email), JSON.stringify({ at, platform: pl.data, profile: pr.data }));
+    return { ...fromParts(email, parsePlatform(pl.data), parseProfile(pr.data)), confirmedAt: at };
+  }
+
+  async function session(): Promise<SessionState> {
+    if (!deps.auth) return { email: null, offline: false, issuedAt: null };
+    if (deps.auth.getSessionState) return deps.auth.getSessionState();
+    return { email: await deps.auth.getEmail(), offline: false, issuedAt: null };
   }
 
   async function refresh(): Promise<PlatformState> {
-    const email = deps.auth ? await deps.auth.getEmail() : null;
-    if (email) {
-      state = await loadEmail(email);
+    const ses = await session();
+    if (ses.email) {
+      // вход не подтверждён сервером (нет связи): сервер не спрашиваем; дольше 14 дней — экран «Вход», данные не трогаем
+      state = ses.offline ? fromDevice(ses.email, ses.issuedAt) : await loadEmail(ses.email, ses.issuedAt);
+      // действующий (не истёкший) вход — уже подтверждение сервера; правило 14 дней — только для устаревшего входа без связи
+      if (ses.offline && offlineExpired(state.confirmedAt ? Date.parse(state.confirmedAt) : null, now())) {
+        state = { ...EMPTY, offline: true, loginReason: 'stale' };
+      }
       safeSet(deps.storage, ENTRY_KEY, null);
     } else if (deps.pinActive()) {
       state = { ...EMPTY, mode: 'pin' };
@@ -163,6 +219,7 @@ export function createPlatform(deps: PlatformDeps): Platform {
       return res;
     },
     async signOut() {
+      if (state.email) safeSet(deps.storage, DEVICE_ACCESS_PREFIX + deviceUserKey(state.email), null);   // P2-0058: копию прав — стереть
       if (deps.auth) await deps.auth.signOut();
       safeSet(deps.storage, ENTRY_KEY, null);
       safeSet(deps.storage, COMPANY_KEY, null);
