@@ -1,0 +1,100 @@
+<title>Макет «Что не ушло»</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Лента разделов: слева «сейчас», справа «предлагаю»; фильтр размера экрана сверху. Палитра — цвета приложения RBI. */
+:root{
+  --bg:#f7f4ee; --card:#ffffff; --fg:#172330; --muted:#626e7b; --line:rgba(28,43,57,.14);
+  --accent:#c49a5f; --accent-ink:#8a6430; --warn:#b8844a; --now:#9f4c45;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111821;--card:#18222d;--fg:#e8edf2;--muted:#9aa6b2;--line:rgba(232,237,242,.14);--accent:#c9a46a;--accent-ink:#e0bd85;--warn:#d4a065;--now:#d98b84;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111821;--card:#18222d;--fg:#e8edf2;--muted:#9aa6b2;--line:rgba(232,237,242,.14);--accent:#c9a46a;--accent-ink:#e0bd85;--warn:#d4a065;--now:#d98b84;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1440px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--f-head);text-wrap:balance;margin:0}
+h1{font-size:28px;line-height:1.15}
+h2{font-size:21px}
+h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+p{margin:0;max-width:72ch}
+.lead{color:var(--muted)}
+.ask{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.ask b{color:var(--accent-ink)}
+.ask ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.filters button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:600 14px var(--f-body);cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.filters button:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+section{display:flex;flex-direction:column;gap:12px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.pair[data-size="375"]{grid-template-columns:repeat(2,minmax(0,390px));justify-content:start}
+.pair[data-size="768"]{grid-template-columns:repeat(2,minmax(0,560px));justify-content:start}
+figure{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+figcaption{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+figcaption.now{color:var(--now)}
+figcaption.new{color:var(--accent-ink)}
+figure img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.variant{display:flex;flex-direction:column;gap:8px}
+.variant > span{font-size:13px;color:var(--muted)}
+table{border-collapse:collapse;width:100%;min-width:640px;background:var(--card)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-top:1px solid var(--line);font-size:14px}
+th{border-top:0;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+td:first-child{font-weight:600}
+@media (max-width:700px){.pair,.pair[data-size="375"],.pair[data-size="768"]{grid-template-columns:1fr}h1{font-size:23px}}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap">
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h3>P2-0059 · этап 4 · показ</h3>
+    <h1>Отправка при плохой связи: что не ушло и почему</h1>
+    <p class="lead">Экран «Настройки → Данные на устройстве» (сюда ведёт значок «не отправлено: N» в шапке). Слева — как сейчас, справа — предлагаю. Снято на стенде в настоящем приложении этой ветки, без интернета; записи в макете — примерные.</p>
+  </header>
+
+  <div class="ask">
+    <b>Что нужно от вас:</b> посмотреть экраны и ответить «Макет подходит» или что поменять.
+    <ol>
+      <li><b>Карточка «Отправка».</b> Сверху — «Нет связи · не отправлено: 3» и кнопка «Отправить сейчас». Ниже — каждая неотправленная запись: что это, когда записана и почему не ушла: «Нет связи — отправим сами», «Нет фото пункта … — Отправить без этого фото», «Сервер не ответил — повтор в 14:42».</li>
+      <li><b>«Отклонено сервером»</b> — отдельной группой: такие записи сами не уйдут (например, нет прав на объект), их не смешиваем с «не отправлено».</li>
+      <li><b>Внизу карточки</b> — «Последняя успешная отправка» и «Проверка связи» (когда приложение последний раз спрашивало сервер).</li>
+      <li><b>«Журнал синхронизации»</b> — свёрнут; внутри: последние события (начало, конец, сколько отправлено и получено, ошибка, длительность) и кнопка «Скопировать отчёт для разработчика». В журнале нет текста записей и имён, хранится до 500 событий только на этом телефоне.</li>
+      <li>Когда всё ушло — «Всё отправлено · Последняя успешная отправка: …».</li>
+    </ol>
+  </div>
+
+  <div class="filters" role="group" aria-label="Размер экрана">
+    <button type="button" data-f="375" aria-pressed="true">Телефон</button>
+    <button type="button" data-f="768" aria-pressed="false">Планшет</button>
+    <button type="button" data-f="1440" aria-pressed="false">Компьютер</button>
+  </div>
+  <div id="list" style="display:flex;flex-direction:column;gap:28px"></div>
+</div>
+<script>
+const SCREENS = [
+  { id: 'device', title: 'Нет связи, 3 не отправлено + 1 отклонено', now: 'device', themes: ['', '-dark'] },
+  { id: 'journal', title: 'Журнал синхронизации открыт', now: 'device', themes: ['', '-dark'] },
+  { id: 'retry', title: 'Связь есть, сервер не ответил — ждёт повтора', now: null, themes: [''] },
+  { id: 'ok', title: 'Всё отправлено', now: null, themes: [''] }
+];
+function fig(cls, label, src) {
+  return '<figure><figcaption class="' + cls + '">' + label + '</figcaption><img loading="lazy" src="' + src + '" alt="' + label + '"></figure>';
+}
+function show(f) {
+  document.querySelectorAll('.filters button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === f)));
+  const out = [];
+  SCREENS.forEach((s) => {
+    s.themes.forEach((t) => {
+      if (t && f === '768') return;
+      const suf = f + t;
+      const now = s.now ? fig('now', 'Сейчас' + (t ? ' · тёмная' : ''), 'img/now-' + s.now + '-' + suf + '.jpg')
+        : '<figure><figcaption class="now">Сейчас</figcaption><div class="lead" style="padding:12px;border:1px dashed var(--line);border-radius:12px">Такого состояния на экране сейчас нет — видно только «не отправлено: N».</div></figure>';
+      out.push('<section><h2>' + s.title + (t ? ' · тёмная тема' : '') + '</h2><div class="pair" data-size="' + f + '">' + now + fig('new', 'Предлагаю' + (t ? ' · тёмная' : ''), 'img/new-' + s.id + '-' + suf + '.jpg') + '</div></section>');
+    });
+  });
+  document.getElementById('list').innerHTML = out.join('');
+}
+document.querySelectorAll('.filters button').forEach((b) => b.addEventListener('click', () => show(b.dataset.f)));
+show('375');
+</script>
