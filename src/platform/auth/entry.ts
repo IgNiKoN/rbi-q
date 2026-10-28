@@ -49,7 +49,7 @@ function getPlatform(): Platform {
   const client = auth ? getClient() : null;
   platform = createPlatform({
     auth,
-    rpc: client ? async (fn, args) => { const r = await client.rpc(fn, args || {}); return { data: r.data, error: r.error }; } : null,
+    rpc: client ? async (fn, args) => { const r = await client.rpc(fn, args || {}); return { data: r.data, error: r.error, status: r.status }; } : null,
     storage: (() => { try { return window.localStorage; } catch { return null; } })(),
     // P2-0016: в Платформе 2.0 вход только почтой (+ демо); PIN — в старом приложении РБИ.
     pinActive: () => false

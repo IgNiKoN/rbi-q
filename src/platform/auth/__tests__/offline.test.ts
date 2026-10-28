@@ -30,6 +30,13 @@ test('нет связи с сервером → состояние offline, ко
   assert.deepEqual(s1.companies, []);
   const thrown = createPlatform({ auth, storage: memStore(), pinActive: () => false, rpc: async () => { throw new Error('Load failed'); } });
   assert.equal((await thrown.boot()).offline, true, 'исключение запроса — тоже «нет ответа»');
+  const s5xx = createPlatform({ auth, storage: memStore(), pinActive: () => false, rpc: async () => ({ data: null, error: { message: 'Bad gateway' }, status: 502 }) });
+  assert.equal((await s5xx.boot()).offline, true, 'сервер недоступен (5xx) — тоже «нет ответа»');
+  const s4xx = createPlatform({ auth, storage: memStore(), pinActive: () => false,
+    rpc: async (fn) => (fn === 'pf_my_profile' ? { data: null, error: { message: 'not found', code: 'PGRST202' }, status: 404 } : { data: { companies: [ALFA] }, error: null, status: 200 }) });
+  const s4 = await s4xx.boot();
+  assert.equal(s4.offline, undefined, 'сервер ответил ошибкой (4xx) — это ответ, как раньше');
+  assert.equal(s4.companies.length, 1);
   const ok = createPlatform({ auth, storage: memStore(), pinActive: () => false,
     rpc: async (fn) => ({ data: fn === 'pf_my_platform' ? { companies: [] } : {}, error: null }) });
   const s2 = await ok.boot();

@@ -42,7 +42,8 @@ export type PlatformAccess = Record<string, boolean>;
 
 export interface PlatformDeps {
   auth: AuthApi | null;
-  rpc: ((fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>) | null;
+  /** status — HTTP-ответ сервера (0 / нет — запрос не дошёл): «нет связи» отличается от ответа сервера с ошибкой. */
+  rpc: ((fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown; status?: number }>) | null;
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
   /** Вошёл ли человек по старому PIN-входу Quality (облако Quality включено и подключено). */
   pinActive: () => boolean;
@@ -73,6 +74,10 @@ export function lastConfirmed(copy: DeviceCopy | null, issuedAtSec: number | nul
   const b = issuedAtSec ? issuedAtSec * 1000 : NaN;
   const best = Math.max(Number.isNaN(a) ? -Infinity : a, Number.isNaN(b) ? -Infinity : b);
   return Number.isFinite(best) ? best : null;
+}
+/** Нет ответа сервера: запрос не дошёл (статуса нет / 0) или сервер недоступен (5xx). Ответ 4xx — это ответ. */
+export function noAnswer(r: { error: unknown; status?: number }): boolean {
+  return !!r.error && (!r.status || r.status >= 500);
 }
 export function offlineExpired(confirmed: number | null, now: number): boolean {
   return confirmed === null || now - confirmed > OFFLINE_DAYS * DAY_MS;
@@ -173,9 +178,15 @@ export function createPlatform(deps: PlatformDeps): Platform {
 
   async function loadEmail(email: string, issuedAt: number | null): Promise<PlatformState> {
     if (!deps.rpc) return fromParts(email, { isPlatformAdmin: false, companies: [] }, { fullName: null, mustChangePassword: false, userId: null });
-    // P2-0058: ошибка запроса — не ответ «компаний нет» (нет связи, сервер недоступен): копия последнего ответа сервера
-    const [pl, pr] = await Promise.all([deps.rpc('pf_my_platform'), deps.rpc('pf_my_profile')].map((q) => q.catch((e: unknown) => ({ data: null, error: e || 'network' }))));
-    if (pl.error || pr.error) return fromDevice(email, issuedAt);
+    // P2-0058: запрос не дошёл или сервер недоступен (нет HTTP-ответа / 5xx) — не ответ «компаний нет»: копия последнего ответа
+    // сервера; сервер ответил ошибкой (4xx) — как раньше, по ответу
+    const [pl, pr] = await Promise.all([deps.rpc('pf_my_platform'), deps.rpc('pf_my_profile')]
+      .map((q) => q.catch((e: unknown): { data: unknown; error: unknown; status?: number } => ({ data: null, error: e || 'network', status: 0 }))));
+    if (noAnswer(pl) || noAnswer(pr)) return fromDevice(email, issuedAt);
+    if (pl.error || pr.error) {
+      return fromParts(email, pl.error ? { isPlatformAdmin: false, companies: [] } : parsePlatform(pl.data),
+        pr.error ? { fullName: null, mustChangePassword: false, userId: null } : parseProfile(pr.data));
+    }
     const at = new Date(now()).toISOString();
     safeSet(deps.storage, DEVICE_ACCESS_PREFIX + deviceUserKey(email), JSON.stringify({ at, platform: pl.data, profile: pr.data }));
     return { ...fromParts(email, parsePlatform(pl.data), parseProfile(pr.data)), confirmedAt: at };
