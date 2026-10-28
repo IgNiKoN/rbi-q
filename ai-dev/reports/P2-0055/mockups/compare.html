@@ -1,0 +1,220 @@
+<title>Редактор структуры мест</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Рабочий лист сравнения: подпись «сейчас / предлагаю», снимки парами, опись таблицей. Цвета — тема «Стандартная» приложения. */
+  :root {
+    --bg: #f7f4ee; --card: #ffffff; --ink: #172330; --muted: #626e7b; --line: rgba(28,43,57,.14);
+    --gold: #c49a5f; --gold-text: #8a6a35; --new: #52705f; --soft: rgba(196,154,95,.10);
+    --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #101923; --card: #172330; --ink: #f7f4ee; --muted: #a8b2bd; --line: rgba(255,255,255,.12);
+    --gold-text: #d8bd91; --new: #86a593; --soft: rgba(196,154,95,.13); color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #101923; --card: #172330; --ink: #f7f4ee; --muted: #a8b2bd; --line: rgba(255,255,255,.12);
+    --gold-text: #d8bd91; --new: #86a593; --soft: rgba(196,154,95,.13); color-scheme: dark }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+  main { max-width: 1440px; margin: 0 auto; padding-block: 24px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 14px; }
+  h1 { font-size: 26px; margin: 0; text-wrap: balance; }
+  h2 { font-size: 19px; margin: 26px 0 0; text-wrap: balance; display: flex; gap: 10px; align-items: baseline; }
+  h2 .n { font: 600 13px var(--f-num); color: var(--gold-text); }
+  h3 { font-size: 12px; margin: 8px 0 0; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  p { margin: 0; max-width: 75ch; } .muted { color: var(--muted); }
+  .lead { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .lead ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .pair.phone { grid-template-columns: repeat(auto-fill, minmax(0, 300px)); }
+  .one { display: grid; grid-template-columns: minmax(0, 1fr); }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  figcaption { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  figcaption.now { color: var(--muted); } figcaption.new { color: var(--new); }
+  figcaption span { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); }
+  figure img { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--line); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11.5px; text-transform: uppercase; color: var(--muted); letter-spacing: .06em; }
+  td.n { width: 40px; font: 600 13px var(--f-num); color: var(--muted); }
+  tr.new td { background: var(--soft); }
+  .tag { display: inline-block; font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--line); white-space: nowrap; }
+  .tag.same { color: var(--muted); } .tag.chg { color: var(--gold-text); } .tag.add { color: var(--new); }
+  kbd { font: 12px var(--f-num); border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; }
+  @media (max-width: 767px) { .pair { grid-template-columns: 1fr; } h1 { font-size: 21px; } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap">
+
+<main>
+  <h1>Редактор структуры «Объекты и места» — сейчас и как предлагаю</h1>
+  <p class="muted">P2-0055, этап 2 · 28.10.2026 · стенд с подставными данными: проект «Репин», Корпус 1 и 2, Секция 1, этажи 1–5 по 4 квартиры. Слева — как сейчас, справа — как предлагаю. Предложение нарисовано прямо в приложении: те же меню, шапка и цвета, поменялась только область «Объекты и места».</p>
+
+  <div class="lead">
+    <b>Коротко</b>
+    <ul>
+      <li>Окна на каждое действие уходят. Название правится прямо в строке, «+» сразу создаёт следующее по номеру («6 этаж», «Кв. 21», «Секция 2»).</li>
+      <li>Копировать, вырезать, вставить — в меню «⋯», в карточке места и клавишами <kbd>Ctrl/⌘ C X V</kbd>. Копию можно вставить в другой корпус. Переносить (вырезать, перетаскивать) — только внутри своего корпуса.</li>
+      <li>На компьютере строку можно перетащить мышью. На телефоне — только меню и кнопки.</li>
+      <li>После каждого действия внизу плашка «Сделано · Отменить» (около 10 секунд) и <kbd>Ctrl/⌘ Z</kbd>.</li>
+      <li>Переключатель «Дерево / Шахматка» у корпуса: секции — столбцы, этажи — строки, квартиры — клетки.</li>
+      <li>Пакетные окна остаются как есть: «+ Объект», «Заполнить объект», «Добавить этажи». Ни одна нынешняя кнопка не пропадает — опись внизу.</li>
+    </ul>
+  </div>
+
+  <h2><span class="n">1</span>Дерево и карточка места · компьютер, 1440 px</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="now-tree-1440.jpg" alt="Сейчас: дерево корпуса и карточка квартиры справа, правка — через «Изменить» и окна"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· выбран «2 этаж»</span></figcaption><img src="new-tree-1440.jpg" alt="Предлагаю: дерево, в строке «+» и «⋯», справа карточка с кнопками действий"></figure>
+  </div>
+  <p>Карточка справа стала рабочей: главная кнопка «+ следующее» (здесь «+ Кв. 21»), затем «Переименовать», «Копировать», «Вырезать», «Вставить сюда», «Выше», «Ниже», «Удалить». Над деревом — «Дерево / Шахматка» и «+ Секция 2».</p>
+  <h3>Тёмная тема</h3>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="now-tree-1440-dark.jpg" alt="Сейчас, тёмная тема"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="new-tree-1440-dark.jpg" alt="Предлагаю, тёмная тема"></figure>
+  </div>
+  <h3>Квартира: номера правятся прямо в карточке</h3>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас <span>· номера — только в окне «Изменить»</span></figcaption><img src="now-sheet-edit-1440.jpg" alt="Сейчас: окно «Изменить»"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="new-apt-1440.jpg" alt="Предлагаю: строительный номер и номер БТИ — поля в карточке"></figure>
+  </div>
+
+  <h2><span class="n">2</span>«+» с автоименем — без окна</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас <span>· «Добавить внутрь» → окно: тип, название, номера</span></figcaption><img src="now-sheet-add-1440.jpg" alt="Сейчас: окно «Добавить внутрь»"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· наведение на «+» у секции</span></figcaption><img src="new-plushover-1440.jpg" alt="Предлагаю: подсказка «Добавить «6 этаж» — сразу, без окна»"></figure>
+  </div>
+  <div class="pair">
+    <figure><figcaption class="new">Предлагаю <span>· после нажатия: «6 этаж» добавлен и выбран, плашка «Отменить»</span></figcaption><img src="new-plus-1440.jpg" alt="Предлагаю: новый «6 этаж» в дереве и плашка «Добавлен «6 этаж» · Отменить»"></figure>
+    <div class="lead">
+      <b>Как получается название</b>
+      <p>Следующий номер берётся у соседей того же вида: после «5 этаж» — «6 этаж», после «эт. 12» — «эт. 13», после «Секция 1» — «Секция 2». Квартира получает следующий строительный номер по корпусу (как при «Добавить этажи») и такое же название: «Кв. 21».</p>
+      <p>Нужен другой вид или своё название и номера — «⋯ → Добавить другое…» открывает нынешнее окно «Добавить внутрь».</p>
+    </div>
+  </div>
+
+  <h2><span class="n">3</span>Название — прямо в строке</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас <span>· «⋯ → Изменить» → окно</span></figcaption><img src="now-sheet-edit-1440.jpg" alt="Сейчас: окно «Изменить»"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· двойной щелчок или <kbd>F2</kbd>; показан отказ сервера</span></figcaption><img src="new-rename-1440.jpg" alt="Предлагаю: поле названия в строке и под ним текст ошибки"></figure>
+  </div>
+  <p><kbd>Enter</kbd> — сохранить, <kbd>Esc</kbd> — отменить. Если сервер отказал («уже есть на этом уровне»), текст ошибки появляется под полем, введённое не стирается.</p>
+
+  <h2><span class="n">4</span>Меню «⋯» строки</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="now-menu-section-1440.jpg" alt="Сейчас: меню секции — Добавить внутрь, Добавить этажи, Копировать секцию, Изменить, Удалить"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="new-menu-1440.jpg" alt="Предлагаю: Переименовать, + 6 этаж, Добавить другое, Добавить этажи, Копировать, Вырезать, Вставить сюда, Дублировать рядом, Выше, Ниже, Удалить"></figure>
+  </div>
+  <p>Пункт, который сейчас нельзя выполнить, виден серым, и рядом написано почему (например, «буфер пуст»).</p>
+
+  <h2><span class="n">5</span>Копировать и вставить, в том числе в другой корпус</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас <span>· копия только рядом с источником, через окно с названием</span></figcaption><img src="now-sheet-copy-1440.jpg" alt="Сейчас: окно «Копировать секцию»"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· после «Копировать» над деревом — что в буфере</span></figcaption><img src="new-paste-1440.jpg" alt="Предлагаю: полоса «Скопировано: Секция 1 — 5 этажей, 20 кв.» и подсказка, куда вставить"></figure>
+  </div>
+  <div class="pair">
+    <figure><figcaption class="new">Предлагаю <span>· «Вставить сюда» в Корпусе 2</span></figcaption><img src="new-paste2-1440.jpg" alt="Предлагаю: плашка «Вставлено в «Корпус 2»: «Секция 2» — 5 этажей, 20 кв. (№ 21–40)» с кнопкой «Отменить»"></figure>
+    <div class="lead">
+      <b>Что происходит при вставке</b>
+      <p>Копия получает следующее название на новом месте и новые строительные номера квартир того корпуса, куда вставили. «Дублировать рядом» делает то же, что нынешняя «Копировать секцию», одним нажатием.</p>
+      <p>Вставить нельзя внутрь самого себя и глубже 6 уровней — пункт серый с причиной, сервер тоже откажет.</p>
+    </div>
+  </div>
+
+  <h2><span class="n">6</span>Вырезать и перетащить — только внутри корпуса</h2>
+  <div class="pair">
+    <figure><figcaption class="new">Предлагаю <span>· «Вырезать»: строка бледнеет до вставки</span></figcaption><img src="new-cut-1440.jpg" alt="Предлагаю: «Вырезано: 3 этаж — 4 кв.», вставить можно только внутри «Корпус 1»"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· мышью: полоса показывает, куда встанет</span></figcaption><img src="new-drag-1440.jpg" alt="Предлагаю: «Кв. 6» перетаскивается на 3 этаж перед «Кв. 11», золотая полоса места вставки"></figure>
+  </div>
+  <div class="pair">
+    <figure><figcaption class="new">Предлагаю <span>· над другим корпусом — «нельзя» и подсказка</span></figcaption><img src="new-drag2-1440.jpg" alt="Предлагаю: Корпус 2 обведён пунктиром, подсказка «Перенести в другой корпус нельзя — Копировать, затем Вставить сюда»"></figure>
+    <div class="lead">
+      <b>Почему только внутри корпуса</b>
+      <p>Так решено 28.10: перенос в другой корпус легко сделать по ошибке, а у квартир свои номера по корпусу. В другой корпус — «Копировать» и «Вставить сюда». Запрет проверяет и сервер.</p>
+      <p>«Выше / Ниже» меняют порядок рядом стоящих мест — в меню и в карточке, на телефоне тоже.</p>
+    </div>
+  </div>
+
+  <h2><span class="n">7</span>Шахматка корпуса</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас <span>· шахматки нет, только дерево</span></figcaption><img src="now-tree-1440.jpg" alt="Сейчас: только дерево"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· пример после вставки «Секции 2» и «6 этажа»</span></figcaption><img src="new-chess-1440.jpg" alt="Предлагаю: столбцы Секция 1 и 2, строки этажей сверху вниз, клетки квартир, «+ эт.» и «+»"></figure>
+  </div>
+  <div class="pair">
+    <figure><figcaption class="new">Тёмная тема</figcaption><img src="new-chess-1440-dark.jpg" alt="Шахматка, тёмная тема"></figure>
+    <div class="lead">
+      <b>Как работает</b>
+      <p>Щелчок по клетке открывает ту же карточку, что в дереве. «+ эт.» над секцией и «+» в конце строки делают то же, что «+» в дереве. Пустой этаж и секции разной высоты видны как есть.</p>
+      <p>Если корпус устроен не «секция → этаж → помещение», вместо шахматки будет подпись «Шахматка недоступна для этой структуры — смотрите дерево».</p>
+    </div>
+  </div>
+
+  <h2><span class="n">8</span>Телефон, 375 px</h2>
+  <p class="muted">На склейках во всю длину нижнее меню приложения скрыто, чтобы не висело посреди страницы. Кнопка «+ Объект» на телефоне закреплена внизу, как сейчас.</p>
+  <div class="pair phone">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="now-tree-375.jpg" alt="Сейчас: телефон, дерево"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· «+» и «⋯» видны всегда, крупные</span></figcaption><img src="new-tree-375.jpg" alt="Предлагаю: телефон, дерево с кнопками «+» и «⋯» в каждой строке"></figure>
+    <figure><figcaption class="now">Сейчас <span>· карточка места</span></figcaption><img src="now-card-375.jpg" alt="Сейчас: карточка места на телефоне"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· карточка — лист снизу с кнопками</span></figcaption><img src="new-sheet-375.jpg" alt="Предлагаю: лист снизу с кнопками действий"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· меню «⋯» — лист снизу</span></figcaption><img src="new-menu-375.jpg" alt="Предлагаю: меню действий листом снизу"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· после «+»: плашка «Отменить» над меню</span></figcaption><img src="new-plus-375.jpg" alt="Предлагаю: плашка «Добавлен «6 этаж» · Отменить» на телефоне"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· шахматка листается вбок внутри блока</span></figcaption><img src="new-chess-375.jpg" alt="Предлагаю: шахматка на телефоне"></figure>
+    <figure><figcaption class="now">Сейчас · тёмная</figcaption><img src="now-tree-375-dark.jpg" alt="Сейчас: телефон, тёмная тема"></figure>
+    <figure><figcaption class="new">Предлагаю · тёмная</figcaption><img src="new-tree-375-dark.jpg" alt="Предлагаю: телефон, тёмная тема"></figure>
+  </div>
+
+  <h2><span class="n">9</span>Планшет 768 px и широкий экран 1920 px</h2>
+  <div class="pair">
+    <figure><figcaption class="new">768 px <span>· карточка листом снизу, как на телефоне</span></figcaption><img src="new-tree-768.jpg" alt="Предлагаю: планшет"></figure>
+    <figure><figcaption class="new">1920 px <span>· содержимое не шире 1440 px</span></figcaption><img src="new-tree-1920.jpg" alt="Предлагаю: широкий экран"></figure>
+  </div>
+  <p class="muted">Раскладка меняется по диапазонам: до 899 px карточка — лист снизу, от 900 px — панель справа.</p>
+
+  <h2><span class="n">10</span>Окна, которые остаются как есть</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас = предлагаю <span>· «+ Объект»</span></figcaption><img src="now-sheet-object-1440.jpg" alt="Окно «Новый объект» с мастером заполнения"></figure>
+    <figure><figcaption class="now">Сейчас = предлагаю <span>· «Добавить этажи»</span></figcaption><img src="now-sheet-floors-1440.jpg" alt="Окно «Добавить этажи» в несколько секций"></figure>
+  </div>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас <span>· «Удалить?» на каждое удаление</span></figcaption><img src="now-sheet-remove-1440.jpg" alt="Сейчас: окно «Удалить?»"></figure>
+    <div class="lead">
+      <b>Удаление</b>
+      <p>Секция, этаж, квартира удаляются без окна «Вы уверены?», но с плашкой «Удалено · Отменить»: отмена возвращает всю ветку. Удаление целого объекта (корпуса) — с подтверждением, как сейчас.</p>
+    </div>
+  </div>
+
+  <h2>Опись: что было → где теперь → что при нажатии</h2>
+  <p class="muted">Все кнопки и действия нынешнего экрана. Серым — без изменений, золотым — изменилось место или способ, зелёным — новое.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>№</th><th>Сейчас</th><th>Где в предложении</th><th>Что при нажатии</th><th></th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td>«+ Объект» (на телефоне — внизу экрана)</td><td>Там же</td><td>Окно «Новый объект»: вид, название, сразу заполнить секциями, этажами, квартирами</td><td><span class="tag same">как сейчас</span></td></tr>
+      <tr><td class="n">2</td><td>Карточки объектов (выбор корпуса)</td><td>Там же</td><td>Открывает корпус ниже; при перетаскивании над чужим корпусом — «нельзя» и подсказка</td><td><span class="tag same">как сейчас</span></td></tr>
+      <tr><td class="n">3</td><td>«Заполнить объект» (у пустого корпуса)</td><td>Шапка корпуса</td><td>Окно мастера, как сейчас</td><td><span class="tag same">как сейчас</span></td></tr>
+      <tr><td class="n">4</td><td>«+ Внутрь» у корпуса</td><td>«+ Секция N» в шапке корпуса; «⋯ → Добавить другое…»</td><td>Сразу создаёт следующую секцию; «Добавить другое…» — нынешнее окно с выбором вида и номеров</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">5</td><td>«⋯» корпуса: «Изменить», «Удалить»</td><td>«⋯» корпуса и карточка корпуса</td><td>Название — в строке или карточке; вид объекта — список в карточке; «Удалить» — с подтверждением</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">6</td><td>▸ / ▾ раскрыть ветку</td><td>Там же</td><td>Раскрывает и сворачивает</td><td><span class="tag same">как сейчас</span></td></tr>
+      <tr><td class="n">7</td><td>Щелчок по строке → карточка (справа на ПК, лист на телефоне)</td><td>Там же; панель справа — с 900 px</td><td>Карточка теперь с кнопками действий и полями номеров</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">8</td><td>«⋯ → Добавить внутрь» (окно)</td><td>«+» в строке и в карточке; «⋯ → Добавить другое…»</td><td>«+» — следующее по номеру без окна; «Добавить другое…» — нынешнее окно</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">9</td><td>«⋯ → Добавить этажи» (у секции)</td><td>«⋯» секции и карточка секции</td><td>Нынешнее окно: в несколько секций, с — по, квартир на этаже</td><td><span class="tag same">как сейчас</span></td></tr>
+      <tr><td class="n">10</td><td>«⋯ → Копировать секцию / этаж» (окно с названием)</td><td>«⋯ → Дублировать рядом»; «Копировать» + «Вставить сюда»</td><td>Дублировать — копия рядом с автоименем одним нажатием; Копировать — в буфер, потом вставить куда угодно в проекте</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">11</td><td>«⋯ → Изменить» (окно: название, номера, вид)</td><td>Двойной щелчок / <kbd>F2</kbd> / «Переименовать»; номера и вид — поля карточки</td><td>Правка на месте, <kbd>Enter</kbd> — сохранить, <kbd>Esc</kbd> — отмена</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">12</td><td>«⋯ → Удалить» → окно «Удалить?»</td><td>«⋯ → Удалить», карточка, клавиша <kbd>Delete</kbd></td><td>Удаляет сразу, плашка «Отменить» возвращает ветку; корпус — с подтверждением</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">13</td><td>Карточка: кнопка «Изменить»</td><td>Карточка: «Переименовать» и поля</td><td>Правка без отдельного окна</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">14</td><td>«ещё N» (длинный список)</td><td>Там же</td><td>Показывает остальные строки</td><td><span class="tag same">как сейчас</span></td></tr>
+      <tr><td class="n">15</td><td>Подписи: «места ведёт Качество — только просмотр», «проект в архиве»</td><td>Там же</td><td>Правка недоступна, кнопки скрыты</td><td><span class="tag same">как сейчас</span></td></tr>
+      <tr><td class="n">16</td><td>Зелёная строка «Сохранено» / красная ошибка вверху</td><td>Плашка внизу «Сделано · Отменить»; ошибка — у строки или поля</td><td>Видно, что сделано, и можно отменить</td><td><span class="tag chg">изменилось</span></td></tr>
+      <tr><td class="n">17</td><td>Пустое состояние («Объектов пока нет…»)</td><td>Там же</td><td>Подсказка, что нажать</td><td><span class="tag same">как сейчас</span></td></tr>
+      <tr class="new"><td class="n">18</td><td>—</td><td>«⋯», карточка, <kbd>Ctrl/⌘ X</kbd></td><td>Вырезать: потом «Вставить сюда» внутри того же корпуса</td><td><span class="tag add">новое</span></td></tr>
+      <tr class="new"><td class="n">19</td><td>—</td><td>«⋯», карточка, <kbd>Ctrl/⌘ V</kbd></td><td>Вставить сюда: копию — в любое место проекта, вырезанное — только внутри корпуса</td><td><span class="tag add">новое</span></td></tr>
+      <tr class="new"><td class="n">20</td><td>—</td><td>«⋯», карточка</td><td>Выше / Ниже — порядок рядом стоящих мест</td><td><span class="tag add">новое</span></td></tr>
+      <tr class="new"><td class="n">21</td><td>—</td><td>Мышью на компьютере (значок ⋮⋮ слева в строке)</td><td>Перетащить перед, после или внутрь другой строки своего корпуса</td><td><span class="tag add">новое</span></td></tr>
+      <tr class="new"><td class="n">22</td><td>—</td><td>Плашка внизу, <kbd>Ctrl/⌘ Z</kbd></td><td>Отменить: добавление, переименование, вставку, перенос, порядок, удаление</td><td><span class="tag add">новое</span></td></tr>
+      <tr class="new"><td class="n">23</td><td>—</td><td>«Дерево / Шахматка» в шапке корпуса</td><td>Шахматка: секции × этажи × квартиры, клетка → карточка</td><td><span class="tag add">новое</span></td></tr>
+      <tr class="new"><td class="n">24</td><td>—</td><td>Без сети</td><td>Кнопки правки неактивны с пояснением «нужна связь»</td><td><span class="tag add">новое</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</main>
