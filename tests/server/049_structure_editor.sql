@@ -274,6 +274,12 @@ begin
   res := res || pg_temp.t((select count(*) from core.locations where project_id = pn and deleted_at is null) = cnt and pg_temp.diff(pn) = 0,
                           'секция: удалить → вернуть — все места и узлы на месте');
 
+  -- 7а. Следующий строительный номер объекта (для «+ Кв.»): как core.next_build_no
+  v := core.next_build_no(k2);
+  perform pg_temp.as_user(uadm, ca);
+  res := res || pg_temp.t(public.pf_next_build_no(k2f1) = v and public.pf_next_build_no(k2) = v, 'pf_next_build_no — следующий номер Корпуса 2 (' || v || ')');
+  reset role;
+
   -- 8. Права: роль без права, чужая компания, аноним
   perform pg_temp.as_user(ueng, ca);
   str := pg_temp.msg(format($q$select public.pf_move_place(%L, %L, null)$q$, a1, s1f1));
@@ -287,13 +293,15 @@ begin
   res := res || pg_temp.t(str like '42501%', 'чужая компания: перенос — отказ (' || str || ')');
   str := pg_temp.msg(format($q$select public.pf_restore_place(%L)$q$, ax));
   res := res || pg_temp.t(str like '42501%', 'чужая компания: восстановление — отказ');
+  str := pg_temp.msg(format($q$select public.pf_next_build_no(%L)$q$, k1));
+  res := res || pg_temp.t(str like '42501%', 'чужая компания: номер — отказ');
   str := pg_temp.msg(format($q$select public.pf_copy_place(%L, %L, 'Секция 7', %L)$q$, s1, gen_random_uuid(), k3));
   res := res || pg_temp.t(str like '42501%', 'чужая компания: копия — отказ');
   reset role;
   res := res || pg_temp.t((select parent_id from core.locations where id = a1) = s1f2 and (select deleted_at from core.locations where id = ax) is not null,
                           'после отказов прав места не изменились');
   res := res || pg_temp.t(not exists (select 1 from unnest(array['public.pf_move_place(uuid,uuid,uuid)', 'public.pf_copy_place(uuid,uuid,text,uuid)',
-                            'public.pf_restore_place(uuid)']) f where has_function_privilege('anon', f::regprocedure, 'execute')),
+                            'public.pf_restore_place(uuid)', 'public.pf_next_build_no(uuid)']) f where has_function_privilege('anon', f::regprocedure, 'execute')),
                           'аноним: новые функции не вызываются');
 
   -- 9. Проект 'quality' (как RBI): места ведёт Качество — перенос и восстановление в Компании — отказ, узлы не тронуты

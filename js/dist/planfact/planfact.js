@@ -12184,6 +12184,7 @@ const xk = `
 .p2-more__item small{font-size:12px;color:var(--text-muted);font-weight:400}
 .p2-more__item:hover,.p2-more__item:focus-visible{background:var(--hover-bg,rgba(0,0,0,.05));outline:none}
 .p2-more__item--danger{color:var(--p2-status-red-fg,#b5452b)}
+.p2-more__item[disabled]{color:var(--text-muted);cursor:default;background:transparent}
 /* карточка записи */
 .p2-rec{display:grid;grid-template-columns:repeat(var(--p2-rec-cols,4),minmax(0,1fr));gap:12px 22px;padding:14px 16px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px}
 .p2-rec__f{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -30257,7 +30258,18 @@ function PN() {
       p_roof: l.roof
     }),
     addFloors: (l, o, u, d) => r("pf_add_floors", { p_sections: l, p_from: o, p_to: u, p_apartments_per_floor: d }),
-    copyPlace: (l, o, u) => r("pf_copy_place", { p_source: l, p_new_id: o, p_name: u }),
+    copyPlace: (l, o, u, d) => r("pf_copy_place", d ? { p_source: l, p_new_id: o, p_name: u, p_target_parent: d } : { p_source: l, p_new_id: o, p_name: u }),
+    movePlace: async (l, o, u) => {
+      const d = await r(
+        "pf_move_place",
+        { p_location: l, p_new_parent: o, p_before: u }
+      );
+      if (!d.ok) return d;
+      const m = d.value || {};
+      return { ok: !0, value: { changed: m.changed === !0, oldParentId: m.old_parent ?? null, oldBeforeId: m.old_before ?? null } };
+    },
+    restorePlace: (l) => r("pf_restore_place", { p_location: l }),
+    nextBuildNo: (l) => r("pf_next_build_no", { p_location: l }),
     addUnit: (l, o, u) => r("pf_add_unit", { p_company: l, p_code: o, p_name: u }),
     deleteUnit: (l) => r("pf_delete_unit", { p_unit: l })
   };

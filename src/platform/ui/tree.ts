@@ -4,11 +4,19 @@
  * при раскрытии — забота экрана), id узла — ключ. На телефоне строка во всю ширину, отступ уровня меньше.
  */
 import { createElement as h } from 'react';
-import type { ReactElement, ReactNode } from 'react';
+import type { DragEvent, ReactElement, ReactNode } from 'react';
 import { MoreMenu } from './page.ts';
 import type { MoreItem } from './page.ts';
 
 export interface TreeItem { id: string; name: string; hasKids: boolean }
+/** P2-0055: куда бросить перетаскиваемую строку — перед, после или внутрь строки. */
+export type DropWhere = 'before' | 'after' | 'inside';
+export interface TreeDrag<T> {
+  can: (n: T) => boolean; start: (n: T) => void; end: () => void;
+  /** Можно ли бросить сюда (экран заодно запоминает подсказку для hint). */
+  over: (n: T, where: DropWhere) => boolean; drop: (n: T, where: DropWhere) => void;
+  hint: { id: string; where: DropWhere; ok: boolean; reason?: string } | null;
+}
 
 export function PlaceTree<T extends TreeItem>(props: {
   testId: string; roots: T[]; kids: Record<string, T[] | undefined>; open: Record<string, boolean>;
@@ -20,6 +28,12 @@ export function PlaceTree<T extends TreeItem>(props: {
   check?: (n: T) => { checked: boolean; onChange: () => void; disabled?: boolean } | null;
   /** P2-0048: содержимое под названием (кто назначен, предупреждение) и кнопка справа (до меню «⋯»). */
   extra?: (n: T) => ReactNode; action?: (n: T) => ReactNode;
+  /** P2-0055: правка названия на месте — вместо подписи строки id показывается node (поле ввода). */
+  editing?: { id: string; node: ReactNode } | null;
+  /** P2-0055: двойной щелчок по названию — правка на месте. */
+  onRename?: (n: T) => void;
+  /** P2-0055: перетаскивание мышью (только ПК): строка берётся за ⋮⋮, полоса показывает место вставки. */
+  drag?: TreeDrag<T>;
 }): ReactElement {
   const { kids, open } = props;
   const nameEl = (n: T, meta: string): ReactElement => {
@@ -28,8 +42,10 @@ export function PlaceTree<T extends TreeItem>(props: {
     const el = chk
       ? h('label', { className: 'p2-tree__name p2-tree__name--check' },
           h('input', { type: 'checkbox', checked: chk.checked, disabled: chk.disabled, onChange: chk.onChange, 'data-testid': 'p2-tree-check', 'aria-label': n.name }), ...label)
+      : props.editing && props.editing.id === n.id ? h('div', { className: 'p2-tree__name p2-tree__name--edit' }, props.editing.node)
       : h('button', { type: 'button', className: 'p2-tree__name', 'data-testid': 'p2-tree-open', 'aria-current': props.selected === n.id ? 'true' : undefined,
-          onClick: () => (props.onSelect ? props.onSelect(n) : props.onToggle(n)) }, ...label);
+          onClick: () => (props.onSelect ? props.onSelect(n) : props.onToggle(n)),
+          onDoubleClick: props.onRename ? () => props.onRename!(n) : undefined }, ...label);
     const extra = props.extra ? props.extra(n) : null;
     return extra ? h('div', { className: 'p2-tree__main' }, el, h('div', { className: 'p2-tree__extra' }, extra)) : el;
   };
@@ -38,15 +54,33 @@ export function PlaceTree<T extends TreeItem>(props: {
     const list = kids[n.id];
     const menu = props.menu ? props.menu(n) : [];
     const meta = props.meta ? props.meta(n) : '';
+    const d = props.drag;
+    const canDrag = !!d && d.can(n);
+    const hint = d && d.hint && d.hint.id === n.id ? d.hint : null;
+    const whereOf = (e: { clientY: number; currentTarget: EventTarget }): DropWhere => {
+      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const y = e.clientY - r.top;
+      return y < r.height * 0.28 ? 'before' : y > r.height * 0.72 ? 'after' : 'inside';
+    };
+    const dnd = d ? {
+      draggable: canDrag || undefined,
+      onDragStart: canDrag ? (e: DragEvent) => { if (e.dataTransfer) { e.dataTransfer.setData('text/plain', n.id); e.dataTransfer.effectAllowed = 'move'; } d.start(n); } : undefined,
+      onDragOver: (e: DragEvent) => { const ok = d.over(n, whereOf(e)); if (ok) { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; } else if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'; },
+      onDrop: (e: DragEvent) => { e.preventDefault(); d.drop(n, whereOf(e)); },
+      onDragEnd: () => d.end()
+    } : {};
     return h('li', { key: n.id, className: 'p2-tree__item', 'data-node-id': n.id },
-      h('div', { className: 'p2-tree__row' + (props.selected === n.id ? ' is-sel' : ''), style: { ['--p2-tree-level' as string]: String(level) } },
+      h('div', { className: 'p2-tree__row' + (props.selected === n.id ? ' is-sel' : '') + (hint ? ` is-drop-${hint.where}${hint.ok ? '' : ' is-drop-no'}` : ''),
+        style: { ['--p2-tree-level' as string]: String(level) }, title: hint && !hint.ok ? hint.reason : undefined, ...dnd },
+        d ? h('span', { className: 'p2-tree__grip' + (canDrag ? '' : ' is-off'), 'aria-hidden': 'true' }, '⋮⋮') : null,
         n.hasKids
           ? h('button', { type: 'button', className: 'p2-tree__tog', 'aria-expanded': isOpen, 'aria-label': (isOpen ? 'Свернуть ' : 'Раскрыть ') + n.name,
               'data-testid': 'p2-tree-toggle', onClick: () => props.onToggle(n) }, isOpen ? '▾' : '▸')
           : h('span', { className: 'p2-tree__tog p2-tree__tog--leaf', 'aria-hidden': 'true' }),
         nameEl(n, meta),
         props.action ? props.action(n) : null,
-        menu.length ? h(MoreMenu, { testId: 'p2-tree-more', items: menu, label: 'Действия: ' + n.name }) : null),
+        menu.length ? h(MoreMenu, { testId: 'p2-tree-more', items: menu, label: 'Действия: ' + n.name }) : null,
+        hint && !hint.ok && hint.reason ? h('span', { className: 'p2-tree__drop-no', role: 'status' }, '⦸ ' + hint.reason) : null),
       isOpen && list ? group(list, n.id, level + 1) : isOpen ? h('div', { className: 'p2-tree__wait' }, 'Загрузка…') : null);
   };
   const group = (list: T[], parentId: string, level: number): ReactElement => {
@@ -80,5 +114,16 @@ export const P2_TREE_CSS = `
 .p2-tree__row:hover .p2-more__btn,.p2-tree__row .p2-more__btn[aria-expanded=true]{color:var(--text-main);border-color:var(--card-border)}
 .p2-tree__wait{font-size:12.5px;color:var(--text-muted);padding:6px 0 6px 56px}
 .p2-tree__more{font:inherit;font-size:13px;font-weight:600;border:0;background:transparent;color:var(--p2-chart-fact,var(--primary));min-height:40px;padding:0 0 0 calc(var(--p2-tree-level,0) * 20px + 40px);cursor:pointer}
+.p2-tree__row{position:relative}
+.p2-tree__grip{flex:0 0 14px;color:var(--text-muted);font-size:12px;letter-spacing:-2px;opacity:0;cursor:grab;user-select:none}
+.p2-tree__row:hover .p2-tree__grip,.p2-tree__row.is-sel .p2-tree__grip{opacity:1}
+.p2-tree__grip.is-off{visibility:hidden}
+.p2-tree__row[draggable=true]{cursor:default}
+.p2-tree__row.is-drop-before{box-shadow:inset 0 2px 0 var(--accent,var(--primary))}
+.p2-tree__row.is-drop-after{box-shadow:inset 0 -2px 0 var(--accent,var(--primary))}
+.p2-tree__row.is-drop-inside{background:var(--sel-bg,rgba(196,154,95,.12));box-shadow:inset 0 0 0 1px var(--accent,var(--primary))}
+.p2-tree__row.is-drop-no{background:transparent;box-shadow:none;outline:1px dashed var(--color-red,#9f4c45);outline-offset:-1px;cursor:not-allowed}
+.p2-tree__drop-no{position:absolute;right:8px;top:calc(100% - 4px);z-index:6;background:var(--text-main);color:var(--card-bg);font-size:12px;padding:6px 9px;border-radius:8px;max-width:320px;pointer-events:none}
+.p2-tree__name--edit{cursor:default;flex-direction:column;align-items:stretch}
 @media (max-width:599.98px){.p2-tree__row{padding-left:calc(var(--p2-tree-level,0) * 12px)}.p2-tree__more{padding-left:calc(var(--p2-tree-level,0) * 12px + 40px)}}
 `;

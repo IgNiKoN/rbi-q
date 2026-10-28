@@ -3,7 +3,8 @@
 --      объект — только порядок среди объектов проекта; пересчёт глубины ветки и порядка на новом уровне, журнал MOVE;
 --   2) pf_copy_place(…, p_target_parent) — копия ветки в любое подходящее место того же проекта (в т.ч. в другой корпус),
 --      квартиры получают строительные номера объекта-получателя; прежний pf_copy_place(3 арг.) не меняется;
---   3) pf_restore_place — вернуть ветку, удалённую одним действием (та же пометка deleted_at), журнал RESTORE.
+--   3) pf_restore_place — вернуть ветку, удалённую одним действием (та же пометка deleted_at), журнал RESTORE;
+--   4) pf_next_build_no — следующий строительный номер помещения в объекте (для «+ Кв.» без окна, только чтение).
 -- Зеркало ядро → Качество (048) отражает родителя, порядок и снятие пометки удаления само — его не трогаем.
 -- Права — core.require_places_manage (как у прочих функций мест). Применять после 048, одним запросом. Откат — 049_structure_editor_down.sql.
 begin;
@@ -225,10 +226,21 @@ begin
   return v_n;
 end $$;
 
--- 4. Доступ: только вошедшим, права проверяет каждая функция.
+-- 4. Следующий строительный номер помещения в объекте места (для «+ Кв.» без окна; только чтение, право — управлять местами).
+create function public.pf_next_build_no(p_location uuid)
+returns int language plpgsql stable security definer set search_path = pg_catalog as $$
+declare v_l core.locations;
+begin
+  select * into v_l from core.locations where id = p_location and deleted_at is null;
+  if v_l.id is null then raise exception 'Место не найдено' using errcode = '22023'; end if;
+  perform core.require_places_manage(v_l.project_id);
+  return core.next_build_no(core.place_object(p_location));
+end $$;
+
+-- 5. Доступ: только вошедшим, права проверяет каждая функция.
 revoke all on function public.pf_move_place(uuid, uuid, uuid), public.pf_copy_place(uuid, uuid, text, uuid),
-  public.pf_restore_place(uuid) from public, anon;
+  public.pf_restore_place(uuid), public.pf_next_build_no(uuid) from public, anon;
 grant execute on function public.pf_move_place(uuid, uuid, uuid), public.pf_copy_place(uuid, uuid, text, uuid),
-  public.pf_restore_place(uuid) to authenticated;
+  public.pf_restore_place(uuid), public.pf_next_build_no(uuid) to authenticated;
 
 commit;

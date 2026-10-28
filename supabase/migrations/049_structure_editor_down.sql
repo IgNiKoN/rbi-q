@@ -9,6 +9,7 @@ begin
   end if;
 end $$;
 
+drop function public.pf_next_build_no(uuid);
 drop function public.pf_restore_place(uuid);
 drop function public.pf_copy_place(uuid, uuid, text, uuid);
 drop function public.pf_move_place(uuid, uuid, uuid);

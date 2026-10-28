@@ -33,7 +33,7 @@ export function Sheet(props: { title: string; sub?: string; testId: string; onCl
       props.footer ? h('div', { className: 'p2-sheet__foot' }, props.footer) : null));
 }
 
-export interface MoreItem { id: string; label: string; hint?: string; danger?: boolean; onClick: () => void }
+export interface MoreItem { id: string; label: string; hint?: string; danger?: boolean; onClick: () => void; /** P2-0055: пункт виден, но неактивен (причина — в hint). */ disabled?: boolean }
 /** Меню «⋯»: редкие действия экрана или строки; закрывается после выбора, нажатием мимо и Esc. */
 export function MoreMenu(props: { testId: string; items: MoreItem[]; label?: string }): ReactElement | null {
   const [open, setOpen] = useState(false);
@@ -52,7 +52,8 @@ export function MoreMenu(props: { testId: string; items: MoreItem[]; label?: str
       'data-testid': props.testId, onClick: () => setOpen(!open) }, '⋯'),
     open ? h('div', { className: 'p2-more__menu', role: 'menu', 'data-testid': props.testId + '-menu' },
       props.items.map((it) => h('button', { key: it.id, type: 'button', role: 'menuitem', 'data-item': it.id, className: 'p2-more__item' + (it.danger ? ' p2-more__item--danger' : ''),
-        onClick: () => { setOpen(false); it.onClick(); } }, h('span', null, it.label), it.hint ? h('small', null, it.hint) : null))) : null);
+        disabled: it.disabled || undefined, 'aria-disabled': it.disabled || undefined,
+        onClick: () => { if (it.disabled) return; setOpen(false); it.onClick(); } }, h('span', null, it.label), it.hint ? h('small', null, it.hint) : null))) : null);
 }
 
 /** Карточка записи: поля «подпись — значение» сеткой (ПК — cols колонок, планшет — 2, телефон — 1); пустое — «—». */
@@ -106,6 +107,7 @@ export const P2_PAGE_CSS = `
 .p2-more__item small{font-size:12px;color:var(--text-muted);font-weight:400}
 .p2-more__item:hover,.p2-more__item:focus-visible{background:var(--hover-bg,rgba(0,0,0,.05));outline:none}
 .p2-more__item--danger{color:var(--p2-status-red-fg,#b5452b)}
+.p2-more__item[disabled]{color:var(--text-muted);cursor:default;background:transparent}
 /* карточка записи */
 .p2-rec{display:grid;grid-template-columns:repeat(var(--p2-rec-cols,4),minmax(0,1fr));gap:12px 22px;padding:14px 16px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px}
 .p2-rec__f{display:flex;flex-direction:column;gap:2px;min-width:0}

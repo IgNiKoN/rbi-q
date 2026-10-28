@@ -1,6 +1,8 @@
 /// <reference types="node" />
-/** «Объекты и места» (P2-0047, этап 4): объекты верхним уровнем, мастер объекта, «Добавить этажи», «Копировать секцию»,
- *  поштучно — исключения, номера помещения, удаление с подтверждением, только просмотр (нет права, архив, Качество). Подставной сервер. */
+/** «Объекты и места» (P2-0047, этап 4; P2-0055 — редактор): объекты верхним уровнем, мастер объекта, «Добавить этажи»,
+ *  «+» с автоименем без окна, правка названия в строке, «Выше / Ниже», «Дублировать рядом», удаление с «Отменить» (объект — с
+ *  подтверждением), «Добавить другое…» с номерами, номера в карточке, без сети — только просмотр; только просмотр (нет права,
+ *  архив, Качество). Подставной сервер. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
@@ -35,10 +37,10 @@ const PROJECT: ProjectCard = { id: 'p1', name: 'ЖК Тест', code: null, arch
   timezone: 'Europe/Moscow', country: 'RU', object_count: 0, place_count: 0, places_led_by_quality: false };
 const KINDS = [{ code: 'building', name: 'Корпус', sort_order: 1 }, { code: 'parking', name: 'Паркинг', sort_order: 2 }, { code: 'other', name: 'Прочее', sort_order: 5 }];
 
-interface Row { id: string; parent: string | null; type: PlanNodeType; kind: string | null; name: string; order: number; build: string | null; bti: string | null; deleted: boolean }
+interface Row { id: string; parent: string | null; type: PlanNodeType; kind: string | null; name: string; order: number; build: string | null; bti: string | null; deleted: boolean; group?: number }
 /** Сервер в памяти: те же правила, что в 045 (верх — только объект, повтор id — та же запись, номера квартир по объекту). */
-function fakeServer(opts: { fail?: string } = {}) {
-  const rows: Row[] = []; const calls: string[] = []; let seq = 0;
+function fakeServer(opts: { fail?: string; failSave?: string } = {}) {
+  const rows: Row[] = []; const calls: string[] = []; let seq = 0; let grp = 0;
   const live = (p: string | null) => rows.filter((r) => !r.deleted && r.parent === p).sort((a, b) => a.order - b.order);
   const byId = (id: string) => rows.find((r) => r.id === id)!;
   const path = (r: Row): string => (r.parent ? path(byId(r.parent)) + ' · ' : '') + r.name;
@@ -58,12 +60,23 @@ function fakeServer(opts: { fail?: string } = {}) {
     async savePlace(_p: string, id: string, parent: string | null, type: PlanNodeType, name: string, kind?: string | null, b?: string | null, t?: string | null) {
       calls.push(`save:${parent}:${type}:${name}:${kind ?? ''}:${b ?? ''}:${t ?? ''}`);
       if (opts.fail) return fail<string>();
+      if (opts.failSave) return { ok: false, message: opts.failSave };
       const old = rows.find((r) => r.id === id);
       if (old) { Object.assign(old, { name, kind: old.type === 'object' ? kind || old.kind : null, build: b ?? null, bti: t ?? null }); return { ok: true, value: id }; }
       if (!parent && type !== 'object') return { ok: false, message: 'Верхний уровень — только объект' };
       ins(parent, type, name, { id, kind: type === 'object' ? kind || 'other' : null, build: b ?? null, bti: t ?? null }); return { ok: true, value: id };
     },
-    async removePlace(id: string) { calls.push('remove:' + id); const all = [byId(id), ...sub(id)]; all.forEach((r) => { r.deleted = true; }); return { ok: true, value: all.length }; },
+    async removePlace(id: string) { calls.push('remove:' + id); const all = [byId(id), ...sub(id)]; grp++; all.forEach((r) => { r.deleted = true; r.group = grp; }); return { ok: true, value: all.length }; },
+    async restorePlace(id: string) { calls.push('restore:' + id); const g = byId(id).group; const all = rows.filter((r) => r.deleted && r.group === g); all.forEach((r) => { r.deleted = false; }); return { ok: true, value: all.length }; },
+    async nextBuildNo(id: string) { calls.push('nextno:' + id); return { ok: true, value: nextNo(objOf(byId(id))) }; },
+    async movePlace(id: string, parent: string | null, before: string | null) {
+      calls.push(`move:${id}:${parent}:${before}`);
+      const r = byId(id); const old = live(r.parent); const i = old.findIndex((x) => x.id === id);
+      const res = { changed: true, oldParentId: r.parent, oldBeforeId: old[i + 1] ? old[i + 1].id : null };
+      const list = live(parent).filter((x) => x.id !== id); const at = before ? list.findIndex((x) => x.id === before) : -1;
+      list.splice(at < 0 ? list.length : at, 0, r); r.parent = parent; list.forEach((x, k) => { x.order = k + 1; });
+      return { ok: true, value: res };
+    },
     async fillObject(p: FillParams) {
       calls.push(`fill:${p.sections}x${p.floors}x${p.apartmentsPerFloor}:${p.firstFloor}:${p.numbering}:${p.startNo}:${p.basement}:${p.roof}`);
       if (opts.fail) return fail<number>();
@@ -87,7 +100,7 @@ function fakeServer(opts: { fail?: string } = {}) {
         for (let f = from; f <= to; f++) { const fid = ins(id, 'floor', 'эт. ' + f); n++; for (let a = 0; a < apf; a++) { ins(fid, 'apartment', 'кв. ' + no, { build: String(no) }); no++; n++; } } }
       return { ok: true, value: n };
     },
-    async copyPlace(src: string, id: string, name: string) { calls.push(`copy:${src}:${name}`); const s = byId(src); ins(s.parent, s.type, name, { id }); return { ok: true, value: id }; }
+    async copyPlace(src: string, id: string, name: string, target?: string) { calls.push(`copy:${src}:${name}` + (target ? ':' + target : '')); const s = byId(src); ins(target || s.parent, s.type, name, { id }); return { ok: true, value: id }; }
   } as unknown as ProjectsApi;
   return { api, calls, rows, ins, live };
 }
@@ -178,19 +191,20 @@ test('«Добавить этажи» в две секции: номера кв�
   root.unmount();
 });
 
-test('«Копировать секцию»: название по соседям, копия рядом', async () => {
+test('«Дублировать рядом»: название по соседям, копия рядом без окна; «Отменить» удаляет копию', async () => {
   const s = fakeServer(); const o = s.ins(null, 'object', 'Корпус 1', { kind: 'building' });
   const s1 = s.ins(o, 'section', 'Секция 1'); s.ins(o, 'section', 'Секция 2');
   const { el, root } = mount(s.api); await tick(); await tick();
-  await openMenu(el, 'Секция 1', 'copy');
-  assert.equal(q(el, 'op-name').value, 'Секция 3');
-  submit(q(el, 'op-copy-form')); await tick(); await tick();
+  await openMenu(el, 'Секция 1', 'dup'); await tick();
   assert.ok(s.calls.includes(`copy:${s1}:Секция 3`));
   assert.ok(rowOf(el, 'Секция 3'));
+  assert.match(q(el, 'op-toast').textContent, /Скопировано: «Секция 3»/);
+  click(q(el, 'op-undo')); await tick(); await tick();
+  assert.ok(!rowOf(el, 'Секция 3'), 'отмена — копия удалена');
   root.unmount();
 });
 
-test('поштучно: квартира с номерами внутрь этажа; карточка места; правка номеров', async () => {
+test('«Добавить другое…»: квартира с номерами внутрь этажа; карточка места; номера правятся в карточке', async () => {
   const s = fakeServer(); const o = s.ins(null, 'object', 'Корпус 1', { kind: 'building' });
   const sec = s.ins(o, 'section', 'Секция 1'); const fl = s.ins(sec, 'floor', 'эт. 1');
   const { el, root } = mount(s.api); await tick(); await tick();
@@ -200,27 +214,109 @@ test('поштучно: квартира с номерами внутрь эта
   const f = q(el, 'op-add-form');
   f.elements.namedItem('name').value = 'кв. 7'; f.elements.namedItem('build_no').value = '7'; f.elements.namedItem('bti_no').value = '107';
   submit(f); await tick(); await tick();
-  assert.ok(s.calls.includes(`save:${fl}:apartment:кв. 7:::7:107`.replace(':::', '::')));
-  click(rowOf(el, 'кв. 7').querySelector('[data-testid="p2-tree-open"]')); await tick();
+  assert.ok(s.calls.includes(`save:${fl}:apartment:кв. 7::7:107`));
   const card = q(el, 'op-place');
+  assert.ok(card, 'новое место выбрано — карточка открыта');
   assert.match(card.textContent, /Корпус 1 › Секция 1 › эт\. 1/);
-  assert.match(card.textContent, /Строительный номер7/); assert.match(card.textContent, /Номер БТИ107/);
-  click(q(el, 'op-place-edit')); await tick();
-  const e = q(el, 'op-edit-form'); e.elements.namedItem('bti_no').value = '207'; submit(e); await tick(); await tick();
+  assert.equal(q(el, 'op-c-build').value, '7'); assert.equal(q(el, 'op-c-bti').value, '107');
+  const bti = q(el, 'op-c-bti'); setValue(bti, '207'); bti.dispatchEvent(new win.FocusEvent('focusout', { bubbles: true })); await tick(); await tick();
   assert.equal(s.rows.find((r) => r.name === 'кв. 7')!.bti, '207');
+  assert.equal(s.rows.find((r) => r.name === 'кв. 7')!.build, '7', 'строительный номер не потерян');
   root.unmount();
 });
 
-test('удалить ветку — только после подтверждения', async () => {
+test('«+» без окна: у секции — следующий этаж по образцу соседей, у этажа — квартира со следующим строительным номером объекта; «Отменить»', async () => {
+  const s = fakeServer(); const o = s.ins(null, 'object', 'Корпус 1', { kind: 'building' });
+  const sec = s.ins(o, 'section', 'Секция 1'); const f1 = s.ins(sec, 'floor', 'эт. 1'); s.ins(sec, 'floor', 'эт. 2');
+  s.ins(f1, 'apartment', 'кв. 1', { build: '1' }); s.ins(f1, 'apartment', 'кв. 2', { build: '2' });
+  const { el, root } = mount(s.api); await tick(); await tick();
+  click(rowOf(el, 'Секция 1').querySelector('[data-testid="op-row-plus"]')); await tick(); await tick();
+  assert.ok(s.calls.some((c) => c === `save:${sec}:floor:эт. 3:::`), 'этаж «эт. 3» — без окна (' + s.calls.filter((c) => c.startsWith('save')).join(';') + ')');
+  assert.ok(!q(el, 'op-add'), 'окна нет');
+  assert.ok(rowOf(el, 'эт. 3'), 'ветка раскрыта, новый этаж виден');
+  assert.equal(q(el, 'op-place').querySelector('b').textContent, 'эт. 3', 'новое место выбрано');
+  assert.match(q(el, 'op-toast').textContent, /Добавлено «эт\. 3»/);
+  click(q(el, 'op-undo')); await tick(); await tick();
+  assert.ok(!rowOf(el, 'эт. 3'), '«Отменить» удалило добавленное');
+  click(rowOf(el, 'эт. 2').querySelector('[data-testid="op-row-plus"]')); await tick(); await tick();
+  assert.ok(s.calls.some((c) => c === `save:${s.live(sec).find((r) => r.name === 'эт. 2')!.id}:apartment:кв. 3::3:`), 'квартира — следующий номер объекта: кв. 3');
+  root.unmount();
+});
+
+test('название — в строке: двойной щелчок, Enter сохраняет; отказ сервера — под полем, ввод не теряется; Esc — отмена; «Отменить» возвращает', async () => {
+  const s = fakeServer(); const o = s.ins(null, 'object', 'Корпус 1', { kind: 'building' });
+  const sec = s.ins(o, 'section', 'Секция 1');
+  const { el, root } = mount(s.api); await tick(); await tick();
+  const dbl = (b: N) => b.dispatchEvent(new win.MouseEvent('dblclick', { bubbles: true }));
+  dbl(rowOf(el, 'Секция 1').querySelector('[data-testid="p2-tree-open"]')); await tick();
+  const inp = q(el, 'op-rename'); assert.ok(inp, 'поле в строке');
+  setValue(inp, 'Секция А'); await tick();
+  inp.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await tick(); await tick();
+  assert.equal(s.rows.find((r) => r.id === sec)!.name, 'Секция А');
+  assert.ok(rowOf(el, 'Секция А') && !q(el, 'op-rename'));
+  click(q(el, 'op-undo')); await tick(); await tick();
+  assert.equal(s.rows.find((r) => r.id === sec)!.name, 'Секция 1', 'отмена вернула название');
+  root.unmount();
+  const s2 = fakeServer({ failSave: 'Место с таким названием уже есть на этом уровне' }); const o2 = s2.ins(null, 'object', 'Корпус 1', { kind: 'building' });
+  s2.ins(o2, 'section', 'Секция 1');
+  const m = mount(s2.api); await tick(); await tick();
+  dbl(rowOf(m.el, 'Секция 1').querySelector('[data-testid="p2-tree-open"]')); await tick();
+  setValue(q(m.el, 'op-rename'), 'Секция 2'); await tick();
+  q(m.el, 'op-rename').dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await tick(); await tick();
+  assert.equal(q(m.el, 'op-rename-error').textContent, 'Место с таким названием уже есть на этом уровне');
+  assert.equal(q(m.el, 'op-rename').value, 'Секция 2', 'ввод не потерян');
+  q(m.el, 'op-rename').dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await tick();
+  assert.ok(!q(m.el, 'op-rename') && rowOf(m.el, 'Секция 1'), 'Esc — прежнее название');
+  m.root.unmount();
+});
+
+test('«Выше / Ниже»: порядок соседей; у края — неактивно с причиной; «Отменить» возвращает', async () => {
+  const s = fakeServer(); const o = s.ins(null, 'object', 'Корпус 1', { kind: 'building' });
+  const a = s.ins(o, 'section', 'Секция 1'), b = s.ins(o, 'section', 'Секция 2'), c = s.ins(o, 'section', 'Секция 3');
+  const { el, root } = mount(s.api); await tick(); await tick();
+  const names = () => [...el.querySelectorAll('[data-testid="op-tree"] > ul > li .p2-tree__name b')].map((x: N) => x.textContent).join(',');
+  click(rowOf(el, 'Секция 1').querySelector('[data-testid="p2-tree-more"]')); await tick();
+  assert.equal(rowOf(el, 'Секция 1').querySelector('[data-item="up"]').disabled, true, 'первая — «Выше» неактивно');
+  click(rowOf(el, 'Секция 1').querySelector('[data-item="down"]')); await tick(); await tick();
+  assert.ok(s.calls.includes(`move:${a}:${o}:${c}`), 'ниже = встать перед «Секция 3»');
+  assert.equal(names(), 'Секция 2,Секция 1,Секция 3');
+  click(q(el, 'op-undo')); await tick(); await tick();
+  assert.ok(s.calls.includes(`move:${a}:${o}:${b}`), 'отмена — обратно перед «Секция 2»');
+  assert.equal(names(), 'Секция 1,Секция 2,Секция 3');
+  root.unmount();
+});
+
+test('удалить ветку — сразу, с плашкой «Отменить»; отмена возвращает ветку; объект — с подтверждением', async () => {
   const s = fakeServer(); const o = s.ins(null, 'object', 'Корпус 1', { kind: 'building' });
   const sec = s.ins(o, 'section', 'Секция 1'); s.ins(sec, 'floor', 'эт. 1');
   const { el, root } = mount(s.api); await tick(); await tick();
-  await openMenu(el, 'Секция 1', 'remove');
-  assert.ok(!s.calls.some((c) => c.startsWith('remove')), 'без подтверждения ничего не удалено');
+  await openMenu(el, 'Секция 1', 'remove'); await tick();
+  assert.ok(s.calls.includes('remove:' + sec), 'без окна');
+  assert.ok(!rowOf(el, 'Секция 1'));
+  assert.match(q(el, 'op-toast').textContent, /Удалено «Секция 1»/);
+  click(q(el, 'op-undo')); await tick(); await tick();
+  assert.ok(s.calls.includes('restore:' + sec));
+  assert.ok(rowOf(el, 'Секция 1') && s.rows.every((r) => !r.deleted), 'ветка вернулась целиком');
+  click(q(el, 'op-obj-more')); await tick();
+  click(el.querySelector('[data-testid="op-obj-more-menu"] [data-item="remove"]')); await tick();
+  assert.ok(!s.calls.includes('remove:' + o), 'объект — только после подтверждения');
   assert.match(q(el, 'op-remove').textContent, /вместе со всем, что внутри/);
   click(q(el, 'op-remove-go')); await tick(); await tick();
-  assert.ok(s.calls.includes('remove:' + sec));
-  assert.ok(!rowOf(el, 'Секция 1'));
+  assert.ok(s.calls.includes('remove:' + o));
+  root.unmount();
+});
+
+test('без сети — правка недоступна с пояснением; связь вернулась — снова можно', async () => {
+  const s = fakeServer(); const o = s.ins(null, 'object', 'Корпус 1', { kind: 'building' }); s.ins(o, 'section', 'Секция 1');
+  const nav = globalThis.navigator as N; const desc = Object.getOwnPropertyDescriptor(nav, 'onLine');
+  Object.defineProperty(nav, 'onLine', { configurable: true, get: () => false });
+  const { el, root } = mount(s.api); await tick(); await tick();
+  assert.ok(q(el, 'op-offline'));
+  assert.ok(!q(el, 'op-add-object') && !el.querySelector('[data-testid="op-row-plus"]') && !el.querySelector('[data-testid="p2-tree-more"]'));
+  Object.defineProperty(nav, 'onLine', { configurable: true, get: () => true });
+  win.dispatchEvent(new win.Event('online')); await tick();
+  assert.ok(!q(el, 'op-offline') && q(el, 'op-add-object') && el.querySelector('[data-testid="op-row-plus"]'));
+  if (desc) Object.defineProperty(nav, 'onLine', desc); else delete nav.onLine;
   root.unmount();
 });
 

@@ -92,6 +92,8 @@ export interface ProjectsApi {
   movePlace?(id: string, newParentId: string | null, beforeId: string | null): Promise<Result<MovePlaceResult>>;
   /** P2-0055: вернуть ветку, удалённую одним действием («Отменить» после удаления). */
   restorePlace?(id: string): Promise<Result<number>>;
+  /** P2-0055: следующий строительный номер помещения в объекте места («+ Кв.» без окна). */
+  nextBuildNo?(id: string): Promise<Result<number>>;
   addUnit(companyId: string, code: string, name: string): Promise<Result<string>>;
   deleteUnit(unitId: string): Promise<Result>;
 }
@@ -187,6 +189,7 @@ export function createProjectsService(): ProjectsApi | null {
       return { ok: true, value: { changed: v.changed === true, oldParentId: v.old_parent ?? null, oldBeforeId: v.old_before ?? null } };
     },
     restorePlace: (id) => call<number>('pf_restore_place', { p_location: id }),
+    nextBuildNo: (id) => call<number>('pf_next_build_no', { p_location: id }),
     addUnit: (company, code, name) => call<string>('pf_add_unit', { p_company: company, p_code: code, p_name: name }),
     deleteUnit: (id) => call('pf_delete_unit', { p_unit: id })
   };
