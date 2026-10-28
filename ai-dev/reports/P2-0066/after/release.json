@@ -1,0 +1,195 @@
+[
+  {
+    "tag": "r-size",
+    "files": 312,
+    "totalMB": 31.8,
+    "byGroupMB": {
+      "оболочка": 19.7,
+      "company": 2.6,
+      "planfact": 2.9,
+      "platform-admin": 0,
+      "construction-v2": 0,
+      "construction": 0.3,
+      "quality": 6.3
+    }
+  },
+  {
+    "tag": "r-deploy",
+    "mixedLoads": 0,
+    "loads": [
+      {
+        "load": 1,
+        "mixed": false,
+        "html": "A",
+        "tags": {
+          "A": 239
+        }
+      },
+      {
+        "load": 2,
+        "mixed": false,
+        "html": "B",
+        "tags": {
+          "B": 240
+        }
+      },
+      {
+        "load": 3,
+        "mixed": false,
+        "html": "B",
+        "tags": {
+          "B": 240
+        }
+      }
+    ],
+    "waiting": false
+  },
+  {
+    "tag": "r-middeploy",
+    "install": "нет новой версии / установка не удалась",
+    "retry": "waiting",
+    "mixedLoads": 0,
+    "loads": [
+      {
+        "load": 1,
+        "mixed": false,
+        "html": "B",
+        "tags": {
+          "B": 239
+        }
+      },
+      {
+        "load": 2,
+        "mixed": false,
+        "html": "B",
+        "tags": {
+          "B": 239
+        }
+      }
+    ]
+  },
+  {
+    "tag": "r-partial",
+    "install": "нет новой версии / установка не удалась",
+    "retry": "waiting",
+    "failedOffline": [],
+    "cacheAfter": {
+      "caches": [
+        "p2-app-meta",
+        "platform2-v2026.10.29-f95d3ed5",
+        "p2-storage-slot",
+        "platform2-v2026.10.29-f3095fd7"
+      ],
+      "planfact": 8,
+      "company": 6
+    },
+    "shown": {
+      "#/planfact": 188,
+      "#/settings/company/objects": 432,
+      "#/quality/engineer": 492
+    }
+  },
+  {
+    "tag": "r-tabs",
+    "install": "waiting",
+    "tab1": {
+      "html": "A",
+      "tags": {
+        "A": 240
+      },
+      "other": []
+    },
+    "tab1Load": "ok",
+    "tab2": {
+      "html": "B",
+      "tags": {
+        "B": 239
+      },
+      "other": []
+    }
+  },
+  {
+    "tag": "r-chunk",
+    "chunk": "xlsx-reader-CPcF3VtK.js",
+    "result": "ok"
+  },
+  {
+    "tag": "r-requests",
+    "requests": 4
+  },
+  {
+    "tag": "r-delta",
+    "install": "waiting",
+    "downloaded": [
+      "/js/shared/theme.utils.js"
+    ]
+  },
+  {
+    "tag": "r-allow",
+    "before": 0,
+    "install": "waiting",
+    "after": 0
+  },
+  {
+    "tag": "r-launch",
+    "install": "waiting",
+    "rowBefore": {
+      "state": "ready",
+      "text": "Новая версия скачана 2026.10.29-f3095fd7 — включится при следующем запуске Перезапустить сейчас Проверить обновления Сейчас работает: 2026.10.29-f95d3ed5 от 29.10.2026 · неотправленное не пропадёт",
+      "restart": true
+    },
+    "after": {
+      "html": "B",
+      "tags": {
+        "B": 238
+      },
+      "other": []
+    },
+    "navs": 3,
+    "rowAfter": {
+      "state": "idle",
+      "text": "Версия 2026.10.29-f3095fd7 от 29.10.2026 · это последняя версия Проверить обновления",
+      "restart": false
+    }
+  },
+  {
+    "tag": "r-return",
+    "install": "waiting",
+    "busy": "A",
+    "after": {
+      "html": "B",
+      "tags": {
+        "B": 238
+      },
+      "other": []
+    }
+  },
+  {
+    "tag": "r-queue",
+    "unsent": 1,
+    "install": "waiting",
+    "after": "B",
+    "sent": 1
+  },
+  {
+    "tag": "r-transition",
+    "opens": [
+      {
+        "open": 1,
+        "html": null,
+        "mixed": false,
+        "sw": "старый кэш"
+      },
+      {
+        "open": 2,
+        "html": "A",
+        "mixed": false,
+        "sw": "2026.10.29-f95d3ed5"
+      }
+    ],
+    "offline": {
+      "html": "A",
+      "failed": []
+    }
+  }
+]
