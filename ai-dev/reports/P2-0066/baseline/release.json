@@ -1,0 +1,123 @@
+[
+  {
+    "tag": "r-size",
+    "files": 310,
+    "totalMB": 29.2,
+    "byGroupMB": {
+      "оболочка": 17.1,
+      "company": 2.6,
+      "planfact": 2.9,
+      "platform-admin": 0,
+      "construction-v2": 0,
+      "construction": 0.3,
+      "quality": 6.3
+    }
+  },
+  {
+    "tag": "r-deploy",
+    "mixedLoads": 1,
+    "loads": [
+      {
+        "load": 1,
+        "mixed": false,
+        "html": "A",
+        "tags": {
+          "A": 238
+        }
+      },
+      {
+        "load": 2,
+        "mixed": true,
+        "html": "B",
+        "tags": {
+          "B": 238,
+          "A": 1
+        }
+      },
+      {
+        "load": 3,
+        "mixed": false,
+        "html": "B",
+        "tags": {
+          "B": 239
+        }
+      }
+    ],
+    "waiting": true
+  },
+  {
+    "tag": "r-middeploy",
+    "install": "waiting",
+    "mixedLoads": 1,
+    "loads": [
+      {
+        "load": 1,
+        "mixed": true,
+        "html": "B",
+        "tags": {
+          "B": 175,
+          "A": 63
+        }
+      },
+      {
+        "load": 2,
+        "mixed": false,
+        "html": "B",
+        "tags": {
+          "B": 238
+        }
+      }
+    ]
+  },
+  {
+    "tag": "r-partial",
+    "install": "waiting",
+    "failedOffline": [
+      "/css/rbi-ui.css",
+      "/libs/xlsx.full.min.js",
+      "/js/dist/rbi-locations.js",
+      "/js/dist/planfact/planfact.js"
+    ],
+    "cacheAfter": {
+      "caches": [
+        "p2-storage-slot",
+        "platform2-v18.104.1-B"
+      ],
+      "planfact": 0,
+      "company": 1
+    },
+    "shown": {
+      "#/planfact": 188,
+      "#/settings/company/objects": 432,
+      "#/quality/engineer": 492
+    }
+  },
+  {
+    "tag": "r-tabs",
+    "install": "waiting",
+    "tab1": {
+      "html": "B",
+      "tags": {
+        "B": 239
+      },
+      "other": []
+    },
+    "tab1Load": "ok",
+    "tab2": {
+      "html": "B",
+      "tags": {
+        "B": 238
+      },
+      "other": []
+    }
+  },
+  {
+    "tag": "r-chunk",
+    "chunk": "xlsx-reader-CPcF3VtK.js",
+    "result": "ошибка: Failed to fetch dynamically imported module: http://localhost:8891/js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js"
+  },
+  {
+    "tag": "r-requests",
+    "requests": 263
+  }
+]

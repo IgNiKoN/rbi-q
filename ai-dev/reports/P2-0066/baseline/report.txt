@@ -1,0 +1,40 @@
+  == r-size: файлов 310, всего 29.2 МБ; оболочка 17.1 МБ, company 2.6 МБ, planfact 2.9 МБ, platform-admin 0 МБ, construction-v2 0 МБ, construction 0.3 МБ, quality 6.3 МБ
+PASS r-size: опись без .map меньше 30 МБ — 29.2 МБ
+  == r-deploy: была версия A → выкладка B → открыть ×3 (со 2-го — зайти в разделы)
+PASS r-deploy: до выкладки вкладка на версии A — html A, скрипты {"A":238}
+  открытие 1: html A, скрипты {"A":238}
+  открытие 2: html B, скрипты {"B":238,"A":1}, чужие: /js/dist/planfact/planfact.js
+  открытие 3: html B, скрипты {"B":239}
+  новая версия ждёт кнопку: {"waiting":true}
+FAIL r-deploy: ни одного открытия со смесью версий — смесь в 1 из 3
+  == r-middeploy: установка новой версии, пока на сервере половина файлов старые → выкладка закончена → «Обновить»
+PASS r-middeploy: до выкладки вкладка на версии A — html A, скрипты {"A":238}
+  установка: waiting
+  после «Обновить», открытие 1: html B, скрипты {"B":175,"A":63}, чужие: /libs/tailwindcdn.js /libs/xlsx.full.min.js /libs/pptxgenjs.bundle.js /libs/docx.bundle.js
+  после «Обновить», открытие 2: html B, скрипты {"B":238}
+FAIL r-middeploy: смесь не установлена как новая версия — установка: waiting; смесь в 1 из 2
+  == r-partial: установка B со сбоем части файлов → «Обновить» → без сети перезапуск
+PASS r-partial: до выкладки вкладка на версии A — html A, скрипты {"A":238}
+  установка: waiting
+  кэш после обновления: {"caches":["p2-storage-slot","platform2-v18.104.1-B"],"planfact":0,"company":1}
+  без сети: html B, скрипты {"B":236}; не загрузилось: ["/css/rbi-ui.css","/libs/xlsx.full.min.js","/js/dist/rbi-locations.js","/js/dist/planfact/planfact.js"]
+  текст разделов без сети (символов): {"#/planfact":188,"#/settings/company/objects":432,"#/quality/engineer":492}
+FAIL r-partial: версия с недокачанными файлами не устанавливается — waiting
+FAIL r-partial: без сети после обновления все файлы на месте — не загрузилось 4
+FAIL r-partial: после обновления код План/Факта и «Компании» в кэше — {"planfact":0,"company":1}
+  == r-tabs: две вкладки на A → выкладка B → во второй «Обновить» → первая догружает часть
+PASS r-tabs: до выкладки вкладка на версии A — html A, скрипты {"A":238}
+  установка: waiting
+  вкладка 2: html B, скрипты {"B":238}
+  вкладка 1 после догрузки exceljs.min-Cd0WKM3n.js: ok; html B, скрипты {"B":239}
+PASS r-tabs: первая вкладка осталась одной версии — html B, скрипты {"B":239}
+FAIL r-tabs: первая вкладка не перезагрузилась сама посреди работы — перезагрузилась на B
+  == r-chunk: открыта A → выкладка B (часть xlsx-reader с новым именем) → A загружает свою часть
+PASS r-chunk: до выкладки вкладка на версии A — html A, скрипты {"A":238}
+  загрузка xlsx-reader-CPcF3VtK.js: ошибка: Failed to fetch dynamically imported module: http://localhost:8891/js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js
+FAIL r-chunk: старая вкладка загружает свою часть после выкладки — ошибка: Failed to fetch dynamically imported module: http://localhost:8891/js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js
+  == r-requests: запросы к серверу при открытии (кэш прогрет)
+PASS r-requests: до выкладки вкладка на версии A — html A, скрипты {"A":238}
+  запросов к файлам приложения: 263; примеры: /index.html /js/shared/theme.utils.js /libs/tailwindcdn.js /css/brand/rbi.css /css/style.css /css/app-shell.desktop.css
+FAIL r-requests: при открытии ≤ 5 запросов к файлам приложения — 263
+Итог: PASS 8, FAIL 8

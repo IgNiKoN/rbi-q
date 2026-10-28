@@ -142,12 +142,21 @@ function respond(req, res, u, body) {
   }
 }
 
+/** P2-0066: «выкладка» на стенде — откуда отдавать файлы приложения. root — папка версии (по умолчанию эта папка);
+ *  pick(путь) → папка (выкладка в процессе: часть файлов старая, часть новая); fail — RegExp: такие файлы отвечают 503 (сбой связи);
+ *  requests — журнал запросов к файлам приложения. */
+export const site = { root: ROOT, pick: null, fail: null, requests: [] };
+export function resetSite() { Object.assign(site, { root: ROOT, pick: null, fail: null }); site.requests.length = 0; }
+
 async function app(req, res) {
   const u = new URL(req.url, APP);
   let p = normalize(decodeURIComponent(u.pathname));
   if (p.endsWith('/')) p += 'index.html';
-  const f = join(ROOT, p);
-  if (!f.startsWith(ROOT)) { res.writeHead(403); return res.end(); }
+  site.requests.push(p);
+  if (site.fail && site.fail.test(p)) { res.writeHead(503); return res.end('unavailable'); }
+  const base = (site.pick && site.pick(p)) || site.root;
+  const f = join(base, p);
+  if (!f.startsWith(base)) { res.writeHead(403); return res.end(); }
   try {
     if (!(await stat(f)).isFile()) throw new Error('dir');
     let data = await readFile(f);
