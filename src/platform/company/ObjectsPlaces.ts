@@ -7,6 +7,8 @@
  * «Добавить другое…» (поштучно, с выбором вида и номерами). Карточка места — панель справа на ПК (от 900 px), лист снизу на
  * телефоне. Права и проверки — на сервере (049: перенос только внутри объекта); экран заранее показывает, что нельзя.
  * У объекта с секциями — переключатель «Дерево / Шахматка» (PlacesChess: те же места, карточка и «+»). Без сети правка недоступна. Дети грузятся при раскрытии. id нового места даёт приложение.
+ * P2-0056: список помещений из Excel — файл перетаскивается на экран (ПК) или «⋯ → Загрузить из Excel»; лист PlacesImport
+ * показывает предпросмотр и создаёт недостающее одной загрузкой («Отменить» снимает её); у помещения — площадь и комнаты.
  */
 import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from 'react';
@@ -20,6 +22,10 @@ import { CHILD_TYPE, clipSummary, dropPlace, MOVE_OTHER_OBJECT, nextChildName, p
 import type { Check, Clip, UndoEntry } from './places-editor.ts';
 import type { DropWhere } from '../ui/tree.ts';
 import { PlacesChess } from './PlacesChess.ts';
+import { PlacesImport } from './PlacesImport.ts';
+import { buildTemplate, createdText, createdTotal } from './places-import.ts';
+import type { ImportResult } from '../core/projects.service.ts';
+import { saveXlsx } from '../ui/registry/export.ts';
 
 const TYPE_LABEL: Record<string, string> = { object: 'объект', building: 'корпус', section: 'секция', floor: 'этаж', apartment: 'квартира', other: 'прочее' };
 const INNER: PlanNodeType[] = ['section', 'floor', 'apartment', 'other'];
@@ -106,6 +112,9 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   const [view, setView] = useState<'tree' | 'chess'>('tree');
   const [drag, setDrag] = useState<PlaceNode | null>(null);
   const [hint, setHint] = useState<{ id: string; where: DropWhere; ok: boolean; reason?: string } | null>(null);
+  const [importing, setImporting] = useState<{ file: File; obj: string | null } | null>(null);
+  const [fileOver, setFileOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const pc = useWide('(min-width: 900px)');   // ПК: мышь, клавиши, перетаскивание
   // панель карточки справа — когда самой области хватает места: от 760 px — 340 px, от 600 — узкая 280 px; иначе — лист снизу
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -258,6 +267,42 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     if (kind === n.object_kind && b === n.build_no && t === n.bti_no) return;
     await act(api.savePlace(project.id, n.id, n.parent_id, n.node_type, n.name, kind, b, t), `Сохранено: «${n.name}»`,
       () => () => api.savePlace!(project.id, n.id, n.parent_id, n.node_type, n.name, n.object_kind, n.build_no, n.bti_no), [n.parent_id]);
+  }
+  /** P2-0056: площадь и комнаты помещения — поля карточки; пусто — стереть. */
+  async function saveInfo(n: PlaceNode, patch: { area?: string; rooms?: string }): Promise<void> {
+    if (!api.savePlaceInfo) return;
+    let area = n.area ?? null, rooms = n.rooms ?? null;
+    if (patch.area !== undefined) {
+      const t = patch.area.trim().replace(',', '.');
+      area = t ? Number(t) : null;
+      if (area !== null && !(Number.isFinite(area) && area > 0)) { setError('Площадь — число больше нуля, например 54,3'); return; }
+    }
+    if (patch.rooms !== undefined) rooms = patch.rooms === '' ? null : Number(patch.rooms);
+    if (area === (n.area ?? null) && rooms === (n.rooms ?? null)) return;
+    await act(api.savePlaceInfo(n.id, area, rooms), `Сохранено: «${n.name}»`, () => () => api.savePlaceInfo!(n.id, n.area ?? null, n.rooms ?? null), [n.parent_id]);
+  }
+  // ---------- P2-0056: список помещений из Excel ----------
+  const isXlsx = (f: File): boolean => /\.xlsx$/i.test(f.name) || f.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  function takeFile(f: File | null | undefined, objName: string | null): void {
+    if (!f || !edit || !api.importPlaces) return;
+    setError(''); setNotice('');
+    if (isXlsx(f)) { setSelId(null); setImporting({ file: f, obj: objName }); return; }
+    if (/\.pdf$/i.test(f.name)) { setNotice('PDF-планы этажей и квартир — в следующем обновлении. Сейчас сюда можно бросить Excel со списком помещений.'); return; }
+    setError(/\.xls$/i.test(f.name) ? 'Старый формат .xls — сохраните файл как .xlsx и бросьте снова' : 'Нужен файл Excel (.xlsx) со списком помещений');
+  }
+  const hasFiles = (e: DragEvent): boolean => !!e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+  async function onImported(res: ImportResult, batch: string): Promise<void> {
+    setImporting(null);
+    const label = `Создано ${createdTotal(res.created)}: ${createdText(res.created)}`;
+    seq.current += 1; const id = seq.current;
+    if (api.importUndo) setUndo((l) => pushUndo(l, { id, label: 'загрузка из Excel', undo: () => api.importUndo!(batch) }));
+    showToast(label, !!api.importUndo);
+    await refresh();
+    const newObj = res.roots.find((r) => (kidsRef.current[''] || []).some((o) => o.id === r));
+    if (newObj && !objId) setObjId(newObj);
+  }
+  async function template(): Promise<void> {
+    try { saveXlsx(await buildTemplate(), 'Шаблон — список помещений.xlsx'); } catch { setError('Не удалось подготовить шаблон'); }
   }
   async function step(n: PlaceNode, dir: -1 | 1): Promise<void> {
     const s = stepBefore(siblings(n), n.id, dir);
@@ -520,7 +565,7 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     return items;
   }
   const meta = (n: PlaceNode): string => {
-    if (n.node_type === 'apartment') return [n.build_no ? `стр. № ${n.build_no}` : '', n.bti_no ? `БТИ ${n.bti_no}` : ''].filter(Boolean).join(' · ');
+    if (n.node_type === 'apartment') return [n.build_no ? `стр. № ${n.build_no}` : '', n.bti_no ? `БТИ ${n.bti_no}` : '', areaText(n.area), roomsText(n.rooms)].filter(Boolean).join(' · ');
     if (n.apartment_count) return `кв. ${n.apartment_count}`;
     if (n.node_type === 'floor' && n.child_count) return `мест ${n.child_count}`;
     return '';
@@ -564,7 +609,15 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
         { id: 'path', label: 'Где', value: n.path.split(' · ').slice(0, -1).join(' › ') || 'верхний уровень' },
         ...(n.child_count ? [{ id: 'inside', label: 'Внутри мест', value: String(n.child_count) }] : []),
         ...(n.apartment_count ? [{ id: 'apts', label: 'Квартир', value: String(n.apartment_count) }] : [])] }),
-      apt ? h('div', { className: 'op-card__nums' }, numIn2('build', 'Строительный номер', n.build_no), numIn2('bti', 'Номер БТИ', n.bti_no)) : null,
+      apt ? h('div', { className: 'op-card__nums' }, numIn2('build', 'Строительный номер', n.build_no), numIn2('bti', 'Номер БТИ', n.bti_no),
+        api.savePlaceInfo ? field('Площадь, м²', h('input', { key: n.id + 'area' + (n.area ?? ''), className: 'pj-input', inputMode: 'decimal', maxLength: 12,
+          defaultValue: n.area != null ? String(n.area).replace('.', ',') : '', disabled: !edit, placeholder: 'не указана', 'data-testid': 'op-c-area',
+          onBlur: (e: Event) => { void saveInfo(n, { area: (e.target as HTMLInputElement).value }); },
+          onKeyDown: (e: ReactKeyboardEvent) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); } })) : null,
+        api.savePlaceInfo ? field('Комнат', h('select', { key: n.id + 'rooms' + (n.rooms ?? ''), className: 'pj-input', defaultValue: n.rooms != null ? String(n.rooms) : '',
+          disabled: !edit, 'data-testid': 'op-c-rooms', onChange: (e: Event) => { void saveInfo(n, { rooms: (e.target as HTMLSelectElement).value }); } },
+          h('option', { value: '' }, 'не указано'), h('option', { value: '0' }, 'студия'),
+          ...Array.from({ length: Math.max(8, n.rooms ?? 0) }, (_, i) => h('option', { key: i + 1, value: String(i + 1) }, String(i + 1))))) : null) : null,
       n.node_type === 'object' ? field('Вид объекта', h('select', { key: n.id + (n.object_kind || ''), className: 'pj-input', defaultValue: n.object_kind || 'other', disabled: !edit,
         'data-testid': 'op-c-kind', onChange: (e: Event) => { void saveFields(n, { kind: (e.target as HTMLSelectElement).value }); } },
         kinds.map((k) => h('option', { key: k.code, value: k.code }, k.name)))) : null,
@@ -586,7 +639,13 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   // ---------- экран ----------
   const head = h('div', { className: 'op-head' },
     h('div', { className: 'op-head__t' }, h('b', null, 'Объекты'), objects ? h('span', { className: 'pf-tab-n' }, String(objects.length)) : null),
-    edit ? h('button', { type: 'button', className: 'pf-btn op-main', 'data-testid': 'op-add-object', onClick: () => { setNewKind('building'); setFillNow(true); setFill(FILL0); openDialog({ kind: 'object' }); } }, '+ Объект') : null);
+    edit ? h('div', { className: 'op-head__acts' },
+      h('button', { type: 'button', className: 'pf-btn op-main', 'data-testid': 'op-add-object', onClick: () => { setNewKind('building'); setFillNow(true); setFill(FILL0); openDialog({ kind: 'object' }); } }, '+ Объект'),
+      api.importPlaces ? h(MoreMenu, { testId: 'op-head-more', label: 'Загрузка из Excel', items: [
+        { id: 'import', label: 'Загрузить из Excel…', hint: pc ? 'или перетащите файл .xlsx на экран' : 'список помещений .xlsx', onClick: () => fileRef.current?.click() },
+        { id: 'template', label: 'Скачать шаблон', hint: 'Корпус, секция, этаж, помещение, номера, площадь, комнаты', onClick: () => { void template(); } }] }) : null,
+      api.importPlaces ? h('input', { ref: fileRef, type: 'file', accept: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', hidden: true,
+        'data-testid': 'op-import-file', onChange: (e: Event) => { const el = e.target as HTMLInputElement; takeFile(el.files && el.files[0], obj ? obj.name : null); el.value = ''; } }) : null) : null);
   const notes = [
     project.places_led_by_quality ? h('div', { key: 'q', className: 'pj-led', role: 'note', 'data-testid': 'op-from-quality' },
       'Места этого проекта ведутся в Качестве — здесь только просмотр. Добавить или изменить корпус, этаж, квартиру можно в Качестве.') : null,
@@ -594,21 +653,33 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     manage && !online ? h('div', { key: 'o', className: 'pj-led', role: 'note', 'data-testid': 'op-offline' }, 'Нет связи — места меняются только онлайн. Правка вернётся, когда появится связь.') : null,
     error && !dialog ? h('div', { key: 'e', className: 'pf-error', role: 'alert' }, error) : null,
     notice ? h('div', { key: 'n', className: 'pj-notice', role: 'status', 'data-testid': 'op-notice' }, notice) : null];
+  const importEl = importing && api.importPlaces ? h(PlacesImport, { api, projectId: project.id, file: importing.file, objects: objects || [],
+    defaultObject: importing.obj, onClose: () => setImporting(null), onDone: (r, b) => { void onImported(r, b); } }) : null;
+  const dropEl = fileOver ? h('div', { className: 'op-drop', 'data-testid': 'op-drop' }, h('div', null, 'Отпустите — загрузим список помещений',
+    h('small', null, 'Файл Excel (.xlsx): корпус, секция, этаж, помещение, номера, площадь, комнаты'))) : null;
+  /** Перетаскивание файла с компьютера (не строки дерева): подсветка и лист загрузки; на объекте — он корпус по умолчанию. */
+  const fileDrop = (objName: () => string | null): Record<string, unknown> => edit && api.importPlaces ? {
+    onDragOver: (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); if (!fileOver) setFileOver(true); },
+    onDragLeave: (e: DragEvent) => { if (e.currentTarget === e.target || !(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setFileOver(false); },
+    onDrop: (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopPropagation(); setFileOver(false); takeFile(e.dataTransfer && e.dataTransfer.files[0], objName()); } } : {};
   const toastEl = toast ? h('div', { className: 'op-toast', role: 'status', 'data-testid': 'op-toast' }, h('span', null, toast.text),
     toast.canUndo && undo.length ? h('button', { type: 'button', 'data-testid': 'op-undo', disabled: busy, onClick: () => { void doUndo(); } }, 'Отменить') : null,
     h('button', { type: 'button', className: 'op-toast__x', 'aria-label': 'Скрыть', onClick: () => setToast(null) }, '✕')) : null;
 
   if (objects === undefined) return h('div', { className: 'op-root', ref: rootRef }, head, h('div', { className: 'pf-muted' }, 'Загрузка…'));
-  if (!objects.length) return h('div', { className: 'op-root', 'data-testid': 'op-root', ref: rootRef }, head, ...notes,
+  if (!objects.length) return h('div', { className: 'op-root', 'data-testid': 'op-root', ref: rootRef, ...fileDrop(() => null) }, head, ...notes,
     h('div', { className: 'pf-card op-empty', 'data-testid': 'op-empty' }, manage ? 'Объектов пока нет — нажмите «+ Объект»: корпус можно сразу заполнить секциями, этажами и квартирами.'
-      : project.places_led_by_quality ? 'Мест пока нет — добавьте корпус в Качестве.' : 'Объектов пока нет.'), sheet(), toastEl);
+      : project.places_led_by_quality ? 'Мест пока нет — добавьте корпус в Качестве.' : 'Объектов пока нет.'),
+      edit && api.importPlaces ? h('div', { className: 'pf-muted op-empty-x' }, 'Есть список помещений в Excel? «⋯ → Загрузить из Excel» или перетащите файл сюда — создадим всё сразу.') : null,
+      dropEl, sheet(), importEl, toastEl);
 
   const cards = h('div', { className: 'op-objs', role: 'list', 'data-testid': 'op-objects' }, objects.map((o) => h('button', {
     key: o.id, type: 'button', role: 'listitem', className: 'op-obj' + (o.id === objId ? ' is-on' : '') + (hint && hint.id === 'obj:' + o.id ? ' is-no' : ''),
-    'aria-pressed': o.id === objId, 'data-object-id': o.id, onClick: () => pickObject(o),
-    // перетаскивание над другим объектом — «нельзя» и подсказка (бросить нельзя: dragover без preventDefault)
-    onDragOver: drag ? () => { if (o.id !== objectOf(drag) && (!hint || hint.id !== 'obj:' + o.id)) setHint({ id: 'obj:' + o.id, where: 'inside', ok: false, reason: MOVE_OTHER_OBJECT }); } : undefined,
-    onDragLeave: drag ? () => { if (hint && hint.id === 'obj:' + o.id) setHint(null); } : undefined },
+    'aria-pressed': o.id === objId, 'data-object-id': o.id, onClick: () => pickObject(o), ...fileDrop(() => o.name),
+    // перетаскивание строки над другим объектом — «нельзя» и подсказка (бросить нельзя: dragover без preventDefault)
+    ...(drag ? {
+      onDragOver: () => { if (o.id !== objectOf(drag) && (!hint || hint.id !== 'obj:' + o.id)) setHint({ id: 'obj:' + o.id, where: 'inside', ok: false, reason: MOVE_OTHER_OBJECT }); },
+      onDragLeave: () => { if (hint && hint.id === 'obj:' + o.id) setHint(null); } } : {}) },
     h('b', null, o.name), h('span', { className: 'op-obj__k' }, kindName(o.object_kind)),
     h('span', { className: 'op-obj__m' }, o.apartment_count ? `квартир ${o.apartment_count}` : o.child_count ? `мест внутри ${o.child_count}` : 'пока пусто'),
     hint && hint.id === 'obj:' + o.id ? h('span', { className: 'op-obj__no', role: 'status', 'data-testid': 'op-obj-no' }, '⦸ ' + MOVE_OTHER_OBJECT) : null)));
@@ -648,16 +719,21 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
           editing: editing && byId(editing.id) ? { id: editing.id, node: renameBox(byId(editing.id) as PlaceNode) } : null })
       : h('div', { className: 'pf-muted op-empty' }, edit ? 'Внутри пока пусто — «Заполнить объект» создаст секции, этажи и квартиры одной формой.' : 'Внутри пока пусто.')) : null;
 
-  return h('div', { className: 'op-root', 'data-testid': 'op-root', ref: rootRef, onKeyDown: onKey }, head, ...notes, cards,
+  return h('div', { className: 'op-root', 'data-testid': 'op-root', ref: rootRef, onKeyDown: onKey, ...fileDrop(() => (obj ? obj.name : null)) }, head, ...notes, cards,
     // на ПК место под карточку есть всегда — выбор строки не сдвигает дерево под мышью
     h('div', { className: 'op-split' + (wide && obj ? ' has-side' : '') + (slim ? ' is-slim' : '') }, objBox, wide && obj ? h('aside', { className: 'op-side' }, sel ? placeCard(sel)
       : h('div', { className: 'op-side__empty', 'data-testid': 'op-place-empty' }, 'Выберите место в дереве — здесь появятся его данные и действия.')) : null),
     !wide && sel && !dialog && !editing ? h(Sheet, { title: sel.name, sub: sel.path.split(' · ').slice(0, -1).join(' › ') || 'верхний уровень', testId: 'op-place-sheet', onClose: () => setSelId(null) }, placeCard(sel, true)) : null,
-    sheet(), toastEl);
+    dropEl, sheet(), importEl, toastEl);
 }
 
+const areaText = (a: number | null | undefined): string => (a != null ? `${String(a).replace('.', ',')} м²` : '');
+const roomsText = (r: number | null | undefined): string => (r == null ? '' : r === 0 ? 'студия' : `${r}к`);
+
 export const OBJECTS_CSS = `
-.op-root{display:flex;flex-direction:column;gap:12px;min-width:0}
+.op-root{display:flex;flex-direction:column;gap:12px;min-width:0;position:relative}
+.op-head__acts{display:flex;align-items:center;gap:8px}
+.op-empty-x{font-size:13.5px}
 .op-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .op-head__t{display:flex;align-items:center;gap:8px;font-size:15px}
 .op-objs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
@@ -728,7 +804,7 @@ export const OBJECTS_CSS = `
 @media (max-width:899.98px){.op-plus{opacity:1;min-width:44px;height:44px}.op-acts .pf-btn{min-height:48px;font-size:15px}}
 @media (max-width:599.98px){.op-form{grid-template-columns:1fr}.op-objs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:767.98px){
-  .op-head>.op-main{position:fixed;z-index:900;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));
+  .op-head .op-main{position:fixed;z-index:900;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));
     bottom:calc(65px + env(safe-area-inset-bottom,0px) + 12px);min-height:50px;font-size:16px;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.22)}
   .op-root:has(.op-main){padding-bottom:84px}
   .op-toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 12px)}

@@ -1,0 +1,12 @@
+import { chromium } from 'playwright-core';
+import { readFileSync } from 'node:fs';
+const p55 = readFileSync(new URL('./p55.js', import.meta.url), 'utf8');
+const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } }); const page = await ctx.newPage();
+await page.route(/rbi-q\.ru/, (r) => r.abort());
+await page.addInitScript({ content: `document.addEventListener('DOMContentLoaded', function () { ${p55} });` });
+await page.goto('http://localhost:8860/#/settings/company/objects'); await page.waitForTimeout(1500);
+const r = await page.evaluate(() => { const cat = window.__standRpc('pf_project_catalog', {}); const rep = cat.find((p) => /Репин/.test(p.name));
+  const objs = window.__standRpc('pf_project_places', { p_project: rep.id, p_parent: null });
+  const o = objs.map((x) => ({ n: x.name, k: x.object_kind, kids: window.__standRpc('pf_project_places', { p_project: rep.id, p_parent: x.id }).map((y) => y.name + '/' + y.node_type + '/' + y.child_count) }));
+  return { id: rep.id, o }; });
+console.log(JSON.stringify(r, null, 1)); await b.close();

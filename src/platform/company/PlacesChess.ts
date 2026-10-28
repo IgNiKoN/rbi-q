@@ -37,13 +37,19 @@ export function PlacesChess(props: {
             h('button', { type: 'button', className: 'op-chess__fl' + sel(cell.floor), title: cell.floor.name, 'aria-label': `${c.section.name} · ${cell.floor.name}`,
               onClick: () => props.onSelect(cell.floor) }, '⋮'),
             cell.places.length ? cell.places.map((p) => h('button', { key: p.id, type: 'button', className: 'op-chess__cell' + sel(p), 'data-place-id': p.id,
-              'aria-label': `${c.section.name} · ${cell.floor.name} · ${p.name}`, onClick: () => props.onSelect(p) },
+              'aria-label': `${c.section.name} · ${cell.floor.name} · ${p.name}`, title: placeTip(p), onClick: () => props.onSelect(p) },
               h('b', null, p.name), p.build_no ? h('small', null, 'стр. ' + p.build_no) : null))
               : h('span', { className: 'op-chess__empty' }, 'пусто'),
             cell.floor.node_type === 'floor' ? plus(cell.floor, '+', 'op-chess__cell op-chess__cell--add') : null);
         })]))),
     h('div', { className: 'op-chess__legend' }, 'Столбцы — секции, строки — этажи (верхний сверху), клетки — помещения: название и строительный №. ',
       'Щелчок по клетке — карточка места; «⋮» в начале строки — карточка этажа; «+» — следующее помещение или этаж, как в дереве.'));
+}
+
+/** P2-0056: подсказка клетки — название, стр. №, площадь, комнаты. */
+export function placeTip(p: PlaceNode): string {
+  return [p.name, p.build_no ? `стр. № ${p.build_no}` : '', p.area != null ? `${String(p.area).replace('.', ',')} м²` : '',
+    p.rooms == null ? '' : p.rooms === 0 ? 'студия' : `${p.rooms}-комн.`].filter(Boolean).join(' · ');
 }
 
 export const CHESS_CSS = `

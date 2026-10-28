@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
 
-/** Бандл раздела «Компания» (React) → js/dist/company/company.js (ES module, React внутри бандла). */
+/** Бандл раздела «Компания» (React) → js/dist/company/company.js (ES module, React внутри бандла).
+ *  P2-0056: библиотека Excel (загрузка списка помещений) — отдельный файл js/dist/company/chunks/*, грузится только при выборе файла. */
 export default defineConfig({
   define: {
     'process.env.NODE_ENV': JSON.stringify('production')
@@ -20,7 +21,8 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        inlineDynamicImports: true
+        inlineDynamicImports: false,
+        chunkFileNames: 'chunks/[name]-[hash].js'
       }
     },
     minify: true,
