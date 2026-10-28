@@ -20,6 +20,35 @@ export const marks = [];
 /** Поведение сервера в сценарии: refresh — 'ok' | 'invalid_grant' (вход недействителен). */
 export const mode = { refresh: 'ok' };
 
+/** P2-0059: «погода» подставного сервера. mode: 'ok' | 'hang' (принял запрос и молчит); latencyMs + kbps — медленная сеть;
+ *  failLeft — столько следующих запросов ответят failCode; drops — [{ re, left }]: запрос «МЕТОД путь» под re принят и выполнен, ответ потерян (обрыв), left раз. */
+export const net = { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [] };
+/** Что лежит на сервере: таблица → (id → строка); файлы хранилища «бакет/путь»; отправки rbi_inspections (id → сколько раз пришло). */
+export const rows = new Map();
+export const files = new Set();
+export const sends = new Map();
+export const flow = { inflight: 0, maxInflight: 0, hung: 0 };
+const held = [];
+/** Сбросить погоду и содержимое сервера перед сценарием. */
+export function resetNet() {
+  Object.assign(net, { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [] });
+  rows.clear(); files.clear(); sends.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
+}
+/** «Зависшие» запросы обрываются (связь пропала окончательно). */
+export function releaseHeld() { held.splice(0).forEach((s) => s.destroy()); }
+const table = (t) => { if (!rows.has(t)) rows.set(t, new Map()); return rows.get(t); };
+/** Запись на сервер: строки по id (повтор — та же строка, как upsert), файлы хранилища. */
+function apply(req, u, body) {
+  const t = u.pathname.match(/^\/rest\/v1\/([a-z_0-9]+)$/);
+  if (t && (req.method === 'POST' || req.method === 'PATCH')) {
+    let data = null; try { data = JSON.parse(body || 'null'); } catch { /* не JSON */ }
+    for (const r of [].concat(data || [])) if (r && r.id !== undefined) table(t[1]).set(String(r.id), r);
+    return;
+  }
+  const f = u.pathname.match(/^\/storage\/v1\/object\/(?!list\/|sign\/|public\/)(.+)$/);
+  if (f && (req.method === 'POST' || req.method === 'PUT')) files.add(decodeURIComponent(f[1]));
+}
+
 export const COMPANY = { id: '11111111-2222-3333-4444-555555555555', name: 'Тест-Строй', is_test: true, roles: ['Руководство'], modules: ['quality', 'construction', 'planfact'], can_manage_company: true };
 export const USER = { id: 'u-1', email: 'test@stand.local', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' };
 export const USER2 = { ...USER, id: 'u-2', email: 'other@stand.local' };
@@ -60,7 +89,26 @@ function api(req, res) {
   req.on('end', () => {
     const u = new URL(req.url, API);
     log.push(req.method + ' ' + u.pathname + u.search.slice(0, 60));
+    if (net.mode === 'hang') { flow.hung++; held.push(req.socket); return; }
+    if (net.failLeft > 0) { net.failLeft--; return json(res, net.failCode, { message: 'Service Unavailable', code: String(net.failCode) }); }
+    const isInsp = req.method === 'POST' && u.pathname === '/rest/v1/rbi_inspections';
+    if (isInsp) { flow.inflight++; flow.maxInflight = Math.max(flow.maxInflight, flow.inflight); res.on('close', () => { flow.inflight--; }); }
+    const wait = net.latencyMs + (net.kbps ? Math.round(Buffer.byteLength(body) * 8 / net.kbps) : 0);
+    const go = () => respond(req, res, u, body);
+    if (wait > 0) setTimeout(go, wait); else go();
+  });
+}
+
+function respond(req, res, u, body) {
+  {
     const mk = body.match(/[A-Z]+-MARK/g); if (mk && req.method !== 'GET') marks.push(req.method + ' ' + u.pathname + ' ' + [...new Set(mk)].join(','));
+    if (req.method === 'POST' && u.pathname === '/rest/v1/rbi_inspections') {
+      let data = []; try { data = [].concat(JSON.parse(body || '[]')); } catch { /* не JSON */ }
+      for (const r of data) if (r && r.id !== undefined) sends.set(String(r.id), (sends.get(String(r.id)) || 0) + 1);
+    }
+    apply(req, u, body);
+    const drop = net.drops.find((d) => d.left > 0 && d.re.test(req.method + ' ' + u.pathname));
+    if (drop) { drop.left--; return req.socket.destroy(); }
     const user = who(req, body);
     if (u.pathname === '/auth/v1/token') {
       if (u.searchParams.get('grant_type') === 'refresh_token' && mode.refresh === 'invalid_grant') {
@@ -76,9 +124,17 @@ function api(req, res) {
       if (req.method === 'GET' || req.method === 'HEAD') return json(res, 200, [], { 'Content-Range': '*/0' });
       return json(res, 201, []);
     }
+    const ls = u.pathname.match(/^\/storage\/v1\/object\/list\/([^/]+)$/);
+    if (ls) {
+      let q = {}; try { q = JSON.parse(body || '{}'); } catch { /* пусто */ }
+      const dir = ls[1] + '/' + String(q.prefix || '').replace(/\/$/, '') + '/';
+      const found = [...files].filter((f) => f.startsWith(dir) && !f.slice(dir.length).includes('/') && f.slice(dir.length).includes(String(q.search || '')));
+      return json(res, 200, found.map((f) => ({ name: f.slice(dir.length), id: f, metadata: { size: 1 } })));
+    }
+    if (u.pathname.startsWith('/storage/v1/object/') && (req.method === 'POST' || req.method === 'PUT')) return json(res, 200, { Key: u.pathname.slice(19), Id: 'f' });
     if (u.pathname.startsWith('/storage/v1/')) return json(res, 200, []);
     json(res, 404, { message: 'not found' });
-  });
+  }
 }
 
 async function app(req, res) {

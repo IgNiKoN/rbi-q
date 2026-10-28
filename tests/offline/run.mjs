@@ -3,11 +3,13 @@
 // базы PLATFORM2_DB; expired — устаревший вход без сети (120 с) и тихое обновление; stale14 — без связи больше 14 дней;
 // invalid — сервер отозвал вход; cache — код План/Факта и «Компании» без сети не удаляется; otheruser — чужие права на устройстве;
 // screen375, screen768, screen1440 — значок «Нет связи · не отправлено: N» 0 → 1 → 0, плашка, «Нужен интернет», «Данные на устройстве».
+// P2-0059: w-offline, w-slow, w-hang, w-flap, w-drop, w-5xx, w-tabs — «погоды» плохой связи (weather.mjs), замер в weather.json.
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { start, stop, log as apiLog, marks, mode, COMPANY } from './servers.mjs';
+import { weatherScenarios } from './weather.mjs';
 import { count, freshProfile, go, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
 
 const args = process.argv.slice(2);
@@ -319,7 +321,7 @@ async function screen(width, scheme) {
 }
 
 const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue, expired, stale14, invalid, cache, otheruser,
-  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark') };
+  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out) };
 const list = pick.length ? pick : Object.keys(SCENARIOS);
 for (const n of list) {
   if (!SCENARIOS[n]) { ok(false, 'нет сценария ' + n); continue; }

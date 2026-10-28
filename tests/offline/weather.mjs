@@ -1,0 +1,151 @@
+// P2-0059: «погоды» плохой связи для стенда test:offline. Каждая погода: вход с сетью → без сети записать 5 осмотров
+// с фото → включить погоду → ждать без нажатий (время телефона проматывается по минуте) → замер: дошло ли всё ровно один
+// раз, за сколько минут, сколько нажатий, были ли две отправки сразу. Таблица — weather.json в папке --out.
+// Боевой сервер не используется (servers.mjs — подставной, lib.mjs отрезает rbi-q.ru).
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { start, stop, net, rows, files, sends, flow, resetNet, releaseHeld } from './servers.mjs';
+import { freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
+
+const N = 5;               // осмотров с фото в каждой погоде
+const PHOTO_BYTES = 60000; // размер фото (≈ сжатое фото пункта)
+const MINUTES = 15;        // сколько минут телефона ждём «не отправлено: 0»
+export const measures = [];
+
+/** Осмотр с одним фото пункта — как пишет экран «Осмотр» (фото в app_photos, ссылка local://). */
+const savePhotoMark = (page, tag, i) => page.evaluate(async ([tag, i, size]) => {
+  const S = window.RBI.services;
+  const ref = 'local://p2w-' + tag + '-' + i + '-' + Date.now();
+  const buf = new Uint8Array(size); for (let k = 0; k < size; k += 4096) crypto.getRandomValues(buf.subarray(k, Math.min(size, k + 4096)));
+  await S.storage.put('app_photos', { id: ref, data: buf.buffer, mimeType: 'image/jpeg', sizeBytes: size });
+  const r = await S.inspections.save({ id: 'p2w-' + tag + '-' + i + '-' + Date.now(), date: new Date().toISOString(), object: 'WEATHER-MARK',
+    template: 'Земляные работы', status: 'done', engineer: 'Иванов Иван', state: { '1': 'bad' }, details: { '1': { comment: 'стенд' } }, photos: { '1': [ref] } });
+  return r && r.id;
+}, [tag, i, PHOTO_BYTES]);
+
+/** Счётчик проходов синхронизации: сколько начато и сколько шло одновременно (после «стопа» 90 с — тоже). */
+const watchPasses = (page) => page.evaluate(() => {
+  if (window.__p2w) return;
+  const w = window.__p2w = { passes: 0, active: 0, max: 0, syncingSince: 0, longest: 0 };
+  const orig = window.triggerSync;
+  window.triggerSync = async function () {
+    if (window.isSyncing) return orig.apply(this, arguments);
+    w.passes++; w.active++; w.max = Math.max(w.max, w.active);
+    try { return await orig.apply(this, arguments); } finally { w.active--; }
+  };
+  setInterval(() => {
+    if (window.isSyncing) { if (!w.syncingSince) w.syncingSince = Date.now(); w.longest = Math.max(w.longest, Date.now() - w.syncingSince); } else w.syncingSince = 0;
+  }, 1000);
+});
+
+const unsentOf = (page, ids) => page.evaluate(async (ids) => {
+  const all = await window.RBI.services.inspections.getActive();
+  return all.filter((r) => ids.includes(r.id) && (r.syncStatus || r.sync_status) !== 'synced').map((r) => (r.syncStatus || r.sync_status) + (r.syncBlockReason ? ':' + r.syncBlockReason : ''));
+}, ids).catch((e) => ['err ' + e.message.split('\n')[0]]);
+
+const pageNow = (page) => page.evaluate(() => Date.now()).catch(() => 0);
+const passInfo = (page) => page.evaluate(() => ({ ...(window.__p2w || {}), syncing: !!window.isSyncing })).catch(() => ({}));
+
+/** Один прогон погоды. w.apply(minute, ctx) — включает погоду на эту минуту; w.real — секунд реального времени на минуту. */
+async function weather(tag, w) {
+  note(`== ${tag}: ${w.title}`);
+  freshProfile(out(), tag);
+  resetNet();
+  await start();
+  const { ctx, page } = await launch(out(), tag, { width: 375, height: 812 });
+  await page.clock.install();
+  await signIn(page);
+  await open(page, 6000);
+  const pages = [page];
+  if (w.tabs === 2) { const p2 = await ctx.newPage(); await p2.route(/rbi-q\.ru/, (r) => r.abort()); await open(p2, 6000); pages.push(p2); }
+  for (const p of pages) await watchPasses(p);
+  // первая загрузка закончилась
+  for (let k = 0; k < 20 && (await passInfo(page)).syncing; k++) await page.waitForTimeout(1000);
+
+  await ctx.setOffline(true);
+  const ids = [];
+  for (let i = 0; i < N; i++) ids.push(await savePhotoMark(page, tag, i).catch((e) => 'ошибка: ' + e.message));
+  await page.waitForTimeout(1500);
+  const u0 = await unsentOf(page, ids);
+  ok(u0.length === N, `${tag}: без сети записано ${N} осмотров с фото, не отправлено: ${N}`, JSON.stringify(u0));
+  for (const p of pages) await p.evaluate(() => { const w = window.__p2w; Object.assign(w, { passes: 0, max: w.active }); }).catch(() => {});
+
+  const t0 = await pageNow(page);
+  let doneAt = null; let left = u0;
+  for (let m = 0; m < MINUTES; m++) {
+    await w.apply(m, ctx, page);
+    for (const p of pages) await p.clock.fastForward(60000).catch(() => {});
+    await page.waitForTimeout((w.real || 6) * 1000);
+    left = await unsentOf(page, ids);
+    const onServer = ids.filter((id) => rows.get('rbi_inspections')?.has(id)).length;
+    if (!left.length && onServer === N && doneAt === null) { doneAt = (await pageNow(page)) - t0; break; }
+  }
+  if (w.after) await w.after(ctx, page);
+  const insp = rows.get('rbi_inspections') || new Map();
+  const ph = rows.get('rbi_inspection_photos') || new Map();
+  const info = await Promise.all(pages.map(passInfo));
+  const syncedLocal = await page.evaluate(async (ids) => (await window.RBI.services.inspections.getActive())
+    .filter((r) => ids.includes(r.id) && (r.syncStatus || r.sync_status) === 'synced').map((r) => r.id), ids).catch(() => []);
+  const r = {
+    weather: tag, title: w.title,
+    delivered: ids.filter((id) => insp.has(id)).length,
+    lost: syncedLocal.filter((id) => !insp.has(id) || ![...ph.values()].some((x) => x.inspection_id === id)).length,
+    photoRows: ids.filter((id) => [...ph.values()].some((x) => x.inspection_id === id)).length,
+    files: [...files].filter((f) => ids.some((id) => f.includes(id))).length,
+    minutesToZero: doneAt === null ? null : Math.round(doneAt / 6000) / 10,
+    unsentLeft: left.length, unsentWhy: [...new Set(left)].slice(0, 3),
+    taps: 0,
+    maxSendsPerRecord: Math.max(0, ...ids.map((id) => sends.get(id) || 0)),
+    passes: info.reduce((a, x) => a + (x.passes || 0), 0),
+    concurrentPasses: Math.max(0, ...info.map((x) => x.max || 0)),
+    concurrentInspectionPosts: flow.maxInflight,
+    longestSyncingSec: Math.round(Math.max(0, ...info.map((x) => x.longest || 0)) / 1000),
+    hungRequests: flow.hung
+  };
+  measures.push(r);
+  note('замер: ' + JSON.stringify(r));
+  ok(true, `${tag}: погода прошла до конца`);
+  releaseHeld();
+  await ctx.close(); await stop();
+  writeFileSync(join(out(), 'weather.json'), JSON.stringify(measures, null, 2));
+  writeFileSync(join(out(), 'weather.md'), weatherTable(measures));
+  return r;
+}
+
+/** Таблица замеров для reports/P2-0059/measure-*.md. */
+export function weatherTable(list) {
+  const yes = (b) => (b ? 'да' : 'нет');
+  const head = '| Погода | Дошло (осмотр / фото) | Потеряно | Минут до «0» без нажатий | Не ушло (почему) | Нажатий | Отправок одной записи, макс. | Две отправки сразу | Дольше всего «Синхронизация…», с | Зависших запросов |\n|---|---|---|---|---|---|---|---|---|---|\n';
+  return head + list.map((r) => `| ${r.title} | ${r.delivered}/${N} · ${r.photoRows}/${N} | ${r.lost} | ${r.minutesToZero === null ? '> ' + MINUTES : r.minutesToZero} | ${r.unsentLeft}${r.unsentWhy.length ? ' (' + r.unsentWhy.join('; ') + ')' : ''} | ${r.taps} | ${r.maxSendsPerRecord} | ${yes(r.concurrentPasses > 1 || r.concurrentInspectionPosts > 1)} (проходов ${r.concurrentPasses}, запросов ${r.concurrentInspectionPosts}) | ${r.longestSyncingSec} | ${r.hungRequests} |`).join('\n') + '\n';
+}
+
+let OUT = null;
+const out = () => OUT;
+const set = (o) => (ctx) => Object.assign(net, o);
+const offline = (v) => (ctx) => ctx.setOffline(v);
+
+export function weatherScenarios(outDir) {
+  OUT = outDir;
+  return {
+    // нет сети 3 минуты, потом сеть хорошая
+    'w-offline': () => weather('w-offline', { title: 'нет сети 3 мин → сеть есть', apply: (m, ctx) => offline(m < 3)(ctx) }),
+    // задержка 2 с, 100 кбит/с всё время
+    'w-slow': () => weather('w-slow', { title: 'медленная: задержка 2 с, 100 кбит/с', real: 14,
+      apply: async (m, ctx) => { await offline(false)(ctx); set({ latencyMs: 2000, kbps: 100 })(); } }),
+    // «Wi-Fi без интернета»: сеть «есть», сервер принимает и молчит 5 минут, потом отвечает
+    'w-hang': () => weather('w-hang', { title: 'сеть есть, ничего не грузится 5 мин → сервер ответил',
+      apply: async (m, ctx) => { await offline(false)(ctx); net.mode = m < 5 ? 'hang' : 'ok'; } }),
+    // мигание: в каждой минуте 10 с есть / 20 с нет (реальное окно связи — 3 с из 9)
+    'w-flap': () => weather('w-flap', { title: 'мигание: 10 с есть / 20 с нет', real: 1,
+      apply: async (m, ctx, page) => { await offline(false)(ctx); await page.waitForTimeout(3000); await offline(true)(ctx); await page.waitForTimeout(5000); },
+      after: offline(false) }),
+    // обрыв: сервер принял фото и пачку осмотров, а ответ потерялся (по одному разу)
+    'w-drop': () => weather('w-drop', { title: 'обрыв посреди фото и посреди пачки (сервер принял, ответ потерян)',
+      apply: async (m, ctx) => { await offline(false)(ctx); if (m === 0) net.drops = [{ re: /^POST \/storage\/v1\/object\/(?!list)/, left: 1 }, { re: /^POST \/rest\/v1\/rbi_inspections$/, left: 1 }]; } }),
+    // сервер болеет: 500/503 на всё 3 минуты
+    'w-5xx': () => weather('w-5xx', { title: 'ответы 503 три минуты → сервер здоров',
+      apply: async (m, ctx) => { await offline(false)(ctx); net.failLeft = m < 3 ? 100000 : 0; } }),
+    // две вкладки одного устройства
+    'w-tabs': () => weather('w-tabs', { title: 'две вкладки, сеть есть', tabs: 2, apply: (m, ctx) => offline(false)(ctx) })
+  };
+}
