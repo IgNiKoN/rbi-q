@@ -210,3 +210,50 @@ test('мост без связи: права Качества и объекты 
   assert.equal(s2!.role, 'engineer', 'роль — из копии прав, не «гость»');
   assert.equal(JSON.parse(store.getItem('rbi_sync_config')!).enabled, true, 'синхронизация не выключена (запишется и уйдёт позже)');
 });
+
+// --- этап 4: значок «Нет связи · не отправлено: N», строка «Данные на устройстве» ---
+import { chipView, deviceLine } from '../net-status.ts';
+import { renderRescueSheet } from '../offline-rescue.ts';
+import { Window } from 'happy-dom';
+
+test('значок: без связи — «Нет связи · не отправлено: N» (телефон — число); со связью — только когда есть неотправленное', () => {
+  const off = chipView({ offline: true, unsent: 0 }, false);
+  assert.equal(off.show, true);
+  assert.match(off.html, /Нет связи/);
+  assert.match(off.html, /не отправлено: <b>0<\/b>/);
+  assert.equal(off.label, 'Нет связи, не отправлено: 0');
+  const phone = chipView({ offline: true, unsent: 3 }, true);
+  assert.doesNotMatch(phone.html, /Нет связи/);
+  assert.match(phone.html, /<b>3<\/b>/);
+  assert.equal(chipView({ offline: false, unsent: 0 }, false).show, false, 'связь есть, всё отправлено — значка нет (облачко как раньше)');
+  const pend = chipView({ offline: false, unsent: 2 }, false);
+  assert.equal(pend.show, true);
+  assert.doesNotMatch(pend.html, /Нет связи/);
+  assert.equal(deviceLine({ offline: false, unsent: 0 }), null);
+  assert.equal(deviceLine({ offline: true, unsent: 1 })!.title, 'Нет связи · не отправлено: 1');
+});
+
+test('окно «Найдено N записей»: список, «Позже» закрывает, «Перенести» — ошибка видна, повтор возможен', async () => {
+  const doc = new Window().document as unknown as Document;
+  let later = 0, tries = 0;
+  const el = renderRescueSheet(doc, { companyName: 'Тест-Строй', onLater: () => { later++; },
+    orphans: [{ store: 'app_history', id: '1', type: 'Осмотр', date: '2026-10-27T09:14:00', object: 'Секция 1' }, { store: 'app_history', id: '2', type: 'Осмотр', date: '', object: '' }],
+    onMove: async () => (++tries === 1 ? 'Не удалось перенести. Попробуйте ещё раз' : null) });
+  doc.body.appendChild(el);
+  assert.match(el.textContent || '', /Найдено 2 записи, сделанные без связи/);
+  assert.match(el.textContent || '', /«Тест-Строй»/);
+  assert.equal(el.querySelectorAll('li').length, 2);
+  assert.match(el.querySelectorAll('li')[1].textContent || '', /без даты.*без объекта/);
+  (el.querySelector('[data-testid=p2-rescue-move]') as HTMLButtonElement).click();
+  await new Promise((r) => setTimeout(r, 5));
+  assert.match(el.textContent || '', /Не удалось перенести/);
+  assert.equal(doc.body.contains(el), true, 'ошибка — окно остаётся');
+  (el.querySelector('[data-testid=p2-rescue-move]') as HTMLButtonElement).click();
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(doc.body.contains(el), false);
+  const one = renderRescueSheet(doc, { companyName: 'А', orphans: [{ store: 's', id: '1', type: 'Осмотр', date: '', object: '' }], onMove: async () => null, onLater: () => { later++; } });
+  assert.match(one.textContent || '', /Найдено 1 запись, сделанная без связи/);
+  doc.body.appendChild(one);
+  (one.querySelector('[data-testid=p2-rescue-later]') as HTMLButtonElement).click();
+  assert.equal(later, 1);
+});

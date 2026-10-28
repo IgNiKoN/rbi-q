@@ -74,6 +74,16 @@ function route() {
     if (!(window.RBI && window.RBI.platform2)) return;   // вход платформы ещё не решил, кто вошёл — ждём rbi:platform-access
     if (!isAllowed()) { showNotConnected(); return; }
     loadBundle().then(function (m) { if (onRoute() && isAllowed()) m.showView(); }).catch(function (e) {
+        // P2-0058: без связи код раздела не скачан (не открывали с сетью) — «Нужен интернет», а не пустой экран
+        var ns = window.RBI && window.RBI.netStatus;
+        if (ns && typeof ns.isOffline === 'function' && ns.isOffline() && onRoute()) {
+            var el = ensureView();
+            document.querySelectorAll('.view-section').forEach(function (n) { n.classList.remove('active'); });
+            el.classList.add('active');
+            el.classList.remove('hidden');
+            ns.needInternet(el, '«План/Факт»');
+            return;
+        }
         console.error('[planfact] модуль не загрузился', e);
     });
 }

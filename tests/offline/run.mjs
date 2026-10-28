@@ -1,7 +1,8 @@
 // P2-0058: стенд «без сети» (npm run test:offline). node tests/offline/run.mjs [сценарий …] [--out <папка>]
 // Сценарии: cold375, cold1440 — холодный запуск без сети (меню, база компании) и запись без сети; rescue — «ничьи» записи общей
 // базы PLATFORM2_DB; expired — устаревший вход без сети (120 с) и тихое обновление; stale14 — без связи больше 14 дней;
-// invalid — сервер отозвал вход; cache — код План/Факта и «Компании» без сети не удаляется; otheruser — чужие права на устройстве.
+// invalid — сервер отозвал вход; cache — код План/Факта и «Компании» без сети не удаляется; otheruser — чужие права на устройстве;
+// screen375, screen768, screen1440 — значок «Нет связи · не отправлено: N» 0 → 1 → 0, плашка, «Нужен интернет», «Данные на устройстве».
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -259,7 +260,66 @@ async function otheruser() {
   await ctx.close();
 }
 
-const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue, expired, stale14, invalid, cache, otheruser };
+/** «Нужен интернет» на экране (React-раздел или точка входа, когда код раздела не скачан). */
+const needInternet = (page) => page.evaluate(() => [...document.querySelectorAll('[data-testid=co-need-internet], [data-testid=pf-need-internet], [data-testid=p2-need-internet]')]
+  .some((e) => e.getClientRects().length > 0 && /Нужен интернет/.test(e.textContent)));
+
+/** Экран без связи (макет этапа 3): плашка, значок 0 → 1 → 0 в той же странице, «Нужен интернет», строка в «Данные на устройстве». */
+async function screen(width, scheme) {
+  const tag = 'screen' + width + (scheme === 'dark' ? 'd' : '');
+  const height = width < 768 ? 812 : width < 1280 ? 1024 : 900;
+  note(`== ${tag}: без сети — значок и экраны по макету (${scheme})`);
+  freshProfile(out, tag);
+  marks.length = 0;
+  await start();
+  let { ctx, page } = await launch(out, tag, { width, height, scheme });
+  await signIn(page);
+  await go(page, '#/quality/engineer', 3000);
+  await page.reload(); await page.waitForTimeout(6000);
+  const chipOn = await page.locator('[data-testid=p2-net]').count();
+  ok(chipOn === 0, `${tag}: с сетью и без неотправленного значка нет (облачко как раньше)`);
+  await ctx.close(); await stop();
+
+  ({ ctx, page } = await launch(out, tag, { width, height, offline: true, scheme }));
+  await open(page, 4000);
+  const banner = await page.locator('[data-testid=p2-net-banner]').innerText().catch(() => '');
+  ok(/Нет связи — данные сохраняются на телефоне/.test(banner), `${tag}: плашка при запуске без связи`);
+  await page.screenshot({ path: join(out, `${tag}-start.png`) });
+  await page.waitForTimeout(7000);
+  ok(!(await page.locator('[data-testid=p2-net-banner]').count()), `${tag}: плашка скрылась сама`);
+  const chip = () => page.locator('[data-testid=p2-net]').getAttribute('aria-label').catch(() => null);
+  ok((await chip()) === 'Нет связи, не отправлено: 0', `${tag}: значок «Нет связи, не отправлено: 0»`, String(await chip()));
+  const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  ok(wide <= 0, `${tag}: без прокрутки вбок`, String(wide));
+  await saveMark(page, 'SCREEN-MARK');
+  let c1 = null;
+  for (let i = 0; i < 6 && c1 !== 'Нет связи, не отправлено: 1'; i++) { await page.waitForTimeout(4000); c1 = await chip(); }
+  ok(c1 === 'Нет связи, не отправлено: 1', `${tag}: записал осмотр — «не отправлено: 1»`, String(c1));
+  await page.screenshot({ path: join(out, `${tag}-unsent.png`) });
+  await go(page, '#/settings/company/objects', 4000);
+  ok(await needInternet(page).catch(() => false), `${tag}: «Компания» — «Нужен интернет»`);
+  await page.screenshot({ path: join(out, `${tag}-company.png`), fullPage: true });
+  await go(page, '#/planfact', 4000);
+  ok(await needInternet(page).catch(() => false), `${tag}: План/Факт — «Нужен интернет»`);
+  await page.screenshot({ path: join(out, `${tag}-planfact.png`), fullPage: true });
+  await page.locator('[data-testid=p2-net]').click();
+  await page.waitForTimeout(3000);
+  const dev = await page.locator('[data-testid=p2-net-device]').innerText().catch(() => '');
+  ok(/#\/settings\/my\/device/.test(await page.evaluate(() => location.hash)) && /не отправлено: 1/.test(dev), `${tag}: нажатие на значок — «Данные на устройстве», строка «не отправлено: 1»`);
+  await page.screenshot({ path: join(out, `${tag}-device.png`), fullPage: true });
+  await go(page, '#/quality/engineer', 2000);
+  await start();
+  await ctx.setOffline(false);
+  let c2 = 'x';
+  for (let i = 0; i < 24 && c2 !== null; i++) { await page.waitForTimeout(5000); c2 = await page.locator('[data-testid=p2-net]').count() ? await chip() : null; }
+  note('после возврата сети значок: ' + c2 + '; дошло: ' + JSON.stringify(marks));
+  ok(c2 === null, `${tag}: сеть вернулась — значок исчез (не отправлено: 0)`);
+  ok(count(marks, 'SCREEN-MARK') === 1, `${tag}: осмотр дошёл до сервера ровно 1 раз`, String(count(marks, 'SCREEN-MARK')));
+  await ctx.close(); await stop();
+}
+
+const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue, expired, stale14, invalid, cache, otheruser,
+  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark') };
 const list = pick.length ? pick : Object.keys(SCENARIOS);
 for (const n of list) {
   if (!SCENARIOS[n]) { ok(false, 'нет сценария ' + n); continue; }

@@ -80,7 +80,12 @@ function loadBundle() {
 
 export function mount(el) {
     if (!allowed()) return Promise.resolve();
-    return loadBundle().then(function (m) { if (allowed() && el.isConnected) m.mount(el); });
+    return loadBundle().then(function (m) { if (allowed() && el.isConnected) m.mount(el); }, function (e) {
+        // P2-0058: без связи код раздела не скачан (не открывали с сетью) — «Нужен интернет», а не пустой экран
+        var ns = window.RBI && window.RBI.netStatus;
+        if (ns && typeof ns.isOffline === 'function' && ns.isOffline() && el.isConnected) { ns.needInternet(el, '«Компания»'); return; }
+        throw e;
+    });
 }
 export function unmount() { if (loaded) loaded.unmount(); }
 

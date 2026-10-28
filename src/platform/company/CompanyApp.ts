@@ -12,6 +12,7 @@
  * здесь — только внутренние вкладки «Сотрудники · Роли и права» и строка «почта · компания · Выйти».
  */
 import { createElement as h, useEffect, useRef, useState } from 'react';
+import { NeedInternet, useOfflineEntry } from '../auth/need-internet.ts';
 import type { ReactElement } from 'react';
 import type { AuthApi } from '../auth/auth.service.ts';
 import { openPlatformLogin, platformSignOut } from '../auth/shell-user.ts';
@@ -108,6 +109,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
   const [tab, setTab] = useState<Tab | null>(tabFromHash(window.location.hash));
   const [rights, setRights] = useState<CompanyRights>({ admin: false, projects: false, units: false });
   const tabsRef = useRef<HTMLDivElement | null>(null);
+  const offline = useOfflineEntry();   // P2-0058: вошёл почтой, связи нет — «Нужен интернет» (офлайн «Компании» — этап В)
   // телефон: активная вкладка видна в полосе (прокрутка только полосы, не страницы)
   useEffect(() => {
     const strip = tabsRef.current;
@@ -167,6 +169,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
     setWho(''); setCompanies([]); setCompanyId(''); setRights({ admin: false, projects: false, units: false }); setMode('login');
   }
 
+  if (offline) return h(NeedInternet, { section: '«Компания»', testId: 'co-need-internet' });
   if (!auth || !api) {
     return h('div', { className: 'pf-root pf-muted', 'data-testid': 'co-offline' }, 'Раздел «Компания» работает только с сервером — вход не настроен.');
   }

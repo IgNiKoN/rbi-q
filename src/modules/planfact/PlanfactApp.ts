@@ -11,6 +11,7 @@ import { PageTabs } from '../../platform/ui/page.ts';
 import type { ReactElement, ReactNode } from 'react';
 import type { AccessEntry, AuthApi } from '../../platform/auth/auth.service.ts';
 import { PLATFORM_AUTH_CSS } from '../../platform/auth/LoginForm.ts';
+import { NeedInternet, useOfflineEntry } from '../../platform/auth/need-internet.ts';
 import { CompanyScope } from '../../platform/company/CompanyScope.ts';
 import type { CoreApi } from '../../platform/core/core.service.ts';
 import { VorTab } from './vor/VorTab.ts';
@@ -124,6 +125,7 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
   const [p2, setP2] = useState(readPlatformView());
   const [pickEl, setPickEl] = useState<HTMLElement | null>(null);       // P2-0041: места в шапке раздела для выбора объекта
   const [actEl, setActEl] = useState<HTMLElement | null>(null);         // и главного действия экрана (InHead)
+  const offline = useOfflineEntry();   // P2-0058: вошёл почтой, связи нет — «Нужен интернет» (офлайн План/Факта — этап В)
 
   // P2-0026: в демо (без входа) меню оболочки показывает все подвкладки, закрытые открывают подсказку «Войдите».
   useEffect(() => { if (onDemo) onDemo(mode === 'demo'); }, [mode]);
@@ -222,6 +224,7 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
   };
   const go = (sub: Sub): void => nav(`${BASE}/directories/${sub}`);
   // «ВОР»: при доступе к компании; в локальном демо-режиме — только просмотр разбора файла (сервер не нужен).
+  if (offline) return h(NeedInternet, { section: '«План/Факт»', testId: 'pf-need-internet' });
   const vor = route.page === 'vor' && ((mode === 'authed' && companies.length > 0) || mode === 'demo');
   // «Смета»: только с правом planfact.estimate.manage (сервер проверяет каждый вызов).
   const est = route.page === 'estimate' && mode === 'authed' && canEstimate && estimate && vorApi;

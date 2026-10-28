@@ -17,6 +17,7 @@ import { showShellUser, restoreShellUser } from './shell-user.ts';
 import { cleanupLegacyDevice, deleteIndexedDb } from './legacy-device.ts';
 import { EMPTY_SLOT_KEY, RESCUE_CSS, moveOrphans, renderRescueSheet, scanOrphans } from './offline-rescue.ts';
 import type { IsUnsent } from './offline-rescue.ts';
+import { startNetStatus } from './net-status.ts';
 
 type Rbi = Record<string, unknown> & {
   services?: { shell?: { renderSidebar?: () => void; renderMobileModuleMenu?: () => void } };
@@ -287,7 +288,12 @@ function cleanupLegacy(): void {
 }
 
 export function start(): Promise<PlatformState> {
-  if (!started) { cleanupLegacy(); started = getPlatform().boot(); }
+  if (!started) {
+    cleanupLegacy();
+    started = getPlatform().boot();
+    // P2-0058: значок «Нет связи · не отправлено: N», плашка при запуске без связи, строка в «Данные на устройстве»
+    void started.then(() => startNetStatus({ platform: () => getPlatform().getState(), navigate: (p) => go(p) }));
+  }
   else void started.then((st) => { if (st.mode === 'none') showLogin(); });
   return started;
 }

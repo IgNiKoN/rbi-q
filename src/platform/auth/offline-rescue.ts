@@ -147,6 +147,31 @@ export async function scanOrphans(idb: IDBFactory, from: string, isUnsent: IsUns
   return found;
 }
 
+/** P2-0058 (З6): сколько записей работы в базе ещё не отправлено (то же правило, что у переноса; демо и системные — нет). */
+export async function countUnsent(idb: IDBFactory, name: string, isUnsent: IsUnsent): Promise<number> {
+  const db = await openExisting(idb, name);
+  if (!db) return 0;
+  let n = 0;
+  try {
+    for (const store of Array.from(db.objectStoreNames)) {
+      if (!(store in RECORD_STORES)) continue;
+      await new Promise<void>((resolve, reject) => {
+        const rq = db.transaction(store, 'readonly').objectStore(store).openCursor();
+        rq.onsuccess = () => {
+          const c = rq.result;
+          if (!c) return resolve();
+          if (pickOrphans(store, [c.value as Rec], isUnsent).length) n++;
+          c.continue();
+        };
+        rq.onerror = () => reject(rq.error);
+      });
+    }
+  } finally {
+    db.close();
+  }
+  return n;
+}
+
 /** Перенести найденное из from в to; в from — пометка. Возвращает число перенесённых записей (без вложений). */
 export async function moveOrphans(idb: IDBFactory, from: string, to: string, found: Found,
   opts: { slot: string; projectCode: string; author?: string; now?: string }): Promise<number> {
@@ -182,32 +207,40 @@ export async function moveOrphans(idb: IDBFactory, from: string, to: string, fou
   return moved;
 }
 
-// ---------- Лист «Найдено N записей» (окончательный вид — по макету этапа 3) ----------
+// ---------- Окно «Найдено N записей» (макет утверждён владельцем 28.10.2026, reports/P2-0058/stage3) ----------
 
 export const RESCUE_CSS = `
 .p2-rescue-wrap{position:fixed;inset:0;z-index:1300}
 .p2-rescue-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
-.p2-rescue{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow-y:auto;
-  padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:var(--card-bg);color:var(--text-main);
-  border-top:1px solid var(--card-border);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.25)}
-.p2-rescue b{font-size:16px;font-weight:600}
-.p2-rescue p{margin:0;font-size:13px;color:var(--text-muted);overflow-wrap:anywhere}
-.p2-rescue ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
-.p2-rescue li{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;padding:8px 10px;border:1px solid var(--card-border);border-radius:10px;overflow-wrap:anywhere}
-.p2-rescue li span{color:var(--text-muted)}
-.p2-rescue__foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-.p2-rescue__foot button{min-height:44px;padding:0 16px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main)}
+.p2-rescue{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;
+  padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));background:var(--card-bg);color:var(--text-main);border-radius:20px 20px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.25)}
+.p2-rescue__grip{width:40px;height:4px;border-radius:4px;background:var(--card-border);align-self:center;margin-top:-6px}
+.p2-rescue__head{display:flex;gap:12px;align-items:flex-start}
+.p2-rescue__ico{width:44px;height:44px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--warning,#b8844a);background:color-mix(in srgb,var(--warning,#b8844a) 14%,transparent)}
+.p2-rescue__head b{display:block;font-size:17px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.p2-rescue__head span{display:block;margin-top:4px;font-size:13.5px;line-height:1.4;color:var(--text-muted);overflow-wrap:anywhere}
+.p2-rescue ul{margin:0;padding:0;list-style:none;border:1px solid var(--card-border);border-radius:14px;overflow:hidden}
+.p2-rescue li{display:grid;grid-template-columns:92px minmax(0,1fr);gap:2px 10px;padding:10px 12px;font-size:13.5px;border-top:1px solid var(--card-border)}
+.p2-rescue li:first-child{border-top:0}
+.p2-rescue li i{font-style:normal;color:var(--text-muted);grid-row:span 2;font-size:12.5px;line-height:1.35}
+.p2-rescue li strong{font-weight:700}
+.p2-rescue li em{font-style:normal;color:var(--text-muted);font-size:12.5px;overflow-wrap:anywhere}
+.p2-rescue p{margin:0;font-size:12.5px;color:var(--text-muted)}
+.p2-rescue__foot{display:flex;gap:8px;justify-content:flex-end}
+.p2-rescue__foot button{flex:1 1 0;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main)}
 .p2-rescue__foot button[data-primary]{border:0;background:var(--accent,var(--primary));color:#fff}
 .p2-rescue__foot button:disabled{opacity:.6;cursor:default}
-@media (min-width:900px){.p2-rescue{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:520px;border-radius:16px;border:1px solid var(--card-border)}}`;
+@media (min-width:768px){.p2-rescue{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:540px;border-radius:20px}
+  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`;
 
 const LIST_LIMIT = 50;
+const ICON_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
 
-export function fmtDate(iso: string): string {
+export function fmtDate(iso: string): [string, string] {
   const d = new Date(iso);
-  if (!iso || Number.isNaN(d.getTime())) return iso || 'без даты';
+  if (!iso || Number.isNaN(d.getTime())) return [iso || 'без даты', ''];
   const p = (n: number): string => String(n).padStart(2, '0');
-  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  return [p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear(), p(d.getHours()) + ':' + p(d.getMinutes())];
 }
 
 export function renderRescueSheet(doc: Document, o: { companyName: string; orphans: Orphan[]; onMove: () => Promise<string | null>; onLater: () => void }): HTMLElement {
@@ -219,31 +252,39 @@ export function renderRescueSheet(doc: Document, o: { companyName: string; orpha
   };
   const wrap = el('div', { class: 'p2-rescue-wrap', 'data-testid': 'p2-rescue' });
   const back = el('div', { class: 'p2-rescue-backdrop', 'aria-hidden': 'true' });
-  const box = el('div', { class: 'p2-rescue', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Записи без связи' });
+  const box = el('div', { class: 'p2-rescue', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Записи, сделанные без связи' });
   const n = o.orphans.length;
-  box.append(el('b', {}, 'Найдено ' + n + ' ' + plural(n, 'запись', 'записи', 'записей') + ', сделанных без связи'),
-    el('p', {}, 'Они остались на этом устройстве и не отправлены. Перенести в «' + o.companyName + '» и отправить?'));
+  const ico = el('div', { class: 'p2-rescue__ico' });
+  ico.innerHTML = ICON_OFF;
+  const txt = el('div');
+  txt.append(el('b', {}, 'Найдено ' + n + ' ' + plural(n, 'запись', 'записи', 'записей') + ', ' + (n % 10 === 1 && n % 100 !== 11 ? 'сделанная' : 'сделанные') + ' без связи'),
+    el('span', {}, (n === 1 ? 'Она осталась' : 'Они остались') + ' на этом телефоне и не отправлены. Перенести в «' + o.companyName + '» и отправить?'));
+  const head = el('div', { class: 'p2-rescue__head' });
+  head.append(ico, txt);
   const ul = el('ul', { 'data-testid': 'p2-rescue-list' });
   for (const x of o.orphans.slice(0, LIST_LIMIT)) {
+    const [day, time] = fmtDate(x.date);
     const li = el('li');
-    li.append(el('span', {}, fmtDate(x.date)), el('strong', {}, x.type), doc.createTextNode(x.object || 'без объекта'));
+    const when = el('i', {}, day);
+    if (time) { when.append(el('br')); when.append(doc.createTextNode(time)); }
+    li.append(when, el('strong', {}, x.type), el('em', {}, x.object || 'без объекта'));
     ul.append(li);
   }
   if (n > LIST_LIMIT) ul.append(el('li', {}, 'и ещё ' + (n - LIST_LIMIT)));
-  const msg = el('p', { 'data-testid': 'p2-rescue-msg', role: 'status' });
+  const note = el('p', { 'data-testid': 'p2-rescue-msg', role: 'status' }, 'Фото переносятся вместе с записями. Демо-данные и задачи, созданные системой, не переносятся.');
   const later = el('button', { type: 'button', 'data-testid': 'p2-rescue-later' }, 'Позже');
   const move = el('button', { type: 'button', 'data-primary': '', 'data-testid': 'p2-rescue-move' }, 'Перенести и отправить');
   const foot = el('div', { class: 'p2-rescue__foot' });
   foot.append(later, move);
-  box.append(ul, msg, foot);
+  box.append(el('div', { class: 'p2-rescue__grip', 'aria-hidden': 'true' }), head, ul, note, foot);
   wrap.append(back, box);
   const close = (): void => { wrap.remove(); };
   later.addEventListener('click', () => { close(); o.onLater(); });
   back.addEventListener('click', () => { close(); o.onLater(); });
   move.addEventListener('click', () => {
-    move.disabled = true; later.disabled = true; msg.textContent = 'Переносим…';
+    move.disabled = true; later.disabled = true; note.textContent = 'Переносим…';
     void o.onMove().then((err) => {
-      if (err) { msg.textContent = err; move.disabled = false; later.disabled = false; } else close();
+      if (err) { note.textContent = err; move.disabled = false; later.disabled = false; } else close();
     });
   });
   return wrap;

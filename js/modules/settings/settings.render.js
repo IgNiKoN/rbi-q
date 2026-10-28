@@ -218,6 +218,8 @@ var SettingsRender = {
                 </details>
             </div>
             <div id="settings-panel-my-device" data-settings-panel="my-device" class="space-y-3" hidden>
+                <!-- P2-0058: «Нет связи · не отправлено: N» — заполняет вход платформы (src/platform/auth/net-status.ts) -->
+                <div id="p2-net-status-slot"></div>
                 <!-- СИНХРОНИЗАЦИЯ КОМАНДЫ -->
                 <details
                     class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden"
