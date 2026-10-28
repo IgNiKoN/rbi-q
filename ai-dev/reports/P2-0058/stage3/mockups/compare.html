@@ -1,0 +1,137 @@
+<title>Работа без сети — макет P2-0058</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Лента разделов: слева «сейчас», справа «предлагаю»; фильтр размера экрана сверху. Палитра — цвета приложения RBI. */
+:root{
+  --bg:#f7f4ee; --card:#ffffff; --fg:#172330; --muted:#626e7b; --line:rgba(28,43,57,.14);
+  --accent:#c49a5f; --accent-ink:#8a6430; --warn:#b8844a; --now:#9f4c45;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111821;--card:#18222d;--fg:#e8edf2;--muted:#9aa6b2;--line:rgba(232,237,242,.14);--accent:#c9a46a;--accent-ink:#e0bd85;--warn:#d4a065;--now:#d98b84;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111821;--card:#18222d;--fg:#e8edf2;--muted:#9aa6b2;--line:rgba(232,237,242,.14);--accent:#c9a46a;--accent-ink:#e0bd85;--warn:#d4a065;--now:#d98b84;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1440px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--f-head);text-wrap:balance;margin:0}
+h1{font-size:28px;line-height:1.15}
+h2{font-size:21px}
+h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+p{margin:0;max-width:72ch}
+.lead{color:var(--muted)}
+.ask{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.ask b{color:var(--accent-ink)}
+.ask ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.filters button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:600 14px var(--f-body);cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.filters button:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+section{display:flex;flex-direction:column;gap:12px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.pair[data-size="375"]{grid-template-columns:repeat(2,minmax(0,390px));justify-content:start}
+.pair[data-size="768"]{grid-template-columns:repeat(2,minmax(0,560px));justify-content:start}
+figure{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+figcaption{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+figcaption.now{color:var(--now)}
+figcaption.new{color:var(--accent-ink)}
+figure img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.variant{display:flex;flex-direction:column;gap:8px}
+.variant > span{font-size:13px;color:var(--muted)}
+table{border-collapse:collapse;width:100%;min-width:640px;background:var(--card)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-top:1px solid var(--line);font-size:14px}
+th{border-top:0;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+td:first-child{font-weight:600}
+@media (max-width:700px){.pair,.pair[data-size="375"],.pair[data-size="768"]{grid-template-columns:1fr}h1{font-size:23px}}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap">
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h3>P2-0058 · этап 3 · показ</h3>
+    <h1>Работа без сети: что увидит человек</h1>
+    <p class="lead">Слева — как сейчас (приложение этой ветки без интернета, на стенде), справа — предлагаю. Сами записи уже не теряются (этапы 1–2 готовы); здесь — только то, что человек видит на экране.</p>
+  </header>
+
+  <div class="ask">
+    <b>Что нужно от вас:</b> посмотреть пять экранов и ответить «Макет подходит» или что поменять.
+    <ol>
+      <li>Значок в шапке: «Нет связи · не отправлено: N» (на телефоне — перечёркнутое облако и число). Нажатие — «Данные на устройстве».</li>
+      <li>Плашка при запуске без сети: «Нет связи — данные сохраняются на телефоне» (один раз, сама скрывается).</li>
+      <li>«Компания» и План/Факт без сети: «Нужен интернет» вместо «нет прав» / «нет проектов».</li>
+      <li>«Данные на устройстве»: сверху строка, сколько записей ждёт отправки.</li>
+      <li>Окно «Найдено N записей, сделанных без связи» — для записей, которые застряли на телефонах до исправления.</li>
+    </ol>
+  </div>
+
+  <div class="filters" role="group" aria-label="Размер экрана">
+    <button type="button" id="f-375" data-f="375" aria-pressed="true">Телефон</button>
+    <button type="button" id="f-1440" data-f="1440" aria-pressed="false">Компьютер</button>
+    <button type="button" id="f-768" data-f="768" aria-pressed="false">Планшет</button>
+    <button type="button" id="f-all" data-f="all" aria-pressed="false">Все размеры</button>
+  </div>
+
+  <div id="sections"></div>
+
+  <section>
+    <h2>Опись: что меняется и что остаётся</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Элемент</th><th>Сейчас</th><th>Предлагаю</th></tr></thead>
+      <tbody>
+        <tr><td>Облачко синхронизации в шапке</td><td>Зелёное облачко, и без сети тоже («всё отправлено»)</td><td>С сетью — как сейчас. Без сети на его месте значок «Нет связи · не отправлено: N». Когда связь есть, но что-то ждёт отправки, — «не отправлено: N»</td></tr>
+        <tr><td>Плашка при запуске</td><td>Нет</td><td>Один раз при запуске без сети, скрывается сама через несколько секунд или по ×</td></tr>
+        <tr><td>«Компания» без сети</td><td>«Нет права управлять компанией» — неправда</td><td>«Нужен интернет», кнопки «Открыть Качество» и «Повторить»</td></tr>
+        <tr><td>План/Факт без сети</td><td>«Нет доступных проектов. Обратитесь к администратору» — неправда</td><td>То же «Нужен интернет»</td></tr>
+        <tr><td>«Данные на устройстве»</td><td>Синхронизация команды, хранилище — без изменений</td><td>Всё на месте; сверху добавлена строка «не отправлено: N» (только когда N &gt; 0 или нет связи)</td></tr>
+        <tr><td>Записи, застрявшие на телефоне до исправления</td><td>Не видны и не отправляются</td><td>Окно со списком (дата, тип, объект), «Перенести и отправить» / «Позже». Демо и задачи, созданные системой, не предлагаются</td></tr>
+        <tr><td>Меню, осмотры, вход</td><td colspan="2">Уже исправлено этапами 1–2: без сети меню полное, осмотры на месте, экрана «Вход» нет до 14 дней</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+</div>
+
+<script>
+const SECTIONS = [
+  { id: 'start', title: '1. Запуск без сети: значок и плашка', note: 'Открыли приложение без интернета. Сверху на несколько секунд — плашка; в шапке — значок, пока записанного без связи нет: 0.' },
+  { id: 'unsent', title: '2. Записали осмотр без сети', note: 'Значок показывает «не отправлено: 1». Когда связь вернётся, станет 0 и значок исчезнет.' },
+  { id: 'company', title: '3. «Компания» без сети', note: 'Раздел работает только онлайн — честно об этом, без «нет прав».' },
+  { id: 'planfact', title: '4. План/Факт без сети', note: 'То же: «Нужен интернет», а не «нет проектов».' },
+  { id: 'device', title: '5. «Данные на устройстве» (куда ведёт значок)', note: 'Сверху — сколько записей ждёт отправки; остальное как было.' },
+  { id: 'rescue', title: '6. Окно «Найдено N записей, сделанных без связи»', note: 'Показывается один раз при входе с интернетом, если на телефоне остались записи, сделанные до исправления. Список — пример.' }
+];
+const VARIANTS = [
+  { key: '375', size: '375', label: 'Телефон, светлая' }, { key: '375-dark', size: '375', label: 'Телефон, тёмная' },
+  { key: '1440', size: '1440', label: 'Компьютер, светлая' }, { key: '1440-dark', size: '1440', label: 'Компьютер, тёмная' },
+  { key: '768', size: '768', label: 'Планшет, светлая' }
+];
+const host = document.getElementById('sections');
+for (const s of SECTIONS) {
+  const sec = document.createElement('section');
+  sec.innerHTML = '<h2></h2><p class="lead"></p>';
+  sec.querySelector('h2').textContent = s.title;
+  sec.querySelector('p').textContent = s.note;
+  for (const v of VARIANTS) {
+    if (s.id === 'rescue' && v.size === '768') continue;
+    const box = document.createElement('div');
+    box.className = 'variant'; box.dataset.size = v.size;
+    box.innerHTML = '<span></span><div class="pair"><figure><figcaption class="now">Сейчас</figcaption><img loading="lazy" alt=""></figure>' +
+      '<figure><figcaption class="new">Предлагаю</figcaption><img loading="lazy" alt=""></figure></div>';
+    box.querySelector('span').textContent = v.label;
+    box.querySelector('.pair').dataset.size = v.size;
+    const [a, b] = box.querySelectorAll('img');
+    a.src = 'img/now-' + s.id + '-' + v.key + '.jpg'; a.alt = 'Сейчас: ' + s.title + ', ' + v.label;
+    b.src = 'img/new-' + s.id + '-' + v.key + '.jpg'; b.alt = 'Предлагаю: ' + s.title + ', ' + v.label;
+    sec.appendChild(box);
+  }
+  host.appendChild(sec);
+}
+function show(f) {
+  document.querySelectorAll('.filters button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === f)));
+  document.querySelectorAll('.variant').forEach((v) => { v.hidden = !(f === 'all' || v.dataset.size === f); });
+  try { localStorage.setItem('p2-0058-size', f); } catch (e) { /* без запоминания */ }
+}
+document.querySelectorAll('.filters button').forEach((b) => b.addEventListener('click', () => show(b.dataset.f)));
+let start = '375';
+try { start = localStorage.getItem('p2-0058-size') || '375'; } catch (e) { /* по умолчанию телефон */ }
+show(start);
+</script>
