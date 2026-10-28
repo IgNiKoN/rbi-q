@@ -58,6 +58,9 @@ export interface GenerateParams {
   sections: number; floors: number; apartmentsPerFloor: number; firstFloor: number;
 }
 
+/** P2-0055: ответ переноса — прежнее положение (для «Отменить»). */
+export interface MovePlaceResult { changed: boolean; oldParentId: string | null; oldBeforeId: string | null }
+
 export interface ProjectsApi {
   myAccess(): Promise<CompanyAccess[]>;
   listProjects(companyId: string): Promise<ProjectItem[]>;
@@ -83,7 +86,12 @@ export interface ProjectsApi {
   removePlace?(id: string): Promise<Result<number>>;
   fillObject?(p: FillParams): Promise<Result<number>>;
   addFloors?(sectionIds: string[], from: number, to: number, apartmentsPerFloor: number): Promise<Result<number>>;
-  copyPlace?(sourceId: string, newId: string, name: string): Promise<Result<string>>;
+  /** P2-0055: копия ветки; targetParentId — куда вставить (место того же проекта, в т.ч. другой корпус); без него — рядом с источником. */
+  copyPlace?(sourceId: string, newId: string, name: string, targetParentId?: string | null): Promise<Result<string>>;
+  /** P2-0055: перенос / порядок только внутри объекта (у объекта — только порядок, newParentId = null); before — сосед, перед которым встать. */
+  movePlace?(id: string, newParentId: string | null, beforeId: string | null): Promise<Result<MovePlaceResult>>;
+  /** P2-0055: вернуть ветку, удалённую одним действием («Отменить» после удаления). */
+  restorePlace?(id: string): Promise<Result<number>>;
   addUnit(companyId: string, code: string, name: string): Promise<Result<string>>;
   deleteUnit(unitId: string): Promise<Result>;
 }
@@ -168,7 +176,17 @@ export function createProjectsService(): ProjectsApi | null {
     fillObject: (p) => call<number>('pf_fill_object', { p_object: p.objectId, p_sections: p.sections, p_floors: p.floors, p_apartments_per_floor: p.apartmentsPerFloor,
       p_first_floor: p.firstFloor, p_numbering: p.numbering, p_start_no: p.startNo, p_basement: p.basement, p_roof: p.roof }),
     addFloors: (sections, from, to, apf) => call<number>('pf_add_floors', { p_sections: sections, p_from: from, p_to: to, p_apartments_per_floor: apf }),
-    copyPlace: (source, id, name) => call<string>('pf_copy_place', { p_source: source, p_new_id: id, p_name: name }),
+    copyPlace: (source, id, name, target) => call<string>('pf_copy_place', target
+      ? { p_source: source, p_new_id: id, p_name: name, p_target_parent: target }
+      : { p_source: source, p_new_id: id, p_name: name }),
+    movePlace: async (id, parent, before) => {
+      const r = await call<{ changed?: boolean; old_parent?: string | null; old_before?: string | null } | null>('pf_move_place',
+        { p_location: id, p_new_parent: parent, p_before: before });
+      if (!r.ok) return r;
+      const v = r.value || {};
+      return { ok: true, value: { changed: v.changed === true, oldParentId: v.old_parent ?? null, oldBeforeId: v.old_before ?? null } };
+    },
+    restorePlace: (id) => call<number>('pf_restore_place', { p_location: id }),
     addUnit: (company, code, name) => call<string>('pf_add_unit', { p_company: company, p_code: code, p_name: name }),
     deleteUnit: (id) => call('pf_delete_unit', { p_unit: id })
   };
