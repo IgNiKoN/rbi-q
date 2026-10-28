@@ -15,17 +15,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Что входит в приложение: файлы корня и папки целиком (без тестов). */
-export const RELEASE_FILES = ['index.html', 'report.html', 'sw.js', 'manifest.webmanifest', 'favicon.ico', '.nojekyll',
-  'Шаблон_акта_эталона_в_18.html'];
-export const RELEASE_DIRS = ['css', 'data', 'fonts', 'icons', 'js', 'libs', 'locales'];
-
-export function isReleaseFile(path) {
-  if (/(^|\/)\.env/.test(path)) return false;
-  if (/(^|\/)__tests__\//.test(path) || /\.map$/.test(path)) return false;
-  if (RELEASE_FILES.includes(path)) return true;
-  return RELEASE_DIRS.some((d) => path.startsWith(d + '/'));
-}
+/** Что входит в приложение — общее правило с описью версии (P2-0066). */
+export { RELEASE_FILES, RELEASE_DIRS, isReleaseFile } from './app-files.mjs';
+import { isReleaseFile } from './app-files.mjs';
 
 function git(args) { return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim(); }
 
@@ -40,7 +32,7 @@ function main() {
 
   const files = git(['-c', 'core.quotepath=off', 'ls-files']).split('\n').filter(isReleaseFile);
   const commit = git(['rev-parse', 'HEAD']);
-  const sw = /SW_VERSION = '([^']+)'/.exec(git(['show', 'HEAD:sw.js']))?.[1] || '';
+  const sw = /version: '([^']+)'/.exec(git(['show', 'HEAD:sw.js']))?.[1] || '';
   console.log(`Выпуск: ${files.length} файлов, коммит ${commit.slice(0, 7)}, SW ${sw} → ${out}${dry ? ' (пробно)' : ''}`);
   if (dry) return;
 

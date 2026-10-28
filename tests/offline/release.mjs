@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isReleaseFile } from '../../scripts/release-rbi-q.mjs';
+import { listAppFiles } from '../../scripts/app-files.mjs';
 import { start, stop, site, resetSite } from './servers.mjs';
 import { freshProfile, go, launch, note, ok, signIn } from './lib.mjs';
 
@@ -18,12 +18,8 @@ const chunkOf = (dir, prefix) => {
   return list.find((n) => n.startsWith(prefix) && n.endsWith('.js'));
 };
 
-/** Файлы приложения (как у release-скрипта): отслеживаемые git + новые неигнорируемые, только существующие на диске. */
-export function appFiles(root = ROOT) {
-  const git = (a) => execFileSync('git', a, { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
-  const all = [...new Set([...git(['ls-files']), ...git(['ls-files', '--others', '--exclude-standard'])])];
-  return all.filter((p) => isReleaseFile(p) && existsSync(join(root, p)) && statSync(join(root, p)).isFile());
-}
+/** Файлы приложения — то же правило, что у выпуска и описи версии. */
+export const appFiles = (root = ROOT) => listAppFiles(root);
 
 const mark = (path, tag) => `\n;(function(){try{var g=typeof self!=='undefined'?self:globalThis;(g.__REL=g.__REL||{})[${JSON.stringify('/' + path)}]=${JSON.stringify(tag)};}catch(e){}})();\n`;
 
@@ -267,7 +263,7 @@ export function releaseScenarios(outDir) {
     }
     const mb = (b) => Math.round(b / 1048576 * 10) / 10;
     note(`== ${tag}: файлов ${files.length}, всего ${mb(total)} МБ; ` + Object.entries(by).map(([g, b]) => `${g} ${mb(b)} МБ`).join(', '));
-    ok(total < 30 * 1048576, `${tag}: опись без .map меньше 30 МБ`, mb(total) + ' МБ');
+    ok(total < 35 * 1048576, `${tag}: опись без .map меньше 35 МБ (решение владельца 29.10)`, mb(total) + ' МБ');
     measure(tag, { files: files.length, totalMB: mb(total), byGroupMB: Object.fromEntries(Object.entries(by).map(([g, b]) => [g, mb(b)])) });
   }
 
