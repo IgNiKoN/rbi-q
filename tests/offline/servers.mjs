@@ -155,6 +155,7 @@ async function app(req, res) {
   if (p.endsWith('/')) p += 'index.html';
   site.requests.push(p);
   if (site.fail && site.fail.test(p)) { res.writeHead(503); return res.end('unavailable'); }
+  if (/\/\./.test(p)) { res.writeHead(404); return res.end('not found'); }   // как боевой nginx: скрытые файлы (.nojekyll, .git) не отдаются
   const base = (site.pick && site.pick(p)) || site.root;
   const f = join(base, p);
   if (!f.startsWith(base)) { res.writeHead(403); return res.end(); }

@@ -21,7 +21,9 @@
 1. Свежий `main` в ветку (если ушёл вперёд); `npm run build:version`, `npm run test:unit`, `npx tsc --noEmit`, `npm run build:platform`, `node tests/offline/run.mjs` (сценарии P2-0058, `w-offline w-tabs`, все `r-*`).
 2. Слияние в `main` (fast-forward), push в `IgNiKoN/rbi-q`.
 3. Сервер (панель Beget → терминал VPS «rbi-q supabase»): `cd /var/www/rbi-quality && git rev-parse HEAD` (запомнить) → `git pull --ff-only` → `git rev-parse HEAD` = коммит `main`.
-4. Проверка без входа: `https://app.rbi-q.ru/` открывается, `sw.js` отдаётся с участком `<app-version>` (номер версии), `index.html` — без `RBI_APP_VERSION 18.59`.
+4. Проверка без входа: `node scripts/check-release.mjs` — каждый файл описи на сайте совпадает с отпечатком (иначе у людей версия не поставится); `index.html` — без `RBI_APP_VERSION 18.59`.
+
+**Как прошло 29.10.2026:** `main` `6d4f736` запушен, `git pull` в панели Beget (терминал VPS, `2ec8959` → `6d4f736`). Проверка сайта нашла: `.nojekyll` → 404 (nginx не отдаёт скрытые файлы) — новая версия у людей не ставилась бы (прежняя работала). Исправлено: скрытые файлы не входят в опись, стенд отдаёт их как nginx (404), сторож в unit; повторная выкладка — ниже в CHANGELOG / отчёте.
 
 **Откат:** на сервере `cd /var/www/rbi-quality && git reset --hard <запомненный HEAD>`. Устройства: старый `sw.js` придёт как «новая версия» — новый кэш приложения поставит его по-старому (у старого кода — плашка «Обновить» или два открытия). Данные на устройствах не теряются.
 

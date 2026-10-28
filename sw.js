@@ -2,13 +2,12 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.29-1b0f2f2a',
+  version: '2026.10.29-43ca6068',
   date: '2026-10-29',
-  digest: '1b0f2f2a',
+  digest: '43ca6068',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
-    ".nojekyll": ["e3b0c44298fc1c14",0,""],
     "css/analytics.desktop.css": ["909efb47e2bdb9fa",118397,""],
     "css/app-shell.desktop.css": ["ede63172f4e50381",13109,""],
     "css/audit.desktop.css": ["1c94cbcc861ff89d",22407,""],

@@ -44,7 +44,8 @@ const sha = (buf) => createHash('sha256').update(buf).digest('hex');
 export function buildManifest(root) {
   const files = {};
   for (const p of listAppFiles(root)) {
-    if (p === 'sw.js') continue;
+    // скрытые файлы (.nojekyll — метка GitHub Pages) боевой nginx не отдаёт: в описи их быть не должно, иначе версия не ставится
+    if (p === 'sw.js' || /(^|\/)\./.test(p)) continue;
     const buf = readFileSync(join(root, p));
     files[p] = [sha(buf).slice(0, 16), buf.length, groupOf(p)];
   }

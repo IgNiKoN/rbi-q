@@ -50,8 +50,12 @@ describe('P2-0066: опись версии', () => {
     assert.deepEqual(missing, []);
   });
 
-  it('выпуск и опись — одно правило: опись = файлы выпуска без sw.js', () => {
-    assert.deepEqual(Object.keys(manifest.files), listAppFiles(ROOT).filter((p) => p !== 'sw.js'));
+  it('выпуск и опись — одно правило: опись = файлы выпуска без sw.js и скрытых', () => {
+    assert.deepEqual(Object.keys(manifest.files), listAppFiles(ROOT).filter((p) => p !== 'sw.js' && !/(^|\/)\./.test(p)));
+  });
+
+  it('в описи нет скрытых файлов — боевой nginx их не отдаёт (.nojekyll → 404, версия не ставилась бы)', () => {
+    assert.deepEqual(Object.keys(manifest.files).filter((p) => /(^|\/)\./.test(p)), []);
   });
 
   it('группы: модули по допуску, манифесты модулей и вход платформы — оболочка', () => {
