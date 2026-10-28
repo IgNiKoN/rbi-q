@@ -27,6 +27,8 @@ export interface PlatformState {
   fullName?: string | null;
   mustChangePassword?: boolean;
   userId?: string | null;
+  /** P2-0058: сервер не ответил (нет связи / недоступен) — компании и права не с сервера; мост не меняет базу Качества. */
+  offline?: boolean;
 }
 
 /** Флаги для меню и Настроек (window.RBI.platformMenuAccess): модули выбранной компании, «Компания», «Администрирование платформы». */
@@ -121,15 +123,17 @@ export function createPlatform(deps: PlatformDeps): Platform {
   async function loadEmail(email: string): Promise<PlatformState> {
     let parsed = { isPlatformAdmin: false, companies: [] as PlatformCompany[] };
     let profile = { fullName: null as string | null, mustChangePassword: false, userId: null as string | null };
+    let offline = false;
     if (deps.rpc) {
-      const [pl, pr] = await Promise.all([deps.rpc('pf_my_platform'), deps.rpc('pf_my_profile')]);
-      if (!pl.error) parsed = parsePlatform(pl.data);
-      if (!pr.error) profile = parseProfile(pr.data);
+      // P2-0058: ошибка запроса — не ответ «компаний нет» (нет связи, сервер недоступен): состояние помечается offline
+      const [pl, pr] = await Promise.all([deps.rpc('pf_my_platform'), deps.rpc('pf_my_profile')].map((q) => q.catch((e: unknown) => ({ data: null, error: e || 'network' }))));
+      if (!pl.error) parsed = parsePlatform(pl.data); else offline = true;
+      if (!pr.error) profile = parseProfile(pr.data); else offline = true;
     }
     const saved = safeGet(deps.storage, COMPANY_KEY);
     const companyId = parsed.companies.some((c) => c.id === saved) ? saved
       : (parsed.companies.find((c) => c.modules.length > 0) || parsed.companies[0] || null)?.id || null;
-    return { mode: 'email', email, isPlatformAdmin: parsed.isPlatformAdmin, companies: parsed.companies, companyId, ...profile };
+    return { mode: 'email', email, isPlatformAdmin: parsed.isPlatformAdmin, companies: parsed.companies, companyId, ...profile, ...(offline ? { offline } : {}) };
   }
 
   async function refresh(): Promise<PlatformState> {

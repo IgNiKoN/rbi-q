@@ -15,6 +15,8 @@ import { LOGIN_CSS, renderLoginScreen } from './login-screen.ts';
 import { PASSWORD_CSS, renderMyProfile as drawMyProfile, renderPasswordScreen } from './password-screen.ts';
 import { showShellUser, restoreShellUser } from './shell-user.ts';
 import { cleanupLegacyDevice, deleteIndexedDb } from './legacy-device.ts';
+import { EMPTY_SLOT_KEY, RESCUE_CSS, moveOrphans, renderRescueSheet, scanOrphans } from './offline-rescue.ts';
+import type { IsUnsent } from './offline-rescue.ts';
 
 type Rbi = Record<string, unknown> & {
   services?: { shell?: { renderSidebar?: () => void; renderMobileModuleMenu?: () => void } };
@@ -196,8 +198,51 @@ async function applyQuality(st: PlatformState): Promise<void> {
     const shell = rbi().services?.shell;
     if (shell && typeof shell.renderSidebar === 'function') shell.renderSidebar();
     if (shell && typeof shell.renderMobileModuleMenu === 'function') shell.renderMobileModuleMenu();
+    if (!st.offline && st.mode === 'email') void offerRescue();
   } catch (e) {
     console.warn('[Platform2] Качество: подключение к хранилищу компании не удалось', e);
+  }
+}
+
+let rescueAsked = false;
+/** P2-0058 (З5): записи, оставшиеся без связи в общей базе устройства, — предложить перенести в базу компании (раз за открытие). */
+async function offerRescue(): Promise<void> {
+  const x = w() as Win & { RBI_DB_NAME?: string; APP_CONFIG?: { LOCAL_DB_NAME?: string }; RbiSyncMergePolicy?: { isUnsentLocal?: IsUnsent };
+    rbiMarkCloudDirty?: () => void };
+  const sync = rbi().qualitySync as { companyName?: string; projectId?: string | null; engineerName?: string } | null | undefined;
+  const isUnsent = x.RbiSyncMergePolicy?.isUnsentLocal;
+  const base = x.APP_CONFIG?.LOCAL_DB_NAME || 'PLATFORM2_DB';
+  const to = x.RBI_DB_NAME || '';
+  if (rescueAsked || !sync || !sync.projectId || !isUnsent || !to || to === base || typeof indexedDB === 'undefined') return;
+  rescueAsked = true;
+  try {
+    const found = await scanOrphans(indexedDB, base, isUnsent);
+    const ls = window.localStorage;
+    if (!found.orphans.length) { ls.removeItem(EMPTY_SLOT_KEY); return; }
+    ensureStyle();
+    if (!document.getElementById('p2-rescue-style')) {
+      const s = document.createElement('style'); s.id = 'p2-rescue-style'; s.textContent = RESCUE_CSS; document.head.appendChild(s);
+    }
+    const projectCode = sync.projectId;
+    document.body.appendChild(renderRescueSheet(document, {
+      companyName: sync.companyName || 'компанию',
+      orphans: found.orphans,
+      onLater: () => { /* спросим при следующем открытии */ },
+      onMove: async () => {
+        try {
+          await moveOrphans(indexedDB, base, to, found, { slot: currentSlot(), projectCode, author: sync.engineerName || '' });
+        } catch {
+          return 'Не удалось перенести. Попробуйте ещё раз';
+        }
+        // отправит обычная синхронизация: «есть неотправленное» — и перезапуск с базой компании (записи видны в журналах)
+        if (typeof x.rbiMarkCloudDirty === 'function') x.rbiMarkCloudDirty(); else ls.setItem('rbi_cloud_dirty', '1');
+        ls.removeItem(EMPTY_SLOT_KEY);
+        window.location.reload();
+        return null;
+      }
+    }));
+  } catch (e) {
+    console.warn('[Platform2] записи без связи: проверка не удалась', e);
   }
 }
 

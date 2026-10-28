@@ -277,7 +277,13 @@ function wireStorageToken(deps: BridgeDeps): void {
 export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): Promise<QualitySync | null> {
   if (st.mode === 'none' && !deps.store.getItem(QUALITY_COMPANY_KEY)) return null;
   const company = qualityCompanyFor(st);
-  if (switchDeviceCompany(deps.store, company, company && st.email ? deviceUserKey(st.email) : '')) { deps.reload(); return null; }
+  const user = company && st.email ? deviceUserKey(st.email) : '';
+  // P2-0058 (З2): база меняется только по ответу сервера (выбрана другая компания, компании у человека больше нет).
+  // Сервер не ответил — устройство остаётся в своей базе: записанное без связи уйдёт из неё, когда связь вернётся.
+  if (st.offline && (company || '') + ':' + user !== (deps.store.getItem(QUALITY_COMPANY_KEY) || '') + ':' + (deps.store.getItem(QUALITY_USER_KEY) || '')) {
+    return ((deps.win.RBI || {}).qualitySync as QualitySync | null | undefined) || null;
+  }
+  if (switchDeviceCompany(deps.store, company, user)) { deps.reload(); return null; }
   // Старая общая база компании (до P2-0018) — удалить: эта страница уже открыла базу пользователя.
   const drop = deps.store.getItem(QUALITY_DROP_DB_KEY);
   if (drop && deps.dropDatabase) {
