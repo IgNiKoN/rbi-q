@@ -182,7 +182,7 @@ window.initSync = async function () {
                 return;
             }
 
-            // P2-0023: после ошибки — пауза (2/5/10/30 мин), а не повтор каждую минуту.
+            // P2-0023: после ошибки — пауза (2/5/10 мин; после сбоя связи — проверка связи каждую минуту, P2-0059), а не повтор каждую минуту.
             if (!rbiAutoSyncAllowedNow()) return;
 
             if (needPush || needFullPull || needRemotePoll) {
@@ -230,8 +230,14 @@ function rbiAttentionRetryDueNow() {
 }
 
 // P2-0023: автосинхронизация (таймер/возврат) ждёт паузу после ошибки; ручная — нет.
+// P2-0059 (С6): пауза после сбоя связи не ждётся — проход сам проверит связь (triggerSync) и начнёт сразу, как сервер ответил;
+// пауза после ошибки сервера — ждётся.
 function rbiAutoSyncAllowedNow() {
     const retryAfter = parseInt(localStorage.getItem('rbi_sync_retry_after') || '0', 10) || 0;
+    if (window.RbiSyncNetPolicy) {
+        const retryKind = localStorage.getItem('rbi_sync_retry_kind') || '';
+        return window.RbiSyncNetPolicy.autoSyncDecision({ now: Date.now(), retryAfter, retryKind }) !== 'wait';
+    }
     return window.RbiSyncRetryPolicy
         ? window.RbiSyncRetryPolicy.autoSyncAllowed({ now: Date.now(), retryAfter })
         : true;

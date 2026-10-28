@@ -69,9 +69,9 @@ export function isTransientSyncError(e) {
     return true;
 }
 
-/** Пауза перед автоповтором после n-й подряд неудачной синхронизации (мс): 2, 5, 10, 30 мин. */
+/** Пауза перед автоповтором после n-й подряд неудачной синхронизации (мс): 2, 5, 10 мин (P2-0059: не дольше 10, было 30). */
 export function retryDelayMs(failCount) {
-    const steps = [2, 5, 10, 30];
+    const steps = [2, 5, 10];
     const n = Math.max(1, Number(failCount) || 1);
     return steps[Math.min(n, steps.length) - 1] * 60 * 1000;
 }
@@ -97,7 +97,7 @@ export const ATTENTION_ASK_USER_AFTER = 4;
 
 /**
  * Пометить объект «нужно внимание» (сохранять вызывающему). Доработка 2: считаем попытки и ставим
- * время следующей (2/5/10/30 мин) — файл мог просто не успеть записаться (гонка), повтор его заберёт.
+ * время следующей (2/5/10 мин) — файл мог просто не успеть записаться (гонка), повтор его заберёт.
  */
 export function markAttention(rec, reason, now) {
     if (!rec) return rec;

@@ -2,7 +2,8 @@
 // с фото → включить погоду → ждать без нажатий (время телефона проматывается по минуте) → замер: дошло ли всё ровно один
 // раз, за сколько минут, сколько нажатий, были ли две отправки сразу. Таблица — weather.json в папке --out.
 // Боевой сервер не используется (servers.mjs — подставной, lib.mjs отрезает rbi-q.ru).
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { start, stop, net, rows, files, sends, flow, resetNet, releaseHeld } from './servers.mjs';
 import { freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
@@ -11,6 +12,8 @@ const N = 5;               // осмотров с фото в каждой по�
 const PHOTO_BYTES = 60000; // размер фото (≈ сжатое фото пункта)
 const MINUTES = 15;        // сколько минут телефона ждём «не отправлено: 0»
 export const measures = [];
+const BEFORE_FILE = fileURLToPath(new URL('../../ai-dev/reports/P2-0059/measure-before.json', import.meta.url));
+const BEFORE = existsSync(BEFORE_FILE) ? JSON.parse(readFileSync(BEFORE_FILE, 'utf8')) : [];
 
 /** Осмотр с одним фото пункта — как пишет экран «Осмотр» (фото в app_photos, ссылка local://). */
 const savePhotoMark = (page, tag, i) => page.evaluate(async ([tag, i, size]) => {
@@ -124,6 +127,13 @@ async function weather(tag, w) {
   ok(r.delivered === N && r.photoRows === N && r.lost === 0, `${tag}: на сервере все ${N} осмотров с фото, потерь нет`, `${r.delivered}/${r.photoRows}/${r.lost}`);
   ok(r.concurrentPasses <= 1 && r.concurrentInspectionPosts <= 1, `${tag}: двух отправок одновременно нет`, `проходов ${r.concurrentPasses}, запросов ${r.concurrentInspectionPosts}`);
   if (w.check) w.check(r);
+  // P2-0059 этап 3: ни одна погода не хуже замера «до» (reports/P2-0059/measure-before.json)
+  const was = BEFORE.find((x) => x.weather === tag);
+  if (was) {
+    const inf = (v) => (v === null ? Infinity : v);
+    ok(inf(r.minutesToZero) <= inf(was.minutesToZero) + 0.5 && r.maxSendsPerRecord <= was.maxSendsPerRecord, `${tag}: не хуже, чем до исправлений`,
+      `минут ${r.minutesToZero} (было ${was.minutesToZero}), отправок записи ${r.maxSendsPerRecord} (было ${was.maxSendsPerRecord})`);
+  }
   releaseHeld();
   await ctx.close(); await stop();
   writeFileSync(join(out(), 'weather.json'), JSON.stringify(measures, null, 2));
@@ -157,6 +167,7 @@ export function weatherScenarios(outDir) {
       apply: async (m, ctx) => { await offline(false)(ctx); net.mode = m < 5 ? 'hang' : 'ok'; } }),
     // мигание: в каждой минуте 10 с есть / 20 с нет (реальное окно связи — 3 с из 9)
     'w-flap': () => weather('w-flap', { title: 'мигание: 10 с есть / 20 с нет', real: 1,
+      check: (r) => ok(r.minutesToZero !== null && r.minutesToZero <= 10, 'w-flap: мигание — «не отправлено: 0» за ≤ 10 мин без нажатий', String(r.minutesToZero)),
       apply: async (m, ctx, page) => { await offline(false)(ctx); await page.waitForTimeout(3000); await offline(true)(ctx); await page.waitForTimeout(5000); },
       after: offline(false) }),
     // обрыв: сервер принял фото и пачку осмотров, а ответ потерялся (по одному разу)

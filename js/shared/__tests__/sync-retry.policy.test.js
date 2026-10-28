@@ -72,7 +72,7 @@ describe('isTransientSyncError (доработка 5)', () => {
 
 describe('повтор с паузой', () => {
   it('2 → 5 → 10 → 30 мин, дальше 30', () => {
-    assert.deepEqual([1, 2, 3, 4, 5, 9].map(n => retryDelayMs(n) / 60000), [2, 5, 10, 30, 30, 30]);
+    assert.deepEqual([1, 2, 3, 4, 5, 9].map(n => retryDelayMs(n) / 60000), [2, 5, 10, 10, 10, 10]);
   });
   it('один «плохой» объект: за 10 минут не больше 3 автоповторов (было 10 — каждую минуту)', () => {
     let now = 0, retryAfter = 0, fails = 0, runs = 0;
@@ -110,7 +110,7 @@ describe('нужно внимание', () => {
 
 describe('доработка 2: «нужно внимание» — автоповтор и «Отправить без этого фото»', () => {
   const MIN = 60000;
-  it('попытки 2/5/10/30 мин: до срока не шлём, после — шлём', () => {
+  it('попытки 2/5/10/10 мин (P2-0059: не дольше 10): до срока не шлём, после — шлём', () => {
     const rec = { id: 1 };
     markAttention(rec, 'x', 0);
     assert.equal(attentionRetryDue(rec, 1 * MIN), false);
@@ -120,7 +120,7 @@ describe('доработка 2: «нужно внимание» — автопо
     markAttention(rec, 'x', 7 * MIN);
     assert.equal(rec.syncAttentionRetryAt, 17 * MIN);
     markAttention(rec, 'x', 17 * MIN);
-    assert.equal(rec.syncAttentionRetryAt, 47 * MIN);
+    assert.equal(rec.syncAttentionRetryAt, 27 * MIN);
   });
   it('фото «пропало на секунду» (гонка записи): первая попытка — внимание, автоповтор уходит, следы сняты', () => {
     const rec = { id: 1, syncStatus: 'not_synced', source: 'local' };

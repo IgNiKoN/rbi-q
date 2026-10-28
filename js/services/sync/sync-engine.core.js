@@ -17,13 +17,16 @@ function _syncAssignedCanonicalKeys(assignedProjects) {
     return list;
 }
 
-// P2-0023: пауза перед автоповтором после неудачной синхронизации (2 → 5 → 10 → 30 мин).
-function rbiScheduleSyncRetry() {
+// P2-0023: пауза перед автоповтором после неудачной синхронизации (2 → 5 → 10 мин; P2-0059 — не дольше 10).
+// P2-0059 (С6): вид сбоя — 'net' (нет связи / нет ответа: таймер проверяет связь каждую минуту и отправляет сразу)
+// или 'server' (сервер ответил ошибкой: ждём паузу).
+function rbiScheduleSyncRetry(kind) {
     try {
         const n = (parseInt(localStorage.getItem('rbi_sync_fail_count') || '0', 10) || 0) + 1;
         localStorage.setItem('rbi_sync_fail_count', String(n));
         const delay = window.RbiSyncRetryPolicy ? window.RbiSyncRetryPolicy.retryDelayMs(n) : 120000;
         localStorage.setItem('rbi_sync_retry_after', String(Date.now() + delay));
+        localStorage.setItem('rbi_sync_retry_kind', kind === 'server' ? 'server' : 'net');
     } catch (_e) { /* ignore */ }
 }
 
@@ -174,11 +177,13 @@ async function rbiSyncPass(mode = 'silent') {
     // Доработка 5: пауза автосинхронизации — только при сетевых/серверных ошибках отправки;
     // запись, которую сервер отклонил (права, данные), не останавливает синхронизацию остальных.
     let transientPushErrors = 0;
+    let serverErrSeen = false; // P2-0059 (С6): сервер ответил ошибкой (5xx) — пауза, а не проверка связи каждую минуту
     const rbiNoteErr = (err) => {
         if (!window.RbiSyncRetryPolicy || window.RbiSyncRetryPolicy.isTransientSyncError(err)) transientPushErrors++;
+        if (window.RbiSyncNetPolicy && window.RbiSyncNetPolicy.retryKindOf(err) === 'server') serverErrSeen = true;
     };
     let retryScheduled = false; // пауза ставится не больше одного раза за проход
-    const rbiScheduleSyncRetryOnce = () => { if (!retryScheduled) { retryScheduled = true; rbiScheduleSyncRetry(); } };
+    const rbiScheduleSyncRetryOnce = () => { if (!retryScheduled) { retryScheduled = true; rbiScheduleSyncRetry(serverErrSeen ? 'server' : 'net'); } };
 
     window.isSyncing = true;
     const syncStartedAt = Date.now(); // P2-0025: черновик, изменённый после начала, снова «к отправке»
@@ -929,7 +934,350 @@ async function rbiSyncPass(mode = 'silent') {
         }
     }
 
+    // P2-0059 (С4, С5): свои осмотры уходят первыми в проходе — до скачивания чужого — и порциями по PUSH_CHUNK:
+    // после каждой порции — отметка «отправлено»; обрыв — следующий проход продолжает с неотправленных.
+    // Второй вызов на прежнем месте отправляет то, что записали за время загрузки (отправленное не повторяется).
+    async function rbiPushOwnInspections() {
+        if (!canPush) return;
+        let currentHistory = [];
+        if (typeof dbForEachCursor === 'function') {
+            currentHistory = [];
+            await dbForEachCursor('app_history', (x) => { if (x) currentHistory.push(x); });
+        } else {
+            currentHistory = typeof dbGetAll === 'function' ? (await dbGetAll('app_history') || []) : [];
+        }
+
+        // Если не админ, отправляем только свои проверки
+        if (window.RBI.services.permissions && !window.RBI.services.permissions.isAdmin()) {
+            currentHistory = currentHistory.filter(i => i.inspectorName === iName);
+        }
+
+        // Блокируем "эхо" облачных проверок, но не теряем старые несинхронизированные записи
+        currentHistory = currentHistory.filter(i => {
+            if (!i) return false;
+
+            const status = i.syncStatus || i.sync_status || '';
+            const source = i.source || '';
+
+            // P2-0023: «нужно внимание» (фото нет на устройстве) — доработка 2: повтор по расписанию 2/5/10 мин;
+            // после ATTENTION_ASK_USER_AFTER неудач ждём решения пользователя («Отправить без этого фото» в Истории).
+            if (window.RbiSyncRetryPolicy && window.RbiSyncRetryPolicy.isAttention(i)) {
+                const rpA = window.RbiSyncRetryPolicy;
+                if (rpA.attentionNeedsUser(i)) return false;
+                if (!rpA.attentionRetryDue(i, Date.now())) { rbiNoteAttentionRetry(i.syncAttentionRetryAt); return false; }
+            }
+
+            // Уже синхронизированное облачное эхо не отправляем обратно
+            if (source === 'cloud' || status === 'synced') return false;
+
+            // Любые несинхронизированные / заблокированные / локальные проверки отправляем всегда,
+            // даже если они старше последней синхронизации.
+            if (status !== 'synced') return true;
+            if (source === 'local') return true;
+
+            if (!lastPushAt) return true;
+
+            const lastPushTime = new Date(lastPushAt).getTime();
+            const t = new Date(i.updatedAt || i.updated_at || i.date || 0).getTime();
+
+            return !t || Number.isNaN(t) || t >= lastPushTime;
+        });
+
+        const NPc = window.RbiSyncNetPolicy;
+        const histChunks = NPc ? NPc.chunks(currentHistory, NPc.PUSH_CHUNK) : (currentHistory.length ? [currentHistory] : []);
+        for (const chunkHist of histChunks) {
+            // остановленный проход (90 с без ответа) — следующие порции не начинаем
+            if (window.RbiSyncNet && window.RbiSyncNet.pass && window.RbiSyncNet.pass.signal.aborted) break;
+            let chunkFailed = false;
+            const inspectionsBatch = [];
+            const itemsBatch = [];
+            const photosBatch = [];
+            const localHistoryToUpdate = [];
+
+            // Собираем пакеты данных
+            for (const c of chunkHist) {
+                const inspectionId = String(c.id);
+                const isDeleted = c._deleted === true;
+
+                // Ретроактивная нормализация объекта
+                if (typeof ObjectDirectory !== 'undefined' && (!c.project_canonical_key || c.project_canonical_key === c.projectName || c.project_canonical_key === c.project_display_name)) {
+                    try {
+                        const match = await ObjectDirectory.normalizeProjectName(c.projectName || c.project_display_name);
+                        if (match && match.status === 'matched') {
+                            c.project_canonical_key = match.canonical_key;
+                            c.project_display_name = match.display_name;
+                            c.projectName = match.display_name;
+                        }
+                    } catch (err) { }
+                }
+
+                // Проверка прав на отправку
+                if (c.source === 'local' || c.importedFromBackup) {
+                    const currentRole = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentRole() : 'guest';
+                    const currentEngineer = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentEngineerName() : (window.syncConfig?.engineerName || '');
+                    const assignedProjects = window.RBI.services.permissions ? window.RBI.services.permissions.getAssignedProjects() : (appSettings?.assignedProjects || []);
+                    const recProject = c.project_canonical_key || c.projectName || '';
+                    const recEngineer = c.inspectorName || c.inspector_name || '';
+
+                    let allowedToPush = false;
+                    let blockReason = '';
+
+                    if (!canPush) {
+                        blockReason = 'Роль не подтверждена для отправки';
+                    } else if (window.RBI.services.permissions ? window.RBI.services.permissions.isAdmin() : ['manager', 'deputy_manager'].includes(currentRole)) {
+                        allowedToPush = true;
+                    } else if (currentRole === 'engineer') {
+                        const ownerOk = !recEngineer || recEngineer === currentEngineer;
+                        // Согласовано с filterByDataScope('ownProjectOrOwnRecords',
+                        // permission.service.js): пустой assignedProjects больше НЕ
+                        // разрешает push по любому объекту — только записи без
+                        // назначенного проекта (свои же). Раньше пустой список
+                        // трактовался как "доступ ко всему", что противоречило
+                        // чтению того же инженера (см. current_plan.md §2).
+                        const isUnassignedProject = recProject === 'unknown' || recProject === '';
+                        const projectOk = (!assignedProjects || assignedProjects.length === 0)
+                            ? isUnassignedProject
+                            : (window.RBI.services.permissions && typeof window.RBI.services.permissions.isRecordInAssignedProjects === 'function'
+                                ? window.RBI.services.permissions.isRecordInAssignedProjects(c, assignedProjects)
+                                : assignedProjects.includes(recProject));
+
+                        if (ownerOk && projectOk) allowedToPush = true;
+                        else if (!ownerOk) blockReason = 'Запись создана другим инженером';
+                        else blockReason = 'Объект не назначен пользователю';
+                    } else {
+                        blockReason = 'Эта роль не может отправлять проектные данные';
+                    }
+
+                    if (!allowedToPush) {
+                        c.syncStatus = 'blocked'; c.sync_status = 'blocked';
+                        c.syncBlockReason = blockReason || 'Отправка запрещена'; c.sync_block_reason = c.syncBlockReason;
+                        c.updatedAt = new Date().toISOString();
+                        localHistoryToUpdate.push(c);
+                        continue;
+                    }
+                }
+
+                const uploadedPhotos = {};
+                const storagePathsToRemove = [];
+
+                // ПАРАЛЛЕЛЬНАЯ отправка фото для одной инспекции.
+                // Множественные фото к пункту чек-листа (B1): c.photos[itemId] —
+                // массив (window.normalizeItemPhotos покрывает и старые записи
+                // со строкой). Каждый элемент массива грузится и пишется отдельной
+                // строкой rbi_inspection_photos с собственным photo_index — id
+                // строки теперь `${inspectionId}_${itemId}_${photoIndex}` (было
+                // `..._main`, всегда photoIndex=0 для единственного фото).
+                const photoItemIds = Object.keys(c.photos || {});
+                const photoPromises = photoItemIds.map(async (itemId) => {
+                    const oldPhotosArr = window.normalizeItemPhotos(c.photos[itemId]);
+                    const uploadedArr = [];
+
+                    if (isDeleted) {
+                        oldPhotosArr.forEach((oldPhoto, photoIndex) => {
+                            const path = getStoragePathFromPublicUrl(oldPhoto, 'inspection-photos');
+                            if (path) storagePathsToRemove.push(path);
+                            if (oldPhoto && isHttpUrl(oldPhoto)) {
+                                photosBatch.push({
+                                    id: `${inspectionId}_${itemId}_${photoIndex}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
+                                    source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), photo_index: photoIndex, photo_type: 'inspection',
+                                    bucket_name: 'inspection-photos', storage_path: path, public_url: oldPhoto, updated_at: new Date().toISOString()
+                                });
+                            }
+                        });
+                        return;
+                    }
+
+                    for (let photoIndex = 0; photoIndex < oldPhotosArr.length; photoIndex++) {
+                        const oldPhoto = oldPhotosArr[photoIndex];
+                        let localPhotoSizeBytes = 0; let localPhotoMimeType = '';
+                        try {
+                            if (oldPhoto && oldPhoto.startsWith('local://') && typeof dbGet === 'function') {
+                                const localPhotoRecord = await dbGet('app_photos', oldPhoto);
+                                if (localPhotoRecord && localPhotoRecord.data) {
+                                    localPhotoSizeBytes = localPhotoRecord.data.byteLength || localPhotoRecord.sizeBytes || 0;
+                                    localPhotoMimeType = localPhotoRecord.mimeType || localPhotoRecord.mime_type || '';
+                                }
+                            }
+                        } catch (e) { }
+
+                        const publicUrl = await window.rbiUploadAsset(oldPhoto, 'inspection-photos', `${pCode}/inspections/${inspectionId}/${itemId}_${photoIndex}`, 'photo');
+                        uploadedArr[photoIndex] = publicUrl;
+
+                        if (publicUrl && isHttpUrl(publicUrl)) {
+                            const photoStoragePath = getStoragePathFromPublicUrl(publicUrl, 'inspection-photos');
+                            photosBatch.push({
+                                id: `${inspectionId}_${itemId}_${photoIndex}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
+                                source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), photo_index: photoIndex, photo_type: 'inspection',
+                                bucket_name: 'inspection-photos', storage_path: photoStoragePath, public_url: publicUrl, updated_at: new Date().toISOString()
+                            });
+
+                            if (oldPhoto && oldPhoto.startsWith('local://') && typeof PhotoManager !== 'undefined') {
+                                await PhotoManager.linkCloudToLocal(oldPhoto, publicUrl);
+                            }
+                            if (window.RbiStorageManager && typeof window.RbiStorageManager.registerUploadedFile === 'function') {
+                                await window.RbiStorageManager.registerUploadedFile({
+                                    project_code: pCode, entity_type: 'inspection_photo', entity_id: inspectionId, field_path: `photos.${itemId}.${photoIndex}`,
+                                    bucket: 'inspection-photos', storage_path: photoStoragePath, public_url: publicUrl, original_name: `inspection_${inspectionId}_${itemId}_${photoIndex}`,
+                                    mime_type: localPhotoMimeType, size_bytes: localPhotoSizeBytes, uploaded_by: iName, cache_policy: 'auto', cache_status: 'cached_cloud'
+                                });
+                            }
+                        }
+                    }
+
+                    uploadedPhotos[itemId] = uploadedArr;
+                });
+
+                // P2-0023: ошибка фото одной проверки не роняет всю синхронизацию.
+                // Доработка 3: allSettled — обрезаем строки фото только после завершения ВСЕХ загрузок,
+                // иначе опоздавшие загрузки допишут строки «удержанной» проверки (Promise.all отклоняется на первой ошибке).
+                const photosBatchBefore = photosBatch.length;
+                const photoResults = await Promise.allSettled(photoPromises); // Дожидаемся фоток
+                const photoFails = photoResults.filter(r => r.status === 'rejected').map(r => r.reason);
+                if (photoFails.length) {
+                    photosBatch.length = photosBatchBefore; // строки фото этой проверки — не отправляем
+                    const rp = window.RbiSyncRetryPolicy;
+                    // сеть/сервер важнее «нет файла»: такая ошибка — просто повтор позже
+                    const photoErr = photoFails.find(e => !(rp && rp.isMissingFileError(e))) || photoFails[0];
+                    if (rp && rp.isMissingFileError(photoErr)) {
+                        console.warn('[Sync] Проверка помечена «нужно внимание» (фото нет на устройстве):', inspectionId, photoErr.message);
+                        // Доработка 2: запоминаем, каких фото нет (для «Отправить без этого фото»), и время повтора.
+                        const missing = [];
+                        photoResults.forEach((r, idx) => {
+                            if (r.status === 'rejected' && rp.isMissingFileError(r.reason)) {
+                                missing.push({ itemId: String(photoItemIds[idx]), ref: String(r.reason.ref || '') });
+                            }
+                        });
+                        const missingNames = missing.map(m => {
+                            const info = typeof getChecklistItem === 'function' ? getChecklistItem(c.templateKey || '', m.itemId) : null;
+                            return (info && info.n) || ((c.details || {})[m.itemId] || {}).name || ('№ ' + m.itemId);
+                        });
+                        rp.markAttention(c, rp.missingPhotoReason(missingNames));
+                        c.syncMissingPhotos = missing;
+                        rbiNoteAttentionRetry(c.syncAttentionRetryAt);
+                        localHistoryToUpdate.push(c);
+                        syncAttentionCount++;
+                    } else {
+                        console.warn('[Sync] Фото проверки не отправлены, повторим позже:', inspectionId, photoErr && photoErr.message);
+                        pushErrors++; rbiNoteErr(photoErr);
+                    }
+                    continue;
+                }
+
+                if (storagePathsToRemove.length > 0) {
+                    await window.supabaseClient.storage.from('inspection-photos').remove(storagePathsToRemove);
+                }
+
+                // Формируем пакет самой проверки
+                const inspContractorId = String(c.contractorId || '').trim();
+                const inspProjectId = String(c.projectId || c.project_id || '').trim();
+                const inspPayload = {
+                    id: inspectionId, project_code: pCode,
+                    project_name: c.project_display_name || c.projectName || '', project_canonical_key: c.project_canonical_key || c.projectName || '', project_display_name: c.project_display_name || c.projectName || '',
+                    engineer_name: c.inspectorName || iName, inspector_name: c.inspectorName || iName, contractor_name: c.contractorName || '',
+                    template_key: c.templateKey || '', template_title: c.templateTitle || '', location: c.location || '',
+                    section: c.section || '', floor: c.floor || '', room: c.room || '', inspection_date: c.date || new Date().toISOString(),
+                    metrics: c.metrics || {}, is_completed: c.isCompleted !== false, is_deleted: isDeleted, deleted_at: isDeleted ? (c._deletedAt || new Date().toISOString()) : null,
+                    inspection_type: c.inspection_type || 'rbi_audit',
+                    source: 'cloud', sync_status: 'synced', sync_block_reason: '', updated_at: new Date().toISOString()
+                };
+                if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(inspContractorId)) {
+                    inspPayload.contractorId = inspContractorId;
+                }
+                if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(inspProjectId)) {
+                    inspPayload.projectId = inspProjectId;
+                }
+                inspectionsBatch.push(inspPayload);
+
+                // Формируем пакет нарушений
+                for (const itemId of Object.keys(c.state || {})) {
+                    const info = getChecklistItem(c.templateKey || '', itemId);
+                    const d = (c.details || {})[itemId] || {};
+                    itemsBatch.push({
+                        id: `${inspectionId}_${itemId}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
+                        source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), item_name: info?.n || d.name || '', item_weight: info?.w || d.weight || null,
+                        status: c.state[itemId], comment: d.comment || d.text || '', cause_code: d.causeCode || '', fact_value: d.fact || d.factValue || '', tolerance_value: d.tolerance || d.toleranceValue || '',
+                        details: d, updated_at: new Date().toISOString()
+                    });
+                }
+
+                // Помечаем, что всё ок (и для живых, и для удаленных!)
+                if (window.RbiSyncRetryPolicy) window.RbiSyncRetryPolicy.clearAttention(c);
+                c.source = 'cloud'; c.syncStatus = 'synced'; c.sync_status = 'synced';
+                c.syncBlockReason = ''; c.sync_block_reason = ''; c.importedFromBackup = false;
+                c.updatedAt = new Date().toISOString(); c.updated_at = c.updatedAt;
+
+                if (!isDeleted) {
+                    c.photos = uploadedPhotos;
+                }
+                // ВСТАВКА: Обязательно сохраняем локально, чтобы статус стал synced и перестал спамить облако
+                localHistoryToUpdate.push(c);
+            }
+
+            // 🚀 ПАКЕТНАЯ ОТПРАВКА В БАЗУ (Вжух и готово!)
+            if (inspectionsBatch.length > 0) {
+                const { error } = await window.supabaseClient.from('rbi_inspections').upsert(inspectionsBatch, { onConflict: 'id' });
+                if (error && (!window.RbiSyncRetryPolicy || window.RbiSyncRetryPolicy.isTransientSyncError(error))) {
+                    // P2-0059: сбой связи или сервера — не «нет прав»: осмотры остаются «не отправлено» и уйдут повтором
+                    // (фото уже на сервере — их ссылки сохраняются, повторно не грузятся)
+                    console.warn('[Sync] Осмотры не отправлены (связь/сервер), повторим:', error.message);
+                    pushErrors++; rbiNoteErr(error);
+                    const sentIds = new Set(inspectionsBatch.map(x => String(x.id)));
+                    localHistoryToUpdate.forEach(c => {
+                        if (!sentIds.has(String(c.id))) return;
+                        c.source = 'local'; c.syncStatus = 'not_synced'; c.sync_status = 'not_synced';
+                    });
+                    itemsBatch.length = 0;
+                    photosBatch.length = 0;
+                    chunkFailed = true;
+                } else if (error) {
+                    console.warn('[Sync] Ошибка RLS: нет прав на отправку некоторых проверок', error.message);
+                    // Помечаем их локально как заблокированные
+                    localHistoryToUpdate.forEach(c => {
+                        c.syncStatus = 'blocked';
+                        c.sync_status = 'blocked';
+                        c.syncBlockReason = 'Ошибка прав доступа (RLS)';
+                        c.sync_block_reason = c.syncBlockReason;
+                    });
+                } else {
+                    actuallyPushedChecks += inspectionsBatch.length;
+                }
+            }
+
+            // Бьем на куски по 1000 строк (лимит Supabase)
+            // RBI FIX: отправляем пункты и фото пачками с обязательной проверкой error.
+            // Раньше ошибки upsert могли теряться, а локальная проверка помечалась как synced.
+            try {
+                await rbiUpsertBatches('rbi_inspection_items', itemsBatch, 500, { onConflict: 'id' });
+                await rbiUpsertBatches('rbi_inspection_photos', photosBatch, 500, { onConflict: 'id' });
+            } catch (chunkErr) {
+                // P2-0059: пункты или фото порции не дошли — её осмотры остаются «не отправлено» (повтор без дубля: по id)
+                console.warn('[Sync] Порция осмотров не дошла целиком, повторим:', chunkErr && chunkErr.message);
+                pushErrors++; rbiNoteErr(chunkErr);
+                const sentIds = new Set(inspectionsBatch.map(x => String(x.id)));
+                localHistoryToUpdate.forEach(c => {
+                    if (!sentIds.has(String(c.id))) return;
+                    c.source = 'local'; c.syncStatus = 'not_synced'; c.sync_status = 'not_synced';
+                });
+                chunkFailed = true;
+            }
+
+            // Обновляем локальную базу
+            if (localHistoryToUpdate.length > 0 && typeof dbPutBatch === 'function') {
+                await dbPutBatch('app_history', localHistoryToUpdate);
+                if (Array.isArray(contractorArray)) {
+                    localHistoryToUpdate.forEach(updatedC => {
+                        const idx = contractorArray.findIndex(x => String(x.id) === String(updatedC.id));
+                        if (idx >= 0) contractorArray[idx] = window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten(updatedC) : updatedC;
+                    });
+                }
+            }
+            if (chunkFailed) break;
+        }
+    }
+
     try {
+        // P2-0059 (С5): своё — до скачивания чужого
+        if (canPush) await rbiPushOwnInspections();
         if (showSyncProgress) {
             if (_syncProg()) _syncProg().setStep(1);
         } else if (mode === 'manual') {
@@ -2341,7 +2689,6 @@ async function rbiSyncPass(mode = 'silent') {
         } catch (e) {
             console.warn("[Sync] Прочие модули не подтянуты:", e.message);
         }
-        let currentHistory = []; // <-- ОБЪЯВЛЯЕМ СНАРУЖИ БЛОКА
         // =====================================================
         // 5. PUSH: локальная история в новую архитектуру (ОПТИМИЗИРОВАНО)
         // =====================================================
@@ -2433,320 +2780,8 @@ async function rbiSyncPass(mode = 'silent') {
                 pushErrors++; rbiNoteErr(e);
             }
 
-            if (typeof dbForEachCursor === 'function') {
-                currentHistory = [];
-                await dbForEachCursor('app_history', (x) => { if (x) currentHistory.push(x); });
-            } else {
-                currentHistory = typeof dbGetAll === 'function' ? (await dbGetAll('app_history') || []) : [];
-            }
-
-            // Если не админ, отправляем только свои проверки
-            if (window.RBI.services.permissions && !window.RBI.services.permissions.isAdmin()) {
-                currentHistory = currentHistory.filter(i => i.inspectorName === iName);
-            }
-
-            // Блокируем "эхо" облачных проверок, но не теряем старые несинхронизированные записи
-            currentHistory = currentHistory.filter(i => {
-                if (!i) return false;
-
-                const status = i.syncStatus || i.sync_status || '';
-                const source = i.source || '';
-
-                // P2-0023: «нужно внимание» (фото нет на устройстве) — доработка 2: повтор по расписанию 2/5/10/30 мин;
-                // после ATTENTION_ASK_USER_AFTER неудач ждём решения пользователя («Отправить без этого фото» в Истории).
-                if (window.RbiSyncRetryPolicy && window.RbiSyncRetryPolicy.isAttention(i)) {
-                    const rpA = window.RbiSyncRetryPolicy;
-                    if (rpA.attentionNeedsUser(i)) return false;
-                    if (!rpA.attentionRetryDue(i, Date.now())) { rbiNoteAttentionRetry(i.syncAttentionRetryAt); return false; }
-                }
-
-                // Уже синхронизированное облачное эхо не отправляем обратно
-                if (source === 'cloud' || status === 'synced') return false;
-
-                // Любые несинхронизированные / заблокированные / локальные проверки отправляем всегда,
-                // даже если они старше последней синхронизации.
-                if (status !== 'synced') return true;
-                if (source === 'local') return true;
-
-                if (!lastPushAt) return true;
-
-                const lastPushTime = new Date(lastPushAt).getTime();
-                const t = new Date(i.updatedAt || i.updated_at || i.date || 0).getTime();
-
-                return !t || Number.isNaN(t) || t >= lastPushTime;
-            });
-
-            if (currentHistory.length > 0) {
-                const inspectionsBatch = [];
-                const itemsBatch = [];
-                const photosBatch = [];
-                const localHistoryToUpdate = [];
-
-                // Собираем пакеты данных
-                for (const c of currentHistory) {
-                    const inspectionId = String(c.id);
-                    const isDeleted = c._deleted === true;
-
-                    // Ретроактивная нормализация объекта
-                    if (typeof ObjectDirectory !== 'undefined' && (!c.project_canonical_key || c.project_canonical_key === c.projectName || c.project_canonical_key === c.project_display_name)) {
-                        try {
-                            const match = await ObjectDirectory.normalizeProjectName(c.projectName || c.project_display_name);
-                            if (match && match.status === 'matched') {
-                                c.project_canonical_key = match.canonical_key;
-                                c.project_display_name = match.display_name;
-                                c.projectName = match.display_name;
-                            }
-                        } catch (err) { }
-                    }
-
-                    // Проверка прав на отправку
-                    if (c.source === 'local' || c.importedFromBackup) {
-                        const currentRole = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentRole() : 'guest';
-                        const currentEngineer = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentEngineerName() : (window.syncConfig?.engineerName || '');
-                        const assignedProjects = window.RBI.services.permissions ? window.RBI.services.permissions.getAssignedProjects() : (appSettings?.assignedProjects || []);
-                        const recProject = c.project_canonical_key || c.projectName || '';
-                        const recEngineer = c.inspectorName || c.inspector_name || '';
-
-                        let allowedToPush = false;
-                        let blockReason = '';
-
-                        if (!canPush) {
-                            blockReason = 'Роль не подтверждена для отправки';
-                        } else if (window.RBI.services.permissions ? window.RBI.services.permissions.isAdmin() : ['manager', 'deputy_manager'].includes(currentRole)) {
-                            allowedToPush = true;
-                        } else if (currentRole === 'engineer') {
-                            const ownerOk = !recEngineer || recEngineer === currentEngineer;
-                            // Согласовано с filterByDataScope('ownProjectOrOwnRecords',
-                            // permission.service.js): пустой assignedProjects больше НЕ
-                            // разрешает push по любому объекту — только записи без
-                            // назначенного проекта (свои же). Раньше пустой список
-                            // трактовался как "доступ ко всему", что противоречило
-                            // чтению того же инженера (см. current_plan.md §2).
-                            const isUnassignedProject = recProject === 'unknown' || recProject === '';
-                            const projectOk = (!assignedProjects || assignedProjects.length === 0)
-                                ? isUnassignedProject
-                                : (window.RBI.services.permissions && typeof window.RBI.services.permissions.isRecordInAssignedProjects === 'function'
-                                    ? window.RBI.services.permissions.isRecordInAssignedProjects(c, assignedProjects)
-                                    : assignedProjects.includes(recProject));
-
-                            if (ownerOk && projectOk) allowedToPush = true;
-                            else if (!ownerOk) blockReason = 'Запись создана другим инженером';
-                            else blockReason = 'Объект не назначен пользователю';
-                        } else {
-                            blockReason = 'Эта роль не может отправлять проектные данные';
-                        }
-
-                        if (!allowedToPush) {
-                            c.syncStatus = 'blocked'; c.sync_status = 'blocked';
-                            c.syncBlockReason = blockReason || 'Отправка запрещена'; c.sync_block_reason = c.syncBlockReason;
-                            c.updatedAt = new Date().toISOString();
-                            localHistoryToUpdate.push(c);
-                            continue;
-                        }
-                    }
-
-                    const uploadedPhotos = {};
-                    const storagePathsToRemove = [];
-
-                    // ПАРАЛЛЕЛЬНАЯ отправка фото для одной инспекции.
-                    // Множественные фото к пункту чек-листа (B1): c.photos[itemId] —
-                    // массив (window.normalizeItemPhotos покрывает и старые записи
-                    // со строкой). Каждый элемент массива грузится и пишется отдельной
-                    // строкой rbi_inspection_photos с собственным photo_index — id
-                    // строки теперь `${inspectionId}_${itemId}_${photoIndex}` (было
-                    // `..._main`, всегда photoIndex=0 для единственного фото).
-                    const photoItemIds = Object.keys(c.photos || {});
-                    const photoPromises = photoItemIds.map(async (itemId) => {
-                        const oldPhotosArr = window.normalizeItemPhotos(c.photos[itemId]);
-                        const uploadedArr = [];
-
-                        if (isDeleted) {
-                            oldPhotosArr.forEach((oldPhoto, photoIndex) => {
-                                const path = getStoragePathFromPublicUrl(oldPhoto, 'inspection-photos');
-                                if (path) storagePathsToRemove.push(path);
-                                if (oldPhoto && isHttpUrl(oldPhoto)) {
-                                    photosBatch.push({
-                                        id: `${inspectionId}_${itemId}_${photoIndex}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
-                                        source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), photo_index: photoIndex, photo_type: 'inspection',
-                                        bucket_name: 'inspection-photos', storage_path: path, public_url: oldPhoto, updated_at: new Date().toISOString()
-                                    });
-                                }
-                            });
-                            return;
-                        }
-
-                        for (let photoIndex = 0; photoIndex < oldPhotosArr.length; photoIndex++) {
-                            const oldPhoto = oldPhotosArr[photoIndex];
-                            let localPhotoSizeBytes = 0; let localPhotoMimeType = '';
-                            try {
-                                if (oldPhoto && oldPhoto.startsWith('local://') && typeof dbGet === 'function') {
-                                    const localPhotoRecord = await dbGet('app_photos', oldPhoto);
-                                    if (localPhotoRecord && localPhotoRecord.data) {
-                                        localPhotoSizeBytes = localPhotoRecord.data.byteLength || localPhotoRecord.sizeBytes || 0;
-                                        localPhotoMimeType = localPhotoRecord.mimeType || localPhotoRecord.mime_type || '';
-                                    }
-                                }
-                            } catch (e) { }
-
-                            const publicUrl = await window.rbiUploadAsset(oldPhoto, 'inspection-photos', `${pCode}/inspections/${inspectionId}/${itemId}_${photoIndex}`, 'photo');
-                            uploadedArr[photoIndex] = publicUrl;
-
-                            if (publicUrl && isHttpUrl(publicUrl)) {
-                                const photoStoragePath = getStoragePathFromPublicUrl(publicUrl, 'inspection-photos');
-                                photosBatch.push({
-                                    id: `${inspectionId}_${itemId}_${photoIndex}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
-                                    source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), photo_index: photoIndex, photo_type: 'inspection',
-                                    bucket_name: 'inspection-photos', storage_path: photoStoragePath, public_url: publicUrl, updated_at: new Date().toISOString()
-                                });
-
-                                if (oldPhoto && oldPhoto.startsWith('local://') && typeof PhotoManager !== 'undefined') {
-                                    await PhotoManager.linkCloudToLocal(oldPhoto, publicUrl);
-                                }
-                                if (window.RbiStorageManager && typeof window.RbiStorageManager.registerUploadedFile === 'function') {
-                                    await window.RbiStorageManager.registerUploadedFile({
-                                        project_code: pCode, entity_type: 'inspection_photo', entity_id: inspectionId, field_path: `photos.${itemId}.${photoIndex}`,
-                                        bucket: 'inspection-photos', storage_path: photoStoragePath, public_url: publicUrl, original_name: `inspection_${inspectionId}_${itemId}_${photoIndex}`,
-                                        mime_type: localPhotoMimeType, size_bytes: localPhotoSizeBytes, uploaded_by: iName, cache_policy: 'auto', cache_status: 'cached_cloud'
-                                    });
-                                }
-                            }
-                        }
-
-                        uploadedPhotos[itemId] = uploadedArr;
-                    });
-
-                    // P2-0023: ошибка фото одной проверки не роняет всю синхронизацию.
-                    // Доработка 3: allSettled — обрезаем строки фото только после завершения ВСЕХ загрузок,
-                    // иначе опоздавшие загрузки допишут строки «удержанной» проверки (Promise.all отклоняется на первой ошибке).
-                    const photosBatchBefore = photosBatch.length;
-                    const photoResults = await Promise.allSettled(photoPromises); // Дожидаемся фоток
-                    const photoFails = photoResults.filter(r => r.status === 'rejected').map(r => r.reason);
-                    if (photoFails.length) {
-                        photosBatch.length = photosBatchBefore; // строки фото этой проверки — не отправляем
-                        const rp = window.RbiSyncRetryPolicy;
-                        // сеть/сервер важнее «нет файла»: такая ошибка — просто повтор позже
-                        const photoErr = photoFails.find(e => !(rp && rp.isMissingFileError(e))) || photoFails[0];
-                        if (rp && rp.isMissingFileError(photoErr)) {
-                            console.warn('[Sync] Проверка помечена «нужно внимание» (фото нет на устройстве):', inspectionId, photoErr.message);
-                            // Доработка 2: запоминаем, каких фото нет (для «Отправить без этого фото»), и время повтора.
-                            const missing = [];
-                            photoResults.forEach((r, idx) => {
-                                if (r.status === 'rejected' && rp.isMissingFileError(r.reason)) {
-                                    missing.push({ itemId: String(photoItemIds[idx]), ref: String(r.reason.ref || '') });
-                                }
-                            });
-                            const missingNames = missing.map(m => {
-                                const info = typeof getChecklistItem === 'function' ? getChecklistItem(c.templateKey || '', m.itemId) : null;
-                                return (info && info.n) || ((c.details || {})[m.itemId] || {}).name || ('№ ' + m.itemId);
-                            });
-                            rp.markAttention(c, rp.missingPhotoReason(missingNames));
-                            c.syncMissingPhotos = missing;
-                            rbiNoteAttentionRetry(c.syncAttentionRetryAt);
-                            localHistoryToUpdate.push(c);
-                            syncAttentionCount++;
-                        } else {
-                            console.warn('[Sync] Фото проверки не отправлены, повторим позже:', inspectionId, photoErr && photoErr.message);
-                            pushErrors++; rbiNoteErr(photoErr);
-                        }
-                        continue;
-                    }
-
-                    if (storagePathsToRemove.length > 0) {
-                        await window.supabaseClient.storage.from('inspection-photos').remove(storagePathsToRemove);
-                    }
-
-                    // Формируем пакет самой проверки
-                    const inspContractorId = String(c.contractorId || '').trim();
-                    const inspProjectId = String(c.projectId || c.project_id || '').trim();
-                    const inspPayload = {
-                        id: inspectionId, project_code: pCode,
-                        project_name: c.project_display_name || c.projectName || '', project_canonical_key: c.project_canonical_key || c.projectName || '', project_display_name: c.project_display_name || c.projectName || '',
-                        engineer_name: c.inspectorName || iName, inspector_name: c.inspectorName || iName, contractor_name: c.contractorName || '',
-                        template_key: c.templateKey || '', template_title: c.templateTitle || '', location: c.location || '',
-                        section: c.section || '', floor: c.floor || '', room: c.room || '', inspection_date: c.date || new Date().toISOString(),
-                        metrics: c.metrics || {}, is_completed: c.isCompleted !== false, is_deleted: isDeleted, deleted_at: isDeleted ? (c._deletedAt || new Date().toISOString()) : null,
-                        inspection_type: c.inspection_type || 'rbi_audit',
-                        source: 'cloud', sync_status: 'synced', sync_block_reason: '', updated_at: new Date().toISOString()
-                    };
-                    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(inspContractorId)) {
-                        inspPayload.contractorId = inspContractorId;
-                    }
-                    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(inspProjectId)) {
-                        inspPayload.projectId = inspProjectId;
-                    }
-                    inspectionsBatch.push(inspPayload);
-
-                    // Формируем пакет нарушений
-                    for (const itemId of Object.keys(c.state || {})) {
-                        const info = getChecklistItem(c.templateKey || '', itemId);
-                        const d = (c.details || {})[itemId] || {};
-                        itemsBatch.push({
-                            id: `${inspectionId}_${itemId}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
-                            source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), item_name: info?.n || d.name || '', item_weight: info?.w || d.weight || null,
-                            status: c.state[itemId], comment: d.comment || d.text || '', cause_code: d.causeCode || '', fact_value: d.fact || d.factValue || '', tolerance_value: d.tolerance || d.toleranceValue || '',
-                            details: d, updated_at: new Date().toISOString()
-                        });
-                    }
-
-                    // Помечаем, что всё ок (и для живых, и для удаленных!)
-                    if (window.RbiSyncRetryPolicy) window.RbiSyncRetryPolicy.clearAttention(c);
-                    c.source = 'cloud'; c.syncStatus = 'synced'; c.sync_status = 'synced';
-                    c.syncBlockReason = ''; c.sync_block_reason = ''; c.importedFromBackup = false;
-                    c.updatedAt = new Date().toISOString(); c.updated_at = c.updatedAt;
-
-                    if (!isDeleted) {
-                        c.photos = uploadedPhotos;
-                    }
-                    // ВСТАВКА: Обязательно сохраняем локально, чтобы статус стал synced и перестал спамить облако
-                    localHistoryToUpdate.push(c);
-                }
-
-                // 🚀 ПАКЕТНАЯ ОТПРАВКА В БАЗУ (Вжух и готово!)
-                if (inspectionsBatch.length > 0) {
-                    const { error } = await window.supabaseClient.from('rbi_inspections').upsert(inspectionsBatch, { onConflict: 'id' });
-                    if (error && (!window.RbiSyncRetryPolicy || window.RbiSyncRetryPolicy.isTransientSyncError(error))) {
-                        // P2-0059: сбой связи или сервера — не «нет прав»: осмотры остаются «не отправлено» и уйдут повтором
-                        // (фото уже на сервере — их ссылки сохраняются, повторно не грузятся)
-                        console.warn('[Sync] Осмотры не отправлены (связь/сервер), повторим:', error.message);
-                        pushErrors++; rbiNoteErr(error);
-                        const sentIds = new Set(inspectionsBatch.map(x => String(x.id)));
-                        localHistoryToUpdate.forEach(c => {
-                            if (!sentIds.has(String(c.id))) return;
-                            c.source = 'local'; c.syncStatus = 'not_synced'; c.sync_status = 'not_synced';
-                        });
-                        itemsBatch.length = 0;
-                        photosBatch.length = 0;
-                    } else if (error) {
-                        console.warn('[Sync] Ошибка RLS: нет прав на отправку некоторых проверок', error.message);
-                        // Помечаем их локально как заблокированные
-                        localHistoryToUpdate.forEach(c => {
-                            c.syncStatus = 'blocked';
-                            c.sync_status = 'blocked';
-                            c.syncBlockReason = 'Ошибка прав доступа (RLS)';
-                            c.sync_block_reason = c.syncBlockReason;
-                        });
-                    } else {
-                        actuallyPushedChecks += inspectionsBatch.length;
-                    }
-                }
-
-                // Бьем на куски по 1000 строк (лимит Supabase)
-                // RBI FIX: отправляем пункты и фото пачками с обязательной проверкой error.
-                // Раньше ошибки upsert могли теряться, а локальная проверка помечалась как synced.
-                await rbiUpsertBatches('rbi_inspection_items', itemsBatch, 500, { onConflict: 'id' });
-                await rbiUpsertBatches('rbi_inspection_photos', photosBatch, 500, { onConflict: 'id' });
-
-                // Обновляем локальную базу
-                if (localHistoryToUpdate.length > 0 && typeof dbPutBatch === 'function') {
-                    await dbPutBatch('app_history', localHistoryToUpdate);
-                    if (Array.isArray(contractorArray)) {
-                        localHistoryToUpdate.forEach(updatedC => {
-                            const idx = contractorArray.findIndex(x => String(x.id) === String(updatedC.id));
-                            if (idx >= 0) contractorArray[idx] = window.RbiHistoryMemory ? window.RbiHistoryMemory.lighten(updatedC) : updatedC;
-                        });
-                    }
-                }
-            }
+            // P2-0059: свои осмотры — функция rbiPushOwnInspections (первыми в проходе и здесь — то, что записали за время загрузки)
+            await rbiPushOwnInspections();
         }
         // =====================================================
         // 6. PUSH: черновик
@@ -2950,7 +2985,7 @@ async function rbiSyncPass(mode = 'silent') {
                     return tTime === 0 || Number.isNaN(tTime) || tTime >= lastPushTimeTasks;
                 });
                 // P2-0023: задачи «нужно внимание» не шлём, пока пользователь их не изменит.
-                // Доработка 2: с повтором по расписанию (2/5/10/30 мин), как у проверок.
+                // Доработка 2: с повтором по расписанию (2/5/10 мин), как у проверок.
                 if (window.RbiSyncRetryPolicy) tasks = tasks.filter(t => {
                     if (!window.RbiSyncRetryPolicy.isAttention(t) || window.RbiSyncRetryPolicy.attentionRetryDue(t, Date.now())) return true;
                     rbiNoteAttentionRetry(t.syncAttentionRetryAt);
@@ -4272,6 +4307,7 @@ async function rbiSyncPass(mode = 'silent') {
             localStorage.setItem('rbi_cloud_dirty', '0');
             localStorage.removeItem('rbi_sync_fail_count');
             localStorage.removeItem('rbi_sync_retry_after');
+            localStorage.removeItem('rbi_sync_retry_kind');
             localStorage.removeItem('rbi_sync_error_shown');
         } else if (flags.pause) {
             if (flags.dirty) localStorage.setItem('rbi_cloud_dirty', '1');
@@ -4717,6 +4753,7 @@ async function rbiSyncPass(mode = 'silent') {
     } catch (e) {
         console.error("[Sync] Ошибка:", e);
         pushErrors++;
+        if (window.RbiSyncNetPolicy && window.RbiSyncNetPolicy.retryKindOf(e) === 'server') serverErrSeen = true;
         rbiScheduleSyncRetryOnce(); // P2-0023: не повторять каждую минуту (доработка 5: не дважды за проход)
         const errMsg = e.message ? e.message.substring(0, 80) : 'Сбой сети';
         if (_syncProg()) {
