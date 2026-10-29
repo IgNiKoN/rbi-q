@@ -134,7 +134,8 @@ async function prefetch(out, width) {
   ok(rows >= 1 && !/Нужен интернет/.test(markF), `${tag}: без сети «Ввод» → Этаж 2 (не открывали) — позиции места видны`, rows + ' поз. · ' + markF);
   await page.screenshot({ path: join(out, tag + '-fact-floor.png'), fullPage: true });
   const enter = page.locator('[data-testid=ft-enter], [data-testid=cb-enter]');
-  ok(!(await enter.count()) || await enter.first().isDisabled(), `${tag}: «Внести» без сети неактивна (если есть)`);
+  // P2-0064: факт без сети вносится (запись на телефоне) — «Внести» активна; исправление и решение РП — только с сетью (pf-*, fact.mjs)
+  ok(!(await enter.count()) || !(await enter.first().isDisabled()), `${tag}: «Внести» без сети активна (P2-0064, если есть)`);
   await go(page, '#/planfact/fact/journal', 5000);
   t = await text(page);
   const markJ = await page.locator('[data-testid=p2-offline-mark]:visible').first().innerText().catch(() => '');

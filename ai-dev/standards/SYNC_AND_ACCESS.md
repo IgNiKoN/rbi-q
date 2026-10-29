@@ -34,6 +34,10 @@
 | `ownFirst` | уходит в начале прохода, до скачивания чужого; задачи и замечания — только новые (сервер их ещё не видел, `cloudKnown` нет), правка уже известной записи — после скачивания, чтобы не отменить удаление или более новую правку с сервера | `true` (осмотры, задачи, замечания) |
 | `objectType` / `memory` | вид для общей отправки «объектов» (`pushCloudObject`) и массив в памяти — тогда движок отправляет его по описанию | совещание — `meeting` / `rbi_meetingsData` |
 
+### Вид, который уходит функцией сервера (P2-0064)
+
+Модуль, у которого ввод на сервере — функция (не строка таблицы), описывает вид полем `rpc` (план/факт: `{ kind: 'pf_fact', store: 'device_records', rpc: 'pf_fact_submit', title: 'Факт' }`). Такая запись живёт в **базе записей устройства** сервиса платформы (`src/platform/services/offline/device-records.ts`, своя база IndexedDB `platform2_device_records`, под «компания + пользователь») — она есть в любой компании, и без Качества (база Качества и его движок есть только у компаний с Качеством / Стройконтролем). Отправка — общая отправка сервиса (`send.ts`, браузер — `device-send.ts`): функция вызывается с `p_client_id` (id записи с телефона) и `p_entry` (что внёс человек); повтор с тем же id — прежний ответ, дубля нет (сервер хранит принятые номера). Правила те же: один проход на все вкладки (замок `p2-device-records`), по порядку создания, ограничение времени, обрыв — повтор с паузой 30 с → 5 мин, отказ — «Сервер отклонил: причина» (сама не уходит до «Отправить снова»), модуль выключен у компании — «Не отправлено: …» (перепроверяется каждый проход), журнал синхронизации, счётчик и «Отправка». Права и область проверяет функция сервера; правило устройства для такого вида — только «вошёл» и «модуль включён» (зеркала нет: решение — на сервере). Со связью запись тоже сначала кладётся на телефон и сразу уходит; отказ сразу — запись удаляется с телефона, экран показывает причину.
+
 ## Правило устройства — что решает и как
 
 - `meFrom` / `deviceMe` — «кто я»: id учётной записи, ФИО (текущее, прежние — мост запоминает при смене), почта, действия и закреплённые объекты из `quality.my_access`, фирма по id, модули компании. Нет входа почтой — `null`: ничего не уходит, причина «нужно войти».
@@ -66,6 +70,7 @@
 | Счётчик и список «не отправлено» | `src/platform/auth/offline-rescue.ts` (`recordStoresFrom` → `RECORD_STORES`, `resetBlocked`), причины — `sync-status.ts` (`reasonFor`), «Отправить снова» — `net-status.ts` |
 | История | `js/modules/quality/features/history/history.render.js` — причина и подсказка у «Заблок.» |
 | Зеркальный тест | `tests/server/sync-access.mirror.mjs` (локальная копия сервера — `tests/server/pglite-db.mjs`, все миграции; PGlite — вне репозитория, путь в `P2_PGLITE`) |
+| Вид с `rpc` (P2-0064) | база записей устройства — `src/platform/services/offline/device-records.ts`; отправка — `send.ts` (`createSender`, `classify`, `sendKindsFrom`), `device-send.ts` (`submitDeviceRecord`, `sendNow`, `startDeviceSend` — из `entry.ts`; `window.RBI.deviceSend`); счётчик и «Отправка» — `net-status.ts` (`deviceRows`); экран модуля — `useDeviceRecords(module)` (`offline/index.ts`); сервер — `pf_fact_submit` (051); unit `src/platform/services/offline/__tests__/device-send.test.ts`, стенд `tests/offline/fact.mjs` |
 | Сценарии стенда | `tests/offline/sync.mjs` (`s-rename`, `s-foreign`, `s-leader`, `s-kinds`, `s-contractor`, `s-reject-retry`, `s-own-first`, `s-module-off`, `s-new-kind`), `tests/offline/pull-scope.mjs` (`s-pull-scope`) |
 
 ## Не делать

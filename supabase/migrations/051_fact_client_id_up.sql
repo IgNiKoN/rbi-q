@@ -10,7 +10,7 @@
 begin;
 
 create table planfact.fact_submissions (
-  client_id uuid primary key,
+  id uuid primary key,   -- номер записи, созданный на телефоне (p_client_id)
   company_id uuid not null,
   project_id uuid not null,
   kind text not null check (kind in ('entry', 'batch')),
@@ -34,7 +34,7 @@ begin
     raise exception 'Неизвестный вид записи факта' using errcode = '22023';
   end if;
   -- повтор уже принятой записи — прежний ответ, второй записи нет
-  select * into v_prev from planfact.fact_submissions where client_id = p_client_id;
+  select * into v_prev from planfact.fact_submissions where id = p_client_id;
   if found then
     if v_prev.created_by <> auth.uid() then raise exception 'Номер записи занят другим пользователем' using errcode = '42501'; end if;
     return v_prev.result || jsonb_build_object('repeat', true);
@@ -48,10 +48,10 @@ begin
   select company_id into v_company from core.projects where id = v_project;
   if v_company is null then raise exception 'Проект не найден' using errcode = '22023'; end if;
   -- номер занимается до записи факта: одновременный повтор ждёт первого и получает его ответ
-  insert into planfact.fact_submissions(client_id, company_id, project_id, kind) values (p_client_id, v_company, v_project, v_kind)
-  on conflict (client_id) do nothing;
+  insert into planfact.fact_submissions(id, company_id, project_id, kind) values (p_client_id, v_company, v_project, v_kind)
+  on conflict (id) do nothing;
   if not found then
-    select * into v_prev from planfact.fact_submissions where client_id = p_client_id;
+    select * into v_prev from planfact.fact_submissions where id = p_client_id;
     if v_prev.created_by <> auth.uid() then raise exception 'Номер записи занят другим пользователем' using errcode = '42501'; end if;
     return v_prev.result || jsonb_build_object('repeat', true);
   end if;
@@ -72,7 +72,7 @@ begin
     v_res := public.pf_fact_add_batch(v_project, (p_entry ->> 'brigade_id')::uuid, (p_entry ->> 'date')::date, p_entry -> 'items',
       (p_entry ->> 'workers')::int, p_entry ->> 'note', coalesce((p_entry ->> 'require_approval')::boolean, false));
   end if;
-  update planfact.fact_submissions set result = v_res where client_id = p_client_id;
+  update planfact.fact_submissions set result = v_res where id = p_client_id;
   return v_res;
 end $$;
 

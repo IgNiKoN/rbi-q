@@ -19,7 +19,7 @@ create or replace function pg_temp.pos(imp uuid, rn int) returns uuid language s
 create or replace function pg_temp.cnt(p uuid) returns int language sql security definer as $f$
   select count(*)::int from planfact.fact_entries where position_id = p $f$;
 create or replace function pg_temp.subs(c uuid) returns int language sql security definer as $f$
-  select count(*)::int from planfact.fact_submissions where client_id = c $f$;
+  select count(*)::int from planfact.fact_submissions where id = c $f$;
 do $$
 declare
   uadm uuid := gen_random_uuid(); upto uuid := gen_random_uuid(); uiv uuid := gen_random_uuid(); upe uuid := gen_random_uuid();
