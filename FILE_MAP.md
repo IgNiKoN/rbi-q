@@ -1,39 +1,33 @@
-# Platform 2.0 — карта файлов для AI-агентов
+# Platform 2.0 — карта кода (FILE_MAP)
 
-**Версия:** 1.3 · 20.10.2026  
-**Назначение:** входная точка «где искать информацию и код». Открывать **перед** чтением большого количества файлов.  
-**Важно:** карта исходников ниже подтверждена только по переданному снимку `rbi-q-main (14)(1).zip`; **это не актуальный Git**. Для любой конкретной правки проверьте реальный путь и текущую реализацию.
+**Что это:** где в коде лежит каждая функция: файлы, миграции, тесты, отчёты блока. **Карта документов** (какой файл регламента зачем и когда читать) — [`ai-dev/DOCS_MAP.md`](ai-dev/DOCS_MAP.md).
+**Как пользоваться:** найти строку по теме (поиск по странице: `grep -n "Шахматка" FILE_MAP.md`), открыть названные файлы, **проверить по коду** — карта направляет поиск, но не заменяет его. Целиком не читать.
+**Кто обновляет:** Исполнитель — в том же блоке, если добавил или перенёс файл, сервис, миграцию, публичный контракт (одна строка на функцию; формат — [`ai-dev/navigation/MAP_MAINTENANCE.md`](ai-dev/navigation/MAP_MAINTENANCE.md)). Старая шапка v1.3 и базовая ревизия `379cc5f` — [`ai-dev/archive/navigation/FILE_MAP_v1_3_history.md`](ai-dev/archive/navigation/FILE_MAP_v1_3_history.md).
 
-## Подтверждённая ревизия базы: `platform-2-core` @ `379cc5f` (P2-0001, TESTER PASS 20.10.2026)
+## Что найти → с чего начать
 
-Ниже — пути, проверенные по коду в ревизии `379cc5f` (ветка `main`, дерево чисто). Всё, что не в этой таблице, по-прежнему взято из снимка ZIP и требует проверки. Источник: `ai-dev/reports/P2-0001/executor-2.md`, `tester-2.md`.
+| Нужно понять | Начать с | Проверить также |
+|---|---|---|
+| Что разрабатывать сейчас | `ai-dev/CURRENT_CONTEXT.md`, `ai-dev/handoff/LATEST_ARCHITECT_PLAN.md` | `ai-dev/ROADMAP.md`, `ai-dev/reference/MODULES.md`, текущая карточка |
+| Как устроена оболочка | `js/core/app.entry.js`, `js/core/app-shell.js` | `js/core/bootstrap.js`, `js/core/views.js` |
+| Как загружается модуль | `js/core/module-loader.js`, `js/modules/modules.manifest.js` | `js/core/rbi-core.js`, `js/core/router.js`, `sw.js` |
+| Где контекст `ctx`, события | `js/core/rbi-core.js` | `js/services/*.service.js`, Module API (создаётся по результату эксперимента) |
+| Вход и текущий пользователь | `js/services/sync/sync-auth.js`, `js/services/user-context.service.js` | `js/services/session.service.js`, `js/services/config.service.js` |
+| Роли, разрешения, компания | `js/services/permission.service.js`, `js/services/company.service.js` | `sql/012_company_settings_role_matrix.sql`, `sql/014_privilege_rls_hardening.sql`, серверные RLS |
+| Дерево объектов и локаций | `src/services/locations/`, `js/services/object-directory.service.js` | `sql/002_create_platform_v2_tables.sql`, `sql/006_extend_location_nodes_hierarchy.sql` |
+| Подрядчики/мастер-данные | `js/services/contractor-directory.service.js`, `js/services/masterData.service.js` | `js/services/object-directory.service.js`, API проекта |
+| IndexedDB/синхронизация | `js/services/storage/`, `js/services/sync/` | `js/services/storage.service.js`, `js/services/sync.service.js`, `sw.js` |
+| Фото, документы, PDF | `js/services/file.service.js`, `js/services/storage/storage-photo-manager.js`, `js/services/storage/storage-photo-loader.js` (ленивая загрузка, P2-0023) | `js/shared/pdf-open.utils.js`, `libs/` |
+| Отправка при плохой связи (P2-0059) | правила `js/services/sync/sync-net.policy.js` (проверка связи, ограничение времени, порции, паузы, замок), журнал `sync-journal.policy.js`; среда — `sync-core.state.js` (`window.RbiSyncNet`, `window.RbiSyncJournal`); проход — `sync-engine.core.js` (`triggerSync` → `rbiWithSyncLock` → `rbiSyncPass`, `rbiPushOwnInspections`); fetch клиента Качества — `quality-bridge.ts` (`syncFetch`); «что не ушло и почему» + журнал — `src/platform/auth/sync-status.ts` (рисует `net-status.ts`, список — `offline-rescue.ts` `listPending`) | тесты `js/shared/__tests__/sync-net.policy.test.js`, `sync-journal.policy.test.js`, `src/platform/auth/__tests__/sync-status.test.ts`; стенд «погод» `tests/offline/weather.mjs` |
+| Правила синхронизации (P2-0023) | `js/services/sync/sync-pull.policy.js` (загрузка), `sync-retry.policy.js` (повторы, «нужно внимание», «Отправить без этого фото» — `history.actions.js`), `sync-merge.policy.js` (автоочистка, совещания, ТИВИ) | тесты `js/shared/__tests__/sync-*.policy.test.js`; черновик «к отправке», удаление, «История» из памяти (P2-0025) — `sync-draft-history.test.js` |
+| Скорость Качества 2.0 (P2-0024) | загрузка нового устройства — `js/services/sync/sync-pull.policy.js` (`pullPagedByIds` параллельно, `indexLocalHistory`, `keepLocalOverCloud`); снимок чек-листа — `js/services/storage/checklist-snapshot.utils.js` + `storage-db.core.js` (хранилище `checklist_snapshots`, база v30, `rbiMigrateChecklistSnapshots`); история в памяти — `js/services/storage/history-memory.utils.js` (`RbiHistoryMemory.lighten`), список «Истории» — `history.state.js` (`historyListFromMemory`) | тесты `js/shared/__tests__/checklist-snapshot.utils.test.js`, `history-memory.utils.test.js`, `history-memory-list.test.js`; стенд — `scripts/perf/quality-history-seed.browser.js`, `scripts/perf/quality-analytics-measure.browser.js` |
+| Единые цвета, кнопки, темы | `css/brand/rbi.css`, `css/rbi-ui.css`, `css/style.css` | `ai-dev/standards/DESIGN_SYSTEM.md`, `UI_COMPONENTS.md` |
+| Пример TS/Vite-модуля | `src/modules/construction-v2/index.ts` | `src/modules/construction-v2/manifest.ts`, `vite.construction-v2.config.ts` |
+| Сборка, тесты | `package.json`, `tsconfig.json`, `vite.*.config.ts` | `js/shared/__tests__/`, фактически доступные команды |
+| Бизнес-требования Plan/Fact (ТЗ) | `ai-dev/reference/TZ_PLAN_FACT.md` (коды PTO/PR/LP/MN/NFR) | оригинал — iCloud `Project Cloude/Образцы заказчиков/ТЗ для программы (1).docx`; §15 — открытые вопросы |
 
-| Функция | Подтверждённый путь/экспорт | Владелец | Потребители/граница | Статус и проверенный commit |
-|---|---|---|---|---|
-| Старт оболочки | `index.html` → `js/core/bootstrap.js` → `js/core/app.entry.js` (`MODULE_KEYS` стр. 23, `BUNDLES` стр. 35, `ALWAYS_INIT` стр. 41) | Core (shell) | все модули | CONFIRMED `379cc5f` |
-| Загрузчик модулей | `js/core/module-loader.js`: `MODULE_BASE_URLS` стр. 16, `import(entryUrl)` и кэш `_loaded[id]` стр. 97–99 | Core (shell) | `app.entry.js` | CONFIRMED `379cc5f`; mount/unmount, версии, откат — нет |
-| Контекст `ctx` | `js/core/rbi-core.js` (149 стр., `window.RBI.events/registry/context/services/utils`); fallback в загрузчике — `js/core/module-loader.js` стр. 95 | Core (shell) | модули | CONFIRMED `379cc5f`; версионированного типизированного `ctx` нет |
-| Манифесты модулей | `js/modules/modules.manifest.js`: 8 статических манифестов (quality, sk, settings, knowledge, construction, construction-v2, game, ai), `getModuleManifest(id)` | Core (shell) | `module-loader.js` | CONFIRMED `379cc5f` |
-| Компания | `js/services/company.service.js:30` `COMPANY_ID='rbi'` | Core / Master Data | все сервисы | CONFIRMED `379cc5f`; жёстко задана |
-| Права и роли | `js/services/permission.service.js:28` `ROLE_MATRIX`, `:110` `COMPANY_ROLE_MATRICES={rbi}`; роли по названию | Access (сейчас в клиенте) | UI и сервисы | CONFIRMED `379cc5f`; расходится с ADR-053 — техдолг |
-| Текущий пользователь | `js/services/user-context.service.js:25-38` (id = имя инженера, fallback `'rbi'`, `projectCode`) | Core | модули | CONFIRMED `379cc5f` |
-| Вход | `js/services/sync/sync-auth.js` (технический email и пароль из `projectCode+имя+PIN`, авто-регистрация `signUp` стр. 79) | Core | Supabase Auth | CONFIRMED `379cc5f` |
-| Конфигурация и адрес БД | `js/services/config.service.js:5-6` и `report.html:354-355` — литерал `https://api.rbi-q.ru` и anon-ключ. `sync-auth.js:128-131` и `ai.actions.js:258` читают `window.APP_CONFIG` | Core | Supabase | CONFIRMED `379cc5f`; **адрес боевой БД в публичном репозитории** |
-| Отчёт (`report.html`) | `report.html:513` — клиент создаётся через `APP_CONFIG.SUPABASE_URL` / `APP_CONFIG.SUPABASE_KEY` (литерал только в стр. 353–355) | Quality | Supabase | CONFIRMED `379cc5f` |
-| Локации / дерево объектов | `src/services/locations/` (5 файлов), `locations.service.ts:179,323` пишет `companyId:'rbi'` | Master Data | Plan/Fact (планируется) | CONFIRMED `379cc5f` |
-| Эталон TS/Vite-модуля | `src/modules/construction-v2/` + `vite.construction-v2.config.ts` → `js/dist/construction-v2.js` | Construction | сборка | CONFIRMED `379cc5f` |
-| Сборка | `npm run build:modules` — 5 Vite-конфигов (`vite.*.config.ts`); собранные `js/dist/*.js` закоммичены | Core | GitHub Pages | CONFIRMED `379cc5f`; `npm ci` PASS (онлайн) |
-| Офлайн-кэш / IndexedDB | `sw.js:5-6` (`CACHE_NAME=rbi-quality-v18.59.59`), `sw.js:328-333` (удаляет чужие caches при `activate`); `js/services/storage/storage-db.core.js:4` `RBI_QUALITY_DB` | Core | браузер | CONFIRMED `379cc5f` |
-| Дизайн-токены | `css/brand/rbi.css` (19 `--*`; темы `html[data-theme="rbi-light-v3" \| "rbi-dark-v3"]`, стр. 51–52), `css/rbi-ui.css`, `css/style.css` | UI | модули | CONFIRMED `379cc5f`; сверка по компонентам с `DESIGN_SYSTEM.md` — NOT RUN |
-| SQL-политики | `sql/002`, `003`, `012` — по 2 `USING (true)`; `sql/007` (storage bucket `public`, `TO anon`); `sql/014` сужает только `rbi_company_settings` | Core / DB | Supabase | CONFIRMED по файлам; **живая БД — NOT VERIFIED** |
-| Plan/Fact (ПФ-1…ПФ-6) | `plan-fact`, `platform-2-0/packages/*` | — | — | **NOT FOUND** в `379cc5f` и в GitHub `main`; реализация **PLANNED / NEW** |
-| CI и окружение | `.github/`, `.env.example` | — | — | **NOT FOUND**; `check:boundaries` FAIL — нет `_ai/scripts/check-module-boundaries.sh` |
 
-**Как добавить новый модуль (подтверждено):** правки в трёх местах ядра — `js/modules/modules.manifest.js`, `MODULE_BASE_URLS` в `js/core/module-loader.js`, `MODULE_KEYS`/`BUNDLES` в `js/core/app.entry.js`.
-
-**Коррекции к снимку ZIP (20.10.2026):** `.gitignore` нового репозитория не игнорирует `docs/` и `README.md` (правило `/dist/` корневое); `npm ci --offline` не нужен, обычный `npm ci` проходит; `tsc --noEmit` даёт 0 ошибок (старые 6 ошибок в `plan-viewer.ts`/`object-bridge.ts` устарели).
-
-## Изменения P2-0005 (ветка `task/P2-0005-projects-locations`, не в `main` до приёмки)
+## План/Факт, ядро, «Компания», места, Настройки (собрано по блокам P2-0005…P2-0056)
 
 | Что | Где |
 |---|---|
@@ -80,7 +74,7 @@
 | «Компания» в Настройках | `js/modules/settings/settings.render.js`, `settings.desktop.render.js`, `js/core/router.js` (`#/settings/company`), `src/platform/company/index.ts` (`RBI.platformPanels.company`), `company.manifest.js` (без пункта меню) |
 | Телефон: «☰ Модули» на всех экранах, последний модуль (P2-0030) | `js/core/app-shell.js` (`syncMobileModuleStrip`, `currentPlatformItem`), `index.html` (`#mobile-module-strip`), `css/style.css` (`.mobile-module-strip`); `src/platform/auth/platform.service.ts` (`homePathFor`), `entry.ts` (`goHome`); отступ шапки по модулю — `js/shared/layout.utils.js` (`updateBodyPadding`); unit — `src/platform/auth/__tests__/mobile-module-strip.test.ts`, `platform.test.ts` |
 
-## Изменения P2-0004b (ветка `task/P2-0004b-role-builder`, не в `main` до приёмки)
+## Вход, администрирование, Качество и перенос РБИ (собрано по блокам P2-0004b…P2-0049)
 
 | Что | Где |
 |---|---|
@@ -103,7 +97,7 @@
 | Раздел «Компания» | `src/platform/company/` (`index.ts` init/mount, `CompanyApp.ts`, `CompanyRoles.ts`, `CompanyMembers.ts`, `CompanyAudit.ts`, `CounterpartiesTab.ts` (P2-0015), `company.service.ts` — только `pf_*`, `action-groups.ts` — русские группы действий); manifest `js/modules/company/company.manifest.js`, вход `js/modules/company/index.js` (бандл динамически, только при праве — P2-0013) → `js/dist/company/company.js`; `vite.company.config.ts`; тесты `src/platform/company/__tests__/` |
 | Регистрация раздела | `js/modules/modules.manifest.js`, `js/core/module-loader.js` (путь, `requiresAccess`), `js/core/app.entry.js` (`PLATFORM2_MODULES`), `js/core/app-shell.js` (`getPlatformMenuItems` — фильтр по `RBI.platformMenuAccess`) |
 
-## Изменения P2-0004 (ветка `task/P2-0004-access-rls`, не в `main` до приёмки)
+## Доступ и сервер Platform 2.0 (P2-0004)
 
 | Что | Где |
 |---|---|
@@ -114,9 +108,8 @@
 | Настройка сервера | `js/services/config.service.js` (`P2_SUPABASE_URL`, `P2_SUPABASE_ANON_KEY`); `.env.example` |
 | Документы | `docs/SERVERS.md`, `docs/TECH_DEBT.md` (пп. 9–16), `CHANGELOG.md` |
 
-## Изменения P2-0002 (ветка `task/P2-0002-shell-planfact`, не в `main` до приёмки)
+## Оболочка, версия, сборка, офлайн-кэш (P2-0002…P2-0067a)
 
-Проверено Исполнителем 20.10.2026 по коду ветки (самопроверка, не TESTER). Строки выше про адрес БД и манифесты для этой ветки **устарели**.
 
 | Функция | Путь | Статус |
 |---|---|---|
@@ -131,60 +124,6 @@
 | Init модулей Platform 2.0 | `js/core/app.entry.js` `PLATFORM2_MODULES` (вне каталога компании) | |
 | Модуль План/Факт | manifest `js/modules/planfact/planfact.manifest.js`; вход `js/modules/planfact/index.js` → бандл `js/dist/planfact/planfact.js`; исходники `src/modules/planfact/` (`index.ts` init/mount/unmount, `PlanfactTable.ts`, `model.ts`, `demo-data.json`); маршрут `#/planfact` регистрирует сам модуль | демо-данные |
 | Сборка / тесты / запуск | `vite.planfact.config.ts`; `src/modules/planfact/__tests__/*.test.ts` (в `npm test`, DOM — happy-dom); `npm run dev` → `scripts/dev-server.mjs` | |
-
-## Маршрут чтения за 60 секунд
-
-1. **Правила и роли:** [`AGENTS.md`](AGENTS.md) → [`ai-dev/WORKFLOW.md`](ai-dev/WORKFLOW.md) → нужная роль в [`ai-dev/roles/`](ai-dev/roles/) → [`ai-dev/tasks/P2-0001.md`](ai-dev/tasks/P2-0001.md) или текущая карточка.
-2. **Текущая передача между сеансами:** [`ai-dev/CURRENT_CONTEXT.md`](ai-dev/CURRENT_CONTEXT.md) — только подтверждённые факты и следующее действие.
-3. **Главный объём продукта:** [`ai-dev/reference/ARCHITECTURE_v1_3_MVP_FINAL.md`](ai-dev/reference/ARCHITECTURE_v1_3_MVP_FINAL.md). Для деталей, которых нет в v1.3, — [`ARCHITECTURE_v1_2.md`](ai-dev/reference/ARCHITECTURE_v1_2.md). Не трактовать всю v1.2 как MVP.
-4. **Правила повторного использования:** [`ai-dev/standards/ENGINEERING_STANDARDS.md`](ai-dev/standards/ENGINEERING_STANDARDS.md), [`SINGLE_SOURCE_OF_TRUTH.md`](ai-dev/standards/SINGLE_SOURCE_OF_TRUTH.md).
-5. **Где что в коде:** [`ai-dev/navigation/CODEBASE_MAP.md`](ai-dev/navigation/CODEBASE_MAP.md) и [`ai-dev/navigation/FILE_INVENTORY_SNAPSHOT.md`](ai-dev/navigation/FILE_INVENTORY_SNAPSHOT.md).
-6. **Как искать без потери контекста:** [`ai-dev/navigation/AGENT_SEARCH_PLAYBOOK.md`](ai-dev/navigation/AGENT_SEARCH_PLAYBOOK.md). Найденный по карте путь — кандидат; код/схема подтверждают реальность.
-7. **Что перенесено из старого `_ai`:** [`ai-dev/reference/LEGACY_AI_TRANSFER_AUDIT.md`](ai-dev/reference/LEGACY_AI_TRANSFER_AUDIT.md). Исторический архив сам по себе **не набор активных инструкций**.
-
-## Новое 20.10.2026
-
-- [`ai-dev/ROADMAP.md`](ai-dev/ROADMAP.md) — **мастер-дорожная карта** Platform 2.0 (старая карта RBI сохранена в `ai-dev/reference/legacy/`).
-- [`ai-dev/reference/TZ_PLAN_FACT.md`](ai-dev/reference/TZ_PLAN_FACT.md) — **ТЗ v1.1** (разделы 1.5, PTO-01/11/12, LP-04).
-- [`ai-dev/specs/`](ai-dev/specs/) — согласованные решения по блокам (ВОР, смета, КП, КС-2).
-- Дизайн-система Platform 2.0 (Claude Design System): https://claude.ai/artifact/Bs4civLNjGjHhixGy2HRWW — токены и компоненты; правила — `ai-dev/standards/DESIGN_SYSTEM.md`.
-- Размер блоков и контрольные точки: `ai-dev/standards/BLOCK_SIZING.md`.
-- Вес приложения (первый экран, модули по требованию, библиотеки, картинки): `ai-dev/standards/WEIGHT_BUDGET.md`; замер — `tests/perf/first-open.mjs`.
-- Роли: **две** — ADR-062 в `ai-dev/standards/DECISIONS_2026-10-20.md`.
-
-## Что найти → с чего начать
-
-| Нужно понять | Начать с (в новом рабочем репозитории) | Проверить также |
-|---|---|---|
-| Что разрабатывать сейчас | `ai-dev/reference/ARCHITECTURE_v1_3_MVP_FINAL.md` §§ 6, 11–14 | `ai-dev/MVP_BACKLOG.md`, текущая карточка |
-| Как устроена оболочка | `js/core/app.entry.js`, `js/core/app-shell.js` | `js/core/bootstrap.js`, `js/core/views.js` |
-| Как загружается модуль | `js/core/module-loader.js`, `js/modules/modules.manifest.js` | `js/core/rbi-core.js`, `js/core/router.js`, `sw.js` |
-| Где контекст `ctx`, события | `js/core/rbi-core.js` | `js/services/*.service.js`, Module API (создаётся по результату эксперимента) |
-| Вход и текущий пользователь | `js/services/sync/sync-auth.js`, `js/services/user-context.service.js` | `js/services/session.service.js`, `js/services/config.service.js` |
-| Роли, разрешения, компания | `js/services/permission.service.js`, `js/services/company.service.js` | `sql/012_company_settings_role_matrix.sql`, `sql/014_privilege_rls_hardening.sql`, серверные RLS |
-| Дерево объектов и локаций | `src/services/locations/`, `js/services/object-directory.service.js` | `sql/002_create_platform_v2_tables.sql`, `sql/006_extend_location_nodes_hierarchy.sql` |
-| Подрядчики/мастер-данные | `js/services/contractor-directory.service.js`, `js/services/masterData.service.js` | `js/services/object-directory.service.js`, API проекта |
-| IndexedDB/синхронизация | `js/services/storage/`, `js/services/sync/` | `js/services/storage.service.js`, `js/services/sync.service.js`, `sw.js` |
-| Фото, документы, PDF | `js/services/file.service.js`, `js/services/storage/storage-photo-manager.js`, `js/services/storage/storage-photo-loader.js` (ленивая загрузка, P2-0023) | `js/shared/pdf-open.utils.js`, `libs/` |
-| Отправка при плохой связи (P2-0059) | правила `js/services/sync/sync-net.policy.js` (проверка связи, ограничение времени, порции, паузы, замок), журнал `sync-journal.policy.js`; среда — `sync-core.state.js` (`window.RbiSyncNet`, `window.RbiSyncJournal`); проход — `sync-engine.core.js` (`triggerSync` → `rbiWithSyncLock` → `rbiSyncPass`, `rbiPushOwnInspections`); fetch клиента Качества — `quality-bridge.ts` (`syncFetch`); «что не ушло и почему» + журнал — `src/platform/auth/sync-status.ts` (рисует `net-status.ts`, список — `offline-rescue.ts` `listPending`) | тесты `js/shared/__tests__/sync-net.policy.test.js`, `sync-journal.policy.test.js`, `src/platform/auth/__tests__/sync-status.test.ts`; стенд «погод» `tests/offline/weather.mjs` |
-| Правила синхронизации (P2-0023) | `js/services/sync/sync-pull.policy.js` (загрузка), `sync-retry.policy.js` (повторы, «нужно внимание», «Отправить без этого фото» — `history.actions.js`), `sync-merge.policy.js` (автоочистка, совещания, ТИВИ) | тесты `js/shared/__tests__/sync-*.policy.test.js`; черновик «к отправке», удаление, «История» из памяти (P2-0025) — `sync-draft-history.test.js` |
-| Скорость Качества 2.0 (P2-0024) | загрузка нового устройства — `js/services/sync/sync-pull.policy.js` (`pullPagedByIds` параллельно, `indexLocalHistory`, `keepLocalOverCloud`); снимок чек-листа — `js/services/storage/checklist-snapshot.utils.js` + `storage-db.core.js` (хранилище `checklist_snapshots`, база v30, `rbiMigrateChecklistSnapshots`); история в памяти — `js/services/storage/history-memory.utils.js` (`RbiHistoryMemory.lighten`), список «Истории» — `history.state.js` (`historyListFromMemory`) | тесты `js/shared/__tests__/checklist-snapshot.utils.test.js`, `history-memory.utils.test.js`, `history-memory-list.test.js`; стенд — `scripts/perf/quality-history-seed.browser.js`, `scripts/perf/quality-analytics-measure.browser.js` |
-| Единые цвета, кнопки, темы | `css/brand/rbi.css`, `css/rbi-ui.css`, `css/style.css` | `ai-dev/standards/DESIGN_SYSTEM.md`, `UI_COMPONENTS.md` |
-| Пример TS/Vite-модуля | `src/modules/construction-v2/index.ts` | `src/modules/construction-v2/manifest.ts`, `vite.construction-v2.config.ts` |
-| Сборка, тесты | `package.json`, `tsconfig.json`, `vite.*.config.ts` | `js/shared/__tests__/`, фактически доступные команды |
-| Бизнес-требования Plan/Fact (ТЗ) | `ai-dev/reference/TZ_PLAN_FACT.md` (коды PTO/PR/LP/MN/NFR) | оригинал `../ТЗ для программы (1).docx`; §15 — открытые вопросы |
-| Исторический Plan/Fact | `_ai/CURRENT_STEP.md` и отчёты `_ai/agent-reports/` из **отдельного архива** | **В переданном кодовом ZIP `plan-fact` отсутствует**; поискать в актуальном Git |
-
-## Важные различия
-
-- **Раскладка после P2-0002 (20.10.2026):** регламент — в корне репозитория `platform-2-core` (этот файл); iCloud-папка регламента переименована в `…__ARCHIVE_moved_to_repo`.
-- **Локальная раскладка (до P2-0002):** папка `Project Cloude/` содержала этот регламент, оригинал ТЗ и `rbi-q-main/` — локальный Git-клон старой RBI Platform (`main`, commit `c6f6b02` от 14.08.2026; `plan-fact` в нём **NOT FOUND**). Там же распакован старый `_ai/` — **только чтение**; `_ai/TEST_CREDENTIALS.md` агентам не открывать.
-
-- **`rbi-q-main (14)(1).zip`** — реальный снимок исходников, не доказательство актуального Git или Supabase.
-- **`_ai.zip`** — позднее датированные исторические планы, правила, карты, отчёты и скрипты. Его карты полезны как указатели, но относятся к **возможно более новой и другой** редакции кода. Там есть служебные учётные данные и runtime-артефакты: **не распаковывать архив целиком в коммерческий репозиторий**.
-- **`ai-dev/`** — новый утверждённый регламент Platform 2.0; его правила главнее исторического `_ai` при расхождениях.
-- **`planfact-smr`** — целевой *отдельный* репозиторий React + TypeScript; **не считать созданным**, пока это не подтверждено актуальным Git. Для него будет собственный `FILE_MAP.md` по [`MODULE_FILE_MAP_TEMPLATE.md`](ai-dev/navigation/MODULE_FILE_MAP_TEMPLATE.md); карта старой RBI Platform не является картой файлов нового модуля.
-- **`platform-2-core`** — целевой отдельный репозиторий оболочки; пути `js/...` выше относятся к исходному снимку и подлежат сверке после копирования.
 
 ## Если файл не найден или устарел
 
