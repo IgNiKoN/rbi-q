@@ -154,6 +154,10 @@ test('предел 2 000 — подсказка сузить период; от�
   };
   const box = await mount(journal(f));
   assert.match(box.querySelector('[data-testid="fj-limit"]').textContent, /последние 2\s000/);
+  // P2-0068: на экране — первая порция, выгрузка — все 2 000
+  assert.equal(qa(box, 'tr[data-row]').length, 100);
+  assert.equal(box.querySelector('[data-testid="p2-reg-more-rows"]').textContent, 'Показать ещё (1900)');
+  assert.equal(box.querySelector('[data-testid="fj-export-all"]').getAttribute('aria-label'), 'Выгрузить список в Excel (2000)');
   const box2 = await mount(journal(stand({ failJournal: true })));
   assert.match(box2.querySelector('[data-testid="fj-error"]').textContent, /Нет права видеть факт/);
   assert.match(box2.textContent, /За выбранный период записей факта нет/);

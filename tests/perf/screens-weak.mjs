@@ -1,6 +1,6 @@
 // P2-0068: скорость основных экранов на слабом телефоне (основа — замер Архитектора 29.10.2026, reports/P2-0068/baseline/). Запуск из корня репозитория.
 // Стенд «без сети» (подставной сервер) + наполнение крупным объектом: 3 секции × 25 этажей × 12 квартир = 900 квартир, 4500 позиций ВОР.
-// node tests/perf/screens-weak.mjs --cpu 6 [--only planfact] [--width 1440 — экран ПК, по умолчанию телефон 375 px] [--shots end] [--out папка]
+// node tests/perf/screens-weak.mjs --cpu 6 [--only planfact] [--width 1440 — экран ПК, по умолчанию телефон 375 px] [--shots end] [--check positions — сценарий карточки P2-0068 на том же наполнении, лучше с --width 1440] [--out папка]
 import { chromium } from 'playwright-core';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { start, stop, APP, API, COMPANY } from '../offline/servers.mjs';
@@ -127,6 +127,37 @@ const saved = await page.evaluate(async (N) => {
 }, QUALITY_N).catch((e) => 'ошибка ' + e.message);
 await page.waitForTimeout(15000);   // фон: версия для офлайна докачивается — даём ей закончить, чтобы не мешала замеру
 
+// --check positions: «Позиции» 4500 → порция 100 → долистать (дорисовка) → «Ждёт РП» → снова порция, 410 → «Выбрать всё» 410 → Excel 410 строк
+const checks = [];
+const expect = (cond, label, extra = '') => { const line = (cond ? 'PASS ' : 'FAIL ') + label + (extra !== '' ? ' — ' + extra : ''); checks.push(line); console.log(line); };
+if (opt('check') === 'positions') {
+  const rowsNow = () => page.locator('tr[data-row]').count();
+  const moreText = async () => (await page.locator('[data-testid=p2-reg-more-rows]').count()) ? page.locator('[data-testid=p2-reg-more-rows]').innerText() : '';
+  await page.evaluate(() => { location.hash = '#/planfact/vor/positions'; });
+  await page.waitForSelector('[data-testid=p2-reg-more-rows]', { timeout: 30000 });
+  expect(await rowsNow() === 100, 'позиции: первая порция — 100 строк', String(await rowsNow()));
+  expect(await moreText() === 'Показать ещё (4400)', 'позиции: «Показать ещё (4400)»', await moreText());
+  for (let i = 0; i < 6; i++) { await page.evaluate(() => window.scrollTo(0, document.scrollingElement.scrollHeight)); await page.waitForTimeout(600); }
+  const scrolled = await rowsNow();
+  expect(scrolled > 100, 'позиции: при прокрутке строки дорисовываются сами', String(scrolled));
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const q = page.locator('[data-testid=p2-reg-q]', { hasText: 'Ждёт РП' });
+  expect((await q.innerText()).replace(/\s+/g, ' ') === 'Ждёт РП 410', 'позиции: счётчик «Ждёт РП» — 410', await q.innerText());
+  await q.click(); await page.waitForTimeout(500);
+  expect(await rowsNow() === 100 && await moreText() === 'Показать ещё (310)', 'позиции: фильтр — снова первая порция из 410', `${await rowsNow()} · ${await moreText()}`);
+  await page.click('[data-testid=p2-reg-pick]'); await page.click('[data-testid=p2-reg-select-all]'); await page.waitForTimeout(300);
+  const sel = await page.locator('[data-testid=p2-reg-selected]').innerText();
+  expect(sel === 'Выбрано: 410', 'позиции: «Выбрать всё» — 410', sel);
+  const label = await page.locator('[data-testid=vr-export-all]').getAttribute('aria-label');
+  expect(label === 'Выгрузить список в Excel (410)', 'позиции: кнопка Excel — 410', label);
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.click('[data-testid=vr-export-all]')]);
+  const ExcelJS = (await import('exceljs')).default;
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.readFile(await dl.path());
+  expect(wb.worksheets[0].rowCount === 411, 'позиции: в файле Excel 410 строк (+ заголовок)', String(wb.worksheets[0].rowCount - 1));
+  await page.click('[data-testid=p2-reg-pick]');
+  await page.locator('[data-testid=p2-reg-quick] button').first().click(); await page.waitForTimeout(300);
+}
+
 const cdp = await ctx.newCDPSession(page);
 await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
 
@@ -172,7 +203,7 @@ async function measure(label, hash, pass) {
 const out = [{ seeded: { places: nodes.length, apartments: apts.length, vorPositions: vorPos.length, quality: saved } }];
 console.log(JSON.stringify(out[0]));
 for (const pass of ['первый', 'повтор']) for (const [label, hash] of SCREENS) out.push(await measure(label, hash, pass));
-out.push({ errors: [...new Set(errors)].slice(0, 20), rpc: [...rpcSeen].sort() });
+out.push({ errors: [...new Set(errors)].slice(0, 20), rpc: [...rpcSeen].sort(), checks });
 console.log(JSON.stringify(out.at(-1)));
 writeFileSync(`${OUT}/cpu${CPU}${phone ? '' : '-w' + WIDTH}.json`, JSON.stringify(out, null, 1));
 await browser.close(); await stop();

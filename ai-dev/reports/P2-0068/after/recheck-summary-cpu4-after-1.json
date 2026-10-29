@@ -1,0 +1,207 @@
+[
+ {
+  "seeded": {
+   "places": 979,
+   "apartments": 900,
+   "vorPositions": 4500,
+   "quality": 1000
+  }
+ },
+ {
+  "label": "План/Факт — сводка",
+  "pass": "первый",
+  "cpu": 4,
+  "readyMs": 411,
+  "longTasks": 2,
+  "blockedMs": 181,
+  "worstMs": 118,
+  "dom": 4667,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Сводка Все проекты (1) ЖК Тестовый 4 недель 8 недель 12 недель С",
+  "scroll": {
+   "fps": 60,
+   "slowFrames": 0,
+   "heightPx": 3334
+  }
+ },
+ {
+  "label": "План/Факт — ВОР",
+  "pass": "первый",
+  "cpu": 4,
+  "readyMs": 189,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 4497,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство ВОР ЖК Тестовый Отдельная ВОР Загрузить новую редакцию Загрузки ",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — позиции ВОР",
+  "pass": "первый",
+  "cpu": 4,
+  "readyMs": 358.5,
+  "longTasks": 2,
+  "blockedMs": 144,
+  "worstMs": 94,
+  "dom": 7726,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство ВОР ЖК Тестовый Загрузки Позиции 4500 Все 4500 В работе 2184 Ждё",
+  "scroll": {
+   "fps": 61,
+   "slowFrames": 0,
+   "heightPx": 7752
+  }
+ },
+ {
+  "label": "План/Факт — факт",
+  "pass": "первый",
+  "cpu": 4,
+  "readyMs": 412,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 4487,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Факт Проект: ЖК Тестовый Ввод Шахматка Ждёт подтверждения Ждёт Р",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — шахматка",
+  "pass": "первый",
+  "cpu": 4,
+  "readyMs": 238,
+  "longTasks": 1,
+  "blockedMs": 51,
+  "worstMs": 51,
+  "dom": 5317,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Факт Проект: ЖК Тестовый Ввод Шахматка Ждёт подтверждения Ждёт Р",
+  "scroll": {
+   "fps": 61,
+   "slowFrames": 0,
+   "heightPx": 1827
+  }
+ },
+ {
+  "label": "План/Факт — сводка",
+  "pass": "повтор",
+  "cpu": 4,
+  "readyMs": 138,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 4667,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Сводка Все проекты (1) ЖК Тестовый 4 недель 8 недель 12 недель С",
+  "scroll": {
+   "fps": 60,
+   "slowFrames": 0,
+   "heightPx": 3334
+  }
+ },
+ {
+  "label": "План/Факт — ВОР",
+  "pass": "повтор",
+  "cpu": 4,
+  "readyMs": 152,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 4497,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство ВОР ЖК Тестовый Отдельная ВОР Загрузить новую редакцию Загрузки ",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — позиции ВОР",
+  "pass": "повтор",
+  "cpu": 4,
+  "readyMs": 269.10009765625,
+  "longTasks": 1,
+  "blockedMs": 59,
+  "worstMs": 59,
+  "dom": 7726,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство ВОР ЖК Тестовый Загрузки Позиции 4500 Все 4500 В работе 2184 Ждё",
+  "scroll": {
+   "fps": 60,
+   "slowFrames": 0,
+   "heightPx": 7752
+  }
+ },
+ {
+  "label": "План/Факт — факт",
+  "pass": "повтор",
+  "cpu": 4,
+  "readyMs": 302,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 4487,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Факт Проект: ЖК Тестовый Ввод Шахматка Ждёт подтверждения Ждёт Р",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — шахматка",
+  "pass": "повтор",
+  "cpu": 4,
+  "readyMs": 151,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 5317,
+  "heapMB": 77,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Факт Проект: ЖК Тестовый Ввод Шахматка Ждёт подтверждения Ждёт Р",
+  "scroll": {
+   "fps": 61,
+   "slowFrames": 0,
+   "heightPx": 1827
+  }
+ },
+ {
+  "errors": [],
+  "rpc": [
+   "core_led_roots",
+   "my_access",
+   "pf_brigade_list",
+   "pf_company_divisions",
+   "pf_company_projects",
+   "pf_counterparties_list",
+   "pf_fact_pending",
+   "pf_fact_positions+",
+   "pf_ks2_settings",
+   "pf_list_company_members",
+   "pf_list_company_roles",
+   "pf_list_locations+",
+   "pf_list_quality_objects",
+   "pf_list_units",
+   "pf_my_admin_companies",
+   "pf_my_area+",
+   "pf_my_company_access+",
+   "pf_my_context",
+   "pf_my_inbox",
+   "pf_my_permissions+",
+   "pf_my_platform",
+   "pf_my_profile",
+   "pf_my_projects",
+   "pf_permission_catalog",
+   "pf_price_list",
+   "pf_project_catalog+",
+   "pf_project_dicts",
+   "pf_summary_attention",
+   "pf_summary_places",
+   "pf_summary_portfolio+",
+   "pf_summary_positions+",
+   "pf_summary_weekly",
+   "pf_summary_worktypes+",
+   "pf_vor_import_rows",
+   "pf_vor_list_imports+",
+   "pf_vor_list_profiles",
+   "pf_vor_positions+"
+  ],
+  "checks": []
+ }
+]
