@@ -5,11 +5,12 @@
 // screen375, screen768, screen1440 — значок «Нет связи · не отправлено: N» 0 → 1 → 0, плашка, «Нужен интернет», «Данные на устройстве».
 // P2-0059: w-offline, w-slow, w-hang, w-flap, w-drop, w-5xx, w-tabs — «погоды» плохой связи (weather.mjs), замер в weather.json.
 // P2-0066: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow, r-launch, r-return, r-queue, r-transition, r-size — «выкладка во время работы» (release.mjs), замер в release.json.
+// P2-0067a: --gzip (или P2_OFFLINE_GZIP=1) — стенд отдаёт файлы приложения сжатыми, как nginx app.rbi-q.ru (servers.mjs, site.gzip).
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { start, stop, log as apiLog, marks, mode, COMPANY } from './servers.mjs';
+import { start, stop, log as apiLog, marks, mode, site, COMPANY } from './servers.mjs';
 import { weatherScenarios } from './weather.mjs';
 import { releaseMeasures, releaseScenarios } from './release.mjs';
 import { count, freshProfile, go, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
@@ -18,6 +19,7 @@ const args = process.argv.slice(2);
 const oi = args.indexOf('--out');
 const out = oi >= 0 ? args[oi + 1] : join(tmpdir(), 'p2-offline');
 const pick = args.filter((a, i) => !a.startsWith('--') && (oi < 0 || i !== oi + 1));
+if (args.includes('--gzip')) site.gzip = true;
 const BASE = 'PLATFORM2_DB';
 const companyDb = (db) => typeof db === 'string' && db.startsWith(BASE + '_' + COMPANY.id + '_');
 
@@ -329,6 +331,7 @@ for (const n of list) {
   if (!SCENARIOS[n]) { ok(false, 'нет сценария ' + n); continue; }
   try { await SCENARIOS[n](); } catch (e) { ok(false, n + ': сценарий упал', e.message.split('\n')[0]); await stop().catch(() => {}); }
 }
+if (site.gzip) ok(site.gzipped > 0, 'стенд со сжатием: файлы приложения отданы с content-encoding: gzip', String(site.gzipped));
 const fail = results.filter((r) => r.startsWith('FAIL')).length;
 const pass = results.filter((r) => r.startsWith('PASS')).length;
 console.log(`\nИтог: PASS ${pass}, FAIL ${fail}. Запросов к подставному серверу: ${apiLog.length}. Журнал: ${join(out, 'report.txt')}`);

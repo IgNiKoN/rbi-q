@@ -6,7 +6,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSy
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listAppFiles } from '../../scripts/app-files.mjs';
-import { start, stop, site, resetSite, COMPANY, marks, net } from './servers.mjs';
+import { start, stop, site, resetSite, APP, COMPANY, marks, net } from './servers.mjs';
 import { freshProfile, go, launch, note, ok, saveMark, signIn } from './lib.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '');
@@ -131,7 +131,7 @@ export function releaseScenarios(outDir) {
     const loads = [];
     for (let i = 1; i <= 3; i++) {
       // открыл приложение (с утра), на втором и третьем открытии — зашёл в разделы
-      await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(7000);
+      await page.goto(APP + '/').catch(() => {}); await page.waitForTimeout(7000);
       if (i > 1) for (const h of sections) await go(page, h, 3000);
       const v = await versions(page);
       loads.push({ load: i, mixed: mixed(v), html: v.html, tags: v.tags });
@@ -190,9 +190,9 @@ export function releaseScenarios(outDir) {
     await ctx.close(); await stop();
     ({ ctx, page } = await launch(outDir, tag, { width: 1440, height: 900, offline: true }));
     const failed = [];
-    page.on('requestfailed', (r) => { const u = new URL(r.url()); if (u.port === '8891') failed.push(u.pathname); });
-    page.on('response', (r) => { const u = new URL(r.url()); if (u.port === '8891' && r.status() >= 400) failed.push(u.pathname + ' ' + r.status()); });
-    await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+    page.on('requestfailed', (r) => { const u = new URL(r.url()); if (u.origin === APP) failed.push(u.pathname); });
+    page.on('response', (r) => { const u = new URL(r.url()); if (u.origin === APP && r.status() >= 400) failed.push(u.pathname + ' ' + r.status()); });
+    await page.goto(APP + '/').catch(() => {}); await page.waitForTimeout(9000);
     const shown = {};
     for (const h of sections) {
       await go(page, h, 4000);
@@ -215,7 +215,7 @@ export function releaseScenarios(outDir) {
     note(`== ${tag}: две вкладки на A → выкладка B → во второй «Обновить» → первая догружает часть`);
     const { ctx, page } = await warm(outDir, tag, A);
     const page2 = await ctx.newPage();
-    await page2.goto('http://localhost:8891/'); await page2.waitForTimeout(8000);
+    await page2.goto(APP + '/'); await page2.waitForTimeout(8000);
     site.root = B;
     const st = await fetchUpdate(page2);
     note('установка: ' + st);
@@ -323,7 +323,7 @@ export function releaseScenarios(outDir) {
     ok(v0.html === 'A', `${tag}: до перезапуска работает A (ничего не перезагрузилось само)`, fmt(v0));
     await page.goto('about:blank');
     const navs = navCount(page);
-    await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+    await page.goto(APP + '/').catch(() => {}); await page.waitForTimeout(9000);
     const v = await versions(page);
     note(`после запуска: ${fmt(v)}; переходов страницы: ${navs()}`);
     ok(v.html === 'B' && !mixed(v) && navs() <= 2, `${tag}: при запуске включилась B целиком, одна перезагрузка`, `${v.html}; переходов ${navs()}`);
@@ -381,7 +381,7 @@ export function releaseScenarios(outDir) {
     const v1 = await versions(page);
     ok(unsent > 0 && v1.html === 'A', `${tag}: есть неотправленное (${unsent}) — возврат из фона не переключает`, fmt(v1));
     await page.goto('about:blank');
-    await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+    await page.goto(APP + '/').catch(() => {}); await page.waitForTimeout(9000);
     const v2 = await versions(page);
     net.failLeft = 0;
     await page.evaluate(() => typeof window.triggerSync === 'function' && window.triggerSync('manual')).catch(() => {});
@@ -412,7 +412,7 @@ export function releaseScenarios(outDir) {
     const opens = [];
     for (let i = 1; i <= 3; i++) {
       await page.goto('about:blank');
-      await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+      await page.goto(APP + '/').catch(() => {}); await page.waitForTimeout(9000);
       const v = await versions(page);
       const sw = await page.evaluate(() => new Promise((res) => {
         const c = navigator.serviceWorker.controller; if (!c) return res('');
@@ -430,9 +430,9 @@ export function releaseScenarios(outDir) {
     await ctx.close(); await stop();
     ({ ctx, page } = await launch(outDir, tag, { width: 375, height: 812, offline: true }));
     const failed = [];
-    page.on('response', (r) => { const u = new URL(r.url()); if (u.port === '8891' && r.status() >= 400) failed.push(u.pathname); });
-    page.on('requestfailed', (r) => { const u = new URL(r.url()); if (u.port === '8891') failed.push(u.pathname); });
-    await page.goto('http://localhost:8891/').catch(() => {}); await page.waitForTimeout(9000);
+    page.on('response', (r) => { const u = new URL(r.url()); if (u.origin === APP && r.status() >= 400) failed.push(u.pathname); });
+    page.on('requestfailed', (r) => { const u = new URL(r.url()); if (u.origin === APP) failed.push(u.pathname); });
+    await page.goto(APP + '/').catch(() => {}); await page.waitForTimeout(9000);
     for (const h of sections) await go(page, h, 3000);
     const v = await versions(page);
     ok(v.html === 'A' && !mixed(v) && failed.length === 0, `${tag}: без сети после перехода всё открывается`, `${fmt(v)}; не загрузилось ${failed.length}`);
