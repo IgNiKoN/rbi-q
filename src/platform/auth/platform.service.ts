@@ -45,7 +45,7 @@ export type PlatformAccess = Record<string, boolean>;
 export interface PlatformDeps {
   auth: AuthApi | null;
   /** status — HTTP-ответ сервера (0 / нет — запрос не дошёл): «нет связи» отличается от ответа сервера с ошибкой. */
-  rpc: ((fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown; status?: number }>) | null;
+  rpc: ((fn: string, args?: Record<string, unknown>, signal?: AbortSignal) => Promise<{ data: unknown; error: unknown; status?: number }>) | null;
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
   /** Вошёл ли человек по старому PIN-входу Quality (облако Quality включено и подключено). */
   pinActive: () => boolean;
@@ -54,6 +54,8 @@ export interface PlatformDeps {
   storedSession?: () => { email: string | null; issuedAt: number | null } | null;
   /** P2-0060: сколько ждать ответа сервера о правах, если на устройстве есть их копия (по умолчанию SERVER_WAIT_MS). */
   serverWaitMs?: number;
+  /** P2-0060: предел общего запроса прав — дольше его запрос отменяется, следующий повтор шлёт новый (по умолчанию ASK_LIMIT_MS). */
+  askLimitMs?: number;
 }
 
 /** Ключи устройства — только свои (platform2_*); ключи старого Quality не читаются и не пишутся. */
@@ -67,6 +69,9 @@ export const OFFLINE_DAYS = 14;
 const DAY_MS = 24 * 3600 * 1000;
 /** P2-0060: ответ сервера о правах ждём не дольше — дальше работа по копии, повтор раз в минуту (решение владельца 29.10.2026). */
 export const SERVER_WAIT_MS = 5000;
+/** P2-0060: общий запрос прав висит дольше — отменяем (освобождает соединение), следующий повтор — новым запросом: «мёртвый» после
+ *  смены сети запрос иначе держал бы «без связи» до перезагрузки. */
+export const ASK_LIMIT_MS = 45000;
 
 interface DeviceCopy { at: string; platform: unknown; profile: unknown }
 export function readDeviceCopy(s: PlatformDeps['storage'], email: string): DeviceCopy | null {
@@ -220,17 +225,31 @@ export function createPlatform(deps: PlatformDeps): Platform {
   }
 
   type Answer = { data: unknown; error: unknown; status?: number };
-  let asking: Promise<Answer[]> | null = null;
-  async function loadEmail(email: string, issuedAt: number | null): Promise<PlatformState> {
+  // P2-0060: общий висящий запрос — только для того же человека и того же входа (epoch: signIn / signOut его меняют)
+  let asking: { email: string; epoch: number; p: Promise<Answer[]>; stop: () => void } | null = null;
+  let epoch = 0;
+  function dropAsking(): void { if (asking) { asking.stop(); asking = null; } }
+  async function loadEmail(email: string, issuedAt: number | null): Promise<PlatformState | null> {
     if (!deps.rpc) return fromParts(email, { isPlatformAdmin: false, companies: [] }, { fullName: null, mustChangePassword: false, userId: null });
     // P2-0058: запрос не дошёл или сервер недоступен (нет HTTP-ответа / 5xx) — не ответ «компаний нет»: копия последнего ответа
     // сервера; сервер ответил ошибкой (4xx) — как раньше, по ответу
     // P2-0060: прежний запрос ещё висит (сервер принял и молчит) — ждём его же, а не шлём новый: каждый висящий запрос держит
     // соединение, а их у браузера к одному серверу 6 — синхронизация Качества осталась бы без связи и после того, как сервер ожил
     const rpc = deps.rpc;
-    const ask = asking || (asking = Promise.all([rpc('pf_my_platform'), rpc('pf_my_profile')]
-      .map((q) => q.catch((e: unknown): Answer => ({ data: null, error: e || 'network', status: 0 }))))
-      .finally(() => { asking = null; }));
+    const mine = epoch;
+    if (asking && (asking.email !== email || asking.epoch !== mine)) dropAsking();
+    if (!asking) {
+      const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+      let limit: ReturnType<typeof setTimeout> | undefined;
+      const gone: Answer = { data: null, error: 'timeout', status: 0 };
+      const cut = new Promise<Answer[]>((r) => { limit = setTimeout(() => { ctl?.abort(); r([gone, gone]); }, deps.askLimitMs ?? ASK_LIMIT_MS); });
+      const all = Promise.all([rpc('pf_my_platform', undefined, ctl?.signal), rpc('pf_my_profile', undefined, ctl?.signal)]
+        .map((q) => q.catch((e: unknown): Answer => ({ data: null, error: e || 'network', status: 0 }))));
+      const entry = { email, epoch: mine, p: Promise.race([all, cut]), stop: () => { clearTimeout(limit); ctl?.abort(); } };
+      entry.p.finally(() => { clearTimeout(limit); if (asking === entry) asking = null; });
+      asking = entry;
+    }
+    const ask = asking.p;
     // P2-0060: есть копия прав — сервер, который принял запрос и молчит, ждём не дольше SERVER_WAIT_MS (как «нет связи»);
     // копии нет — ждём ответа (экран загрузки), иначе меню строить не из чего
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -239,6 +258,7 @@ export function createPlatform(deps: PlatformDeps): Platform {
       ? await Promise.race([ask, new Promise<Answer[]>((r) => { timer = setTimeout(() => r([silent, silent]), deps.serverWaitMs ?? SERVER_WAIT_MS); })])
       : await ask;
     clearTimeout(timer);
+    if (mine !== epoch) return null;   // пока ждали, человек вышел / вошёл другой — ответ устарел, копию не пишем
     if (noAnswer(pl) || noAnswer(pr)) return fromDevice(email, issuedAt);
     if (pl.error || pr.error) {
       return fromParts(email, pl.error ? { isPlatformAdmin: false, companies: [] } : parsePlatform(pl.data),
@@ -267,10 +287,14 @@ export function createPlatform(deps: PlatformDeps): Platform {
         emit();
       }
     }
+    const mine = epoch;
     const ses = await session();
+    if (mine !== epoch) return state;   // P2-0060: пока ждали, был выход / новый вход — этот результат устарел
     if (ses.email) {
       // вход не подтверждён сервером (нет связи): сервер не спрашиваем; дольше 14 дней — экран «Вход», данные не трогаем
-      state = ses.offline ? fromDevice(ses.email, ses.issuedAt) : await loadEmail(ses.email, ses.issuedAt);
+      const next = ses.offline ? fromDevice(ses.email, ses.issuedAt) : await loadEmail(ses.email, ses.issuedAt);
+      if (!next || mine !== epoch) return state;
+      state = next;
       // действующий (не истёкший) вход — уже подтверждение сервера; правило 14 дней — только для устаревшего входа без связи
       if (ses.offline && offlineExpired(state.confirmedAt ? Date.parse(state.confirmedAt) : null, now())) {
         state = { ...EMPTY, offline: true, loginReason: 'stale' };
@@ -294,10 +318,11 @@ export function createPlatform(deps: PlatformDeps): Platform {
       if (!deps.auth) return { ok: false, message: 'Сервер не настроен — вход недоступен' };
       if (!email.trim() || !password) return { ok: false, message: 'Введите почту и пароль' };
       const res = await deps.auth.signIn(email, password);
-      if (res.ok) await refresh();
+      if (res.ok) { epoch++; dropAsking(); await refresh(); }
       return res;
     },
     async signOut() {
+      epoch++; dropAsking();   // P2-0060: висящий запрос прав вышедшего — отменить, поздний ответ не применять
       if (state.email) safeSet(deps.storage, DEVICE_ACCESS_PREFIX + deviceUserKey(state.email), null);   // P2-0058: копию прав — стереть
       if (deps.auth) await deps.auth.signOut();
       safeSet(deps.storage, ENTRY_KEY, null);

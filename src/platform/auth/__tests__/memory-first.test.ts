@@ -204,3 +204,68 @@ test('разделам перечитать данные: при запуске,
   assert.equal(shouldNotifyAccess(base, { ...base, companies: [{ ...ALFA, modules: ['quality'] }] }), true, 'права изменились');
   assert.equal(shouldNotifyAccess(base, { ...base, mode: 'none', email: null, companies: [], companyId: null }), true, 'выход');
 });
+
+test('доработка З1: запрос прав А завис, А вышел, вошёл Б — Б спрашивает сервер заново; поздний ответ про А не попадает ни в копию Б, ни в меню', async () => {
+  const B = 'b@beta.test';
+  const ses: SessionState = { email: EMAIL, offline: false, issuedAt: sec(NOW) };
+  const store = memStore();
+  const srv = hangingRpc();
+  const p = createPlatform({ auth: { ...sessionAuth(ses), async getSessionState() { return ses; } }, storage: store, pinActive: () => false, now: () => NOW, rpc: srv.rpc });
+  void p.boot();
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(srv.held.length, 2, 'запрос А висит');
+  const heldA = srv.held.splice(0);
+  await p.signOut();
+  ses.email = B;
+  const signing = p.signIn(B, 'x');
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(srv.held.length, 2, 'для Б — новый запрос, а не висящий запрос А');
+  heldA.forEach((r, i) => r(platformAnswer([ALFA])(i)));   // поздний ответ про А
+  srv.answer(platformAnswer([{ ...ALFA, id: 'beta', name: 'Бета', modules: ['quality'] }]));
+  await signing;
+  assert.equal(p.getState().email, B);
+  assert.equal(p.getState().companyId, 'beta');
+  assert.equal(store.getItem(DEVICE_ACCESS_PREFIX + user), null, 'копии прав А нет');
+  assert.match(String(store.getItem(DEVICE_ACCESS_PREFIX + deviceUserKey(B))), /Бета/);
+});
+
+test('доработка З2: запрос прав «умер» (нет ответа дольше предела) — отменяется, следующий повтор шлёт новый и применяет ответ', async () => {
+  const store = memStore({ [DEVICE_ACCESS_PREFIX + user]: copyOf(NOW - 3600e3) });
+  const srv = hangingRpc();
+  const signals: Array<AbortSignal | undefined> = [];
+  const p = createPlatform({ auth: sessionAuth({ email: EMAIL, offline: false, issuedAt: sec(NOW) }), storage: store, pinActive: () => false, now: () => NOW,
+    rpc: (fn: string, _a?: Record<string, unknown>, signal?: AbortSignal) => { signals.push(signal); return srv.rpc(fn); },
+    storedSession: () => ({ email: EMAIL, issuedAt: sec(NOW) }), serverWaitMs: 10, askLimitMs: 30 });
+  const s1 = await p.boot();
+  assert.equal(s1.offline, true, 'сервер молчит — по копии');
+  srv.held.splice(0);   // этот запрос так и не ответит
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(signals.length === 2 && signals.every((x) => x && x.aborted), 'висящий запрос отменён (соединение свободно)');
+  const again = p.refresh();
+  await new Promise((r) => setTimeout(r, 2));
+  assert.equal(srv.held.length, 2, 'повтор — новым запросом, а не ожиданием мёртвого');
+  srv.answer(platformAnswer([{ ...ALFA, modules: ['quality'] }]));
+  const s2 = await again;
+  assert.equal(!!s2.offline, false, 'сервер ответил — «без связи» снято');
+  assert.equal(!!p.access().planfact, false, 'и меню — по ответу сервера');
+});
+
+test('доработка З3: запуск по копии, «Выйти» до ответа сервера — поздний ответ не возвращает ни меню, ни копию вышедшего', async () => {
+  const store = memStore({ [DEVICE_ACCESS_PREFIX + user]: copyOf(NOW - 3600e3) });
+  const srv = hangingRpc();
+  const ses: SessionState = { email: EMAIL, offline: false, issuedAt: sec(NOW) };
+  const p = createPlatform({ auth: { ...sessionAuth(ses), async signOut() { ses.email = null; } }, storage: store, pinActive: () => false, now: () => NOW,
+    rpc: srv.rpc, storedSession: () => ({ email: EMAIL, issuedAt: sec(NOW) }) });
+  const booting = p.boot();
+  assert.equal(p.getState().checking, true);
+  await new Promise((r) => setTimeout(r, 2));
+  const held = srv.held.splice(0);
+  await p.signOut();
+  assert.equal(p.getState().email, null);
+  held.forEach((r, i) => r(platformAnswer([ALFA])(i)));
+  await booting;
+  await new Promise((r) => setTimeout(r, 2));
+  assert.equal(p.getState().email, null, 'после выхода — не вошёл');
+  assert.equal(p.getState().companyId, null);
+  assert.equal(store.getItem(DEVICE_ACCESS_PREFIX + user), null, 'копия прав вышедшего не записана заново');
+});
