@@ -61,7 +61,7 @@ function session(user, ttl = 3600) {
     token_type: 'bearer', expires_in: ttl, expires_at: exp, refresh_token: 'rt-' + user.id + '-' + exp, user };
 }
 /** P2-0060: второму пользователю стенда тоже дать компанию (План/Факт), его Сводка — с ошибкой сервера (копии у него нет). */
-export const stand = { user2Planfact: false };
+export const stand = { user2Planfact: false, quality: null };
 const hasPf = (u) => u.id === USER.id || stand.user2Planfact;
 /** P2-0060: Сводка План/Факта первого пользователя (один объект) — по ней стенд сверяет цифры с сетью и без сети. */
 export const SUMMARY = { project_id: 'p-1', name: 'ЖК Тестовый', code: 'ЖКТ', planned_start: '2026-06-01', planned_finish: '2027-03-31',
@@ -104,7 +104,7 @@ const RPC = {
   pf_project_catalog: () => [{ id: 'p-1', name: 'ЖК Тестовый', code: 'ЖКТ', archived_at: null, created_at: '2026-06-01T00:00:00Z', can_manage: true,
     division_id: null, division_name: null, address: 'Москва', planned_start: '2026-06-01', planned_finish: '2027-03-31', manager_user_id: null, manager_name: null,
     stage: 'construction', our_role: null, timezone: 'Europe/Moscow', country: 'RU' }],
-  my_access: () => ACCESS,
+  my_access: () => stand.quality || ACCESS,   // P2-0060: роль экрана Качества сценария (прораб / руководитель)
   // P2-0060: доступ к компании для План/Факта (подвкладки раздела) — по модулям компании на сервере стенда
   pf_my_company_access: (u) => hasPf(u) && COMPANY.modules.includes('planfact') ? [{ company_id: COMPANY.id, company_name: COMPANY.name,
     can_manage_projects: true, can_manage_units: true, can_manage_roles: true, can_manage_counterparties: true }] : [],
@@ -184,6 +184,8 @@ function respond(req, res, u, body) {
       return json(res, 200, found.map((f) => ({ name: f.slice(dir.length), id: f, metadata: { size: 1 } })));
     }
     if (u.pathname.startsWith('/storage/v1/object/') && (req.method === 'POST' || req.method === 'PUT')) return json(res, 200, { Key: u.pathname.slice(19), Id: 'f' });
+    // P2-0060: фото по публичной ссылке — маленькая картинка (докачка фото «заранее»; запросы видны в журнале)
+    if (req.method === 'GET' && u.pathname.startsWith('/storage/v1/object/public/')) { res.writeHead(200, { 'Content-Type': 'image/jpeg' }); return res.end(Buffer.alloc(2048, 7)); }
     if (u.pathname.startsWith('/storage/v1/')) return json(res, 200, []);
     json(res, 404, { message: 'not found' });
   }

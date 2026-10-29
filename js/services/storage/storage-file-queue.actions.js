@@ -187,11 +187,23 @@ async function rbiDownloadFileWithRetry(url, maxAttempts = 3) {
 window.rbiFileCacheQueueLock = false;
 
 /**
+ * P2-0060: охват автокэша этого человека — «Фото и PDF заранее» (выбор в «Данные на устройстве» или правило по роли, сервис
+ * офлайна платформы window.RBI.offlineFiles): mine30 | all30 | all | none. Без входа платформы — как раньше, всё.
+ */
+window.rbiAutoCacheScope = function () {
+    const f = window.RBI && window.RBI.offlineFiles;
+    try { return f && typeof f.scope === 'function' ? f.scope() : 'all'; } catch (_) { return 'all'; }
+};
+
+/**
  * Докачка облачных файлов в IDB.
  * @param {boolean} silent — не показывать toast «уже выполняется»; прогресс в mini-toast всё равно виден
- * @param {'all'|'days30'|'knowledge'|'reports'} scope
+ * @param {'all'|'days30'|'all30'|'mine30'|'none'|'auto'|'knowledge'|'reports'} scope — auto: охват этого человека (rbiAutoCacheScope);
+ *   none — заранее ничего не качается (уже скачанное не удаляется — только «Очистить скачанное»)
  */
 window.downloadMissingCloudFiles = async function (silent = false, scope = 'all') {
+    if (scope === 'auto') scope = window.rbiAutoCacheScope();
+    if (scope === 'none') return;
     if (window.rbiFileCacheQueueLock) {
         if (!silent && typeof showToast === 'function') showToast('⏳ Докачка файлов уже выполняется');
         return;

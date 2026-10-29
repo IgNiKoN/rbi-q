@@ -8,6 +8,8 @@ import { createOfflineReader, NEED_INTERNET_INPUT, NO_CONNECTION_TEXT, offlineOf
 import type { ModuleOffline, OfflineReader, OfflineResult, ReadOpts, Result } from './offline-read.ts';
 import { deviceUserKey } from '../../auth/quality-bridge.ts';
 import { getClient } from '../../auth/auth.service.ts';
+import { FILES_SCOPES, filesScopeFor, mine30Photos } from './files-rule.ts';
+import type { FilesScope, InspectionLike } from './files-rule.ts';
 
 type St = { mode?: string; email?: string | null; companyId?: string | null; offline?: boolean };
 type Loader = { getById?: (id: string) => { offline?: unknown } | null };
@@ -174,3 +176,42 @@ export function markPrefetched(module: string, stats: unknown, now: number): voi
 export async function pruneToMyProjects(ids: string[], modules: string[]): Promise<void> {
   for (const m of modules) await offlineReader().pruneProjects(m, ids);
 }
+
+/** P2-0060 этап 4: «Фото и PDF заранее» — выбор человека (по модулю, у «компания + пользователь»); не выбирал — правило по роли. */
+const FILES_KEY = 'platform2_offline_files:';
+export function filesChoice(module = 'quality'): FilesScope | null {
+  const slot = currentSlot();
+  const v = slot ? readJson<Record<string, string>>(FILES_KEY + slot, {})[module] : undefined;
+  return FILES_SCOPES.includes(v as FilesScope) ? (v as FilesScope) : null;
+}
+export function setFilesChoice(module: string, scope: FilesScope | null): void {
+  const slot = currentSlot();
+  if (!slot) return;
+  const all = readJson<Record<string, string>>(FILES_KEY + slot, {});
+  if (scope) all[module] = scope; else delete all[module];
+  writeJson(FILES_KEY + slot, all);
+}
+/** Роль экрана Качества по правам сервера (мост quality-bridge.ts: roleFor); нет моста — гость. */
+export function qualityRole(): string {
+  const w = typeof window === 'undefined' ? undefined : (window as unknown as { RBI?: { qualitySync?: { role?: string } | null } }).RBI;
+  return (w && w.qualitySync && w.qualitySync.role) || 'guest';
+}
+/** Охват автокэша фото Качества / Стройконтроля сейчас: выбор человека или правило по роли; «держать без сети» выключено — не качать. */
+export function currentFilesScope(): FilesScope {
+  if (!keepOffline('quality')) return 'none';
+  return filesScopeFor(filesChoice('quality'), qualityRole());
+}
+type Perm = { getAssignedProjects?: () => string[]; isRecordInAssignedProjects?: (r: unknown, a: string[]) => boolean };
+/** Осмотр моего объекта: закреплённые объекты (P2-0033); не закреплено — все объекты компании. */
+function isMine(r: InspectionLike): boolean {
+  const p = (typeof window === 'undefined' ? undefined : (window as unknown as { RBI?: { services?: { permissions?: Perm } } }).RBI?.services?.permissions);
+  const assigned = p && typeof p.getAssignedProjects === 'function' ? p.getAssignedProjects() || [] : [];
+  return !assigned.length || !!(p && typeof p.isRecordInAssignedProjects === 'function' && p.isRecordInAssignedProjects(r, assigned));
+}
+/** Для движка синхронизации и докачки файлов (обычный JS): window.RBI.offlineFiles — охват и отбор фото осмотров для mine30. */
+export function exposeOfflineFiles(): void {
+  if (typeof window === 'undefined') return;
+  const w = window as unknown as { RBI?: Record<string, unknown> };
+  (w.RBI = w.RBI || {}).offlineFiles = { scope: currentFilesScope, select: (list: InspectionLike[]) => mine30Photos(list, isMine, Date.now()) };
+}
+exposeOfflineFiles();

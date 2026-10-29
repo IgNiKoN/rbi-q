@@ -174,6 +174,15 @@ async function rbiProcessBgCacheQueue(options = {}) {
     if (typeof PhotoManager === 'undefined') return;
     if (typeof PhotoManager.downloadForOffline !== 'function') return;
 
+    // P2-0060: лёгкая очередь — в охвате «Фото и PDF заранее» этого человека (роль / выбор): «не скачивать» — ничего,
+    // «за 30 дней» / «мои за 30 дней» — только файлы из этого охвата; открытое человеком кэшируется само, как раньше
+    const scope = typeof window.rbiAutoCacheScope === 'function' ? window.rbiAutoCacheScope() : 'all';
+    if (scope === 'none') { window.rbiBgCacheQueue = []; return; }
+    if (scope !== 'all' && typeof window.rbiCollectOfflineCacheUrls === 'function') {
+        const allowed = new Set((window.rbiCollectOfflineCacheUrls(scope) || []).map((e) => e && e.url));
+        window.rbiBgCacheQueue = window.rbiBgCacheQueue.filter((x) => x && allowed.has(x.url));
+    }
+
     // Единая политика для всех устройств (без Safari/iOS split).
     const concurrency = options.concurrency || window.RBI_OFFLINE_CACHE_CONCURRENCY || 4;
     const maxPerRun = options.maxPerRun || 80;
@@ -308,7 +317,7 @@ function rbiScheduleFullOfflineCacheIfEnabled(delayMs = 800) {
             window.rbiFullOfflineCacheProcessing = true;
             try {
                 console.log('[OfflineCache] Запуск докачки после очистки/запроса.');
-                await window.downloadMissingCloudFiles(false, 'all');
+                await window.downloadMissingCloudFiles(false, 'auto');   // P2-0060: охват этого человека (роль / выбор)
                 window.rbiBgCacheQueue = [];
                 localStorage.setItem('rbi_first_full_offline_cache_done', '1');
                 localStorage.setItem('rbi_last_bg_cache_at', String(Date.now()));

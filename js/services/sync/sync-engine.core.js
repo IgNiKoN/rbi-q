@@ -4553,7 +4553,7 @@ async function rbiSyncPass(mode = 'silent') {
                             );
 
                             // Прогресс N/M+МБ в mini-toast; не await внутри pull.
-                            await window.downloadMissingCloudFiles(false, 'all');
+                            await window.downloadMissingCloudFiles(false, 'auto');   // P2-0060: охват этого человека (роль / выбор)
 
                             window.rbiBgCacheQueue = [];
 

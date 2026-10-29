@@ -131,11 +131,19 @@ function rbiRecordDateMs(record) {
 
 /**
  * Собирает URL для офлайн-кэша.
- * @param {'all'|'days30'|'knowledge'|'reports'} scope
+ * P2-0060: охват «Фото и PDF заранее» — mine30 (мои объекты за 30 дней + фото открытых замечаний моих объектов, отбор —
+ * window.RBI.offlineFiles.select сервиса офлайна), all30 (= days30), none (заранее ничего).
+ * @param {'all'|'days30'|'all30'|'mine30'|'none'|'knowledge'|'reports'} scope
  * @returns {{ url: string, sortTs: number, kind: string }[]}
  */
 function rbiCollectOfflineCacheUrls(scope = 'all') {
-    const scoped = scope || 'all';
+    let scoped = scope === 'all30' ? 'days30' : (scope || 'all');
+    if (scoped === 'none') return [];
+    const offlineFiles = window.RBI && window.RBI.offlineFiles;
+    // без сервиса офлайна (старое приложение) «мои за 30 дней» — как «все за 30 дней»
+    if (scoped === 'mine30' && !(offlineFiles && typeof offlineFiles.select === 'function')) scoped = 'days30';
+    const mine = scoped === 'mine30' && typeof contractorArray !== 'undefined' && Array.isArray(contractorArray)
+        ? offlineFiles.select(contractorArray) : null;
     const items = [];
     const seen = new Set();
 
@@ -151,7 +159,7 @@ function rbiCollectOfflineCacheUrls(scope = 'all') {
         rbiNormalizeCloudUrlList(value).forEach((url) => add(url, sortTs, kind));
     };
 
-    const wantInspections = scoped === 'all' || scoped === 'days30';
+    const wantInspections = scoped === 'all' || scoped === 'days30' || scoped === 'mine30';
     const wantKnowledge = scoped === 'all' || scoped === 'knowledge';
     const wantReports = scoped === 'all' || scoped === 'reports';
     const cutoff30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -160,6 +168,14 @@ function rbiCollectOfflineCacheUrls(scope = 'all') {
         contractorArray.forEach((check) => {
             const ts = rbiRecordDateMs(check);
             if (scoped === 'days30' && ts < cutoff30) return;
+            if (mine) {
+                // P2-0060: мой объект за 30 дней — все фото; старше — только фото открытых замечаний (пункты из отбора)
+                const pick = check ? mine.get(check.id) : null;
+                if (!pick || !check.photos) return;
+                if (pick === 'all') Object.values(check.photos).forEach((v) => addMany(v, ts, 'inspection_photo'));
+                else pick.forEach((item) => addMany(check.photos[item], ts, 'inspection_photo'));
+                return;
+            }
             if (check && check.photos) {
                 Object.values(check.photos).forEach((v) => addMany(v, ts, 'inspection_photo'));
             }
@@ -182,7 +198,7 @@ function rbiCollectOfflineCacheUrls(scope = 'all') {
         fmeaList.forEach((f) => {
             if (!f || f._deleted === true || f.is_deleted === true) return;
             const ts = rbiRecordDateMs(f);
-            if (scoped === 'days30' && ts < cutoff30) return;
+            if ((scoped === 'days30' || scoped === 'mine30') && ts < cutoff30) return;
             const defects = Array.isArray(f.defects) ? f.defects : [];
             defects.forEach((d) => {
                 if (d && d.photo) addMany(d.photo, ts, 'fmea_photo');
@@ -295,7 +311,7 @@ function rbiCollectOfflineCacheUrls(scope = 'all') {
         });
     }
 
-    if (scoped === 'all' || scoped === 'days30') {
+    if (scoped === 'all' || scoped === 'days30' || scoped === 'mine30') {
         items.sort((a, b) => (b.sortTs || 0) - (a.sortTs || 0));
     }
 

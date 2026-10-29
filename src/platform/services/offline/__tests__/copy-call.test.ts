@@ -111,3 +111,20 @@ test('чтения нет в копии, а экран собирает его �
   assert.equal(none.ok, false, 'собрать не из чего — «Нужен интернет»');
   st.offline = false;
 });
+
+test('охват фото сейчас: роль экрана Качества → правило; выбор человека важнее; «держать без сети» выключено — не качать', async () => {
+  const { currentFilesScope, exposeOfflineFiles, setFilesChoice } = await import('../copy.ts');
+  st.offline = false;
+  g.window.RBI.moduleLoader.getById = (id: string) => (id === 'planfact' || id === 'quality' ? { offline: { view: true, input: [] } } : null);
+  g.window.RBI.qualitySync = { role: 'engineer' };
+  assert.equal(currentFilesScope(), 'mine30');
+  g.window.RBI.qualitySync = { role: 'manager' };
+  assert.equal(currentFilesScope(), 'none');
+  setFilesChoice('quality', 'all30');
+  assert.equal(currentFilesScope(), 'all30', 'руководитель сам выбрал «Все за 30 дней»');
+  setKeepOffline('quality', false);
+  assert.equal(currentFilesScope(), 'none', 'Качество не держать без сети — фото заранее не качаются');
+  setKeepOffline('quality', true); setFilesChoice('quality', null);
+  exposeOfflineFiles();   // в браузере — при загрузке модуля
+  assert.equal(typeof g.window.RBI.offlineFiles.scope, 'function', 'движку синхронизации — window.RBI.offlineFiles');
+});

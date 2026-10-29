@@ -1,0 +1,42 @@
+  == f-field: 300 осмотров по 3 объектам за 90 дней → докачка «заранее» по роли (field)
+PASS f-field: закреплён «Объект 1» — свои осмотры отличаются от чужих — [true,false]
+  роль экрана: engineer, охват: mine30
+PASS f-field: охват по роли — мои объекты за 30 дней — mine30
+  фото всего 600, ожидалось 74, скачано 74, лишних 0, не хватает 0
+PASS f-field: скачано ровно положенное по роли — скачано 74 из 600
+PASS f-field: фото чужих объектов не скачаны
+PASS f-field: фото открытых замечаний старше 30 дней — скачаны — 6
+PASS f-field: без сети свои фото — на телефоне — 5 из 5
+PASS f-field: неотправленный осмотр после докачки — на месте (фото на телефоне или уже ушло) — {"has":true,"st":"not_synced","blob":true,"cloud":false}
+  f-field: отправка осмотра инженером на стенде не работает и до P2-0060 (ТД) — {"has":true,"st":"not_synced","blob":true,"cloud":false}
+PASS f-field: неотправленный осмотр и его фото на телефоне ждут отправки (не пропали) — {"has":true,"st":"not_synced","blob":true,"cloud":false}
+  == f-manager: 300 осмотров по 3 объектам за 90 дней → докачка «заранее» по роли (manager)
+  роль экрана: manager, охват: none
+PASS f-manager: охват по роли — не скачивать заранее — none
+  фото всего 600, ожидалось 0, скачано 0, лишних 0, не хватает 0
+PASS f-manager: скачано ровно положенное по роли — скачано 0 из 600
+PASS f-manager: неотправленный осмотр после докачки — на месте (фото на телефоне или уже ушло) — {"has":true,"st":"synced","blob":false,"cloud":true}
+PASS f-manager: неотправленный осмотр с фото ушёл на сервер ровно 1 раз — отправок 1, {"has":true,"st":"synced","blob":false,"cloud":true}
+  == cold375: вход с сетью → закрыть → без сети открыть заново → записать осмотр → сеть → открыть
+PASS cold375: с сетью база компании — PLATFORM2_DB_11111111-2222-3333-4444-555555555555_4c85ce68faabb809
+  меню с сетью: ["Качество","Качество●","Настройки","План/Факт","Стройконтроль","Стройконтроль в2 (тест)"]
+  без сети: {"db":"PLATFORM2_DB_11111111-2222-3333-4444-555555555555_4c85ce68faabb809","platform":{"mode":"email","companies":1,"companyId":"11111111-2222-3333-4444-555555555555","offline":true},"records":["ONLINE-MARK"],"login":false}
+PASS cold375: без сети база = база компании — PLATFORM2_DB_11111111-2222-3333-4444-555555555555_4c85ce68faabb809
+PASS cold375: без сети прежние осмотры на месте — ["ONLINE-MARK"]
+PASS cold375: без сети нет экрана «Вход»
+  меню без сети: ["Качество","Качество●","Настройки","План/Факт","Стройконтроль","Стройконтроль в2 (тест)"]
+PASS cold375: без сети права меню — по копии (Качество, Стройконтроль, План/Факт) — {"company":true,"platformAdmin":false,"quality":true,"construction":true,"planfact":true}
+PASS cold375: без сети меню то же, что с сетью
+PASS cold375: состояние «без связи», компания из копии
+PASS cold375: осмотр без сети записан в базу компании — OFFLINE-MARK-1793270817508
+PASS cold375: в общей базе PLATFORM2_DB нового нет
+  сеть вернулась: {"db":"PLATFORM2_DB_11111111-2222-3333-4444-555555555555_4c85ce68faabb809","platform":{"mode":"email","companies":1,"companyId":"11111111-2222-3333-4444-555555555555","offline":false},"dirty":"0"} дошло: ["POST /rest/v1/rbi_inspections ONLINE-MARK","POST /rest/v1/rbi_inspections OFFLINE-MARK"]
+PASS cold375: осмотр без сети дошёл до сервера ровно 1 раз — 1
+  == w-offline: нет сети 3 мин → сеть есть
+PASS w-offline: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-offline","title":"нет сети 3 мин → сеть есть","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":4.4,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":1,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":2,"hungRequests":0}
+PASS w-offline: погода прошла до конца
+PASS w-offline: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-offline: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-offline: не хуже, чем до исправлений — минут 4.4 (было 4.4), отправок записи 1 (было 1)
+Итог: PASS 27, FAIL 0

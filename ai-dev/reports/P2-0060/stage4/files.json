@@ -1,0 +1,22 @@
+[
+  {
+    "tag": "f-field",
+    "role": "engineer",
+    "scope": "mine30",
+    "photos": 600,
+    "wanted": 74,
+    "downloaded": 74,
+    "extra": 0,
+    "missing": 0
+  },
+  {
+    "tag": "f-manager",
+    "role": "manager",
+    "scope": "none",
+    "photos": 600,
+    "wanted": 0,
+    "downloaded": 0,
+    "extra": 0,
+    "missing": 0
+  }
+]
