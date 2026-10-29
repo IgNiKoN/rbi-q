@@ -32,6 +32,9 @@ export const NEED_INTERNET_INPUT = 'Нужен интернет';
 export const COPY_DAYS = 14;
 /** Сколько ждать ответа сервера на чтение, если есть копия (дальше — копия). */
 export const READ_WAIT_MS = 8000;
+/** Сервер принял чтение и промолчал дольше READ_WAIT_MS — столько новых чтений к нему не шлём (копия сразу): каждый висящий запрос держит
+ *  соединение, а их у браузера к одному серверу 6 — иначе синхронизация Качества осталась бы без связи (как погода hang, P2-0059). */
+export const SILENT_MS = 60000;
 const DAY_MS = 24 * 3600 * 1000;
 
 export function offlineOf(manifest: { offline?: unknown } | null | undefined): ModuleOffline | null {
@@ -84,6 +87,8 @@ export interface OfflineReader {
   size(module: string, project?: string): Promise<number>;
   /** «Очистить скачанное»: копии модуля (или всех модулей) этого человека. */
   clear(module?: string): Promise<number>;
+  /** Сервер недавно промолчал (SILENT_MS) — новые чтения идут сразу в копию; «заранее» останавливается. */
+  serverSilent(): boolean;
 }
 
 const TIMEOUT = Symbol('timeout');
@@ -92,6 +97,7 @@ const DENIED = /нет права|нет доступа/i;
 
 export function createOfflineReader(deps: ReaderDeps): OfflineReader {
   const now = (): number => (deps.now ? deps.now() : Date.now());
+  let silentUntil = 0;
   /** модуль → ключ чтения → время показанной копии */
   const shown = new Map<string, Map<string, string>>();
   /** модуль → чтения без сети, которых нет в копии (экран не открывали с интернетом) */
@@ -131,12 +137,14 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
         const r = await fetcher();
         return r.ok ? { ok: true, value: r.value, meta: null } : r;
       }
-      if (deps.offline()) return fromCopy<T>(module, key, id, opts.quiet);
+      if (deps.offline() || now() < silentUntil) return fromCopy<T>(module, key, id, opts.quiet);
       let timer: ReturnType<typeof setTimeout> | undefined;
       const r = await Promise.race([fetcher().catch((): Result<T> => ({ ok: false, message: NO_CONNECTION_TEXT })),
         new Promise<typeof TIMEOUT>((res) => { timer = setTimeout(() => res(TIMEOUT), deps.waitMs ?? READ_WAIT_MS); })]);
       clearTimeout(timer);
+      if (r === TIMEOUT) silentUntil = now() + SILENT_MS;
       if (r === TIMEOUT || (!r.ok && r.message === NO_CONNECTION_TEXT)) return fromCopy<T>(module, key, id, opts.quiet);
+      silentUntil = 0;
       // сервер отказал по правам — у человека больше нет этих данных: копия удаляется (цены и сметы без права estimate и т. п.)
       if (!r.ok) { if (DENIED.test(r.message)) { await deps.store.delete(id); note(module, key, null); } return r; }
       const at = new Date(now()).toISOString();
@@ -166,6 +174,7 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
     resolveMiss(module, key) { miss(module, key, false); },
     missedKeys(module) { return [...(missed.get(module) || [])]; },
     subscribe(cb) { subs.add(cb); return () => { subs.delete(cb); }; },
+    serverSilent: () => now() < silentUntil,
     async size(module, project) {
       const slot = deps.slot();
       return slot ? (await deps.store.list(slot, module)).filter((r) => project === undefined || r.project === project).reduce((a, r) => a + (r.bytes || 0), 0) : 0;

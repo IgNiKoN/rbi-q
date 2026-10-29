@@ -17,23 +17,27 @@ export async function prefetchCore(d: CorePrefetchDeps): Promise<CorePrefetchSta
   let reads = 0;
   const count = async <T>(p: Promise<T>): Promise<T> => { reads++; return p; };
   const before = await offlineReader().size('company');
-  const [admin, access] = await Promise.all([count(d.api.myAdminCompanies()), d.projects ? count(d.projects.myAccess()) : Promise.resolve([])]);
-  await Promise.all([count(d.api.catalog()), count(d.api.listProjects())]);
+  const admin = await count(d.api.myAdminCompanies());
+  const access = d.projects ? await count(d.projects.myAccess()) : [];
+  await count(d.api.catalog()); await count(d.api.listProjects());
   const ids = new Set<string>([...admin.map((c) => c.company_id), ...access.filter((c) => c.can_manage_projects || c.can_manage_units).map((c) => c.company_id)]);
   for (const co of ids) {
-    if (offlineNow()) { stats.stopped = 'связь пропала'; break; }
+    if (offlineNow() || offlineReader().serverSilent()) { stats.stopped = 'связь пропала'; break; }
     const isAdmin = admin.some((c) => c.company_id === co);
-    const jobs: Promise<unknown>[] = [];
-    if (isAdmin) jobs.push(d.api.listMembers(co), d.api.listRoles(co));
-    if (isAdmin && d.api.listQualityObjects) jobs.push(d.api.listQualityObjects(co));
+    // по одному и до первого молчания сервера (висящие запросы держат соединения синхронизации Качества)
+    const api = d.api;
+    const jobs: Array<() => Promise<unknown>> = [];
+    if (isAdmin) jobs.push(() => api.listMembers(co), () => api.listRoles(co));
+    if (isAdmin && api.listQualityObjects) jobs.push(() => api.listQualityObjects!(co));
     const pr = d.projects;
     if (pr) {
-      jobs.push(pr.listUnits(co));
-      if (pr.projectCatalog) jobs.push(pr.projectCatalog(co));
-      if (pr.listDivisions) jobs.push(pr.listDivisions(co));
+      jobs.push(() => pr.listUnits(co));
+      if (pr.projectCatalog) jobs.push(() => pr.projectCatalog!(co));
+      if (pr.listDivisions) jobs.push(() => pr.listDivisions!(co));
     }
-    if (d.core) jobs.push(d.core.listCounterparties(co, false));
-    await Promise.all(jobs.map(count));
+    const core = d.core;
+    if (core) jobs.push(() => core.listCounterparties(co, false));
+    for (const j of jobs) { if (offlineReader().serverSilent()) break; await count(j()); }
     stats.companies++;
   }
   if (d.projects && d.projects.dicts) await count(d.projects.dicts());

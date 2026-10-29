@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { memoryCopyStore } from '../copy-store.ts';
-import { copyMarkText, createOfflineReader, inputBlocked, isStale, NEED_INTERNET_TEXT, NO_CONNECTION_TEXT, offlineOf } from '../offline-read.ts';
+import { copyMarkText, createOfflineReader, inputBlocked, isStale, NEED_INTERNET_TEXT, NO_CONNECTION_TEXT, offlineOf, SILENT_MS } from '../offline-read.ts';
 import type { Result } from '../offline-read.ts';
 
 const NOW = Date.parse('2026-10-29T11:32:00Z');
@@ -74,12 +74,13 @@ test('с сетью выяснилось, что доступа к объект�
 });
 
 test('сервер не ответил (обрыв / молчит дольше ожидания) — копия; сервер отказал — его ответ, копия не подменяет', async () => {
-  const { reader } = setup();
+  const { reader, env } = setup();
   await reader.read('planfact', 'k', ok('копия'));
   const cut = await reader.read('planfact', 'k', noNet);
   assert.ok(cut.ok && cut.value === 'копия' && cut.meta!.from === 'copy', 'обрыв связи');
   const silent = await reader.read('planfact', 'k', () => new Promise<Result<string>>(() => { /* молчит */ }));
   assert.ok(silent.ok && silent.meta!.from === 'copy', 'сервер молчит');
+  env.now += SILENT_MS + 1;   // минута тишины прошла — снова спрашиваем сервер
   const thrown = await reader.read('planfact', 'k', async () => { throw new Error('Load failed'); });
   assert.ok(thrown.ok && thrown.meta!.from === 'copy', 'исключение запроса — тоже обрыв');
   const denied = await reader.read('planfact', 'k', async () => ({ ok: false, message: 'Нет права на это действие' }));
@@ -190,4 +191,22 @@ test('без сети экрана нет в копии — пометка «Н�
   assert.equal(reader.status('company')!.missed, 0);
   await reader.read('company', 'x', ok(1), { quiet: true });
   assert.equal(reader.status('company')!.missed, 0, 'служебные чтения пропуском не считаются');
+});
+
+test('сервер промолчал дольше ожидания — минуту новые чтения сразу из копии (не держим соединения); ответил — снова спрашиваем', async () => {
+  const { env, reader } = setup();
+  await reader.read('planfact', 'summary:portfolio', ok(['было']));
+  const hang = (): Promise<Result<string[]>> => new Promise(() => {});
+  const r1 = await reader.read('planfact', 'summary:portfolio', hang);
+  assert.equal(r1.ok && r1.meta!.from, 'copy');
+  assert.equal(reader.serverSilent(), true);
+  let calls = 0;
+  const r2 = await reader.read('planfact', 'summary:portfolio', async () => { calls++; return { ok: true, value: ['новое'] }; });
+  assert.equal(calls, 0, 'пока сервер молчит — к нему не идём');
+  assert.equal(r2.ok && r2.meta!.from, 'copy');
+  env.now = NOW + SILENT_MS + 1;
+  assert.equal(reader.serverSilent(), false);
+  const r3 = await reader.read('planfact', 'summary:portfolio', async () => { calls++; return { ok: true, value: ['новое'] }; });
+  assert.equal(calls, 1);
+  assert.deepEqual(r3.ok && r3.value, ['новое']);
 });
