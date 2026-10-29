@@ -42,10 +42,10 @@ test('роль экрана Качества — из прав компании 
 
 test('доступ из my_access: объекты (null — вся компания) и фирма подрядчика', () => {
   assert.deepEqual(parseAccess({ actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: null }),
-    { actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: '', contractorId: '', objects: null, container: null });
-  assert.deepEqual(parseAccess({ actions: [], projects: null, contractor: { id: 'k', name: 'ООО «Альфа-Строй»', keys: [] } }),
-    { actions: [], templates: [], projects: null, contractor: 'ООО «Альфа-Строй»', contractorId: 'k', objects: null, container: null });
-  assert.deepEqual(parseAccess(null), { actions: [], templates: [], projects: null, contractor: '', contractorId: '', objects: null, container: null });
+    { actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null });
+  assert.deepEqual(parseAccess({ actions: [], projects: null, contractor: { id: 'k', name: 'ООО «Альфа-Строй»', keys: ['альфа-строй'] } }),
+    { actions: [], templates: [], projects: null, contractor: 'ООО «Альфа-Строй»', contractorId: 'k', contractorKeys: ['альфа-строй'], objects: null, container: null });   // P2-0061: ключи карточек фирмы
+  assert.deepEqual(parseAccess(null), { actions: [], templates: [], projects: null, contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null });
   assert.deepEqual(parseAccess({ actions: [], objects: [{ id: 'obj_1', key: 'большевиков,22 (гений)', name: 'Большевиков,22 (Гений)' }, { id: 'x' }] }).objects,
     ['большевиков,22 (гений)'], 'P2-0033: ключи закреплённых объектов Качества');
   assert.deepEqual(parseAccess({ actions: [], objects: [] }).objects, [], 'пустой список — не «все»');

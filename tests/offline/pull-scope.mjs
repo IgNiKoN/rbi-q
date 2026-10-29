@@ -6,7 +6,7 @@ import { freshProfile, launch, note, ok, signIn } from './lib.mjs';
 
 const CP1 = '7a7a7a7a-1111-4111-8111-111111111111', CP2 = '7b7b7b7b-2222-4222-8222-222222222222';
 const T = '2026-10-20T10:00:00Z';
-const meeting = (id, author, authorId, cp, firm) => ({ id, project_code: 'p', project_canonical_key: '', data: { id, author, title: 'Совещание ' + id },
+const meeting = (id, author, authorId, cp, firm) => ({ id, project_code: 'p', project_canonical_key: '', data: { id, author, title: 'Совещание ' + id, contractorId: 'card-' + id },
   owner: author, created_by: author, core_created_by: authorId, core_counterparty_id: cp, contractor_name: firm, updated_at: T, created_at: T, is_deleted: false });
 const task = (id, author, authorId, assignee, cp, firm) => ({ id, project_code: 'p', project_canonical_key: '', engineer_name: author, core_created_by: authorId,
   assigned_to_auth_user_id: assignee, core_counterparty_id: cp, contractor_name: firm, status: 'pending', task_data: { id, engineerName: author, title: 'Задача ' + id },

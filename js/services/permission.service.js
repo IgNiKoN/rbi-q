@@ -437,7 +437,9 @@
             const SA = window.RbiSyncAccess;
             const kind = SA && kindName ? SA.kindOf(kindName) : null;
             if (!SA || !kind) return null;
-            return SA.canChange(rec, kind, SA.deviceMe()).ok;
+            const me = SA.deviceMe();
+            if (!me || !me.actions.length) return null;   // З8: вход по PIN / демо / права ещё не пришли — прежняя проверка по подписи
+            return SA.canChange(rec, kind, me).ok;
         },
 
         // 7. Можно ли редактировать проектные данные. P2-0061: canEdit(запись, вид) — по общему правилу; canEdit(ФИО) — как раньше

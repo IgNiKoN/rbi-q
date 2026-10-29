@@ -19,7 +19,7 @@ export const SKManifest = {
     // P2-0061: виды записей для общего правила синхронизации (standards/SYNC_AND_ACCESS.md)
     sync: [
         { kind: 'sk_record', store: 'sk_records', table: 'sk_records', title: 'Запись СК',
-          author: { id: 'authorId', name: ['uploaded_by', 'sk_uploaded_by', 'imported_by', 'owner', 'author'] }, object: ['project_canonical_key', 'projectName', 'projectId', 'project'], counterparty: ['contractorId', 'core_counterparty_id'], mode: 'contractor', view: ['quality.view'], edit: ['quality.edit'] }
+          author: { id: 'authorId', name: ['uploaded_by', 'sk_uploaded_by', 'imported_by', 'owner', 'author'] }, object: ['project_canonical_key', 'projectName', 'projectId', 'project'], counterparty: ['core_counterparty_id'], contractorCard: 'contractorId', mode: 'contractor', view: ['quality.view'], edit: ['quality.edit'] }
     ],
     routes: ['/sk', '/sk/:subTab'],
     defaultRoute: '/sk'

@@ -17,10 +17,10 @@ export const ConstructionV2Manifest = {
     // объекты в правах Стройконтроля не участвуют (objects: false), подрядчик — своя фирма по id контрагента; помещения — quality.can
     sync: [
         { kind: 'defect_v2', store: 'construction_defects_v2', table: 'construction_defects_v2', title: 'Замечание',
-          author: { id: 'authorId', name: ['owner', 'created_by', 'author'] }, counterparty: ['core_counterparty_id'], objects: false,
+          author: { id: 'authorId', name: ['owner', 'created_by', 'author'] }, counterparty: ['core_counterparty_id'], contractorCard: 'contractorId', objects: false,
           mode: 'contractor', view: ['construction.view'], edit: ['construction.edit'], ownFirst: true },
         { kind: 'acceptance_v2', store: 'construction_acceptance_v2', table: 'construction_acceptance_v2', title: 'Приёмка',
-          author: { id: 'authorId', name: ['owner', 'created_by', 'author'] }, counterparty: ['core_counterparty_id'], objects: false,
+          author: { id: 'authorId', name: ['owner', 'created_by', 'author'] }, counterparty: ['core_counterparty_id'], contractorCard: 'contractorId', objects: false,
           mode: 'contractor', view: ['construction.view'], edit: ['construction.edit'] },
         { kind: 'unit_v2', store: 'construction_units_v2', table: 'construction_units_v2', title: 'Помещение',
           author: { id: 'authorId', name: ['owner', 'created_by', 'author'] }, mode: 'shared', view: ['construction.view'], edit: ['construction.edit'] }

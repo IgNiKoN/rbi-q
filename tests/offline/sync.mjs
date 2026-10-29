@@ -161,16 +161,24 @@ async function contractor(out) {
     await signIn(page);
     const cp = await page.evaluate(() => window.appSettings && window.appSettings.assignedCounterpartyId).catch(() => null);
     ok(cp === CP_OWN, `${tag}: фирма подрядчика — id контрагента из ответа сервера`, String(cp));
+    // карточка справочника подрядчиков «Фирма 1» на телефоне (id карточки ≠ id контрагента)
+    await page.evaluate(async () => {
+      await window.RBI.services.storage.put(STORES.CONTRACTOR_DIRECTORY, { id: 'card-firm-1', canonical_key: 'фирма 1', display_name: 'Фирма 1', source: 'cloud', syncStatus: 'synced' });
+      const C = window.RBI.services.contractors; if (C && typeof C.init === 'function') await C.init();
+    });
     await ctx.setOffline(true);
     const t = Date.now();
     const put = (store, id, firm) => page.evaluate(async ([st, i, f]) => window.RBI.services.storage.put(st, { id: i, title: 'SYNC-MARK', owner: 'Иванов Иван', locationId: 'loc-1',
       core_counterparty_id: f, status: 'issued', source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() }), [store, id, firm]);
-    const ids = { dOwn: 'd-own-' + t, dOther: 'd-other-' + t, aOwn: 'a-own-' + t, aOther: 'a-other-' + t };
+    const ids = { dOwn: 'd-own-' + t, dOther: 'd-other-' + t, aOwn: 'a-own-' + t, aOther: 'a-other-' + t, aNew: 'a-new-' + t };
     await put('construction_defects_v2', ids.dOwn, CP_OWN); await put('construction_defects_v2', ids.dOther, CP_OTHER);
     await put('construction_acceptance_v2', ids.aOwn, CP_OWN); await put('construction_acceptance_v2', ids.aOther, CP_OTHER);
+    // Б1: новая заявка подрядчика, как пишет форма: id фирмы ещё нет (его ставит сервер), только карточка справочника
+    await page.evaluate(async (i) => window.RBI.services.storage.put('construction_acceptance_v2', { id: i, title: 'SYNC-MARK', owner: 'Иванов Иван', locationId: 'loc-1',
+      contractorId: 'card-firm-1', status: 'submitted', source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() }), ids.aNew);
     await ctx.setOffline(false);
     const n = (tb, id) => sendsAll.get(tb + ':' + id) || 0;
-    for (let i = 0; i < 6 && !(n('construction_defects_v2', ids.dOwn) && n('construction_acceptance_v2', ids.aOwn)); i++) {
+    for (let i = 0; i < 6 && !(n('construction_defects_v2', ids.dOwn) && n('construction_acceptance_v2', ids.aOwn) && n('construction_acceptance_v2', ids.aNew)); i++) {
       await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000);
     }
     await page.waitForTimeout(2500);
@@ -178,12 +186,15 @@ async function contractor(out) {
     const r = { dOwn: n('construction_defects_v2', ids.dOwn), dOther: n('construction_defects_v2', ids.dOther), aOwn: n('construction_acceptance_v2', ids.aOwn),
       aOther: n('construction_acceptance_v2', ids.aOther), dOtherRec: await rec('construction_defects_v2', ids.dOther), aOtherRec: await rec('construction_acceptance_v2', ids.aOther) };
     note(JSON.stringify(r));
+    note('новая заявка: ' + JSON.stringify(await rec('construction_acceptance_v2', ids.aNew)) + ' карточки: ' + JSON.stringify(await page.evaluate(() => {
+      const SA = window.RbiSyncAccess, me = SA && SA.deviceMe(); return me ? me.contractorCards : null; })));
     // подрядчик отправляет только замечания («В работу» / «Устранено»; P2-0044), приёмки — нет
     ok(r.dOwn === 1, `${tag}: замечание своей фирмы ушло ровно 1 раз`, String(r.dOwn));
     ok(r.dOther === 0 && r.dOtherRec && r.dOtherRec[0] === 'blocked' && r.dOtherRec[1] === 'Не отправлено: запись другой фирмы',
       `${tag}: замечание чужой фирмы — не ушло, причина «запись другой фирмы»`, JSON.stringify(r.dOtherRec));
     // приёмки: правка по серверу (row_visible_id) — своей фирмы можно, чужой — нет
     ok(r.aOwn === 1 && r.aOther === 0 && r.aOtherRec && r.aOtherRec[0] === 'blocked', `${tag}: приёмка своей фирмы ушла 1 раз, чужой — нет (причина)`, `${r.aOwn}/${r.aOther} ${JSON.stringify(r.aOtherRec)}`);
+    ok(n('construction_acceptance_v2', ids.aNew) === 1, `${tag}: новая заявка подрядчика (только карточка справочника, без id фирмы) ушла 1 раз`, String(n('construction_acceptance_v2', ids.aNew)));
     await ctx.close();
     // инженер только Стройконтроля (без прав Качества): свои замечания уходят — раньше не уходило ничего (роль экрана «Директор»)
     stand.quality = { actions: ['construction.view', 'construction.edit', 'quality.view'], templates: [], projects: null, contractor: null, objects: null, container: null };
@@ -209,7 +220,10 @@ async function rejectRetry(out, width = 375, scheme = 'light') {
     await start();
     let { ctx, page } = await launch(out, tag, { width, height: width < 768 ? 812 : 900, scheme });
     await signIn(page);
-    const t = Date.now(), a = 'rej-a-' + t, b = 'rej-b-' + t;
+    const t = Date.now(), a = 'rej-a-' + t, b = 'rej-b-' + t, good = 'rej-good-' + t;
+    // З6: хороший осмотр в той же порции — не замораживается отказом соседей
+    await page.evaluate(async (i) => window.RBI.services.inspections.save({ id: i, date: new Date().toISOString(), object: 'ЖК Тестовый', template: 'Фасад',
+      templateTitle: 'Фасад', status: 'done', inspectorName: 'Иванов Иван' }), good);
     for (const id of [a, b]) await page.evaluate(async (i) => window.RBI.services.inspections.save({ id: i, date: new Date().toISOString(), object: 'ЖК Тестовый',
       location: 'REJECT-MARK', template: 'Фасад', templateTitle: 'Фасад', status: 'done', inspectorName: 'Иванов Иван' }), id);
     // чужая запись на телефоне — для снимка: «Не отправлено: запись другого сотрудника»
@@ -218,6 +232,7 @@ async function rejectRetry(out, width = 375, scheme = 'light') {
       updatedAt: new Date().toISOString() }), 'foreign-' + t);
     for (let i = 0; i < 3; i++) { await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
     const rej0 = flow.rejected || 0;
+    ok((sends.get(good) || 0) === 1, `${tag}: хороший осмотр из той же порции ушёл 1 раз (отказ соседей его не держит)`, String(sends.get(good) || 0));
     const ra = await getRec(page, a);
     ok(rej0 >= 1 && ra && ra.st === 'blocked' && ra.reason === 'Сервер отклонил: нет прав на эту запись', `${tag}: сервер отклонил — запись на телефоне с причиной`, JSON.stringify(ra) + ' отказов ' + rej0);
     // ещё проходы при том же доступе — запись не уходит снова (не бьётся в сервер каждый раз)
@@ -274,21 +289,28 @@ async function ownFirst(out) {
     const { ctx, page } = await launch(out, tag);
     await signIn(page);
     await page.waitForTimeout(3000);
-    const t = Date.now(), task = 'task-' + t, def = 'def-' + t;
-    await page.evaluate(async ([ti, di]) => {
+    const t = Date.now(), task = 'task-' + t, def = 'def-' + t, known = 'task-known-' + t;
+    await page.evaluate(async ([ti, di, ki]) => {
       const S = window.RBI.services;
       await S.storage.put('rbi_tasks', { id: ti, title: 'SYNC-MARK', engineerName: 'Иванов Иван', status: 'pending', date: new Date().toISOString(), source: 'local',
         syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() });
       await S.storage.put('construction_defects_v2', { id: di, title: 'SYNC-MARK', owner: 'Иванов Иван', locationId: 'loc-1', status: 'issued', source: 'local',
         syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() });
-    }, [task, def]);
+      // правка задачи, которую сервер уже знает (скачана раньше), — уходит после скачивания, чтобы не отменить удаление с сервера
+      await S.storage.put('rbi_tasks', { id: ki, title: 'SYNC-MARK', engineerName: 'Иванов Иван', status: 'done', date: new Date().toISOString(), source: 'local', cloudKnown: true,
+        syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() });
+    }, [task, def, known]);
     const n0 = apiLog.length;
     await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {});
     for (let i = 0; i < 10 && !(sendsAll.get('rbi_tasks:' + task) && sendsAll.get('construction_defects_v2:' + def)); i++) await page.waitForTimeout(2000);
     const L = apiLog.slice(n0);
     const at = (re) => L.findIndex((x) => re.test(x));
     const iTask = at(/^POST \/rest\/v1\/rbi_tasks/), iDef = at(/^POST \/rest\/v1\/construction_defects_v2/), iPull = at(/^GET \/rest\/v1\/rbi_inspections/);
-    note(`порядок: задача ${iTask}, замечание ${iDef}, скачивание осмотров ${iPull}`);
+    const taskPosts = L.map((x, k) => (/^POST \/rest\/v1\/rbi_tasks/.test(x) ? k : -1)).filter((k) => k >= 0);
+    const iKnown = taskPosts.find((k) => k > iPull) ?? -1;   // второй запрос задач — после скачивания
+    note(`порядок: задача ${iTask}, замечание ${iDef}, скачивание осмотров ${iPull}, правка известной задачи ${iKnown}`);
+    ok(iPull >= 0 && iKnown > iPull && (sendsAll.get('rbi_tasks:' + known) || 0) === 1, `${tag}: правка задачи, которую сервер уже знает, — после скачивания, 1 раз`,
+      `${iKnown} > ${iPull}, ${sendsAll.get('rbi_tasks:' + known) || 0}`);
     ok(iTask >= 0 && iDef >= 0 && (iPull < 0 || (iTask < iPull && iDef < iPull)), `${tag}: задача и замечание ушли до скачивания чужого`, `${iTask}/${iDef}/${iPull}`);
     ok((sendsAll.get('rbi_tasks:' + task) || 0) === 1 && (sendsAll.get('construction_defects_v2:' + def) || 0) === 1, `${tag}: каждая — ровно 1 раз за проход`,
       `${sendsAll.get('rbi_tasks:' + task) || 0}/${sendsAll.get('construction_defects_v2:' + def) || 0}`);

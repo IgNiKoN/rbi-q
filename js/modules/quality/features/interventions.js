@@ -1429,7 +1429,7 @@ window.rbi_editPractice = function (id) {
     const p = window.rbi_practicesData.find(x => x.id === id);
     if (!p) return;
     var _perms = window.RBI && window.RBI.services && window.RBI.services.permissions;
-    if (_perms && typeof _perms.canEdit === 'function' && !_perms.canEdit(p, 'intervention')) {
+    if (_perms && typeof _perms.canEdit === 'function' && !_perms.canEdit(p, 'practice')) {   // P2-0061 (З10): практика — вид библиотеки
         return showToast("⚠️ Редактировать можно только свою практику.");
     }
 

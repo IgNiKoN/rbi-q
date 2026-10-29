@@ -119,7 +119,8 @@ for (const [t, kindName] of TABLES) {
       // запись устройства — как её сохраняет скачивание (id автора, подпись, объект, фирма, кому задача)
       const nameField = [].concat((K.author || {}).name || [])[0] || 'inspectorName';
       const rec = { id: r.id, authorId: r.core_created_by || undefined, [nameField]: r.engineer_name || '', project_canonical_key: r.project_canonical_key || '',
-        contractorId: r.core_counterparty_id || '', core_counterparty_id: r.core_counterparty_id || '', assignedToId: r.assigned_to_auth_user_id || '' };
+        core_counterparty_id: r.core_counterparty_id || '', assignedToId: r.assigned_to_auth_user_id || '',
+        contractorId: 'card-' + r.id };   // Б2: как на телефоне — contractorId это карточка справочника (другой номер), не id фирмы
       const dv = visible(rec, K, me), de = canSend(rec, K, me);
       const key = t + ' · ' + k;
       tally[key] = tally[key] || [0, 0];

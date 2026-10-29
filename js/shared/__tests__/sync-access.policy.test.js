@@ -72,8 +72,8 @@ test('объекты: не назначенный — причина «объе�
 
 test('подрядчик: своя фирма по id — да, чужая или без фирмы — «запись другой фирмы»', () => {
   const me = eng({ actions: ['quality.view', 'quality.edit', 'quality.scope.contractor'], contractorId: CP });
-  assert.equal(canSend(rec({ contractorId: CP, inspectorName: 'Петров' }), K, me).ok, true);
-  assert.equal(canSend(rec({ contractorId: 'другая' }), K, me).code, 'contractor');
+  assert.equal(canSend(rec({ core_counterparty_id: CP, inspectorName: 'Петров' }), K, me).ok, true);
+  assert.equal(canSend(rec({ core_counterparty_id: 'другая' }), K, me).code, 'contractor');
   assert.equal(canSend(rec(), K, me).code, 'contractor');
 });
 
@@ -111,8 +111,8 @@ test('этап 2: каждый вид Качества, СК и Базы зна�
 
 test('этап 2: подрядчик — в режиме «команда объекта» только своя фирма; библиотека — по праву', () => {
   const me = eng({ actions: ['quality.view', 'quality.edit', 'quality.scope.contractor'], contractorId: CP });
-  assert.equal(canSend({ id: 'm', author: 'Петров', contractorId: CP }, kindOf('meeting'), me).ok, true);
-  assert.equal(canSend({ id: 'm', author: 'Петров', contractorId: 'чужая' }, kindOf('meeting'), me).code, 'contractor');
+  assert.equal(canSend({ id: 'm', author: 'Петров', core_counterparty_id: CP }, kindOf('meeting'), me).ok, true);
+  assert.equal(canSend({ id: 'm', author: 'Петров', core_counterparty_id: 'чужая' }, kindOf('meeting'), me).code, 'contractor');
   assert.equal(canSend({ id: 'p', author: 'Петров' }, kindOf('practice'), me).ok, true);
 });
 
@@ -135,7 +135,7 @@ test('этап 5: отбор после скачивания — по прави
   assert.equal(keepPulled({ id: 'm', author: 'Петров', authorId: U1, project_canonical_key: 'ЖК Север' }, meet, me, true), true, 'моё по id');
   assert.equal(keepPulled({ id: 'm' }, meet, null, true), true, 'без «кто я» — решает сервер');
   const ctr = eng({ actions: ['quality.view', 'quality.edit', 'quality.scope.contractor'], contractorId: CP });
-  assert.equal(keepPulled({ id: 'm', author: 'Петров', contractorId: CP }, meet, ctr, true), true, 'подрядчику «Только мои» не сужает его фирму (как раньше)');
+  assert.equal(keepPulled({ id: 'm', author: 'Петров', core_counterparty_id: CP }, meet, ctr, true), true, 'подрядчику «Только мои» не сужает его фирму (как раньше)');
   assert.equal(keepPulled({ id: 'm', author: 'Петров' }, meet, eng({ actions: ['quality.view', 'quality.edit', 'quality.manage'] }), true), true, 'руководителю — тоже');
   assert.equal(keepPulled({ id: 'x' }, null, me, true), true, 'вид без описания — как раньше');
 });
@@ -151,4 +151,31 @@ test('этап 5: новый вид записи — одна строка оп�
   assert.equal(canSend({ id: 'n', owner: 'Петров' }, k, eng()).code, 'foreign');
   const { objectKinds } = await import('../../services/sync/sync-access.policy.js');
   assert.deepEqual(objectKinds(kinds).map((x) => x.kind), ['note'], 'отправка «объектов» берёт вид из описания');
+});
+
+test('доработка Б1/Б2: своя фирма — по id контрагента; без него — по карточке справочника своей фирмы; карточку с id фирмы не путать', () => {
+  const me = eng({ actions: ['quality.view', 'quality.edit', 'quality.scope.contractor', 'construction.view', 'construction.edit'], contractorId: CP, contractorCards: ['card-1'] });
+  const acc = kindOf('acceptance_v2'), insp = K;
+  assert.equal(canSend({ id: 'a', owner: 'Петров', contractorId: 'card-1' }, acc, me).ok, true, 'Б1: новая заявка подрядчика (только карточка) — уходит');
+  assert.equal(canSend({ id: 'a', owner: 'Петров', contractorId: 'card-2' }, acc, me).code, 'contractor', 'чужая карточка — другая фирма');
+  assert.equal(canSend({ id: 'i', inspectorName: 'Петров', contractorId: 'card-9', core_counterparty_id: CP }, insp, me).ok, true, 'Б2: id фирмы главнее карточки');
+  assert.equal(keepPulled({ id: 'i', inspectorName: 'Петров', contractorId: 'card-9', core_counterparty_id: CP }, insp, me, true), true, 'Б2: скачанное своей фирмы не выбрасывается');
+  assert.equal(canSend({ id: 'i', inspectorName: 'Петров', contractorId: CP }, insp, me).code, 'contractor', 'id фирмы в поле карточки — не совпадение');
+});
+
+test('доработка Б3: исполнитель задачи её автором не становится; автор задачи по id может её менять', () => {
+  const t = kindOf('task');
+  const B = eng({ userId: U2, name: 'Петров Пётр', email: 'p@test.invalid', names: [] });
+  const task = { id: 't', engineerName: 'Иванов Иван', assignedToId: U2 };
+  assert.equal(isMine(task, t, B), true, 'исполнитель — моя (видна, можно отправить)');
+  assert.equal(stampAuthor(task, t, B), false, 'но автором не записывается');
+  assert.equal(task.authorId, undefined);
+  const A = eng();
+  assert.equal(canChange({ ...task, authorId: U1 }, t, A).ok, true, 'автор по id — может менять');
+});
+
+test('доработка З4/З9: права ещё не пришли — скачанное не отбирается; Стройконтроль — управление construction.manage', () => {
+  assert.equal(keepPulled({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Юг' }, kindOf('meeting'), eng({ actions: [], objects: ['ЖК Север'] }), true), true);
+  const mgr = eng({ actions: ['construction.view', 'construction.edit', 'construction.manage'] });
+  assert.equal(canChange({ id: 'd', owner: 'Петров', core_counterparty_id: '' }, kindOf('defect_v2'), mgr).ok, true);
 });

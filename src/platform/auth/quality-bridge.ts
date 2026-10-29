@@ -121,10 +121,10 @@ export function roleFor(actions: string[]): string {
 
 /** Доступ из quality.my_access: projects — назначенные объекты ядра (null — вся компания), contractor — фирма назначения,
  *  objects — ключи закреплённых объектов Качества (P2-0033, 033; null — все объекты). */
-export interface QualityAccess { actions: string[]; templates: string[]; projects: string[] | null; contractor: string; contractorId: string; objects: string[] | null; container: string | null }
+export interface QualityAccess { actions: string[]; templates: string[]; projects: string[] | null; contractor: string; contractorId: string; contractorKeys: string[]; objects: string[] | null; container: string | null }
 export function parseAccess(data: unknown): QualityAccess {
   const d = (data && typeof data === 'object' ? data : {}) as { actions?: unknown; templates?: unknown; projects?: unknown; contractor?: unknown; objects?: unknown; container?: unknown };
-  const c = (d.contractor && typeof d.contractor === 'object' ? d.contractor : {}) as { id?: unknown; name?: unknown };
+  const c = (d.contractor && typeof d.contractor === 'object' ? d.contractor : {}) as { id?: unknown; name?: unknown; keys?: unknown };
   return {
     actions: Array.isArray(d.actions) ? d.actions.map(String) : [],
     templates: Array.isArray(d.templates) ? d.templates.map(String) : [],
@@ -132,6 +132,8 @@ export function parseAccess(data: unknown): QualityAccess {
     contractor: typeof c.name === 'string' ? c.name : '',
     // P2-0044: номер фирмы (контрагент ядра) — по нему Стройконтроль отбирает записи подрядчика
     contractorId: typeof c.id === 'string' ? c.id : '',
+    // P2-0061 (Б1/Б2): ключи карточек справочника подрядчиков фирмы — «своя фирма» у записей без id контрагента
+    contractorKeys: Array.isArray(c.keys) ? c.keys.map(String).filter(Boolean) : [],
     objects: Array.isArray(d.objects)
       ? d.objects.map((o) => (o && typeof o === 'object' ? String((o as { key?: unknown }).key ?? '') : '')).filter(Boolean) : null,
     // P2-0035 (039b): служебный объект-контейнер компании (как «Объекты RBI») — Качество работает в нём
@@ -261,6 +263,7 @@ export interface QualitySync {
   userId?: string;
   names?: string[];
   objects?: string[] | null;
+  contractorKeys?: string[];
   selectProject(id: string): Promise<void>;
 }
 
@@ -399,6 +402,7 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
   const applyRole = (a: QualityAccess): void => {
     sync.actions = a.actions;
     sync.objects = a.objects;   // P2-0061: null — все объекты (как сервер), иначе ключи закреплённых
+    sync.contractorKeys = a.contractorKeys;
     sync.role = roleFor(a.actions);
     // Фирма подрядчика — из назначения роли (020). Закреплённые объекты Качества (033) — экрану ключами объектов, как в старом
     // профиле (assignedProjects): старые фильтры и выбор объекта работают как раньше; что видно — решает сервер. Все объекты — [].

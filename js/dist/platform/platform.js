@@ -4066,7 +4066,7 @@ Suggested solution: ${e.workaround}`), new Error(r);
     }
   }
 }
-const Ri = "2.118.0", Oi = `realtime-js/${Ri}`, Ci = "1.0.0", As = "2.0.0", Ii = As, ji = 1e4, Pi = 15e3, Ni = 1e4, $i = 100, ce = {
+const Ri = "2.118.0", Ci = `realtime-js/${Ri}`, Oi = "1.0.0", As = "2.0.0", Ii = As, ji = 1e4, Pi = 15e3, Ni = 1e4, $i = 100, ce = {
   closed: "closed",
   errored: "errored",
   joined: "joined",
@@ -4263,7 +4263,7 @@ const ln = (t, e, r = {}) => {
     return i.map((a) => Rs(e, a));
   }
   return t;
-}, Fi = (t) => typeof t == "string" ? t.replace(" ", "T") : t, Os = (t) => {
+}, Fi = (t) => typeof t == "string" ? t.replace(" ", "T") : t, Cs = (t) => {
   const e = new URL(t);
   return e.protocol = e.protocol.replace(/^ws/i, "http"), e.pathname = e.pathname.replace(/\/+$/, "").replace(/\/socket\/websocket$/i, "").replace(/\/socket$/i, "").replace(/\/websocket$/i, ""), e.pathname === "" || e.pathname === "/" ? e.pathname = "/api/broadcast" : e.pathname = e.pathname + "/api/broadcast", e.href;
 };
@@ -4381,7 +4381,7 @@ var Ne = (t) => typeof t == "function" ? (
   trigger(t, e) {
     this.channel.trigger(this.refEvent, { status: t, response: e });
   }
-}, Cs = class {
+}, Os = class {
   /**
   * @param {() => void} callback
   * @param {(tries: number) => number} timerCalc
@@ -4407,7 +4407,7 @@ var Ne = (t) => typeof t == "function" ? (
    * @param {Socket} socket
    */
   constructor(t, e, r) {
-    this.state = H.closed, this.topic = t, this.params = Ne(e || {}), this.socket = r, this.bindings = [], this.bindingRef = 0, this.timeout = this.socket.timeout, this.joinedOnce = !1, this.joinPush = new ut(this, ne.join, this.params, this.timeout), this.pushBuffer = [], this.stateChangeRefs = [], this.rejoinTimer = new Cs(() => {
+    this.state = H.closed, this.topic = t, this.params = Ne(e || {}), this.socket = r, this.bindings = [], this.bindingRef = 0, this.timeout = this.socket.timeout, this.joinedOnce = !1, this.joinPush = new ut(this, ne.join, this.params, this.timeout), this.pushBuffer = [], this.stateChangeRefs = [], this.rejoinTimer = new Os(() => {
       this.socket.isConnected() && this.rejoin();
     }, this.socket.rejoinAfterMs), this.stateChangeRefs.push(this.socket.onError(() => this.rejoinTimer.reset())), this.stateChangeRefs.push(
       this.socket.onOpen(() => {
@@ -5073,7 +5073,7 @@ var Ne = (t) => typeof t == "function" ? (
     })), this.heartbeatIntervalMs = e.heartbeatIntervalMs || 3e4, this.autoSendHeartbeat = e.autoSendHeartbeat ?? !0, this.heartbeatCallback = e.heartbeatCallback ?? (() => {
     }), this.rejoinAfterMs = (s) => e.rejoinAfterMs ? e.rejoinAfterMs(s) : [1e3, 2e3, 5e3][s - 1] || 1e4, this.reconnectAfterMs = (s) => e.reconnectAfterMs ? e.reconnectAfterMs(s) : [10, 50, 100, 150, 200, 250, 500, 1e3, 2e3][s - 1] || 5e3, this.logger = e.logger || null, !this.logger && e.debug && (this.logger = (s, i, o) => {
       console.log(`${s}: ${i}`, o);
-    }), this.longpollerTimeout = e.longpollerTimeout || 2e4, this.params = Ne(e.params || {}), this.endPoint = `${t}/${vr.websocket}`, this.vsn = e.vsn || zi, this.heartbeatTimeoutTimer = null, this.heartbeatTimer = null, this.heartbeatSentAt = null, this.pendingHeartbeatRef = null, this.reconnectTimer = new Cs(() => {
+    }), this.longpollerTimeout = e.longpollerTimeout || 2e4, this.params = Ne(e.params || {}), this.endPoint = `${t}/${vr.websocket}`, this.vsn = e.vsn || zi, this.heartbeatTimeoutTimer = null, this.heartbeatTimer = null, this.heartbeatSentAt = null, this.pendingHeartbeatRef = null, this.reconnectTimer = new Os(() => {
       if (this.pageHidden) {
         this.log("Not reconnecting as page is hidden!"), this.teardown();
         return;
@@ -5874,7 +5874,7 @@ class ie {
       private: !1
     }, r.config), this.channelAdapter = new no(this.socket.socketAdapter, e, this.params), this.presence = new to(this), this._onClose(() => {
       this.socket._remove(this);
-    }), this._updateFilterTransform(), this.broadcastEndpointURL = Os(this.socket.socketAdapter.endPointURL()), this.private = this.params.config.private || !1, !this.private && (!((i = (s = this.params.config) === null || s === void 0 ? void 0 : s.broadcast) === null || i === void 0) && i.replay))
+    }), this._updateFilterTransform(), this.broadcastEndpointURL = Cs(this.socket.socketAdapter.endPointURL()), this.private = this.params.config.private || !1, !this.private && (!((i = (s = this.params.config) === null || s === void 0 ? void 0 : s.broadcast) === null || i === void 0) && i.replay))
       throw new Error(`tried to use replay on public channel '${this.topic}'. It must be a private channel.`);
   }
   /**
@@ -6659,7 +6659,7 @@ class _o {
       throw new Error("API key is required to connect to Realtime");
     this.apiKey = r.params.apikey;
     const s = this._initializeOptions(r);
-    this.socketAdapter = new ho(e, s), this.httpEndpoint = Os(e), this.fetch = this._resolveFetch(r == null ? void 0 : r.fetch);
+    this.socketAdapter = new ho(e, s), this.httpEndpoint = Cs(e), this.fetch = this._resolveFetch(r == null ? void 0 : r.fetch);
   }
   /**
    * Connects the socket, unless already connected.
@@ -6923,7 +6923,7 @@ class _o {
     r === this._authGeneration && (this.accessToken ? this._manuallySetToken = !1 : s && (this._manuallySetToken = !0), this.accessTokenValue != n && (this.accessTokenValue = n, this.channels.forEach((i) => {
       const o = {
         access_token: n,
-        version: Oi
+        version: Ci
       };
       i.updateJoinPayload(o), i.joinedOnce && i.channelAdapter.isJoined() && i.channelAdapter.push(Ts.access_token, {
         access_token: n
@@ -7011,7 +7011,7 @@ class _o {
     let m, g;
     const y = (d = e == null ? void 0 : e.vsn) !== null && d !== void 0 ? d : Ii;
     switch (y) {
-      case Ci:
+      case Oi:
         m = (_, v) => v(JSON.stringify(_)), g = (_, v) => v(JSON.parse(_));
         break;
       case As:
@@ -7597,7 +7597,7 @@ function Ro(t) {
   for (const [r, n] of Object.entries(t)) e[r.toLowerCase()] = n;
   return e;
 }
-const Oo = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), Co = (t) => {
+const Co = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), Oo = (t) => {
   if (typeof t != "object" || t === null) return !1;
   const e = Object.getPrototypeOf(t);
   return (e === null || e === Object.prototype || Object.getPrototypeOf(e) === null) && !(Symbol.toStringTag in t) && !(Symbol.iterator in t);
@@ -7640,7 +7640,7 @@ const Oo = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), Co = (t) => {
     headers: (e == null ? void 0 : e.headers) || {}
   };
   if (t === "GET" || t === "HEAD" || !n) return x(x({}, s), r);
-  if (Co(n)) {
+  if (Oo(n)) {
     var i;
     const o = (e == null ? void 0 : e.headers) || {};
     let a;
@@ -7682,7 +7682,7 @@ var qe = class {
   * @param namespace - Error namespace ('storage' or 'vectors')
   */
   constructor(t, e = {}, r, n = "storage") {
-    this.shouldThrowOnError = !1, this.url = t, this.headers = Ro(e), this.fetch = Oo(r), this.namespace = n;
+    this.shouldThrowOnError = !1, this.url = t, this.headers = Ro(e), this.fetch = Co(r), this.namespace = n;
   }
   /**
   * Enable throwing errors instead of returning them.
@@ -10340,7 +10340,7 @@ class B extends ee {
 function ft(t) {
   return b(t) && t.name === "AuthSessionMissingError";
 }
-class Oe extends ee {
+class Ce extends ee {
   constructor() {
     super("Auth session or user missing", "AuthInvalidTokenResponseError", 500, void 0);
   }
@@ -10398,32 +10398,32 @@ class bn extends ee {
     return Object.assign(Object.assign({}, super.toJSON()), { reasons: this.reasons });
   }
 }
-class Ot extends ee {
+class Ct extends ee {
   constructor(e) {
     super(e, "AuthInvalidJwtError", 400, "invalid_jwt");
   }
 }
-const Ct = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split(""), Sn = ` 	
+const Ot = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split(""), Sn = ` 	
 \r=`.split(""), ia = (() => {
   const t = new Array(128);
   for (let e = 0; e < t.length; e += 1)
     t[e] = -1;
   for (let e = 0; e < Sn.length; e += 1)
     t[Sn[e].charCodeAt(0)] = -2;
-  for (let e = 0; e < Ct.length; e += 1)
-    t[Ct[e].charCodeAt(0)] = e;
+  for (let e = 0; e < Ot.length; e += 1)
+    t[Ot[e].charCodeAt(0)] = e;
   return t;
 })();
 function kn(t, e, r) {
   if (t !== null)
     for (e.queue = e.queue << 8 | t, e.queuedBits += 8; e.queuedBits >= 6; ) {
       const n = e.queue >> e.queuedBits - 6 & 63;
-      r(Ct[n]), e.queuedBits -= 6;
+      r(Ot[n]), e.queuedBits -= 6;
     }
   else if (e.queuedBits > 0)
     for (e.queue = e.queue << 6 - e.queuedBits, e.queuedBits = 6; e.queuedBits >= 6; ) {
       const n = e.queue >> e.queuedBits - 6 & 63;
-      r(Ct[n]), e.queuedBits -= 6;
+      r(Ot[n]), e.queuedBits -= 6;
     }
 }
 function Ds(t, e, r) {
@@ -10586,10 +10586,10 @@ Wt.promiseConstructor = Promise;
 function yt(t) {
   const e = t.split(".");
   if (e.length !== 3)
-    throw new Ot("Invalid JWT structure");
+    throw new Ct("Invalid JWT structure");
   for (let n = 0; n < e.length; n++)
     if (!Zo.test(e[n]))
-      throw new Ot("JWT not in base64url format");
+      throw new Ct("JWT not in base64url format");
   return {
     // using base64url lib
     header: JSON.parse(En(e[0])),
@@ -10787,7 +10787,7 @@ function Zt() {
     }
   });
 }
-function Oa(t, e) {
+function Ca(t, e) {
   return new Proxy(t, {
     get: (r, n, s) => {
       if (n === "__isInsecureUserWarningProxy")
@@ -10858,7 +10858,7 @@ async function Rn(t) {
     throw new bn(we(r), t.status, r.weak_password.reasons);
   throw new ra(we(r), t.status || 500, n);
 }
-const Ca = (t, e, r, n) => {
+const Oa = (t, e, r, n) => {
   const s = { method: t, headers: (e == null ? void 0 : e.headers) || {} };
   return t === "GET" ? s : (s.headers = Object.assign({ "Content-Type": "application/json;charset=UTF-8" }, e == null ? void 0 : e.headers), s.body = JSON.stringify(n), Object.assign(Object.assign({}, s), r));
 };
@@ -10875,7 +10875,7 @@ async function S(t, e, r, n) {
   return n != null && n.xform ? n == null ? void 0 : n.xform(l) : { data: Object.assign({}, l), error: null };
 }
 async function Ia(t, e, r, n, s, i) {
-  const o = Ca(e, n, s, i);
+  const o = Oa(e, n, s, i);
   let a;
   try {
     a = await t(r, Object.assign({}, o));
@@ -10897,7 +10897,7 @@ function V(t) {
   const n = (e = t.user) !== null && e !== void 0 ? e : typeof (t == null ? void 0 : t.id) == "string" ? t : null;
   return { data: { session: r, user: n }, error: null };
 }
-function On(t) {
+function Cn(t) {
   const e = V(t);
   return !e.error && t.weak_password && typeof t.weak_password == "object" && Array.isArray(t.weak_password.reasons) && t.weak_password.reasons.length && t.weak_password.message && typeof t.weak_password.message == "string" && t.weak_password.reasons.reduce((r, n) => r && typeof n == "string", !0) && (e.data.weak_password = t.weak_password), e;
 }
@@ -10924,7 +10924,7 @@ function Pa(t) {
     error: null
   };
 }
-function Cn(t) {
+function On(t) {
   return t;
 }
 function Na(t) {
@@ -11340,7 +11340,7 @@ class $a {
           page: (n = (r = e == null ? void 0 : e.page) === null || r === void 0 ? void 0 : r.toString()) !== null && n !== void 0 ? n : "",
           per_page: (i = (s = e == null ? void 0 : e.perPage) === null || s === void 0 ? void 0 : s.toString()) !== null && i !== void 0 ? i : ""
         },
-        xform: Cn
+        xform: On
       });
       if (u.error)
         throw u.error;
@@ -11678,7 +11678,7 @@ class $a {
           page: (n = (r = e == null ? void 0 : e.page) === null || r === void 0 ? void 0 : r.toString()) !== null && n !== void 0 ? n : "",
           per_page: (i = (s = e == null ? void 0 : e.perPage) === null || s === void 0 ? void 0 : s.toString()) !== null && i !== void 0 ? i : ""
         },
-        xform: Cn
+        xform: On
       });
       if (u.error)
         throw u.error;
@@ -12624,7 +12624,7 @@ const Ja = {
   // 5 seconds. Only used when a custom `lock` is supplied. TODO(v3): remove.
   skipAutoInitialize: !1,
   experimental: {}
-}, Ce = {};
+}, Oe = {};
 let Ln = !1;
 class st {
   /**
@@ -12632,17 +12632,17 @@ class st {
    */
   get jwks() {
     var e, r;
-    return (r = (e = Ce[this.storageKey]) === null || e === void 0 ? void 0 : e.jwks) !== null && r !== void 0 ? r : { keys: [] };
+    return (r = (e = Oe[this.storageKey]) === null || e === void 0 ? void 0 : e.jwks) !== null && r !== void 0 ? r : { keys: [] };
   }
   set jwks(e) {
-    Ce[this.storageKey] = Object.assign(Object.assign({}, Ce[this.storageKey]), { jwks: e });
+    Oe[this.storageKey] = Object.assign(Object.assign({}, Oe[this.storageKey]), { jwks: e });
   }
   get jwks_cached_at() {
     var e, r;
-    return (r = (e = Ce[this.storageKey]) === null || e === void 0 ? void 0 : e.cachedAt) !== null && r !== void 0 ? r : Number.MIN_SAFE_INTEGER;
+    return (r = (e = Oe[this.storageKey]) === null || e === void 0 ? void 0 : e.cachedAt) !== null && r !== void 0 ? r : Number.MIN_SAFE_INTEGER;
   }
   set jwks_cached_at(e) {
-    Ce[this.storageKey] = Object.assign(Object.assign({}, Ce[this.storageKey]), { cachedAt: e });
+    Oe[this.storageKey] = Object.assign(Object.assign({}, Oe[this.storageKey]), { cachedAt: e });
   }
   /**
    * Create a new client for use in the browser.
@@ -13275,7 +13275,7 @@ class st {
             password: o,
             gotrue_meta_security: { captcha_token: a == null ? void 0 : a.captchaToken }
           },
-          xform: On
+          xform: Cn
         });
       } else if ("phone" in e) {
         const { phone: i, password: o, options: a } = e;
@@ -13286,7 +13286,7 @@ class st {
             password: o,
             gotrue_meta_security: { captcha_token: a == null ? void 0 : a.captchaToken }
           },
-          xform: On
+          xform: Cn
         });
       } else
         throw new pt("You must provide either an email or phone number and a password");
@@ -13294,7 +13294,7 @@ class st {
       if (s)
         return this._returnResult({ data: { user: null, session: null }, error: s });
       if (!n || !n.session || !n.user) {
-        const i = new Oe();
+        const i = new Ce();
         return this._returnResult({ data: { user: null, session: null }, error: i });
       }
       return n.session && (await this._saveSession(n.session), await this._notifyAllSubscribers("SIGNED_IN", n.session)), this._returnResult({
@@ -13697,9 +13697,9 @@ class st {
         if (typeof g == "object")
           v = g;
         else {
-          const C = window;
-          if ("ethereum" in C && typeof C.ethereum == "object" && "request" in C.ethereum && typeof C.ethereum.request == "function")
-            v = C.ethereum;
+          const O = window;
+          if ("ethereum" in O && typeof O.ethereum == "object" && "request" in O.ethereum && typeof O.ethereum.request == "function")
+            v = O.ethereum;
           else
             throw new Error("@supabase/auth-js: No compatible Ethereum wallet interface on the window object (window.ethereum) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'ethereum', wallet: resolvedUserWallet }) instead.");
         }
@@ -13710,7 +13710,7 @@ class st {
       }
       const w = new URL((r = _ == null ? void 0 : _.url) !== null && r !== void 0 ? r : window.location.href), E = await v.request({
         method: "eth_requestAccounts"
-      }).then((C) => C).catch(() => {
+      }).then((O) => O).catch(() => {
         throw new Error("@supabase/auth-js: Wallet method eth_requestAccounts is missing or invalid");
       });
       if (!E || E.length === 0)
@@ -13718,10 +13718,10 @@ class st {
       const k = Fs(E[0]);
       let R = (n = _ == null ? void 0 : _.signInWithEthereum) === null || n === void 0 ? void 0 : n.chainId;
       if (!R) {
-        const C = await v.request({
+        const O = await v.request({
           method: "eth_chainId"
         });
-        R = Ua(C);
+        R = Ua(O);
       }
       const A = {
         domain: w.host,
@@ -13755,7 +13755,7 @@ class st {
       if (g)
         throw g;
       if (!m || !m.session || !m.user) {
-        const y = new Oe();
+        const y = new Ce();
         return this._returnResult({ data: { user: null, session: null }, error: y });
       }
       return m.session && (await this._saveSession(m.session), await this._notifyAllSubscribers("SIGNED_IN", m.session)), this._returnResult({ data: Object.assign({}, m), error: g });
@@ -13843,7 +13843,7 @@ class st {
       if (y)
         throw y;
       if (!g || !g.session || !g.user) {
-        const _ = new Oe();
+        const _ = new Ce();
         return this._returnResult({ data: { user: null, session: null }, error: _ });
       }
       return g.session && (await this._saveSession(g.session), await this._notifyAllSubscribers("SIGNED_IN", g.session)), this._returnResult({ data: Object.assign({}, g), error: y });
@@ -13871,7 +13871,7 @@ class st {
       if (await G(this.storage, this.storageKey, o), u)
         throw u;
       if (!c || !c.session || !c.user) {
-        const d = new Oe();
+        const d = new Ce();
         return this._returnResult({
           data: { user: null, session: null, redirectType: null },
           error: d
@@ -13978,7 +13978,7 @@ class st {
       if (c)
         return this._returnResult({ data: { user: null, session: null }, error: c });
       if (!l || !l.session || !l.user) {
-        const u = new Oe();
+        const u = new Ce();
         return this._returnResult({ data: { user: null, session: null }, error: u });
       }
       return l.session && (await this._saveSession(l.session), await this._notifyAllSubscribers("SIGNED_IN", l.session)), this._returnResult({ data: l, error: c });
@@ -14670,7 +14670,7 @@ class st {
     }
     if (this.storage.isServer && e.user && !e.user.__isUserNotAvailableProxy) {
       const r = { value: this.suppressGetSessionWarning };
-      e.user = Oa(e.user, r), r.value && (this.suppressGetSessionWarning = !0);
+      e.user = Ca(e.user, r), r.value && (this.suppressGetSessionWarning = !0);
     }
     return e;
   }
@@ -15819,7 +15819,7 @@ class st {
         }), { data: p, error: h } = d;
         return h ? this._returnResult({ data: { user: null, session: null }, error: h }) : !p || !p.session || !p.user ? this._returnResult({
           data: { user: null, session: null },
-          error: new Oe()
+          error: new Ce()
         }) : (p.session && (await this._saveSession(p.session), await this._notifyAllSubscribers("USER_UPDATED", p.session)), this._returnResult({ data: p, error: h }));
       } catch (s) {
         if (await G(this.storage, this.storageKey, null), b(s))
@@ -16863,7 +16863,7 @@ class st {
         try {
           Aa(i.exp);
         } catch (h) {
-          throw new Ot(h instanceof Error ? h.message : "JWT validation failed");
+          throw new Ct(h instanceof Error ? h.message : "JWT validation failed");
         }
       const c = !s.alg || s.alg.startsWith("HS") || !s.kid || !("crypto" in globalThis && "subtle" in globalThis.crypto) ? null : await this.fetchJwk(s.kid, r != null && r.keys ? { keys: r.keys } : r == null ? void 0 : r.jwks);
       if (!c) {
@@ -16883,7 +16883,7 @@ class st {
         "verify"
       ]);
       if (!await crypto.subtle.verify(u, d, o, ca(`${a}.${l}`)))
-        throw new Ot("Invalid JWT signature");
+        throw new Ct("Invalid JWT signature");
       return {
         data: {
           claims: i,
@@ -17967,7 +17967,7 @@ const Rr = [
   "rbi_last_bg_cache_at",
   "rbi_settings_backup"
 ];
-function Ol(t) {
+function Cl(t) {
   if (t.mode !== "email" || !t.companyId) return null;
   const e = t.companies.find((r) => r.id === t.companyId);
   return e && (e.modules.includes("quality") || e.modules.includes("construction")) ? e.id : null;
@@ -17982,7 +17982,7 @@ function ot(t) {
   };
   return r(2166136261) + r(791551244);
 }
-function Cl(t, e, r = "") {
+function Ol(t, e, r = "") {
   const n = t.getItem(fe) || "", s = n && t.getItem(Qe) || "", i = e || "", o = i ? r : "";
   if (n === i && s === o) return !1;
   const a = !!n && !s && n === i && !!o;
@@ -18020,6 +18020,8 @@ function nr(t) {
     contractor: typeof r.name == "string" ? r.name : "",
     // P2-0044: номер фирмы (контрагент ядра) — по нему Стройконтроль отбирает записи подрядчика
     contractorId: typeof r.id == "string" ? r.id : "",
+    // P2-0061 (Б1/Б2): ключи карточек справочника подрядчиков фирмы — «своя фирма» у записей без id контрагента
+    contractorKeys: Array.isArray(r.keys) ? r.keys.map(String).filter(Boolean) : [],
     objects: Array.isArray(e.objects) ? e.objects.map((n) => n && typeof n == "object" ? String(n.key ?? "") : "").filter(Boolean) : null,
     // P2-0035 (039b): служебный объект-контейнер компании (как «Объекты RBI») — Качество работает в нём
     container: typeof e.container == "string" && e.container ? e.container : null
@@ -18133,10 +18135,10 @@ const ir = /* @__PURE__ */ new WeakMap();
 async function Fl(t, e) {
   var U;
   if (t.mode === "none" && !e.store.getItem(fe)) return null;
-  const r = Ol(t), n = r && t.email ? ot(t.email) : "", s = !!t.offline || !!t.checking;
+  const r = Cl(t), n = r && t.email ? ot(t.email) : "", s = !!t.offline || !!t.checking;
   if (s && (r || "") + ":" + n != (e.store.getItem(fe) || "") + ":" + (e.store.getItem(Qe) || ""))
     return (e.win.RBI || {}).qualitySync || null;
-  if (Cl(e.store, r, n))
+  if (Ol(e.store, r, n))
     return e.reload(), null;
   const i = e.store.getItem(Lt);
   if (i && e.dropDatabase) {
@@ -18150,11 +18152,11 @@ async function Fl(t, e) {
   if (a && a.companyId === r) {
     const T = s ? void 0 : ir.get(a);
     T && (ir.delete(a), T());
-    const O = (t.fullName || "").trim() || t.email;
-    if (a.engineerName !== O) {
-      a.names = Vn(e.store, r + ":" + n, O), a.engineerName = O;
+    const C = (t.fullName || "").trim() || t.email;
+    if (a.engineerName !== C) {
+      a.names = Vn(e.store, r + ":" + n, C), a.engineerName = C;
       const M = e.win.syncConfig;
-      M && (M.engineerName = O, M.previousNames = a.names, e.store.setItem("rbi_sync_config", JSON.stringify(M))), e.win.appSettings && Gn(e.win.appSettings, { engineerName: O });
+      M && (M.engineerName = C, M.previousNames = a.names, e.store.setItem("rbi_sync_config", JSON.stringify(M))), e.win.appSettings && Gn(e.win.appSettings, { engineerName: C });
     }
     return a;
   }
@@ -18175,18 +18177,18 @@ async function Fl(t, e) {
   };
   let p = null;
   const h = async (T) => {
-    const O = T || "*", M = Promise.resolve(l.rpc("my_access", { p_project: T })).catch((L) => ({ data: null, error: L || "network" })).then((L) => (L.error || (u.access[O] = L.data, d()), L));
-    if (s && O in u.access) {
-      const L = JSON.stringify(u.access[O]);
+    const C = T || "*", M = Promise.resolve(l.rpc("my_access", { p_project: T })).catch((L) => ({ data: null, error: L || "network" })).then((L) => (L.error || (u.access[C] = L.data, d()), L));
+    if (s && C in u.access) {
+      const L = JSON.stringify(u.access[C]);
       return M.then((Yt) => {
-        !Yt.error && JSON.stringify(Yt.data) !== L && p && p.projectId === T && C(nr(Yt.data));
-      }), nr(u.access[O]);
+        !Yt.error && JSON.stringify(Yt.data) !== L && p && p.projectId === T && O(nr(Yt.data));
+      }), nr(u.access[C]);
     }
     const { data: me, error: He } = await M;
-    return nr(He ? O in u.access ? u.access[O] : null : me);
-  }, f = await h(null), m = f.projects, g = t.companies.find((T) => T.id === r), y = () => e.listProjects(r).then((T) => (u.projects = T, d(), T), () => u.projects || []), _ = !f.container && !!t.checking && !!u.projects, v = f.container ? null : t.offline || _ ? u.projects || [] : await y(), w = f.container ? [{ id: f.container, name: g ? g.name : "" }] : (v || []).filter((T) => m === null || m.includes(T.id)), E = e.store.getItem(Kn + r), k = f.container ? f.container : w.some((T) => T.id === E) ? E : w.length === 1 ? w[0].id : null, R = t.email, A = (t.fullName || "").trim() || R, C = (T) => {
-    j.actions = T.actions, j.objects = T.objects, j.role = Il(T.actions);
-    const O = T.objects || [];
+    return nr(He ? C in u.access ? u.access[C] : null : me);
+  }, f = await h(null), m = f.projects, g = t.companies.find((T) => T.id === r), y = () => e.listProjects(r).then((T) => (u.projects = T, d(), T), () => u.projects || []), _ = !f.container && !!t.checking && !!u.projects, v = f.container ? null : t.offline || _ ? u.projects || [] : await y(), w = f.container ? [{ id: f.container, name: g ? g.name : "" }] : (v || []).filter((T) => m === null || m.includes(T.id)), E = e.store.getItem(Kn + r), k = f.container ? f.container : w.some((T) => T.id === E) ? E : w.length === 1 ? w[0].id : null, R = t.email, A = (t.fullName || "").trim() || R, O = (T) => {
+    j.actions = T.actions, j.objects = T.objects, j.contractorKeys = T.contractorKeys, j.role = Il(T.actions);
+    const C = T.objects || [];
     e.win.appSettings && Gn(e.win.appSettings, {
       userRole: j.role,
       cloudStatus: "approved",
@@ -18194,16 +18196,16 @@ async function Fl(t, e) {
       contractorName: T.contractor,
       assignedContractor: T.contractor,
       assignedCounterpartyId: T.contractorId,
-      assignedProjects: O,
-      assigned_projects: O
+      assignedProjects: C,
+      assigned_projects: C
     });
     const M = e.win.syncConfig;
     M && (j.role === "manager" || j.role === "director") && M.syncMode !== "full" && (M.syncMode = "full", e.store.setItem("rbi_sync_config", JSON.stringify(M)));
     const me = e.win.dispatchEvent;
     typeof me == "function" && me.call(e.win, new Event(Ml));
   }, te = (T) => {
-    const O = e.win.syncConfig = e.win.syncConfig || {};
-    O.enabled = !!T, O.engineerName = A, O.authUserId = t.userId || null, O.previousNames = j.names || [], O.projectCode = T || "", O.pinHash = null, O.syncMode || (O.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(O));
+    const C = e.win.syncConfig = e.win.syncConfig || {};
+    C.enabled = !!T, C.engineerName = A, C.authUserId = t.userId || null, C.previousNames = j.names || [], C.projectCode = T || "", C.pinHash = null, C.syncMode || (C.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(C));
   }, j = {
     active: !0,
     companyId: r,
@@ -18218,12 +18220,12 @@ async function Fl(t, e) {
     role: "guest",
     actions: [],
     async selectProject(T) {
-      !w.some((O) => O.id === T) || T === j.projectId || (e.store.setItem(Kn + r, T), j.projectId = T, C(await h(T)), e.win.applySyncConnect ? await e.win.applySyncConnect(A, T, null) : te(T), e.win.initSync && await e.win.initSync());
+      !w.some((C) => C.id === T) || T === j.projectId || (e.store.setItem(Kn + r, T), j.projectId = T, O(await h(T)), e.win.applySyncConnect ? await e.win.applySyncConnect(A, T, null) : te(T), e.win.initSync && await e.win.initSync());
     }
   };
   return o.qualitySync = j, p = j, _ && ir.set(j, () => y().then((T) => {
-    j.projects = T.filter((O) => m === null || m.includes(O.id));
-  })), te(k), C(await h(k)), e.win.initSync && await e.win.initSync(), e.win.renderSyncUI && e.win.renderSyncUI(), j;
+    j.projects = T.filter((C) => m === null || m.includes(C.id));
+  })), te(k), O(await h(k)), e.win.initSync && await e.win.initSync(), e.win.renderSyncUI && e.win.renderSyncUI(), j;
 }
 const Hl = (t, e, r) => t + "|" + e + "|" + r;
 function zl() {
@@ -18408,14 +18410,14 @@ const Hr = ["mine30", "all30", "all", "none"], Qs = {
   all: "Все",
   none: "Не скачивать заранее"
 }, Zs = /* @__PURE__ */ new Set(["engineer", "contractor"]), tc = 30, rc = 24 * 3600 * 1e3;
-function Or(t) {
+function Cr(t) {
   return Zs.has(t) ? "mine30" : "none";
 }
-function Cr(t) {
+function Or(t) {
   return Zs.has(t) ? "all" : "none";
 }
 function nc(t, e) {
-  return Hr.includes(t) ? t : Or(e);
+  return Hr.includes(t) ? t : Cr(e);
 }
 const lr = (t) => {
   const e = Date.parse(String(t.date || ""));
@@ -18566,7 +18568,7 @@ function $r() {
 function ni() {
   if (!Wr("knowledge")) return "none";
   const t = pe(), e = t ? Fe(Ut + t, {}).knowledge : void 0;
-  return e === "all" || e === "none" ? e : Cr(Kr());
+  return e === "all" || e === "none" ? e : Or(Kr());
 }
 function wc(t) {
   var n, s;
@@ -18761,7 +18763,7 @@ function dr(t) {
     userId: typeof e.user_id == "string" ? e.user_id : null
   };
 }
-function Oc(t) {
+function Cc(t) {
   const e = t.companies.find((n) => n.id === t.companyId) || null, r = {
     company: t.mode === "email" && t.companies.some((n) => n.can_manage_company),
     platformAdmin: t.mode === "email" && t.isPlatformAdmin
@@ -18769,7 +18771,7 @@ function Oc(t) {
   if (t.mode === "email" && e) for (const n of e.modules) r[n] = !0;
   return r;
 }
-const Cc = "rbi_last_module_hash";
+const Oc = "rbi_last_module_hash";
 function Ic(t, e) {
   const r = (n) => JSON.stringify([
     n.mode,
@@ -18823,16 +18825,16 @@ function Lc(t) {
     const g = t.rpc, y = l;
     if (a && (a.email !== f || a.epoch !== y) && c(), !a) {
       const A = typeof AbortController == "function" ? new AbortController() : null;
-      let C;
-      const te = { data: null, error: "timeout", status: 0 }, j = new Promise((O) => {
-        C = setTimeout(() => {
-          A == null || A.abort(), O([te, te]);
+      let O;
+      const te = { data: null, error: "timeout", status: 0 }, j = new Promise((C) => {
+        O = setTimeout(() => {
+          A == null || A.abort(), C([te, te]);
         }, t.askLimitMs ?? Tc);
-      }), U = Promise.all([g("pf_my_platform", void 0, A == null ? void 0 : A.signal), g("pf_my_profile", void 0, A == null ? void 0 : A.signal)].map((O) => O.catch((M) => ({ data: null, error: M || "network", status: 0 })))), T = { email: f, epoch: y, p: Promise.race([U, j]), stop: () => {
-        clearTimeout(C), A == null || A.abort();
+      }), U = Promise.all([g("pf_my_platform", void 0, A == null ? void 0 : A.signal), g("pf_my_profile", void 0, A == null ? void 0 : A.signal)].map((C) => C.catch((M) => ({ data: null, error: M || "network", status: 0 })))), T = { email: f, epoch: y, p: Promise.race([U, j]), stop: () => {
+        clearTimeout(O), A == null || A.abort();
       } };
       T.p.finally(() => {
-        clearTimeout(C), a === T && (a = null);
+        clearTimeout(O), a === T && (a = null);
       }), a = T;
     }
     const _ = a.p;
@@ -18905,7 +18907,7 @@ function Lc(t) {
       e.mode !== "email" || !e.companies.some((m) => m.id === f) || e.companyId === f || (ve(t.storage, cr, f), e = { ...e, companyId: f }, n());
     },
     getState: () => e,
-    access: () => Oc(e),
+    access: () => Cc(e),
     subscribe(f) {
       return r.add(f), () => {
         r.delete(f);
@@ -19167,8 +19169,8 @@ const Jc = {
   // P2-0060: что модуль умеет без сети (сервис «Офлайн и синхронизация», MODULES.md): view — смотреть, input — вводы ('*' — свой движок), files — фото и PDF заранее
   offline: { view: !0, input: ["*"], files: !0 },
   // P2-0061: виды записей для общего правила синхронизации (standards/SYNC_AND_ACCESS.md, js/services/sync/sync-access.policy.js):
-  // store — хранилище на устройстве, table — таблица сервера, author — поле id автора и подписи, object — ключ объекта,
-  // counterparty — id фирмы, mode — как в серверной политике (author / owner / contractor), view / edit — действия, ownFirst — «своё первым»
+  // store — хранилище на устройстве, table — таблица сервера, objectType / memory — общая отправка «объектов» (pushCloudObject) и массив в памяти, author — поле id автора и подписи, object — ключ объекта,
+  // counterparty — id фирмы, mode — как в серверной политике (author / owner / contractor), view / edit — действия, ownFirst — «своё первым» (уходит до скачивания чужого: осмотры, задачи, замечания Стройконтроля 2.0)
   sync: [
     {
       kind: "inspection",
@@ -19177,7 +19179,8 @@ const Jc = {
       title: "Осмотр",
       author: { id: "authorId", name: ["inspectorName", "inspector_name"] },
       object: ["project_canonical_key", "projectName", "projectId"],
-      counterparty: ["contractorId", "core_counterparty_id"],
+      counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       mode: "author",
       view: ["quality.view"],
       edit: ["quality.edit"],
@@ -19191,7 +19194,8 @@ const Jc = {
       assignee: "assignedToId",
       author: { id: "authorId", name: ["engineerName", "inspectorName", "engineer_name", "inspector_name"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
-      counterparty: ["contractorId", "core_counterparty_id"],
+      counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       mode: "author",
       view: ["quality.view"],
       edit: ["quality.edit"],
@@ -19200,55 +19204,63 @@ const Jc = {
     // «вся команда объекта, подрядчик — своя фирма» (record_visible … 'contractor' на сервере)
     {
       kind: "meeting",
+      objectType: "meeting",
+      memory: "rbi_meetingsData",
       store: "rbi_meetings",
       table: "project_meetings",
       title: "Совещание",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
-      counterparty: ["contractorId", "core_counterparty_id"],
+      counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       mode: "contractor",
       view: ["quality.view"],
-      edit: ["quality.edit"],
-      ownFirst: !0
+      edit: ["quality.edit"]
     },
     {
       kind: "intervention",
+      objectType: "intervention",
+      memory: "rbi_interventionsData",
       store: "rbi_interventions",
       table: "project_interventions",
       title: "Вмешательство",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
-      counterparty: ["contractorId", "core_counterparty_id"],
+      counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       mode: "contractor",
       view: ["quality.view"],
-      edit: ["quality.edit"],
-      ownFirst: !0
+      edit: ["quality.edit"]
     },
     {
       kind: "fmea",
+      objectType: "fmea",
+      memory: "rbi_fmeaRecords",
       store: "rbi_fmea",
       table: "project_fmea",
       title: "FMEA",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
-      counterparty: ["contractorId", "core_counterparty_id"],
+      counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       mode: "contractor",
       view: ["quality.view"],
-      edit: ["quality.edit"],
-      ownFirst: !0
+      edit: ["quality.edit"]
     },
     {
       kind: "schedule",
+      objectType: "schedule",
+      memory: "rbi_scheduleData",
       store: "rbi_schedule_stages",
       table: "project_schedule_stages",
       title: "Этап графика",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
-      counterparty: ["contractorId", "core_counterparty_id"],
+      counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       mode: "contractor",
       view: ["quality.view"],
-      edit: ["quality.edit"],
-      ownFirst: !0
+      edit: ["quality.edit"]
     },
     {
       kind: "report",
@@ -19257,15 +19269,17 @@ const Jc = {
       title: "Отчёт",
       author: { id: "authorId", name: ["created_by", "owner", "author"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
-      counterparty: ["contractorId", "core_counterparty_id"],
+      counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       mode: "contractor",
       view: ["quality.view"],
-      edit: ["quality.edit"],
-      ownFirst: !0
+      edit: ["quality.edit"]
     },
     // библиотека компании — все, у кого есть право (quality.can на сервере)
     {
       kind: "etalon",
+      objectType: "etalon",
+      memory: "etalonActsArray",
       store: "rbi_etalon_acts",
       table: "shared_etalons",
       title: "Акт эталона",
@@ -19276,6 +19290,8 @@ const Jc = {
     },
     {
       kind: "document",
+      objectType: "custom_doc",
+      memory: "customDocs",
       store: "custom_docs",
       table: "shared_docs",
       title: "Документ",
@@ -19325,11 +19341,11 @@ const Jc = {
       title: "Запись СК",
       author: { id: "authorId", name: ["uploaded_by", "sk_uploaded_by", "imported_by", "owner", "author"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
-      counterparty: ["contractorId", "core_counterparty_id"],
+      counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       mode: "contractor",
       view: ["quality.view"],
-      edit: ["quality.edit"],
-      ownFirst: !0
+      edit: ["quality.edit"]
     }
   ],
   routes: ["/sk", "/sk/:subTab"],
@@ -19360,8 +19376,8 @@ const Jc = {
   offline: { view: !0, input: [], files: !0 },
   // P2-0061: виды записей для общего правила синхронизации (библиотека компании — quality.can на сервере)
   sync: [
-    { kind: "practice", store: "rbi_practices", table: "shared_practices", title: "Практика", author: { id: "authorId", name: ["owner", "author"] }, mode: "shared", view: ["quality.view"], edit: ["quality.edit"] },
-    { kind: "twi", store: "twi_cards", table: "shared_twi_cards", title: "Карта TWI", author: { id: "authorId", name: ["owner", "author"] }, mode: "shared", view: ["quality.view"], edit: ["quality.edit"] }
+    { kind: "practice", objectType: "practice", memory: "rbi_practicesData", store: "rbi_practices", table: "shared_practices", title: "Практика", author: { id: "authorId", name: ["owner", "author"] }, mode: "shared", view: ["quality.view"], edit: ["quality.edit"] },
+    { kind: "twi", objectType: "custom_twi_card", memory: "customTwiCards", store: "twi_cards", table: "shared_twi_cards", title: "Карта TWI", author: { id: "authorId", name: ["owner", "author"] }, mode: "shared", view: ["quality.view"], edit: ["quality.edit"] }
   ],
   routes: ["/knowledge", "/knowledge/twi", "/knowledge/docs", "/knowledge/nodes", "/knowledge/etalons"],
   defaultRoute: "/knowledge"
@@ -19399,6 +19415,7 @@ const Jc = {
       title: "Замечание",
       author: { id: "authorId", name: ["owner", "created_by", "author"] },
       counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       objects: !1,
       mode: "contractor",
       view: ["construction.view"],
@@ -19412,11 +19429,11 @@ const Jc = {
       title: "Приёмка",
       author: { id: "authorId", name: ["owner", "created_by", "author"] },
       counterparty: ["core_counterparty_id"],
+      contractorCard: "contractorId",
       objects: !1,
       mode: "contractor",
       view: ["construction.view"],
-      edit: ["construction.edit"],
-      ownFirst: !0
+      edit: ["construction.edit"]
     },
     {
       kind: "unit_v2",
@@ -19858,20 +19875,20 @@ function li(t, e) {
   const n = new Date(r), s = new Date(e), i = (a) => new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime(), o = Math.round((i(s) - i(n)) / 864e5);
   return o === 0 ? "сегодня " + Ue(r) : o === 1 ? "вчера " + Ue(r) : Bt(n.getDate()) + "." + Bt(n.getMonth() + 1) + " " + Ue(r);
 }
-const Ou = [
+const Cu = [
   [/RLS|прав доступа|permission/i, "нет прав"],
   [/не назначен/i, "объект не назначен"],
   [/другим инженером/i, "запись другого инженера"],
   [/Роль не подтверждена/i, "роль не подтверждена"],
   [/роль не может/i, "у роли нет права отправки"]
 ];
-function Cu(t, e, r) {
+function Ou(t, e, r) {
   const n = String(t.syncStatus ?? t.sync_status ?? ""), s = String(t.syncBlockReason ?? t.sync_block_reason ?? "");
   if (e) {
     const i = String(t.syncBlockHint ?? "");
     if (/^(Не отправлено|Сервер отклонил):/.test(s))
       return { chip: "bad", why: s, hint: i || "запись осталась на телефоне; нажмите «Отправить снова», когда дадут права" };
-    const o = Ou.find(([a]) => a.test(s));
+    const o = Cu.find(([a]) => a.test(s));
     return {
       chip: "bad",
       why: "Сервер отклонил: " + (o ? o[1] : s ? s.charAt(0).toLowerCase() + s.slice(1) : "нет прав"),
@@ -19895,7 +19912,7 @@ function ju(t, e) {
     rejected: s,
     title: Iu(r, n),
     when: li(Jr(r, n).date, e.now),
-    reason: Cu(n, s, e)
+    reason: Ou(n, s, e)
   })).sort((r, n) => Number(r.rejected) - Number(n.rejected));
 }
 const Pu = { online: "есть", offline: "нет ответа", server: "сервер не отвечает" };
@@ -20037,7 +20054,7 @@ async function Vu(t) {
   }
   const d = Kr(), p = Vt(), h = [];
   for (const g of o) {
-    const y = Wr(g.id === "quality" ? "quality" : g.id), _ = g.id === "planfact" || g.id === "company" ? await p.size(g.id) : 0, v = g.files === "quality" ? Nr("quality") || Or(d) : g.files === "knowledge" ? Nr("knowledge") || Cr(d) : null, w = g.files === "quality" ? Or(d) : g.files === "knowledge" ? Cr(d) : null, E = _c(g.id), k = y ? g.files === "quality" ? $r() === "none" ? "Фото заранее не скачиваются — открытые остаются на телефоне" : "Фото и PDF заранее: " + Qs[$r()].toLowerCase() : g.files === "knowledge" ? ni() === "none" ? "Открытые документы остаются на телефоне" : "Документы заранее: все" : E ? "Скачано заранее: " + Fu(E.at) : "Заранее ещё не скачивалось — скачается, когда будет связь" : "Заранее не скачивается — без сети раздел покажет то, что вы открывали";
+    const y = Wr(g.id === "quality" ? "quality" : g.id), _ = g.id === "planfact" || g.id === "company" ? await p.size(g.id) : 0, v = g.files === "quality" ? Nr("quality") || Cr(d) : g.files === "knowledge" ? Nr("knowledge") || Or(d) : null, w = g.files === "quality" ? Cr(d) : g.files === "knowledge" ? Or(d) : null, E = _c(g.id), k = y ? g.files === "quality" ? $r() === "none" ? "Фото заранее не скачиваются — открытые остаются на телефоне" : "Фото и PDF заранее: " + Qs[$r()].toLowerCase() : g.files === "knowledge" ? ni() === "none" ? "Открытые документы остаются на телефоне" : "Документы заранее: все" : E ? "Скачано заранее: " + Fu(E.at) : "Заранее ещё не скачивалось — скачается, когда будет связь" : "Заранее не скачивается — без сети раздел покажет то, что вы открывали";
     h.push({
       row: g,
       keep: y,
@@ -20222,10 +20239,10 @@ function nd(t) {
       _ && _.remove();
       return;
     }
-    const v = (U) => !!U && U.getClientRects().length > 0, E = [r.getElementById("desk-sync-status"), r.getElementById("header-sync-status")].find((U) => U && v(U.parentElement)) || null, k = r.querySelector(".mobile-module-menu-wrap"), R = !E && k && v(k) ? k.parentElement : null, A = !E && !R ? r.getElementById("app-sidebar") : null, C = R || (A && v(A) ? A : null), j = (window.innerWidth < 768 || !!A) !== window.innerWidth < 768 ? gs(n, !0) : y;
+    const v = (U) => !!U && U.getClientRects().length > 0, E = [r.getElementById("desk-sync-status"), r.getElementById("header-sync-status")].find((U) => U && v(U.parentElement)) || null, k = r.querySelector(".mobile-module-menu-wrap"), R = !E && k && v(k) ? k.parentElement : null, A = !E && !R ? r.getElementById("app-sidebar") : null, O = R || (A && v(A) ? A : null), j = (window.innerWidth < 768 || !!A) !== window.innerWidth < 768 ? gs(n, !0) : y;
     _ || (_ = r.createElement("span"), _.className = "p2-net", _.setAttribute("role", "button"), _.tabIndex = 0, _.dataset.testid = "p2-net", _.setAttribute("data-testid", "p2-net"), _.addEventListener("click", a), _.addEventListener("keydown", (U) => {
       (U.key === "Enter" || U.key === " ") && (U.preventDefault(), a());
-    })), C && _.parentElement !== C ? (_.classList.toggle("p2-net--row", C === R), _.classList.toggle("p2-net--rail", C !== R), C.appendChild(_)) : !C && E && _.previousElementSibling !== E && (_.classList.remove("p2-net--row", "p2-net--rail"), E.insertAdjacentElement("afterend", _)), _.innerHTML !== j.html && (_.innerHTML = j.html), _.setAttribute("aria-label", y.label), _.title = y.label;
+    })), O && _.parentElement !== O ? (_.classList.toggle("p2-net--row", O === R), _.classList.toggle("p2-net--rail", O !== R), O.appendChild(_)) : !O && E && _.previousElementSibling !== E && (_.classList.remove("p2-net--row", "p2-net--rail"), E.insertAdjacentElement("afterend", _)), _.innerHTML !== j.html && (_.innerHTML = j.html), _.setAttribute("aria-label", y.label), _.title = y.label;
   }
   let c = !1, u = !1;
   async function d() {
@@ -20249,7 +20266,7 @@ function nd(t) {
             } catch {
               return "";
             }
-          }, A = e.RbiSyncNet, C = !!A && !!A.lastProbeAt && k - A.lastProbeAt < 12e4, te = { offline: n.offline || C && A.lastProbe === "offline", now: k, retryAfter: Number(R("rbi_sync_retry_after")) || 0, retryKind: R("rbi_sync_retry_kind") }, j = e.RbiSyncJournal, U = e.RbiSyncJournalPolicy, T = j ? j.list() : [], O = U ? T.slice(-20).reverse().map((L) => ({ t: rd(L.t, k), text: U.eventLine(L), tone: U.eventTone(L) })) : [], M = ju(E, te), me = M.filter((L) => !L.rejected).length;
+          }, A = e.RbiSyncNet, O = !!A && !!A.lastProbeAt && k - A.lastProbeAt < 12e4, te = { offline: n.offline || O && A.lastProbe === "offline", now: k, retryAfter: Number(R("rbi_sync_retry_after")) || 0, retryKind: R("rbi_sync_retry_kind") }, j = e.RbiSyncJournal, U = e.RbiSyncJournalPolicy, T = j ? j.list() : [], C = U ? T.slice(-20).reverse().map((L) => ({ t: rd(L.t, k), text: U.eventLine(L), tone: U.eventTone(L) })) : [], M = ju(E, te), me = M.filter((L) => !L.rejected).length;
           me !== n.unsent && (n = { ...n, unsent: me }, l());
           const He = Nu({
             ...te,
@@ -20257,7 +20274,7 @@ function nd(t) {
             lastOkAt: j ? j.lastOkAt() : "",
             probe: (A == null ? void 0 : A.lastProbe) ?? null,
             probeAt: (A == null ? void 0 : A.lastProbeAt) || 0,
-            journal: O,
+            journal: C,
             journalTotal: T.length
           }, !!y.querySelector("details[open]"));
           y.dataset.p2 !== He && (y.dataset.p2 = He, y.innerHTML = He), u || (u = !0, y.addEventListener("click", p)), ci(r.getElementById("p2-offline-modules-slot"));
@@ -20334,8 +20351,8 @@ function nd(t) {
     }, window.dispatchEvent(new Event(Xu));
   }
   async function g(y = !1) {
-    var C;
-    const _ = o(), v = t.platform(), w = (C = e.RbiSyncMergePolicy) == null ? void 0 : C.isUnsentLocal, E = e.RBI_DB_NAME || "";
+    var O;
+    const _ = o(), v = t.platform(), w = (O = e.RbiSyncMergePolicy) == null ? void 0 : O.isUnsentLocal, E = e.RBI_DB_NAME || "";
     let k = n.unsent, R = !1;
     try {
       R = window.localStorage.getItem("rbi_cloud_dirty") === "1";
@@ -20453,7 +20470,7 @@ function ad() {
 function Qr() {
   let t = null;
   try {
-    t = window.localStorage.getItem(Cc);
+    t = window.localStorage.getItem(Oc);
   } catch {
   }
   Zr($c(D().access(), t));

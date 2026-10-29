@@ -55,6 +55,8 @@ export function meFrom(src) {
         actions: Array.isArray(s.actions) ? s.actions.map(String) : [],
         objects: Array.isArray(s.objects) ? s.objects.map(objClean).filter(Boolean) : null,
         contractorId: clean(s.contractorId),
+        // Б1/Б2: карточки справочника подрядчиков своей фирмы (id quality.contractor_directory) — для записей без id контрагента
+        contractorCards: Array.isArray(s.contractorCards) ? s.contractorCards.map(clean).filter(Boolean) : [],
         // модули, включённые у компании (null — неизвестно: решает сервер); выключенный — записи на телефоне, причина видна
         modules: Array.isArray(s.modules) ? s.modules.map(String) : null,
         // как запись узнаёт свой объект: на устройстве — справочник объектов (по id, ключу, синонимам), как record_keys сервера
@@ -70,22 +72,27 @@ const authorNameOf = (rec, kind) => {
     return '';
 };
 
-/** Моя запись: по id автора (или исполнителя); без id — переходное правило по подписи (ФИО / почта). id главнее подписи. */
-export function isMine(rec, kind, me) {
-    if (!rec || !kind || !me) return false;
+/** Я — автор: по id автора; без id — переходное правило по подписи (ФИО / почта). id главнее подписи. */
+function isAuthor(rec, kind, me) {
     const aid = authorIdOf(rec, kind);
-    const asg = clean(get(rec, kind.assignee));
-    if (asg && asg === me.userId) return true;
     if (aid) return aid === me.userId;
     const nm = authorNameOf(rec, kind);
     return !!nm && me.names.some((x) => low(x) === low(nm));
+}
+/** Моя запись: я автор или исполнитель (задача, назначенная мне). */
+export function isMine(rec, kind, me) {
+    if (!rec || !kind || !me) return false;
+    const asg = clean(get(rec, kind.assignee));
+    if (asg && asg === me.userId) return true;
+    return isAuthor(rec, kind, me);
 }
 
 /** Автор записи — id: моей записи без authorId (переходное правило) и новой записи без подписи автора (создана сейчас
  *  на этом устройстве вошедшим) дописать мой id; ничего другого не меняет, чужую не трогает. true — дописан. */
 export function stampAuthor(rec, kind, me) {
     if (!rec || !kind || !me || authorIdOf(rec, kind)) return false;
-    if (!isMine(rec, kind, me) && authorNameOf(rec, kind)) return false;
+    // Б3: только по авторству — исполнитель задачи её автором не становится
+    if (!isAuthor(rec, kind, me) && authorNameOf(rec, kind)) return false;
     rec[(kind.author || {}).id || 'authorId'] = me.userId;
     return true;
 }
@@ -94,6 +101,18 @@ const has = (me, a) => me.actions.includes(a);
 /** Признаки объекта записи (id, ключ, название) — без пустых и «unknown». */
 const objectKeys = (rec, kind) => (Array.isArray(kind.object) ? kind.object : [kind.object])
     .map((f) => objClean(get(rec, f))).filter((v) => v && v !== 'unknown');
+
+/** Своя фирма (Б1/Б2): по id контрагента ядра (`counterparty`, его ставит сервер); у записи без него (создана на телефоне,
+ *  ещё не отправлена) — по карточке справочника подрядчиков (`contractorCard`), как `ownsRecord` Стройконтроля 2.0. */
+function ownFirm(rec, kind, me) {
+    let cp = '';
+    for (const f of [].concat(kind.counterparty || [])) { cp = clean(get(rec, f)); if (cp) break; }
+    if (cp) return !!me.contractorId && cp === me.contractorId;
+    const card = clean(get(rec, kind.contractorCard));
+    return !!card && me.contractorCards.includes(card);
+}
+/** Модуль вида — по его действиям (quality / construction). */
+const moduleOf = (kind) => String(((kind.edit || kind.view || [])[0]) || 'quality.').split('.')[0];
 
 /** Решение по действию view / edit: { ok, code, reason, hint }. Порядок — как assignment_sees_id сервера. */
 function decide(rec, kind, me, what) {
@@ -125,9 +144,7 @@ function decide(rec, kind, me, what) {
     }
     if (has(me, 'quality.scope.company') || has(me, mod + '.manage')) return { ok: true };
     if (has(me, 'quality.scope.contractor')) {
-        let cp = '';
-        for (const f of [].concat(kind.counterparty || 'counterpartyId')) { cp = clean(get(rec, f)); if (cp) break; }
-        if (me.contractorId && cp && cp === me.contractorId) return { ok: true };
+        if (ownFirm(rec, kind, me)) return { ok: true };
         return { ok: false, code: 'contractor', reason: 'Не отправлено: запись другой фирмы', hint: 'Отправит сотрудник этой фирмы или руководитель' };
     }
     if (mode === 'author' && has(me, mod + '.edit') && !mine) return foreign(rec, kind);
@@ -146,7 +163,7 @@ export const canSend = (rec, kind, me) => decide(rec, kind, me, 'edit');
 export function canChange(rec, kind, me) {
     const d = canSend(rec, kind, me);
     if (!d.ok || !kind || !me) return d;
-    const mod = kind.module === 'construction' ? 'construction' : 'quality';
+    const mod = moduleOf(kind);   // З9: Стройконтроль 2.0 — construction.manage
     if (isMine(rec, kind, me) || has(me, mod + '.manage') || has(me, 'quality.scope.company')) return d;
     return foreign(rec, kind);
 }
@@ -155,7 +172,8 @@ export const visible = (rec, kind, me) => decide(rec, kind, me, 'view').ok;
 /** Отбор после скачивания (ТД 149): видна по правилу (сервер уже отобрал — это страховка, а не замена) и, в режиме «Только мои»,
  *  моя по id автора (переходно — по подписи). Без «кто я» — оставить (решает сервер), чтобы не потерять скачанное. */
 export function keepPulled(rec, kind, me, personal) {
-    if (!kind || !me) return true;
+    // З4: права с сервера ещё не пришли (пустые действия) — не отбирать: сервер уже отдал видимое этому человеку
+    if (!kind || !me || !me.actions.length) return true;
     if (!visible(rec, kind, me)) return false;
     return !personal || !personalApplies(kind, me) || isMine(rec, kind, me);
 }
@@ -170,6 +188,17 @@ export function accessStamp(me) {
     return [me.userId, me.actions.slice().sort().join(','), me.objects === null ? '*' : me.objects.slice().sort().join(','), me.contractorId].join('|');
 }
 
+/** Карточки справочника подрядчиков своей фирмы: по ключам фирмы из my_access (contractor.keys) и по названию назначения. */
+function myContractorCards(w, qs) {
+    const C = w.RBI && w.RBI.services && w.RBI.services.contractors;
+    if (!C || typeof C.resolveIdFromNormalized !== 'function') return [];
+    const out = [];
+    const add = (v) => { const id = clean(v); if (id && id !== 'pending' && !out.includes(id)) out.push(id); };
+    for (const key of Array.isArray(qs.contractorKeys) ? qs.contractorKeys : []) add(C.resolveIdFromNormalized({ canonical_key: key }));
+    const name = clean((w.appSettings || {}).assignedContractor || (w.appSettings || {}).contractorName);
+    if (name) add(C.resolveIdFromNormalized({ display_name: name, contractor_name: name }));
+    return out;
+}
 /** «Кто я» на этом устройстве — из моста Качества (ответ сервера quality.my_access, P2-0035b/P2-0061), не из названия роли.
  *  Нет моста (не вошли почтой) — null: ничего не уходит, причина «нужно войти». */
 export function deviceMe(w = typeof window !== 'undefined' ? window : {}) {
@@ -184,6 +213,7 @@ export function deviceMe(w = typeof window !== 'undefined' ? window : {}) {
         modules: comp && Array.isArray(comp.modules) ? comp.modules : null, userId: c.authUserId || qs.userId, name: c.engineerName || qs.engineerName, email: qs.email,
         names: qs.names || c.previousNames, actions: qs.actions, objects: qs.objects === undefined ? null : qs.objects,
         contractorId: st.assignedCounterpartyId,
+        contractorCards: myContractorCards(w, qs),
         inObject: P && typeof P.isRecordInAssignedProjects === 'function' ? (rec) => !!P.isRecordInAssignedProjects(rec, P.getAssignedProjects()) : null });
 }
 

@@ -78,6 +78,8 @@ function rbiAccessGate(kindName, rec, canPushRole = true) {
     const kind = SA && rec ? SA.kindOf(kindName) : null;
     if (!kind) return { ok: true, changed: false, described: false };
     const me = SA.deviceMe();
+    // З4: права с сервера ещё не пришли (пустые действия) — не решать и не помечать: следующий проход
+    if (me && !me.actions.length) return { ok: false, changed: false, described: true };
     // ТД 313: отклонённое сервером — снова, только если мой доступ изменился (или нажали «Отправить снова» — отпечаток сброшен)
     if (rec.syncServerRejected && rec.syncAccessStamp && rec.syncAccessStamp === SA.accessStamp(me)) return { ok: false, changed: false, described: true };
     const dec = !canPushRole ? { ok: false, reason: 'Не отправлено: роль не подтверждена для отправки', hint: 'Войдите заново или обратитесь к администратору' }
@@ -94,7 +96,7 @@ function rbiAccessGate(kindName, rec, canPushRole = true) {
     rec.syncBlockReason = dec.reason || 'Не отправлено'; rec.sync_block_reason = rec.syncBlockReason;
     rec.syncBlockHint = dec.hint || '';
     rec.syncAccessStamp = stamp;
-    rec.updatedAt = new Date().toISOString();
+    rec.syncBlockedAt = new Date().toISOString();   // З7: время пометки — отдельно, updatedAt записи не трогаем
     return { ok: false, changed: true, described: true };
 }
 
@@ -1058,7 +1060,10 @@ async function rbiSyncPass(mode = 'silent') {
         });
         currentHistory.forEach(i => ownSeenThisPass.set(String(i.id), recStamp(i)));
         const NPc = window.RbiSyncNetPolicy;
-        const histChunks = NPc ? NPc.chunks(currentHistory, NPc.PUSH_CHUNK) : (currentHistory.length ? [currentHistory] : []);
+        // P2-0061 (З6): осмотры из порции, которую сервер отклонил целиком, уходят по одной — отказ получает только виновная запись
+        const splitOnes = currentHistory.filter(i => i && i.syncSplit);
+        const restHist = currentHistory.filter(i => !(i && i.syncSplit));
+        const histChunks = splitOnes.map(i => [i]).concat(NPc ? NPc.chunks(restHist, NPc.PUSH_CHUNK) : (restHist.length ? [restHist] : []));
         for (const chunkHist of histChunks) {
             // остановленный проход (90 с без ответа) — следующие порции не начинаем
             if (myPass && myPass.signal.aborted) {
@@ -1243,6 +1248,7 @@ async function rbiSyncPass(mode = 'silent') {
                 if (window.RbiSyncRetryPolicy) window.RbiSyncRetryPolicy.clearAttention(c);
                 c.source = 'cloud'; c.syncStatus = 'synced'; c.sync_status = 'synced';
                 c.syncBlockReason = ''; c.sync_block_reason = ''; c.importedFromBackup = false;
+                delete c.syncSplit; delete c.syncServerRejected; c.syncBlockHint = '';   // P2-0061: отказ снят
                 c.updatedAt = new Date().toISOString(); c.updated_at = c.updatedAt;
 
                 if (!isDeleted) {
@@ -1277,17 +1283,27 @@ async function rbiSyncPass(mode = 'silent') {
                     const rejIds = new Set(inspectionsBatch.map(x => String(x.id)));
                     itemsBatch.length = 0;
                     photosBatch.length = 0;
-                    // P2-0061 (ТД 313): «Сервер отклонил» — запись остаётся своей (source local) и уйдёт снова, когда изменится мой
-                    // доступ (отпечаток), или по «Отправить снова»; повтор — upsert по id, без дубля
+                    // P2-0061 (ТД 313, З6): порция из нескольких осмотров — не метить всю: следующий проход пошлёт их по одной
+                    // (syncSplit); один осмотр — «Сервер отклонил» с отпечатком доступа: уйдёт сам, когда доступ изменится,
+                    // или по «Отправить снова»; повтор — upsert по id, без дубля
                     const meRej = window.RbiSyncAccess ? window.RbiSyncAccess.deviceMe() : null;
+                    const single = inspectionsBatch.length === 1;
+                    const noRight = String(error.code || '') === '42501' || /row-level security|RLS|permission/i.test(String(error.message || ''));
                     localHistoryToUpdate.forEach(c => {
                         if (!rejIds.has(String(c.id))) return;
                         c.source = 'local';
+                        if (!single) {
+                            c.syncSplit = true; c.syncStatus = 'not_synced'; c.sync_status = 'not_synced';
+                            return;
+                        }
+                        delete c.syncSplit;
                         c.syncStatus = 'blocked';
                         c.sync_status = 'blocked';
-                        c.syncBlockReason = 'Сервер отклонил: нет прав на эту запись';
+                        c.syncBlockReason = noRight ? 'Сервер отклонил: нет прав на эту запись'
+                            : 'Сервер отклонил: ' + String(error.message || 'ошибка данных').slice(0, 120);
                         c.sync_block_reason = c.syncBlockReason;
-                        c.syncBlockHint = 'Уйдёт сама, когда вам дадут права, или нажмите «Отправить снова»';
+                        c.syncBlockHint = noRight ? 'Уйдёт сама, когда вам дадут права, или нажмите «Отправить снова»'
+                            : 'Сообщите администратору; после исправления нажмите «Отправить снова»';
                         c.syncServerRejected = true;
                         c.syncAccessStamp = window.RbiSyncAccess ? window.RbiSyncAccess.accessStamp(meRej) : '';
                     });
@@ -1339,8 +1355,10 @@ async function rbiSyncPass(mode = 'silent') {
         // P2-0059 (С5): своё — до скачивания чужого; P2-0061 (ТД 315): и задачи, и замечания Стройконтроля 2.0 (ownFirst в описании `sync`)
         if (canPush) {
             await rbiPushOwnInspections();
-            await rbiPushTasks();
-            if (typeof dbGetAll === 'function' && window.supabaseClient && typeof STORES !== 'undefined') await pushConstructionDefectsV2();
+            // З5: в начале прохода — только новые записи (сервера ещё нет): правка существующей уходит после скачивания, как раньше,
+            // чтобы не отменить удаление или более новую правку с сервера
+            await rbiPushTasks(true);
+            if (typeof dbGetAll === 'function' && window.supabaseClient && typeof STORES !== 'undefined') await pushConstructionDefectsV2(true);
         }
         if (showSyncProgress) {
             if (_syncProg()) _syncProg().setStep(1);
@@ -1703,6 +1721,7 @@ async function rbiSyncPass(mode = 'silent') {
 
                     inspectorName: h.engineer_name || '',
                     authorId: h.core_created_by || '',   // P2-0061: автор — id учётной записи (сервер ставит сам)
+                    core_counterparty_id: h.core_counterparty_id || '',   // P2-0061 (Б2): фирма — id контрагента ядра (сервер)
                     contractorName: h.contractor_name || '',
                     contractorId: h.contractorId || h.contractor_id || '',
                     templateKey: h.template_key || '',
@@ -1932,6 +1951,10 @@ async function rbiSyncPass(mode = 'silent') {
                         const t = row.task_data || {};
                         t.id = row.id;
                         t.assignedToId = row.assigned_to_auth_user_id || null;   // P2-0035b: кому задача — номер учётки (сервер)
+                        // P2-0061 (Б3): автор — id, который поставил сервер (core_created_by), а не присланный клиентом в task_data
+                        t.authorId = row.core_created_by || '';
+                        t.core_counterparty_id = row.core_counterparty_id || '';   // Б2: фирма — id контрагента ядра
+                        t.cloudKnown = true;   // З5: сервер уже знает задачу — в начале прохода её правку не слать
                         t.status = row.status || t.status;
                         t.updatedAt = row.updated_at;
                         t.project_canonical_key = row.project_canonical_key || t.project_canonical_key || t.project || t.projectName || '';
@@ -2603,11 +2626,13 @@ async function rbiSyncPass(mode = 'silent') {
                                     ...d,
                                     locationId: d.locationId || d.location_id,
                                     contractorId: d.contractorId || d.contractor_id || null,
+                                    authorId: d.core_created_by || '',   // P2-0061: автор — id учётной записи (сервер)
                                     photos,
                                     photo: photos[0] || d.photo || null,
                                     status: st || 'issued',
                                     _deleted: d.is_deleted === true,
                                     source: 'cloud',
+                                    cloudKnown: true,   // P2-0061 (З5): сервер уже знает запись — в начале прохода её правку не слать
                                     syncStatus: 'synced',
                                     sync_status: 'synced',
                                     updatedAt: d.updated_at || new Date().toISOString()
@@ -2665,6 +2690,7 @@ async function rbiSyncPass(mode = 'silent') {
                                     status: st,
                                     _deleted: a.is_deleted === true,
                                     source: 'cloud',
+                                    authorId: a.core_created_by || '',   // P2-0061: автор — id учётной записи (сервер)
                                     syncStatus: 'synced',
                                     sync_status: 'synced',
                                     updatedAt: a.updated_at || new Date().toISOString()
@@ -3021,13 +3047,14 @@ async function rbiSyncPass(mode = 'silent') {
         // =====================================================
         // P2-0061 (ТД 315): «своё первым» у задач — та же функция вызывается и в начале прохода, до скачивания чужого;
         // повтор в проходе отправленное не шлёт (задачи помечаются «отправлено»)
-        async function rbiPushTasks() {
+        async function rbiPushTasks(onlyNew = false) {
         if (canPush) {
             try {
 
                 let tasks = typeof dbGetAll === 'function'
                     ? (await dbGetAll('rbi_tasks') || [])
                     : (typeof window.rbi_tasksData !== 'undefined' ? window.rbi_tasksData : []);
+                if (onlyNew) tasks = tasks.filter(t => t && !t.cloudKnown);
 
                 const lastPushTimeTasks = lastPushAt ? new Date(lastPushAt).getTime() : 0;
 
@@ -3142,6 +3169,7 @@ async function rbiSyncPass(mode = 'silent') {
                         for (const task of batch) {
                             if (window.RbiSyncRetryPolicy) window.RbiSyncRetryPolicy.clearAttention(task);
                             task.source = 'cloud';
+                            task.cloudKnown = true;
                             task.syncStatus = 'synced';
                             task.sync_status = 'synced';
                             task.syncBlockReason = '';
@@ -3217,12 +3245,13 @@ async function rbiSyncPass(mode = 'silent') {
         }
         // P2-0044: отправка замечаний Стройконтроля 2.0 — отдельным шагом: подрядчику (без права «создавать»)
         // она тоже нужна («В работу», «Устранено»); что он может менять — решает сервер (043, сторож подрядчика).
-        async function pushConstructionDefectsV2() {   // P2-0061 (ТД 315): объявление — чтобы вызвать и в начале прохода
+        async function pushConstructionDefectsV2(onlyNew = false) {   // P2-0061 (ТД 315): объявление — чтобы вызвать и в начале прохода
             // Push замечаний construction-v2 (как legacy const_defect — любой авторизованный push-capable, не только admin)
             if (STORES.CONST_DEFECTS_V2 && typeof window.prepareConstructionDefectV2ForCloud === 'function') {
                 try {
                     const defectItems = await dbGetAll(STORES.CONST_DEFECTS_V2) || [];
                     let defectsToPush = defectItems.filter(d => {
+                        if (onlyNew && d && d.cloudKnown) return false;   // З5
                         const status = d.syncStatus || d.sync_status || '';
                         const source = d.source || '';
                         return status === 'not_synced' || status === 'blocked' || source === 'local';
@@ -3274,6 +3303,7 @@ async function rbiSyncPass(mode = 'silent') {
                             .upsert(cloudItem, { onConflict: 'id' });
                         if (error) throw error;
                         item.source = 'cloud';
+                        item.cloudKnown = true;
                         item.syncStatus = 'synced';
                         item.sync_status = 'synced';
                         item.updatedAt = new Date().toISOString();
