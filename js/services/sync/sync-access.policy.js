@@ -201,7 +201,16 @@ function myContractorCards(w, qs) {
 }
 /** «Кто я» на этом устройстве — из моста Качества (ответ сервера quality.my_access, P2-0035b/P2-0061), не из названия роли.
  *  Нет моста (не вошли почтой) — null: ничего не уходит, причина «нужно войти». */
+let memo = { at: 0, w: null, me: null };
 export function deviceMe(w = typeof window !== 'undefined' ? window : {}) {
+    // на одну записи прохода — один расчёт (справочник подрядчиков не перебирается на каждую запись); 1,5 с — права и ФИО меняются редко
+    const now = Date.now();
+    if (memo.w === w && now - memo.at < 1500) return memo.me;
+    const me = computeDeviceMe(w);
+    memo = { at: now, w, me };
+    return me;
+}
+function computeDeviceMe(w) {
     const qs = (w.RBI && w.RBI.qualitySync) || null;
     if (!qs) return null;
     const c = w.syncConfig || {};

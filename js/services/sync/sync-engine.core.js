@@ -68,6 +68,25 @@ window.triggerSync = async function (mode = 'silent') {
 };
 
 /**
+ * P2-0061 (З5, повторное ревью): один раз после обновления — задачам и замечаниям Стройконтроля 2.0, которые уже есть на сервере
+ * (отправлены или скачаны: статус synced / source cloud), ставится признак cloudKnown: их правки не уходят в начале прохода раньше
+ * скачивания (не отменят удаление с сервера). Запись, правленная до обновления и ещё не отправленная, признака не получит (ТД 351).
+ */
+async function rbiMarkCloudKnownOnce() {
+    const FLAG = 'p2_0061_cloud_known_v1';
+    try { if (localStorage.getItem(FLAG) === '1' || typeof dbGetAll !== 'function' || typeof dbPut !== 'function') return; } catch (e) { return; }
+    for (const store of ['rbi_tasks', 'construction_defects_v2']) {
+        try {
+            for (const r of (await dbGetAll(store)) || []) {
+                const st = r && (r.syncStatus || r.sync_status);
+                if (r && !r.cloudKnown && (st === 'synced' || r.source === 'cloud')) { r.cloudKnown = true; await dbPut(store, r); }
+            }
+        } catch (e) { return; }   // хранилища нет / ошибка — попробуем в следующем проходе
+    }
+    try { localStorage.setItem(FLAG, '1'); } catch (e) { /* приватный режим */ }
+}
+
+/**
  * P2-0061: общее правило перед отправкой записи (js/services/sync/sync-access.policy.js — зеркало сервера, standards/SYNC_AND_ACCESS.md).
  * Можно — моей записи без id автора дописывается мой id. Нельзя — запись помечается «Не отправлено» (blocked) с причиной, подсказкой
  * и отпечатком доступа (ТД 313: доступ изменится — перепроверится); та же причина при том же доступе — запись не переписывается.
@@ -1249,6 +1268,7 @@ async function rbiSyncPass(mode = 'silent') {
                 c.source = 'cloud'; c.syncStatus = 'synced'; c.sync_status = 'synced';
                 c.syncBlockReason = ''; c.sync_block_reason = ''; c.importedFromBackup = false;
                 delete c.syncSplit; delete c.syncServerRejected; c.syncBlockHint = '';   // P2-0061: отказ снят
+                c.__prevUpdatedAt = c.updatedAt || c.updated_at || '';   // З7: не дошло — время записи вернуть как было
                 c.updatedAt = new Date().toISOString(); c.updated_at = c.updatedAt;
 
                 if (!isDeleted) {
@@ -1271,6 +1291,7 @@ async function rbiSyncPass(mode = 'silent') {
                     localHistoryToUpdate.forEach(c => {
                         if (!sentIds.has(String(c.id))) return;
                         c.source = 'local'; c.syncStatus = 'not_synced'; c.sync_status = 'not_synced';
+                        if (c.__prevUpdatedAt !== undefined) { c.updatedAt = c.__prevUpdatedAt; c.updated_at = c.__prevUpdatedAt; }   // З7
                     });
                     itemsBatch.length = 0;
                     photosBatch.length = 0;
@@ -1288,10 +1309,12 @@ async function rbiSyncPass(mode = 'silent') {
                     // или по «Отправить снова»; повтор — upsert по id, без дубля
                     const meRej = window.RbiSyncAccess ? window.RbiSyncAccess.deviceMe() : null;
                     const single = inspectionsBatch.length === 1;
-                    const noRight = String(error.code || '') === '42501' || /row-level security|RLS|permission/i.test(String(error.message || ''));
+                    // «нет прав» — только код 42501 / текст RLS сервера; иное (данные, истёкший вход) — повтор на следующем проходе
+                    const noRight = String(error.code || '') === '42501' || /row-level security/i.test(String(error.message || ''));
                     localHistoryToUpdate.forEach(c => {
                         if (!rejIds.has(String(c.id))) return;
                         c.source = 'local';
+                        if (c.__prevUpdatedAt !== undefined) { c.updatedAt = c.__prevUpdatedAt; c.updated_at = c.__prevUpdatedAt; }   // З7
                         if (!single) {
                             c.syncSplit = true; c.syncStatus = 'not_synced'; c.sync_status = 'not_synced';
                             return;
@@ -1305,7 +1328,8 @@ async function rbiSyncPass(mode = 'silent') {
                         c.syncBlockHint = noRight ? 'Уйдёт сама, когда вам дадут права, или нажмите «Отправить снова»'
                             : 'Сообщите администратору; после исправления нажмите «Отправить снова»';
                         c.syncServerRejected = true;
-                        c.syncAccessStamp = window.RbiSyncAccess ? window.RbiSyncAccess.accessStamp(meRej) : '';
+                        // отпечаток — только при «нет прав»: такая запись ждёт смены доступа; иная ошибка — пробуется снова на следующем проходе
+                        c.syncAccessStamp = noRight && window.RbiSyncAccess ? window.RbiSyncAccess.accessStamp(meRej) : '';
                     });
                 } else {
                     actuallyPushedChecks += inspectionsBatch.length;
@@ -1332,6 +1356,7 @@ async function rbiSyncPass(mode = 'silent') {
             }
 
             // Обновляем локальную базу
+            localHistoryToUpdate.forEach(c => { delete c.__prevUpdatedAt; });
             if (localHistoryToUpdate.length > 0 && typeof dbPutBatch === 'function') {
                 await dbPutBatch('app_history', localHistoryToUpdate);
                 if (Array.isArray(contractorArray)) {
@@ -1357,6 +1382,7 @@ async function rbiSyncPass(mode = 'silent') {
             await rbiPushOwnInspections();
             // З5: в начале прохода — только новые записи (сервера ещё нет): правка существующей уходит после скачивания, как раньше,
             // чтобы не отменить удаление или более новую правку с сервера
+            await rbiMarkCloudKnownOnce();
             await rbiPushTasks(true);
             if (typeof dbGetAll === 'function' && window.supabaseClient && typeof STORES !== 'undefined') await pushConstructionDefectsV2(true);
         }
