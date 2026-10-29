@@ -13,6 +13,9 @@ import type { AccessEntry, AuthApi } from '../../platform/auth/auth.service.ts';
 import { PLATFORM_AUTH_CSS } from '../../platform/auth/LoginForm.ts';
 import { NeedInternet, NO_COPY_TEXT, useOfflineEntry } from '../../platform/auth/need-internet.ts';
 import { NEED_INTERNET_INPUT, OFFLINE_HINT, OfflineMark, offlineRead, useScreenChange } from '../../platform/services/offline/index.ts';
+
+/** P2-0064: подсказка «Факта» без сети — факт вносится, остальное ждёт интернета. */
+export const FACT_OFFLINE_HINT = 'Без сети: факт сохраняется на телефоне и уйдёт на сервер сам. Исправить запись, подтвердить РП, бригады и КС-2 — когда появится интернет.';
 import { quietly } from '../../platform/services/offline/copy.ts';
 import { CompanyScope } from '../../platform/company/CompanyScope.ts';
 import type { CoreApi } from '../../platform/core/core.service.ts';
@@ -217,7 +220,8 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     : null;
   const userTag = mode === 'authed' ? h('span', { className: 'pf-visually-hidden', 'data-testid': 'pf-user' }, who, ' · ', p2 ? platformRoleLabel(p2) : accessLabel(access)) : null;
   /** Шапка раздела: заголовок, места для объекта и главного действия (их заполняет экран), подвкладки под ней. */
-  const pageHead = (title: string, tabs?: ReactNode): ReactElement => h('div', { className: 'pf-root pf-dirhead' },
+  // P2-0064: на «Факте» без сети вносить можно — подсказка о том, что уйдёт само, а что ждёт интернета
+  const pageHead = (title: string, tabs?: ReactNode, hint: string = OFFLINE_HINT): ReactElement => h('div', { className: 'pf-root pf-dirhead' },
     h('div', { className: 'pf-pagehead' },
       h('h2', { className: 'pf-title' }, title),
       h(OfflineMark, { module: 'planfact' }),   // P2-0060: «Без сети · данные на …»
@@ -226,7 +230,7 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
       // P2-0060: без сети главное действие экрана неактивно (запись без сети не отправляется)
       h('div', { className: 'pf-head-actions' + (offline ? ' pf-head-actions--off' : ''), ref: setActEl, 'data-testid': 'pf-head-actions', inert: offline || undefined,
         title: offline ? NEED_INTERNET_INPUT : undefined })),
-    offline ? h('div', { className: 'pf-offline-hint pf-muted', role: 'note', 'data-testid': 'pf-offline-hint' }, OFFLINE_HINT) : null,
+    offline ? h('div', { className: 'pf-offline-hint pf-muted', role: 'note', 'data-testid': 'pf-offline-hint' }, hint) : null,
     tabs || null);
 
   // «Справочники» открываются, только если сервер дал доступ к компании (пункт меню показывается по тому же признаку).
@@ -289,7 +293,7 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     ? pageHead('КС-2')
     : fct
     ? pageHead('Факт', h(PageTabs, { testId: 'pf-facttabs', active: fsub, onPick: (id) => nav(`${BASE}${FACT_SUBS.find((t) => t.id === id)!.path}`),
-        items: FACT_SUBS.filter((t) => !t.approve || factApprove !== null).map((t) => ({ id: t.id, label: segLabel(t.label, t.short, t.approve && factApprove !== null ? factApprove : null) })) }))
+        items: FACT_SUBS.filter((t) => !t.approve || factApprove !== null).map((t) => ({ id: t.id, label: segLabel(t.label, t.short, t.approve && factApprove !== null ? factApprove : null) })) }), FACT_OFFLINE_HINT)
     : est
     ? pageHead('Смета')
     : vor
