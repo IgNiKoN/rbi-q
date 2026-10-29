@@ -7,7 +7,7 @@
  * 3. Favicon: ./favicon.ico, ./icons/favicon-16x16.png, ./icons/favicon-32x32.png
  * 4. Apple touch: ./icons/apple-touch-icon.png
  * 5. PWA icons (manifest.webmanifest): ./icons/icon-192.png, ./icons/icon-512.png,
- *    ./icons/icon-maskable-512.png (splash также ./icons/icon-512-2.png)
+ *    ./icons/icon-maskable-512.png (заставка — ./icons/splash-logo.jpg 348×348; оригинал 1254×1254 — docs/assets/splash-logo-original-1254.png, в приложение не входит — P2-0067a)
  * 6. При необходимости — одна строка <link> в index.html на css/brand/<install>.css
  *
  * Темы [data-theme=…] в css/style.css могут переопределять те же имена для режима.

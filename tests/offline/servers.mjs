@@ -2,6 +2,7 @@
 // Боевой сервер не трогается: в браузере rbi-q.ru отрезан (lib.mjs). Основа — reports/P2-0058/baseline/servers.mjs.
 import http from 'node:http';
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -194,7 +195,10 @@ function respond(req, res, u, body) {
 /** P2-0066: «выкладка» на стенде — откуда отдавать файлы приложения. root — папка версии (по умолчанию эта папка);
  *  pick(путь) → папка (выкладка в процессе: часть файлов старая, часть новая); fail — RegExp: такие файлы отвечают 503 (сбой связи);
  *  requests — журнал запросов к файлам приложения. */
-export const site = { root: ROOT, pick: null, fail: null, requests: [] };
+export const site = { root: ROOT, pick: null, fail: null, requests: [], gzip: !!process.env.P2_OFFLINE_GZIP, gzipped: 0 };
+/** P2-0067a: режим «как nginx с gzip» (site.gzip, флаг --gzip) — те же типы и порог, что в блоке app.rbi-q.ru (reports/P2-0067a/release-plan.md). */
+const GZIP_TYPES = new Set(['text/html', 'text/css', 'application/javascript', 'text/javascript', 'application/json', 'application/manifest+json', 'image/svg+xml', 'text/plain']);
+const GZIP_MIN = 1024;
 export function resetSite() { Object.assign(site, { root: ROOT, pick: null, fail: null }); site.requests.length = 0; }
 
 async function app(req, res) {
@@ -217,7 +221,15 @@ async function app(req, res) {
       if (cfg) data = Buffer.from(data.toString('utf8').replace(/("js\/services\/config\.service\.js": \[")[0-9a-f]{16}(",)\d+/,
         (m, a, b) => a + createHash('sha256').update(standConfig(cfg)).digest('hex').slice(0, 16) + b + standConfig(cfg).length));
     }
-    res.writeHead(200, { 'Content-Type': MIME[extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    const type = MIME[extname(f)] || 'application/octet-stream';
+    const head = { 'Content-Type': type, 'Cache-Control': 'no-cache' };
+    if (site.gzip && GZIP_TYPES.has(type.split(';')[0])) {
+      head.Vary = 'Accept-Encoding';
+      if (data.length >= GZIP_MIN && /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''))) {
+        data = gzipSync(data, { level: 5 }); head['Content-Encoding'] = 'gzip'; site.gzipped++;
+      }
+    }
+    res.writeHead(200, head);
     res.end(data);
   } catch {
     res.writeHead(404); res.end('not found');

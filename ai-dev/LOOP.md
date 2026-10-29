@@ -39,7 +39,7 @@ ARCHITECT ⇄ владелец (обсуждение блока) ──PLAN_READ
 
 ## 5. Выбор следующего блока (ARCHITECT)
 
-1. Источник — `ai-dev/ROADMAP.md` и `ai-dev/MVP_BACKLOG.md` по порядку; перепрыгивать без решения владельца нельзя.
+1. Источник — `ai-dev/ROADMAP.md` и очередь в `handoff/LATEST_ARCHITECT_PLAN.md` по порядку; перепрыгивать без решения владельца нельзя.
 2. Размер и нарезка — по `standards/BLOCK_SIZING.md`: один видимый результат, 3–7 этапов вертикальными срезами, контрольная точка (проверка + стоп-условие + коммит) после каждого этапа, не больше одной CRITICAL-зоны.
 3. Перед планом — reuse review, Single Source of Truth review, impact-review для общих сервисов (`standards/*`).
 4. Побочные находки — в `docs/TECH_DEBT.md` или правкой Markdown, отдельной задачей не оформлять.
@@ -68,4 +68,4 @@ AGENTS §3: production RBI/Quality не изменять; новые Supabase-о
 
 ## 9. Скилы
 
-Копии скилов — `ai-dev/skills-backup/`. Актуальные под ADR-062: `platform2-architect`, `platform2-executor`. `platform2-verify` — отключить в настройках скилов.
+Навыки ролей хранятся **в репозитории**: `.claude/skills/platform2-architect/`, `.claude/skills/platform2-executor/` (решение владельца 29.10.2026) — правятся обычным коммитом. На компьютере владельца `~/.claude/skills/<навык>` — ссылки на них в основной папке `~/dev/platform-2-core` (она всегда на `main`). Старые копии в аккаунте Claude (`platform2-architect`, `platform2-executor`, `platform2-verify`) — выключить в настройках навыков; `platform2-verify` — в архиве (`ai-dev/archive/skills-backup/`), ролей две (ADR-062).

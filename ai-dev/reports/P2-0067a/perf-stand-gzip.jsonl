@@ -1,0 +1,4 @@
+{"stand":"no-gzip","url":"http://localhost:8995/","profile":"4g","cpu":4,"width":375,"firstPaintMs":6281,"loginFormMs":12762,"mbToLogin":13.45,"requestsToLogin":155,"codeResponsesGzip":0,"codeResponsesPlain":150}
+{"stand":"no-gzip","url":"http://localhost:8995/","profile":"4g","cpu":4,"width":375,"firstPaintMs":6282,"loginFormMs":12754,"mbToLogin":13.55,"requestsToLogin":155,"codeResponsesGzip":0,"codeResponsesPlain":150}
+{"stand":"gzip","url":"http://localhost:8995/","profile":"4g","cpu":4,"width":375,"firstPaintMs":2416,"loginFormMs":5889,"mbToLogin":2.93,"requestsToLogin":137,"codeResponsesGzip":123,"codeResponsesPlain":10}
+{"stand":"gzip","url":"http://localhost:8995/","profile":"4g","cpu":4,"width":375,"firstPaintMs":2419,"loginFormMs":5896,"mbToLogin":2.92,"requestsToLogin":135,"codeResponsesGzip":121,"codeResponsesPlain":10}

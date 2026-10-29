@@ -1,0 +1,303 @@
+[
+ {
+  "seeded": {
+   "places": 979,
+   "apartments": 900,
+   "vorPositions": 4500,
+   "quality": 1000
+  }
+ },
+ {
+  "label": "Качество — осмотр",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 0,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 4573,
+  "heapMB": 64,
+  "text": "ДОБРО ПОЖАЛОВАТЬ Выберите режим старта работы ДЕМО-РЕЖИМ БЕЗОПАСНО Тестовые данные. Можно нажимать всё — рабоч",
+  "scroll": null
+ },
+ {
+  "label": "Качество — инженер (список осмотров)",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 417.10009765625,
+  "longTasks": 2,
+  "blockedMs": 116,
+  "worstMs": 60,
+  "dom": 4467,
+  "heapMB": 64,
+  "text": "КАЧЕСТВО 1000 ПРОФИЛЬ ЗАДАЧИ СОВЕЩ. IMPACT FMEA НЕДЕЛЯ 44 26 окт. — 1 нояб. 2026 г. ПРОГРЕСС: 0/2 Откр. 2 · Пр",
+  "scroll": null
+ },
+ {
+  "label": "Качество — аналитика",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 96,
+  "longTasks": 1,
+  "blockedMs": 90,
+  "worstMs": 90,
+  "dom": 3672,
+  "heapMB": 64,
+  "text": "КАЧЕСТВО 1000 ПОДР. СВОДКА ГРАФИК СК ИСТОРИЯ ▾ ГЛОБАЛЬНЫЕ ФИЛЬТРЫ Все объекты Все подрядчики Все инспекторы Вс",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — сводка",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 715.5,
+  "longTasks": 5,
+  "blockedMs": 465,
+  "worstMs": 197,
+  "dom": 3666,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Сводка Все проекты (1) ЖК Тестовый 4 недель 8 недель 12 недель С",
+  "scroll": {
+   "fps": 59,
+   "slowFrames": 1,
+   "heightPx": 3114
+  }
+ },
+ {
+  "label": "План/Факт — ВОР",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 435.300048828125,
+  "longTasks": 4,
+  "blockedMs": 239,
+  "worstMs": 69,
+  "dom": 3517,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство ВОР ЖК Тестовый Отдельная ВОР Загрузить новую редакцию Загрузки ",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — позиции ВОР",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 124,
+  "longTasks": 2,
+  "blockedMs": 4654,
+  "worstMs": 2591,
+  "dom": 146205,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство ВОР ЖК Тестовый Загрузки Позиции 4500 Все 4500 В работе 2184 Ждё",
+  "scroll": {
+   "fps": 27,
+   "slowFrames": 4,
+   "heightPx": 339667
+  }
+ },
+ {
+  "label": "План/Факт — факт",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 1419,
+  "longTasks": 7,
+  "blockedMs": 1563,
+  "worstMs": 709,
+  "dom": 3507,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Факт Проект: ЖК Тестовый Ввод Шахматка Ждёт подтверждения Ждёт Р",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — шахматка",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 301.39990234375,
+  "longTasks": 2,
+  "blockedMs": 146,
+  "worstMs": 78,
+  "dom": 4337,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Факт Проект: ЖК Тестовый Ввод Шахматка Ждёт подтверждения Ждёт Р",
+  "scroll": {
+   "fps": 60,
+   "slowFrames": 0,
+   "heightPx": 1827
+  }
+ },
+ {
+  "label": "Компания — проекты и места",
+  "pass": "первый",
+  "cpu": 6,
+  "readyMs": 744.60009765625,
+  "longTasks": 5,
+  "blockedMs": 384,
+  "worstMs": 103,
+  "dom": 3744,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 Настройки Компания Проекты и объекты test@stand.local Выйти Проекты 1 проектов ⋯ + Проект Фильт",
+  "scroll": null
+ },
+ {
+  "label": "Качество — осмотр",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 63,
+  "longTasks": 1,
+  "blockedMs": 60,
+  "worstMs": 60,
+  "dom": 2070,
+  "heapMB": 64,
+  "text": "ДОБРО ПОЖАЛОВАТЬ Выберите режим старта работы ДЕМО-РЕЖИМ БЕЗОПАСНО Тестовые данные. Можно нажимать всё — рабоч",
+  "scroll": null
+ },
+ {
+  "label": "Качество — инженер (список осмотров)",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 77,
+  "longTasks": 1,
+  "blockedMs": 76,
+  "worstMs": 76,
+  "dom": 2173,
+  "heapMB": 64,
+  "text": "КАЧЕСТВО 1000 ПРОФИЛЬ ЗАДАЧИ СОВЕЩ. IMPACT FMEA НЕДЕЛЯ 44 26 окт. — 1 нояб. 2026 г. ПРОГРЕСС: 0/2 Откр. 2 · Пр",
+  "scroll": null
+ },
+ {
+  "label": "Качество — аналитика",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 0,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 2154,
+  "heapMB": 64,
+  "text": "КАЧЕСТВО 1000 ПОДР. СВОДКА ГРАФИК СК ИСТОРИЯ ▾ ГЛОБАЛЬНЫЕ ФИЛЬТРЫ Все объекты Все подрядчики Все инспекторы Вс",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — сводка",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 108,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 1995,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Сводка Все проекты (1) ЖК Тестовый 4 недель 8 недель 12 недель С",
+  "scroll": {
+   "fps": 61,
+   "slowFrames": 0,
+   "heightPx": 3136
+  }
+ },
+ {
+  "label": "План/Факт — ВОР",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 134,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 1846,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство ВОР ЖК Тестовый Отдельная ВОР Загрузить новую редакцию Загрузки ",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — позиции ВОР",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 125,
+  "longTasks": 2,
+  "blockedMs": 4610,
+  "worstMs": 2547,
+  "dom": 144534,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство ВОР ЖК Тестовый Загрузки Позиции 4500 Все 4500 В работе 2184 Ждё",
+  "scroll": {
+   "fps": 16,
+   "slowFrames": 10,
+   "heightPx": 339667
+  }
+ },
+ {
+  "label": "План/Факт — факт",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 2274,
+  "longTasks": 4,
+  "blockedMs": 1256,
+  "worstMs": 729,
+  "dom": 1836,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Факт Проект: ЖК Тестовый Ввод Шахматка Ждёт подтверждения Ждёт Р",
+  "scroll": null
+ },
+ {
+  "label": "План/Факт — шахматка",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 99,
+  "longTasks": 0,
+  "blockedMs": 0,
+  "worstMs": 0,
+  "dom": 2666,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ 1000 test@stand.local · Руководство Факт Проект: ЖК Тестовый Ввод Шахматка Ждёт подтверждения Ждёт Р",
+  "scroll": {
+   "fps": 60,
+   "slowFrames": 1,
+   "heightPx": 1848
+  }
+ },
+ {
+  "label": "Компания — проекты и места",
+  "pass": "повтор",
+  "cpu": 6,
+  "readyMs": 380,
+  "longTasks": 1,
+  "blockedMs": 114,
+  "worstMs": 114,
+  "dom": 3738,
+  "heapMB": 64,
+  "text": "ПЛАН/ФАКТ Настройки Компания Проекты и объекты test@stand.local Выйти Проекты 1 проектов ⋯ + Проект Фильтр 1 и",
+  "scroll": null
+ },
+ {
+  "errors": [],
+  "rpc": [
+   "core_led_roots",
+   "my_access",
+   "pf_brigade_list",
+   "pf_company_divisions",
+   "pf_company_projects",
+   "pf_fact_pending",
+   "pf_fact_positions+",
+   "pf_list_locations+",
+   "pf_my_admin_companies",
+   "pf_my_area+",
+   "pf_my_company_access+",
+   "pf_my_context",
+   "pf_my_inbox",
+   "pf_my_permissions+",
+   "pf_my_platform",
+   "pf_my_profile",
+   "pf_my_projects",
+   "pf_price_list",
+   "pf_project_catalog+",
+   "pf_project_dicts",
+   "pf_summary_attention",
+   "pf_summary_places",
+   "pf_summary_portfolio+",
+   "pf_summary_positions+",
+   "pf_summary_weekly",
+   "pf_summary_worktypes+",
+   "pf_vor_import_rows",
+   "pf_vor_list_imports+",
+   "pf_vor_list_profiles",
+   "pf_vor_positions+"
+  ]
+ }
+]

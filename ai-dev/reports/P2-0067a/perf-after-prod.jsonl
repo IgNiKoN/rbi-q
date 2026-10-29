@@ -1,0 +1,6 @@
+{"url":"https://app.rbi-q.ru/","profile":"none","cpu":4,"width":375,"firstPaintMs":1149,"loginFormMs":2093,"mbToLogin":3.88,"requestsToLogin":215,"codeResponsesGzip":196,"codeResponsesPlain":11}
+{"url":"https://app.rbi-q.ru/","profile":"none","cpu":4,"width":375,"firstPaintMs":1139,"loginFormMs":2037,"mbToLogin":3.81,"requestsToLogin":215,"codeResponsesGzip":196,"codeResponsesPlain":11}
+{"url":"https://app.rbi-q.ru/","profile":"4g","cpu":4,"width":375,"firstPaintMs":3189,"loginFormMs":4124,"mbToLogin":2.9,"requestsToLogin":134,"codeResponsesGzip":118,"codeResponsesPlain":11}
+{"url":"https://app.rbi-q.ru/","profile":"4g","cpu":4,"width":375,"firstPaintMs":3059,"loginFormMs":4003,"mbToLogin":2.9,"requestsToLogin":134,"codeResponsesGzip":118,"codeResponsesPlain":11}
+{"url":"https://app.rbi-q.ru/","profile":"slow","cpu":4,"width":375,"firstPaintMs":11356,"loginFormMs":14874,"mbToLogin":2.72,"requestsToLogin":168,"codeResponsesGzip":155,"codeResponsesPlain":11}
+{"url":"https://app.rbi-q.ru/","profile":"slow","cpu":4,"width":375,"firstPaintMs":11001,"loginFormMs":19104,"mbToLogin":3.67,"requestsToLogin":215,"codeResponsesGzip":193,"codeResponsesPlain":16}

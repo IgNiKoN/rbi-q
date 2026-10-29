@@ -4,7 +4,7 @@
 
 ## 1. Архитектор
 
-> ROLE=ARCHITECT. Прочитай `ai-dev/CORE_RULES.md`, `ai-dev/CURRENT_CONTEXT.md`, `ai-dev/ROADMAP.md`, `ai-dev/MVP_BACKLOG.md`, `ai-dev/roles/ARCHITECT.md`. Предложи владельцу следующий **крупный блок**: что он даст, 2–3 варианта реализации с рекомендацией — простым языком. После обсуждения напиши карточку `ai-dev/tasks/<ID>.md` (DRAFT) и `ai-dev/handoff/LATEST_ARCHITECT_PLAN.md` (`STATUS: PLAN_READY`). Код и SQL не пиши. Для общих функций — владелец и единственный источник истины (`standards/SINGLE_SOURCE_OF_TRUTH.md`, `AUTH_AND_ACCESS.md`).
+> ROLE=ARCHITECT. Прочитай `ai-dev/CORE_RULES.md`, `ai-dev/CURRENT_CONTEXT.md`, `ai-dev/ROADMAP.md`, `ai-dev/reference/MODULES.md`, `ai-dev/handoff/LATEST_ARCHITECT_PLAN.md`, `ai-dev/roles/ARCHITECT.md` (что ещё — `ai-dev/DOCS_MAP.md` §1). Предложи владельцу следующий **крупный блок**: что он даст, 2–3 варианта реализации с рекомендацией — простым языком. После обсуждения напиши карточку `ai-dev/tasks/<ID>.md` (DRAFT) и `ai-dev/handoff/LATEST_ARCHITECT_PLAN.md` (`STATUS: PLAN_READY`). Код и SQL не пиши. Для общих функций — владелец и единственный источник истины (`standards/SINGLE_SOURCE_OF_TRUTH.md`, `AUTH_AND_ACCESS.md`).
 
 ## 2. Исполнитель
 

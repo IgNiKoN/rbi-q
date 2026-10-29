@@ -1,7 +1,7 @@
 # RBI Platform — обзор приложения
 
 Короткий вход для человека (и агента), который открыл репозиторий впервые.  
-Техническая глубина и история рефакторинга — в `_ai/`, не здесь.
+Техническая глубина — в `ai-dev/` (карта — `ai-dev/DOCS_MAP.md`); история старого рефакторинга — в архивном `_ai/`.
 
 ---
 
@@ -18,7 +18,7 @@ index.html → bootstrap / app.entry → Core → Services → Modules
 Модули общаются через **сервисы** (`ctx.services.*`) и **события**, не напрямую друг с другом. Offline-first: IndexedDB + sync в Supabase.
 
 Живая карта БД (таблицы, RLS, buckets, counts):  
-[`_ai/supabase/LIVE_INVENTORY.md`](../_ai/supabase/LIVE_INVENTORY.md).
+`_ai/supabase/LIVE_INVENTORY.md` (старый архив, в репозитории нет; для Platform 2.0 — `docs/SERVERS.md`).
 
 ---
 
@@ -386,19 +386,9 @@ _P2-0022:_ в карточке позиции — блок **«Прогноз»*
 
 Не входит в блок: импорт ГПР (плановая линия по графику работ), диаграмма Ганта, ФОТ и маржа, уведомления и эскалации, PDF и рассылка, разнесение объёмов по этажам (блок прораба).
 
-## Карта репозитория `_ai/` (что читать)
+## Что читать агенту
 
-| Файл | Когда открывать |
-|---|---|
-| [`ARCHITECTURE_BRIEF.md`](../_ai/ARCHITECTURE_BRIEF.md) | Ежедневный технический контекст — **первый** |
-| [`current_plan.md`](../_ai/current_plan.md) | Текущий блок работы Архитектора |
-| [`CURRENT_STEP.md`](../_ai/CURRENT_STEP.md) | История сделанного |
-| [`PLATFORM_TARGET_ARCHITECTURE.md`](../_ai/PLATFORM_TARGET_ARCHITECTURE.md) | Целевая архитектура (не каждый день) |
-| [`SERVICES_API.md`](../_ai/SERVICES_API.md) | Контракты сервисов вместо чтения кода |
-| [`ROADMAP.md`](../_ai/ROADMAP.md) | Очередь эпиков / отложенное |
-| [`PROJECT_CARD.md`](../_ai/PROJECT_CARD.md) | Бизнес-вехи, не runtime-детали |
-| [`supabase/LIVE_INVENTORY.md`](../_ai/supabase/LIVE_INVENTORY.md) | Живая схема Supabase |
-| [`DEV_RUNTIME.md`](../_ai/DEV_RUNTIME.md) | Always-on HTTP `:8765` + Chromium CDP `:9222` |
+Старого `_ai/` в этом репозитории нет (оно осталось в архивной копии `rbi-q-main/_ai/`, только чтение). Что читать в Platform 2.0 — [`ai-dev/DOCS_MAP.md`](../ai-dev/DOCS_MAP.md); где код — [`FILE_MAP.md`](../FILE_MAP.md); сервер и схема — [`docs/SERVERS.md`](SERVERS.md).
 
 Рабочий цикл ролей Архитектор / Исполнитель — в корневом [`README.md`](../README.md).
 
@@ -440,7 +430,7 @@ npm run smoke:knowledge
 # или: node _ai/scripts/smoke-knowledge.mjs --reload
 ```
 
-HTTP `:8765`, Chromium CDP `:9222` — см. [`_ai/DEV_RUNTIME.md`](../_ai/DEV_RUNTIME.md). Не запускать новый Chromium на каждый прогон.
+HTTP `:8765`, Chromium CDP `:9222` — см. `_ai/DEV_RUNTIME.md` (старый архив, в репозитории нет). Не запускать новый Chromium на каждый прогон.
 
 ---
 
