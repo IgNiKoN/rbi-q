@@ -8,12 +8,29 @@ import type { ReactElement } from 'react';
 import { copyMarkText, inputBlocked } from './offline-read.ts';
 import { moduleOffline, offlineReader } from './copy.ts';
 import { useOfflineEntry } from '../../auth/need-internet.ts';
+import { DEVICE_RECORDS_EVENT, pendingDeviceRecords } from './device-send.ts';
+import type { DeviceRecord } from './device-records.ts';
 
 export { NEED_INTERNET_TEXT, NEED_INTERNET_INPUT } from './offline-read.ts';
 
 /** Подсказка под шапкой раздела без сети (План/Факт, «Компания»). */
 export const OFFLINE_HINT = 'Без сети — только просмотр. Внести или изменить — когда появится интернет.';
 export type { CopyMeta, CopyStatus, OfflineResult, Result } from './offline-read.ts';
+export type { DeviceRecord } from './device-records.ts';
+export { DEVICE_RECORDS_EVENT } from './device-send.ts';
+
+/** P2-0064: не ушедшие записи этого телефона по модулю (ждут отправки и отклонённые) — для пометок «не отправлено» на экране. */
+export function useDeviceRecords(module: string): DeviceRecord[] {
+  const [list, setList] = useState<DeviceRecord[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = (): void => { void pendingDeviceRecords(module).then((r) => { if (alive) setList(r); }, () => {}); };
+    load();
+    window.addEventListener(DEVICE_RECORDS_EVENT, load);
+    return () => { alive = false; window.removeEventListener(DEVICE_RECORDS_EVENT, load); };
+  }, [module]);
+  return list;
+}
 export { copyCall, currentSlot, moduleOffline, offlineNow, offlineRead, offlineReader, rpcRead } from './copy.ts';
 
 /** Экран модуля сменился — пропуски копии прежнего экрана в пометку не идут. */

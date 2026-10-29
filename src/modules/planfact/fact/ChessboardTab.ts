@@ -17,6 +17,8 @@ import { ChessCell, ChessScale, CHESS_STATE_LABEL } from '../../../platform/ui/i
 import { buildingsOf, cellKey, cellPositions, indexPlaces, loadPlaces, placePositions, sectionGrid, sectionsOf, unplacedIn, workGrid, workTypesOf } from './chessboard.ts';
 import type { CellValue, Grid, PlaceIndex, Placement, Ref } from './chessboard.ts';
 import { fmtPct, fmtQty, percent, remainder } from './fact.ts';
+import { unsentLabel } from './deviceFacts.ts';
+import type { UnsentSum } from './deviceFacts.ts';
 
 const ALL = '';
 type View = 'sections' | 'works';
@@ -45,8 +47,9 @@ export function cellLabel(row: string, col: string, v: CellValue): string {
 interface Sel { row: string; col: string }
 
 /** Таблица шахматки: первая колонка закреплена, прокрутка вбок — внутри таблицы. */
-function GridTable(props: { grid: Grid; corner: string; sel: Sel | null; onPick: (s: Sel) => void; testId: string; open?: Set<string>; onToggle?: (row: string) => void }): ReactElement {
-  const { grid, corner, sel, onPick, testId, open, onToggle } = props;
+function GridTable(props: { grid: Grid; corner: string; sel: Sel | null; onPick: (s: Sel) => void; testId: string; open?: Set<string>; onToggle?: (row: string) => void;
+  /** P2-0064: сколько записей факта ячейки ещё на телефоне */ unsentIn?: (v: CellValue) => number }): ReactElement {
+  const { grid, corner, sel, onPick, testId, open, onToggle, unsentIn } = props;
   const rows = grid.rows.filter((r) => !r.parent || (open && open.has(r.parent)));
   return h('div', { className: 'p2-chess', 'data-testid': testId },
     h('table', { className: 'p2-chess__table' },
@@ -63,7 +66,7 @@ function GridTable(props: { grid: Grid; corner: string; sel: Sel | null; onPick:
           const t = cellText(v);
           const isSel = !!sel && sel.row === r.key && sel.col === c.id;
           return h('td', { key: c.id, 'data-col': c.id },
-            h(ChessCell, { state: v.state, main: t.main, sub: t.sub, pending: v.pending, rejected: v.rejected, selected: isSel,
+            h(ChessCell, { state: v.state, main: t.main, sub: t.sub, pending: v.pending, rejected: v.rejected, unsent: unsentIn ? unsentIn(v) : 0, selected: isSel,
               hot: !!sel && !isSel && (sel.row === r.key || sel.col === c.id), label: cellLabel(r.label, c.name, v), onClick: () => onPick({ row: r.key, col: c.id }) }));
         }))))));
 }
@@ -71,7 +74,8 @@ function GridTable(props: { grid: Grid; corner: string; sel: Sel | null; onPick:
 /** Где позиция внутри ячейки: квартира («Секция 1 · кв. 5») или «на этаже»; путь без названия корпуса. */
 const where = (p: FactPosition): string => (p.location_type === 'apartment' ? p.location_path.split(' · ').slice(1).filter((x) => !/^эт\.|этаж/i.test(x)).join(' · ') : 'на этаже');
 
-export interface CellCtx { api: FactApi; projectId: string; me: string; canCreate: boolean; /** исправить свою запись — только с сетью (P2-0064) */ canFix: boolean; canApprove: boolean; /** P2-0060: право есть, но нет сети */ noNet?: boolean; brigades: Brigade[]; lastBrigade: string; onBrigade: (id: string) => void }
+export interface CellCtx { api: FactApi; projectId: string; me: string; canCreate: boolean; /** исправить свою запись — только с сетью (P2-0064) */ canFix: boolean; canApprove: boolean; /** P2-0060: право есть, но нет сети */ noNet?: boolean;
+  /** P2-0064: факт этого телефона, ещё не принятый сервером, по позициям */ unsent?: Map<string, UnsentSum>; brigades: Brigade[]; lastBrigade: string; onBrigade: (id: string) => void }
 
 /** Панель ячейки: сводка, позиции места, окно быстрого ввода по позиции, «История», «Закрыть этаж». На ПК — сбоку, на телефоне — шторкой. */
 function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: FactPosition[]; floor: boolean; onClose: () => void; onChanged: (msg: string) => void }): ReactElement {
@@ -112,6 +116,8 @@ function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: Fac
             h('span', { className: 'cb-pos-nums' }, `${fmtQty(p.fact_qty)} из ${fmtQty(p.plan_qty)} ${p.unit_code}`, h('b', null, ` ${fmtPct(pct)}`))),
           p.pending_count ? h('div', { className: 'ft-pending' }, `Ждёт подтверждения РП: ${fmtQty(p.pending_qty)} ${p.unit_code}`) : null,
           p.last_rejected_note ? h('div', { className: 'ft-bad' }, `Отклонено РП: ${p.last_rejected_note}`) : null,
+          ctx.unsent && ctx.unsent.get(p.position_id) ? h('div', { className: ctx.unsent.get(p.position_id)!.problem ? 'ft-bad' : 'ft-unsent', 'data-testid': 'cb-unsent' },
+            unsentLabel(ctx.unsent.get(p.position_id)!, p.unit_code, fmtQty)) : null,
           openId === p.position_id
             ? h(FactEntryForm, { api: ctx.api, pos: p, brigades: ctx.brigades, lastBrigade: ctx.lastBrigade, onBrigade: ctx.onBrigade, onCancel: () => setOpenId(''), onSaved: done, projectId: ctx.projectId, me: ctx.me,
                 quick: { historyCount: count, onHistory: () => { setHistoryId(p.position_id); setOpenId(''); } } })
@@ -211,11 +217,12 @@ export function ChessboardTab(props: { projects: ProjectsApi; ctx: CellCtx }): R
     h('div', { className: 'pf-muted cb-mode', 'data-testid': 'cb-mode' },
       view === 'works' ? 'В ячейке — % выполнения вида работ по объёму; если у вида разные единицы — «закрыто позиций X из Y». Нажмите на этаж, чтобы увидеть квартиры.'
         : w ? 'В ячейке — % выполнения по объёму; если у вида работ разные единицы — «закрыто позиций X из Y».' : 'В ячейке — «закрыто позиций X из Y» по всем видам работ.'),
-    h(ChessScale, null),
+    h(ChessScale, { unsent: !!ctx.unsent && ctx.unsent.size > 0 }),
     loose.length ? h('div', { className: 'pf-muted cb-loose', 'data-testid': 'cb-loose' }, `Не разнесено по этажам: ${loose.length} поз. (на корпусе или секции) — в шахматку не входят, факт по ним — во вкладке «Ввод».`) : null,
     h('div', { className: 'cb-layout' + (selV ? ' cb-layout--side' : '') },
       h(GridTable, { grid, corner: view === 'works' ? 'Этаж / квартира' : 'Этаж', sel, onPick: (s) => setSel(sel && sel.row === s.row && sel.col === s.col ? null : s), testId: 'cb-grid',
-        open: view === 'works' ? open : undefined, onToggle: view === 'works' ? toggle : undefined }),
+        open: view === 'works' ? open : undefined, onToggle: view === 'works' ? toggle : undefined,
+        unsentIn: ctx.unsent && ctx.unsent.size ? (v) => cellPositions(data.positions, v).reduce((a, p) => a + (ctx.unsent!.get(p.position_id)?.n || 0), 0) : undefined }),
       selV && sel ? h(CellPanel, { key: `${sel.row}|${sel.col}`, ctx, title: `${rowLabel(sel.row)} · ${colLabel(sel.col)}`, v: selV, list: cellPositions(data.positions, selV),
         floor: !grid.rows.find((r) => r.key === sel.row)?.parent, onClose: () => setSel(null), onChanged: () => { void refresh(); } }) : null));
 }

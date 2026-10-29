@@ -11,9 +11,11 @@ export const CHESS_STATE_LABEL: Record<ChessState, string> = { none: 'Нет р�
 
 const MARK = {
   pending: h('g', null, h('circle', { cx: 12, cy: 12, r: 8.5 }), h('path', { d: 'M12 7.5V12l3 2' })),
-  rejected: h('g', null, h('circle', { cx: 12, cy: 12, r: 8.5 }), h('path', { d: 'M12 7.5v5.5M12 16.5h.01' }))
+  rejected: h('g', null, h('circle', { cx: 12, cy: 12, r: 8.5 }), h('path', { d: 'M12 7.5v5.5M12 16.5h.01' })),
+  // P2-0064: на этом телефоне есть факт, ещё не принятый сервером (стрелка вверх — «ждёт отправки»)
+  unsent: h('g', null, h('path', { d: 'M12 18V6' }), h('path', { d: 'm6.5 11.5 5.5-5.5 5.5 5.5' }))
 };
-function mark(kind: 'pending' | 'rejected', title: string): ReactElement {
+function mark(kind: 'pending' | 'rejected' | 'unsent', title: string): ReactElement {
   return h('span', { className: `p2-chess__mark p2-chess__mark--${kind}`, title, 'data-mark': kind },
     h('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true' }, MARK[kind]));
 }
@@ -21,16 +23,19 @@ function mark(kind: 'pending' | 'rejected', title: string): ReactElement {
 /** Ячейка: главное число (%, «3/5»), подпись под ним, значки «ждёт подтверждения» / «отклонено»; hot — подсветка строки/столбца. */
 export function ChessCell(props: {
   state: ChessState; main: string; sub?: string; pending?: number; rejected?: number; selected?: boolean; hot?: boolean;
+  /** P2-0064: записей факта на этом телефоне, ещё не принятых сервером */
+  unsent?: number;
   label: string; onClick?: () => void; testId?: string;
 }): ReactElement {
-  const { state, main, sub, pending, rejected, selected, hot, label, onClick, testId } = props;
+  const { state, main, sub, pending, rejected, unsent, selected, hot, label, onClick, testId } = props;
   const cls = `p2-chess__cell p2-chess__cell--${state}` + (selected ? ' p2-chess__cell--sel' : '') + (hot ? ' p2-chess__cell--hot' : '');
   const body = [
     h('span', { key: 'm', className: 'p2-chess__main' }, main),
     sub ? h('span', { key: 's', className: 'p2-chess__sub' }, sub) : null,
-    pending || rejected ? h('span', { key: 'k', className: 'p2-chess__marks' },
+    pending || rejected || unsent ? h('span', { key: 'k', className: 'p2-chess__marks' },
       pending ? mark('pending', `Ждёт подтверждения: ${pending}`) : null,
-      rejected ? mark('rejected', `Отклонено: ${rejected}`) : null) : null
+      rejected ? mark('rejected', `Отклонено: ${rejected}`) : null,
+      unsent ? mark('unsent', `Не отправлено с телефона: ${unsent}`) : null) : null
   ];
   return state === 'none' || !onClick
     ? h('span', { className: cls, title: label, 'data-state': state, 'data-testid': testId || 'p2-chess-cell' }, body)
@@ -38,12 +43,13 @@ export function ChessCell(props: {
 }
 
 /** Шкала: что значат цвета и значки шахматки. */
-export function ChessScale(): ReactElement {
+export function ChessScale(props: { unsent?: boolean }): ReactElement {
   return h('ul', { className: 'p2-legend p2-chess__scale', 'data-testid': 'p2-chess-scale' },
     (['todo', 'progress', 'done'] as ChessState[]).map((s) => h('li', { key: s, className: 'p2-legend__item' },
       h('span', { className: `p2-chess__swatch p2-chess__cell--${s}`, 'aria-hidden': 'true' }), CHESS_STATE_LABEL[s])),
     h('li', { className: 'p2-legend__item' }, mark('pending', 'Ждёт подтверждения'), 'ждёт подтверждения РП'),
-    h('li', { className: 'p2-legend__item' }, mark('rejected', 'Отклонено'), 'отклонено РП'));
+    h('li', { className: 'p2-legend__item' }, mark('rejected', 'Отклонено'), 'отклонено РП'),
+    props && props.unsent ? h('li', { className: 'p2-legend__item', 'data-testid': 'p2-chess-scale-unsent' }, mark('unsent', 'Не отправлено'), 'не отправлено с телефона') : null);
 }
 
 export const P2_CHESS_CSS = `
@@ -69,6 +75,7 @@ button.p2-chess__cell:focus-visible{outline:2px solid var(--p2-chart-fact);outli
 .p2-chess__mark{display:inline-flex}
 .p2-chess__mark--pending{color:var(--p2-status-yellow-fg)}
 .p2-chess__mark--rejected{color:var(--p2-status-red-fg)}
-.p2-legend__item .p2-chess__mark--pending,.p2-legend__item .p2-chess__mark--rejected{padding:2px;border-radius:999px;background:var(--p2-status-grey-bg)}
+.p2-chess__mark--unsent{color:var(--warning,#b8844a)}
+.p2-legend__item .p2-chess__mark--pending,.p2-legend__item .p2-chess__mark--rejected,.p2-legend__item .p2-chess__mark--unsent{padding:2px;border-radius:999px;background:var(--p2-status-grey-bg)}
 .p2-chess__swatch{display:inline-block;width:14px;height:14px;border-radius:4px}
 `;

@@ -5,7 +5,7 @@
  * отфильтрованный список или выбранные); карточка — запись и история позиции (pf_fact_history). Только чтение: право
  * planfact.fact.view проверяет сервер.
  */
-import { createElement as h, useEffect, useMemo, useState } from 'react';
+import { createElement as h, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { HistoryFeed, RegistryExport, RegistryTable, SideCard, StatusBadge, buildRegistryXlsx, queryOf, queryToState, registryFileName, registryRows, saveXlsx, syncRegistryAddress } from '../../../platform/ui/index.ts';
 import type { RegistryColumn, RegistryFilter, RegistryState, Status } from '../../../platform/ui/index.ts';
@@ -17,6 +17,9 @@ import { corpOf } from '../vor/PositionsRegistry.ts';
 import { ruDate } from '../ks2/form.ts';
 import { hashParam } from '../ProjectPicker.ts';
 import { authorText, personName, useMyArea, isPartial } from '../area.ts';
+import { useDeviceRecords } from '../../../platform/services/offline/index.ts';
+import { unsentFacts } from './deviceFacts.ts';
+import type { UnsentFact } from './deviceFacts.ts';
 
 export const JOURNAL_LINK = '#/planfact/fact/journal';
 /** Записей за один запрос (сервер отдаёт не больше; постраничность — ТД). */
@@ -121,9 +124,20 @@ export function FactJournal(props: FactJournalProps): ReactElement {
   const [state, setState] = useState<RegistryState>(() => queryToState(queryOf(window.location.hash)));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState('');
+  // P2-0064: факт с этого телефона, ещё не принятый сервером, — отдельным блоком над журналом (в журнал сервера он попадёт после отправки)
+  const devRecs = useDeviceRecords('planfact');
+  const mine = useMemo(() => unsentFacts(devRecs.filter((r) => r.project === projectId)), [devRecs, projectId]);
   const [custom, setCustom] = useState(false);
   const area = useMyArea(projectId);
 
+  // запись с телефона принята сервером — журнал перечитывается (статус от сервера: принято / на проверке)
+  const devIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const now = new Set(devRecs.map((r) => r.id));
+    const gone = [...devIds.current].some((id) => !now.has(id));
+    devIds.current = now;
+    if (gone) void load(from, to);
+  }, [devRecs]);
   async function load(f: string, t: string): Promise<void> {
     if (f && t && f > t) { setError('Начало периода позже конца'); return; }
     setRows(null); setError('');
@@ -163,6 +177,7 @@ export function FactJournal(props: FactJournalProps): ReactElement {
         h('label', { className: 'pf-field' }, 'С', h('input', { type: 'date', className: 'pj-input', value: from, max: to || undefined, 'data-testid': 'fj-from', onChange: (e) => { const v = (e.target as HTMLInputElement).value; setFrom(v); setCustom(true); void load(v, to); } })),
         h('label', { className: 'pf-field' }, 'По', h('input', { type: 'date', className: 'pj-input', value: to, min: from || undefined, 'data-testid': 'fj-to', onChange: (e) => { const v = (e.target as HTMLInputElement).value; setTo(v); setCustom(true); void load(from, v); } })))),
     error ? h('div', { className: 'pf-error', role: 'alert', 'data-testid': 'fj-error' }, error) : null,
+    mine.length ? h(UnsentBlock, { list: mine }) : null,
     rows && rows.length >= JOURNAL_LIMIT ? h('div', { className: 'pj-notice', role: 'status', 'data-testid': 'fj-limit' }, `Показаны последние ${JOURNAL_LIMIT.toLocaleString('ru-RU')} записей периода — сузьте период, чтобы увидеть остальные.`) : null,
     rows === null ? h('div', { className: 'pf-muted' }, 'Загрузка журнала…') : h(RegistryTable<JournalRow>, {
       tools: h(RegistryExport, { testId: 'fj-export-all', count: ordered.length, onClick: () => { void exportRows(visibleCols, ordered, save); } }),
@@ -177,7 +192,23 @@ export function FactJournal(props: FactJournalProps): ReactElement {
       onPrev: () => setOpenId(ordered[Math.max(0, idx - 1)].id), onNext: () => setOpenId(ordered[Math.min(ordered.length - 1, idx + 1)].id), onClose: () => setOpenId('') }) : null);
 }
 
+/** P2-0064: «С этого телефона ещё не ушло» — работа, дата, место, объём; ждёт отправки или причина отказа. */
+function UnsentBlock(props: { list: UnsentFact[] }): ReactElement {
+  const waiting = props.list.filter((f) => !f.problem).length;
+  return h('section', { className: 'pf-card fj-unsent', 'data-testid': 'fj-unsent', 'aria-label': 'Факт с этого телефона, не принятый сервером' },
+    h('b', { className: 'fj-unsent-title' }, `С этого телефона ещё не ушло: ${props.list.length}`),
+    h('span', { className: 'pf-muted' }, waiting === props.list.length ? 'Уйдёт на сервер само, когда появится связь; в журнал и итог попадёт после принятия сервером.'
+      : 'Часть записей сервер отклонил — причина у записи; исправьте и нажмите «Отправить снова» в «Данные на устройстве».'),
+    h('ul', { className: 'fj-unsent-list' }, props.list.map((f, i) => h('li', { key: f.recordId + ':' + i, className: 'fj-c', 'data-testid': 'fj-unsent-row' },
+      h('span', { className: 'fj-c-name' }, h('b', null, f.work || 'Факт'), h('span', { className: 'fp-sub' }, [f.date ? ruDate(f.date) : '', f.place, f.brigade].filter(Boolean).join(' · '))),
+      h('span', { className: 'fj-c-q' }, h('b', null, `${fmtQty(f.qty)} ${f.unit}`.trim()),
+        h(StatusBadge, { status: f.problem ? 'red' : 'yellow', label: f.problem ? f.problem : 'Не отправлено', testId: 'fj-unsent-status' }))))));
+}
+
 export const FACT_JOURNAL_CSS = `
+.fj-unsent{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-color:color-mix(in srgb,var(--warning,#b8844a) 45%,transparent)}
+.fj-unsent-title{font-size:14.5px}
+.fj-unsent-list{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
 .fj-period{display:flex;flex-direction:column;gap:8px}
 .fj-dates{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
 .fj-dates--off{display:none}

@@ -5,7 +5,7 @@
  * записей); права и допуск перебора — тоже.
  */
 import { StatusBadge } from '../../../platform/ui/index.ts';
-import { createElement as h, useEffect, useRef, useState } from 'react';
+import { createElement as h, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { VorApi, VorProject } from '../vor/vor.service.ts';
 import type { LocationNode, ProjectsApi } from '../../../platform/core/projects.service.ts';
@@ -22,7 +22,8 @@ import { FactWindow, FACT_WINDOW_CSS } from './FactWindow.ts';
 import { initialProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
 import { emptyText, useMyArea } from '../area.ts';
 import { isTopPlace } from '../../../services/locations/types.ts';
-import { NEED_INTERNET_INPUT, useInputBlocked } from '../../../platform/services/offline/index.ts';
+import { NEED_INTERNET_INPUT, useDeviceRecords, useInputBlocked } from '../../../platform/services/offline/index.ts';
+import { unsentByPosition, unsentFacts, unsentLabel } from './deviceFacts.ts';
 
 const PAGE = 100;
 /** P2-0068: после того, как браузер нарисовал текущее состояние экрана. */
@@ -87,6 +88,10 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   const canApprove = myPerms.includes(FACT_APPROVE) && !noNetEdit;
   const place = path.length ? path[path.length - 1] : null;
   const area = useMyArea(projectId);
+  // P2-0064: факт, записанный на этом телефоне и ещё не принятый сервером, — пометка у работы; ушёл — список места обновляется
+  const devRecs = useDeviceRecords('planfact');
+  const unsent = useMemo(() => unsentByPosition(unsentFacts(devRecs)), [devRecs]);
+  const devIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     void (async () => {
@@ -146,6 +151,12 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   }
 
   const refresh = async (): Promise<void> => { await loadPositions(projectId, place); await loadPending(projectId, canApprove); };
+  useEffect(() => {
+    const now = new Set(devRecs.map((r) => r.id));
+    const gone = [...devIds.current].some((id) => !now.has(id));
+    devIds.current = now;
+    if (gone && projectId && place) void refresh();
+  }, [devRecs]);
   const rememberBrigade = (id: string): void => { setLastBrigade(id); if (project) writeLast(project.company_id, id); };
 
   if (list === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
@@ -168,7 +179,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   if (mode === 'chessboard') {
     return h('div', { className: 'pj-tab ft-tab ft-tab--wide', 'data-testid': 'ft-tab' },
       h(ProjectPicker, { list, value: projectId, onChange: setProjectId }),
-      projectId ? h(ChessboardTab, { projects, ctx: { api, projectId, me, canCreate, canFix, canApprove, noNet: mayCreate && noNet, brigades, lastBrigade, onBrigade: rememberBrigade } }) : null);
+      projectId ? h(ChessboardTab, { projects, ctx: { api, projectId, me, canCreate, canFix, canApprove, unsent, noNet: mayCreate && noNet, brigades, lastBrigade, onBrigade: rememberBrigade } }) : null);
   }
 
   const rel = (pos: FactPosition): string => {
@@ -266,7 +277,9 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
                       h('span', { className: 'ft-bar-fill' + (pct >= 100 ? ' ft-bar-fill--done' : '') + (pct > 100 ? ' ft-bar-fill--over' : ''), style: { width: `${Math.min(100, pct)}%` } })),
                     h('span', { className: 'pf-muted ft-rest' }, `осталось ${fmtQty(remainder(p.plan_qty, p.fact_qty))}`)),
                   p.pending_count ? h('span', { className: 'ft-pending', 'data-testid': 'ft-pending-badge' }, `Ждёт РП: ${fmtQty(p.pending_qty)} ${p.unit_code}`) : null,
-                  p.last_rejected_note ? h('span', { className: 'ft-bad', 'data-testid': 'ft-rejected' }, `Отклонено РП: ${p.last_rejected_note}`) : null),
+                  p.last_rejected_note ? h('span', { className: 'ft-bad', 'data-testid': 'ft-rejected' }, `Отклонено РП: ${p.last_rejected_note}`) : null,
+                  unsent.get(p.position_id) ? h('span', { className: unsent.get(p.position_id)!.problem ? 'ft-bad' : 'ft-unsent', 'data-testid': 'ft-unsent' },
+                    unsentLabel(unsent.get(p.position_id)!, p.unit_code, fmtQty)) : null),
                 h('b', { className: 'ft-pct' + (pct > 100 ? ' ft-pct--over' : ''), 'data-testid': 'ft-pct' }, fmtPct(pct)),
                 h('span', { className: 'ft-acts' },
                   canCreate ? h('button', { type: 'button', className: 'pf-btn ft-small-btn', 'data-testid': 'ft-enter', onClick: () => { setOpenId(p.position_id); setHistoryId(''); setClosing(false); } }, 'Внести')
@@ -345,6 +358,7 @@ export const FACT_CSS = PENDING_REGISTRY_CSS + FACT_JOURNAL_CSS + FACT_WINDOW_CS
 .ft-bar-fill--done{background:var(--color-green)}
 .ft-bar-fill--over{background:var(--color-yellow)}
 .ft-pending{font-size:12.5px;font-weight:600;color:var(--p2-status-blue-fg,var(--color-yellow))}
+.ft-unsent{font-size:12.5px;font-weight:600;color:var(--warning,#b8844a)}
 .ft-form{display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:12px;background:var(--hover-bg)}
 .ft-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .ft-sheet{display:flex;flex-direction:column;gap:10px;padding:12px 14px}

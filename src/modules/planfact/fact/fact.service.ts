@@ -54,7 +54,9 @@ export interface FactEntryInput { brigadeId: string; date: string; qty: number; 
   /** P2-0064: подпись записи на телефоне — для «Отправка» и пометок «не отправлено» (работа, место, объём). */
   view?: FactRecordView }
 /** P2-0064: что видно у записи факта на телефоне до отправки. */
-export interface FactRecordView { title: string; positionId?: string; locationPath?: string; workName?: string; unit?: string; qty?: number; date?: string; brigade?: string; rows?: number }
+export interface FactRecordView { title: string; positionId?: string; locationPath?: string; workName?: string; unit?: string; qty?: number; date?: string; brigade?: string; rows?: number;
+  /** пачка: подписи строк по позиции (работа, место, единица) */
+  items?: Record<string, { work: string; place: string; unit: string }> }
 /** requireApproval (P2-0019, миграция 027) — «Закрыть через РП»: все строки ждут подтверждения РП даже без перебора. */
 export interface FactBatchInput { projectId: string; brigadeId: string; date: string; workers: number | null; note: string; items: { position_id: string; qty: number }[]; requireApproval?: boolean;
   /** P2-0048: «за кого» на всю пачку — pf_fact_add_batch_for (все места пачки — этого ответственного; «через РП» — без «за кого»). */

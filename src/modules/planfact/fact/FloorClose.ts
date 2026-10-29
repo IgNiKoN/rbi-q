@@ -71,8 +71,9 @@ export function FloorClose(props: {
     for (let i = 0; i < items.length; i += BATCH_MAX) {
       const r = await api.addBatch({ projectId, brigadeId: brigade, date, workers: w, note: note.trim(), items: items.slice(i, i + BATCH_MAX), ...(requireApproval ? { requireApproval: true } : {}),
         ...(behalf.value ? { onBehalf: behalf.value } : {}),
-        view: { title: `Пачка ${Math.min(BATCH_MAX, items.length - i)} строк · ${place.name}`, locationPath: place.name, date, rows: Math.min(BATCH_MAX, items.length - i),
-          brigade: brigades.find((b) => b.id === brigade)?.name || '' } });
+        view: { title: `Пачка: ${Math.min(BATCH_MAX, items.length - i)} стр. · ${place.name}`, locationPath: place.name, date, rows: Math.min(BATCH_MAX, items.length - i),
+          brigade: brigades.find((b) => b.id === brigade)?.name || '',
+          items: Object.fromEntries(send.slice(i, i + BATCH_MAX).map((x) => [x.p.position_id, { work: x.p.work_name, place: x.p.location_path, unit: x.p.unit_code }])) } });
       if (!r.ok) {
         setBusy(false);
         setError(i ? `Записано строк: ${acc + pen} из ${items.length}; остальные не записаны: ${r.message}` : r.message);
