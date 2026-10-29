@@ -118,6 +118,7 @@ export function reasonFor(r: Rec, rejected: boolean, c: ReasonCtx): Reason {
 
 /** «Осмотр · Кладка · ЖК Тестовый» — то, что человек узнаёт (только на его телефоне; в журнал не попадает). */
 export function itemTitle(store: string, r: Rec): string {
+  if (typeof r.p2Title === 'string' && r.p2Title) return r.p2Title;   // P2-0064: запись устройства — подпись готова (device-send.ts)
   const d = describe(store, r);
   const tpl = typeof r.templateTitle === 'string' ? r.templateTitle : typeof r.template === 'string' ? r.template : '';
   const place = [r.section, r.floor].map((v) => (typeof v === 'string' ? v.trim() : '')).filter(Boolean).join(', ');

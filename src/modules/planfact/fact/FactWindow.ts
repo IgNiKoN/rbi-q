@@ -11,7 +11,7 @@ import { FactHistory } from './FactHistory.ts';
 
 export function FactWindow(props: {
   api: FactApi; pos: FactPosition; place: string; brigades: Brigade[]; lastBrigade: string; onBrigade: (id: string) => void;
-  me: string; canCreate: boolean; projectId?: string; canApprove: boolean; onClose: () => void; onSaved: (msg: string) => void; onChanged: () => void;
+  me: string; canCreate: boolean; canFix: boolean; projectId?: string; canApprove: boolean; onClose: () => void; onSaved: (msg: string) => void; onChanged: () => void;
 }): ReactElement {
   const { api, pos, place, onClose } = props;
   const [count, setCount] = useState<number | null>(null);
@@ -29,7 +29,7 @@ export function FactWindow(props: {
         h('div', { className: 'ft-win-title' }, h('b', null, pos.work_name), place ? h('span', { className: 'pf-muted' }, place) : null),
         h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'ft-win-close', onClick: onClose }, 'Закрыть')),
       history
-        ? h(FactHistory, { api, pos, me: props.me, canApprove: props.canApprove, canCreate: props.canCreate, onClose: () => setHistory(false), onChanged: props.onChanged })
+        ? h(FactHistory, { api, pos, me: props.me, canApprove: props.canApprove, canFix: props.canFix, onClose: () => setHistory(false), onChanged: props.onChanged })
         : props.canCreate
           ? h(FactEntryForm, { api, pos, brigades: props.brigades, lastBrigade: props.lastBrigade, onBrigade: props.onBrigade, onCancel: onClose, onSaved: props.onSaved, projectId: props.projectId, me: props.me,
               quick: { historyCount: count, onHistory: () => setHistory(true) } })

@@ -10,6 +10,7 @@
 // P2-0060: d-device, d-quality-only, d-screens — «Данные на устройстве → Офлайн по модулям» (device.mjs).
 // P2-0066: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow, r-launch, r-return, r-queue, r-transition, r-size — «выкладка во время работы» (release.mjs), замер в release.json.
 // P2-0061: s-rename, s-foreign, s-leader — автор по id, смена ФИО, чужая запись с причиной, руководитель (sync.mjs).
+// P2-0064: pf-offline, pf-offline1440, pf-drop — факт без сети и обрыв при отправке (fact.mjs).
 // P2-0067a: --gzip (или P2_OFFLINE_GZIP=1) — стенд отдаёт файлы приложения сжатыми, как nginx app.rbi-q.ru (servers.mjs, site.gzip).
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
@@ -23,6 +24,7 @@ import { saveViewMeasures, viewScenarios } from './view.mjs';
 import { filesScenarios, saveFilesMeasures } from './files.mjs';
 import { deviceScenarios } from './device.mjs';
 import { syncScenarios } from './sync.mjs';
+import { factScenarios } from './fact.mjs';
 import { count, freshProfile, go, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
 
 const args = process.argv.slice(2);
@@ -337,7 +339,7 @@ async function screen(width, scheme) {
 }
 
 const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue, expired, stale14, invalid, cache, otheruser,
-  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out), ...releaseScenarios(out), ...menuScenarios(out), ...viewScenarios(out), ...filesScenarios(out), ...deviceScenarios(out), ...syncScenarios(out) };
+  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out), ...releaseScenarios(out), ...menuScenarios(out), ...viewScenarios(out), ...filesScenarios(out), ...deviceScenarios(out), ...syncScenarios(out), ...factScenarios(out) };
 const list = pick.length ? pick : Object.keys(SCENARIOS);
 for (const n of list) {
   if (!SCENARIOS[n]) { ok(false, 'нет сценария ' + n); continue; }

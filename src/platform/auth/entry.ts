@@ -18,6 +18,7 @@ import { cleanupLegacyDevice, deleteIndexedDb } from './legacy-device.ts';
 import { EMPTY_SLOT_KEY, RESCUE_CSS, moveOrphans, renderRescueSheet, scanOrphans } from './offline-rescue.ts';
 import type { IsUnsent } from './offline-rescue.ts';
 import { startNetStatus } from './net-status.ts';
+import { startDeviceSend } from '../services/offline/device-send.ts';
 
 type Rbi = Record<string, unknown> & {
   services?: { shell?: { renderSidebar?: () => void; renderMobileModuleMenu?: () => void } };
@@ -324,6 +325,8 @@ export function start(): Promise<PlatformState> {
     started = getPlatform().boot();
     // P2-0058: значок «Нет связи · не отправлено: N», плашка при запуске без связи, строка в «Данные на устройстве»
     void started.then(() => startNetStatus({ platform: () => getPlatform().getState(), navigate: (p) => go(p) }));
+    // P2-0064: записи устройства (факт без сети) уходят сами — при связи, по таймеру, после «Отправить снова»
+    void started.then(() => startDeviceSend());
   }
   else void started.then((st) => { if (st.mode === 'none') showLogin(); });
   return started;

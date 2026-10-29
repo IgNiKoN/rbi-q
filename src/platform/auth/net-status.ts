@@ -2,13 +2,15 @@
  * P2-0058 (З4, З6): связь и неотправленное — значок в шапке, плашка при запуске без связи, строка в «Данные на устройстве».
  * Без связи значок «Нет связи · не отправлено: N» стоит на месте облачка синхронизации (оно рисует «всё отправлено» и без
  * сети); со связью, пока что-то ждёт отправки, — «не отправлено: N». Нажатие — «Настройки → Данные на устройстве».
- * N — записи работы текущей базы Качества / СК по правилу движка (isUnsentLocal); сама отправка — движок синхронизации.
+ * N — записи работы текущей базы Качества / СК по правилу движка (isUnsentLocal; сама отправка — движок синхронизации) и записи
+ * устройства модулей с rpc (P2-0064, факт План/Факта; отправка — device-send.ts).
  * Макет утверждён владельцем 28.10.2026 (reports/P2-0058/stage3/mockups/compare.html).
  */
 import { countUnsent, listPending, resetBlocked } from './offline-rescue.ts';
 import { statusHtml, toItems, SYNC_CSS, SYNC_STYLE_ID } from './sync-status.ts';
 import type { IsUnsent } from './offline-rescue.ts';
 import { renderOfflineModules } from '../services/offline/device-modules.ts';
+import { DEVICE_RECORDS_EVENT, deviceRows, pendingDeviceRecords, resetDeviceRejected, sendNow } from '../services/offline/device-send.ts';
 
 export const NET_STATUS_EVENT = 'rbi:net-status';
 export const DEVICE_PATH = '#/settings/my/device';
@@ -125,6 +127,7 @@ export function startNetStatus(deps: Deps): void {
   ensureNetCss(doc);
   let st: NetStatus = { offline: false, unsent: 0 };
   let lastScan = 0;
+  let qualityUnsent = 0;
   let bannerShown = false;
 
   const isOffline = (): boolean => { const p = deps.platform(); return p.mode === 'email' && (!!p.offline || navigator.onLine === false); };
@@ -183,6 +186,7 @@ export function startNetStatus(deps: Deps): void {
       const isUnsent = win.RbiSyncMergePolicy?.isUnsentLocal;
       const db = win.RBI_DB_NAME || '';
       const rows = isUnsent && db && typeof indexedDB !== 'undefined' ? await listPending(indexedDB, db, isUnsent).catch(() => []) : [];
+      rows.push(...(await deviceRows()));   // P2-0064: записи устройства модулей с rpc (факт План/Факта) — в той же карточке
       const now = Date.now();
       const ls = (k: string): string => { try { return window.localStorage.getItem(k) || ''; } catch { return ''; } };
       const net = win.RbiSyncNet;
@@ -208,14 +212,14 @@ export function startNetStatus(deps: Deps): void {
     const b = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
     if (!b) return;
     const act = b.dataset.act;
-    if (act === 'sync' && typeof win.triggerSync === 'function') void win.triggerSync('manual');
+    if (act === 'sync') { void sendNow('manual'); if (typeof win.triggerSync === 'function') void win.triggerSync('manual'); }
     if (act === 'drop' && b.dataset.id && win.HistoryActions?.resolveSyncAttention) void Promise.resolve(win.HistoryActions.resolveSyncAttention(b.dataset.id)).then(() => fillDevice());
     if (act === 'copy') void copyReport(b);
     // P2-0061 (ТД 313): «Отправить снова» — перепроверить правилом всё «Не отправлено» / «Сервер отклонил» и запустить отправку
     if (act === 'retry') {
       const db = win.RBI_DB_NAME || '';
-      void (db && typeof indexedDB !== 'undefined' ? resetBlocked(indexedDB, db) : Promise.resolve(0))
-        .then(() => { if (typeof win.triggerSync === 'function') return win.triggerSync('manual'); })
+      void Promise.all([db && typeof indexedDB !== 'undefined' ? resetBlocked(indexedDB, db) : Promise.resolve(0), resetDeviceRejected().catch(() => 0)])
+        .then(() => Promise.all([sendNow('manual'), typeof win.triggerSync === 'function' ? win.triggerSync('manual') : null]))
         .then(() => fillDevice(), () => fillDevice());
     }
   }
@@ -270,7 +274,7 @@ export function startNetStatus(deps: Deps): void {
     const p = deps.platform();
     const isUnsent = win.RbiSyncMergePolicy?.isUnsentLocal;
     const db = win.RBI_DB_NAME || '';
-    let unsent = st.unsent;
+    let unsent = qualityUnsent;
     // со связью и без признака «есть неотправленное» — раз в минуту; без связи или с неотправленным — каждый раз
     let dirty = false;
     try { dirty = window.localStorage.getItem('rbi_cloud_dirty') === '1'; } catch { dirty = false; }
@@ -280,7 +284,10 @@ export function startNetStatus(deps: Deps): void {
       lastScan = Date.now();
       unsent = await countUnsent(indexedDB, db, isUnsent).catch(() => unsent);
     }
-    st = { offline, unsent };
+    qualityUnsent = unsent;
+    // P2-0064: записи устройства (сервис платформы) — в любой компании, и без Качества
+    const dev = p.mode === 'email' ? (await pendingDeviceRecords().catch(() => [])).filter((r) => r.syncStatus === 'not_synced').length : 0;
+    st = { offline, unsent: unsent + dev };
     render();
   }
 
@@ -290,6 +297,7 @@ export function startNetStatus(deps: Deps): void {
   window.addEventListener('rbi:platform-net', () => { void recount(); });   // P2-0060: сервер замолчал / ответил
   window.addEventListener('hashchange', () => { setTimeout(render, 300); });
   window.addEventListener('rbi:sync-journal', () => { void fillDevice(); });
+  window.addEventListener(DEVICE_RECORDS_EVENT, () => { void recount(true); });
   setInterval(() => { void recount(); }, 15000);
   setInterval(placeChip, 1500);   // шапку перерисовывают разделы — значок возвращается на место
   void recount(true);

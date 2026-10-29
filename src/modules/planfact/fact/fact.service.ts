@@ -7,9 +7,12 @@
 import { getClient } from '../../../platform/auth/auth.service.ts';
 import { mapCompanyError } from '../../../platform/company/company.service.ts';
 import type { Result } from '../../../platform/company/company.service.ts';
-import { copyCall, placePath } from '../../../platform/services/offline/copy.ts';
+import { copyCall, placePath, projectOf } from '../../../platform/services/offline/copy.ts';
+import { submitDeviceRecord } from '../../../platform/services/offline/device-send.ts';
 
-/** P2-0060: чтения факта и бригад — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
+/** P2-0060: чтения факта и бригад — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется.
+ *  P2-0064: ввод факта (одной строкой и пачкой) — запись на устройстве с id с телефона и сразу отправка pf_fact_submit (миграция 051);
+ *  без связи или при обрыве запись остаётся на телефоне и уходит сама (сервис платформы, device-send.ts) — повтор без дубля. */
 export const FACT_READS: ReadonlySet<string> = new Set(['pf_brigade_list', 'pf_fact_positions', 'pf_fact_history', 'pf_fact_pending', 'pf_fact_journal']);
 
 export const FACT_VIEW = 'planfact.fact.view';
@@ -47,13 +50,18 @@ export const DECIDE_BATCH_MAX = 500;
 /** periodFrom (P2-0022) — начало периода «с … по date»; без него — запись за день. */
 export interface FactEntryInput { brigadeId: string; date: string; qty: number; workers: number | null; manHours: number | null; note: string; periodFrom?: string | null;
   /** P2-0048: «за кого» (id ответственного за факт по месту) — вносит РП: pf_fact_add_for. */
-  onBehalf?: string | null }
+  onBehalf?: string | null;
+  /** P2-0064: подпись записи на телефоне — для «Отправка» и пометок «не отправлено» (работа, место, объём). */
+  view?: FactRecordView }
+/** P2-0064: что видно у записи факта на телефоне до отправки. */
+export interface FactRecordView { title: string; positionId?: string; locationPath?: string; workName?: string; unit?: string; qty?: number; date?: string; brigade?: string; rows?: number }
 /** requireApproval (P2-0019, миграция 027) — «Закрыть через РП»: все строки ждут подтверждения РП даже без перебора. */
 export interface FactBatchInput { projectId: string; brigadeId: string; date: string; workers: number | null; note: string; items: { position_id: string; qty: number }[]; requireApproval?: boolean;
   /** P2-0048: «за кого» на всю пачку — pf_fact_add_batch_for (все места пачки — этого ответственного; «через РП» — без «за кого»). */
-  onBehalf?: string | null }
-export interface FactAddResult { id: string; status: 'accepted' | 'pending_approval' }
-export interface BatchResult { batch_id: string; accepted: number; pending: number }
+  onBehalf?: string | null; view?: FactRecordView }
+/** queued (P2-0064) — нет связи: факт сохранён на телефоне (id — запись устройства) и уйдёт сам. */
+export interface FactAddResult { id: string; status: 'accepted' | 'pending_approval' | 'queued' }
+export interface BatchResult { batch_id: string; accepted: number; pending: number; queued?: number }
 
 export interface FactApi {
   listBrigades(companyId: string, withArchived: boolean): Promise<Brigade[]>;
@@ -93,6 +101,17 @@ export function createFactService(): FactApi | null {
       return { ok: false, message: mapCompanyError({ message: e instanceof Error ? e.message : '' }) };
     }
   }
+  /** P2-0064: ввод факта — на устройстве, затем сразу на сервер; нет связи — «сохранено на телефоне» (queued). */
+  async function submit<T>(project: string | null, entry: Record<string, unknown>, view: FactRecordView | undefined, queued: (id: string) => T): Promise<Result<T>> {
+    try {
+      const r = await submitDeviceRecord({ module: 'planfact', kind: 'pf_fact', project, payload: entry, view: (view || { title: '' }) as unknown as Record<string, unknown> });
+      if (r.state === 'sent') return { ok: true, value: r.result as T };
+      if (r.state === 'rejected') return { ok: false, message: mapCompanyError({ message: r.message }) };
+      return { ok: true, value: queued(r.id) };
+    } catch (e) {
+      return { ok: false, message: 'Не удалось сохранить на телефоне: ' + (e instanceof Error && e.message ? e.message : 'нет места или запрещено хранение') };
+    }
+  }
   const list = async <T, U = T>(fn: string, args: Record<string, unknown>, map: (r: T) => U): Promise<Result<U[]>> => {
     const r = await call<T[]>(fn, args);
     return r.ok ? { ok: true, value: (r.value || []).map(map) } : r;
@@ -115,16 +134,15 @@ export function createFactService(): FactApi | null {
     },
     history: (position) => list<FactHistoryRow>('pf_fact_history', { p_position: position }, normHistory),
     pending: (project) => list<FactPendingRow>('pf_fact_pending', { p_project: project }, normPending),
-    add: (position, e) => e.onBehalf
-      ? call<FactAddResult>('pf_fact_add_for', { p_on_behalf: e.onBehalf, p_position: position, p_brigade: e.brigadeId, p_date: e.date, p_qty: e.qty, p_workers: e.workers, p_man_hours: e.manHours,
-          p_note: e.note || null, p_period_from: e.periodFrom || null })
-      : call<FactAddResult>('pf_fact_add', { p_position: position, p_brigade: e.brigadeId, p_date: e.date, p_qty: e.qty, p_workers: e.workers, p_man_hours: e.manHours, p_note: e.note || null,
-      ...(e.periodFrom ? { p_period_from: e.periodFrom } : {}) }),   // период — только когда задан (вызов без него — как до 030)
-    // Флаг передаётся, только когда нужен: прежний вызов (6 параметров) — как до 027.
-    addBatch: (b) => b.onBehalf
-      ? call<BatchResult>('pf_fact_add_batch_for', { p_on_behalf: b.onBehalf, p_project: b.projectId, p_brigade: b.brigadeId, p_date: b.date, p_items: b.items, p_workers: b.workers, p_note: b.note || null })
-      : call<BatchResult>('pf_fact_add_batch', { p_project: b.projectId, p_brigade: b.brigadeId, p_date: b.date, p_items: b.items, p_workers: b.workers, p_note: b.note || null,
-      ...(b.requireApproval ? { p_require_approval: true } : {}) }),
+    add: (position, e) => submit<FactAddResult>(projectOf({ p_position: position }), {
+      kind: 'entry', position_id: position, brigade_id: e.brigadeId, date: e.date, qty: e.qty, workers: e.workers, man_hours: e.manHours,
+      note: e.note || null, period_from: e.periodFrom || null, on_behalf: e.onBehalf || null }, e.view,
+      (id) => ({ id, status: 'queued' })),
+    // «за кого» и «Закрыть через РП» — как прежние pf_fact_add_batch_for / pf_fact_add_batch (сервер: pf_fact_submit, kind batch)
+    addBatch: (b) => submit<BatchResult>(b.projectId, {
+      kind: 'batch', project_id: b.projectId, brigade_id: b.brigadeId, date: b.date, items: b.items, workers: b.workers, note: b.note || null,
+      require_approval: !!b.requireApproval && !b.onBehalf, on_behalf: b.onBehalf || null }, b.view,
+      (id) => ({ batch_id: id, accepted: 0, pending: 0, queued: b.items.length })),
     correct: (entry, qty, reason) => call<{ id: string; status: string }>('pf_fact_correct', { p_entry: entry, p_qty: qty, p_reason: reason }),
     decide: (entry, approve, note) => call('pf_fact_decide', { p_entry: entry, p_approve: approve, p_note: note || null }),
     async decideBatch(project, ids, approve, note) {

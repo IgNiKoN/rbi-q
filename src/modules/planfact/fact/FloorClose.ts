@@ -67,20 +67,24 @@ export function FloorClose(props: {
     setBusy(true); setError('');
     onBrigade(brigade);
     const items = send.map((x) => ({ position_id: x.p.position_id, qty: x.qty as number }));
-    let acc = 0, pen = 0;
+    let acc = 0, pen = 0, saved = 0;
     for (let i = 0; i < items.length; i += BATCH_MAX) {
       const r = await api.addBatch({ projectId, brigadeId: brigade, date, workers: w, note: note.trim(), items: items.slice(i, i + BATCH_MAX), ...(requireApproval ? { requireApproval: true } : {}),
-        ...(behalf.value ? { onBehalf: behalf.value } : {}) });
+        ...(behalf.value ? { onBehalf: behalf.value } : {}),
+        view: { title: `Пачка ${Math.min(BATCH_MAX, items.length - i)} строк · ${place.name}`, locationPath: place.name, date, rows: Math.min(BATCH_MAX, items.length - i),
+          brigade: brigades.find((b) => b.id === brigade)?.name || '' } });
       if (!r.ok) {
         setBusy(false);
         setError(i ? `Записано строк: ${acc + pen} из ${items.length}; остальные не записаны: ${r.message}` : r.message);
         if (i) onDone(`Записано строк: ${acc + pen} из ${items.length} (часть не записана — см. ошибку)`, true);
         return;
       }
-      acc += r.value.accepted; pen += r.value.pending;
+      acc += r.value.accepted; pen += r.value.pending; saved += r.value.queued || 0;
     }
     setBusy(false);
-    onDone(`Записано строк: ${acc + pen}` + (pen ? `, из них ждут подтверждения РП: ${pen}` : ''));
+    // P2-0064: без связи пачка сохранена на телефоне — уйдёт сама (статус придёт с сервера: принято / на проверке)
+    onDone(saved ? `Сохранено на телефоне строк: ${saved}` + (acc + pen ? `, записано на сервере: ${acc + pen}` : '') + ' — уйдут на сервер сами, когда появится связь'
+      : `Записано строк: ${acc + pen}` + (pen ? `, из них ждут подтверждения РП: ${pen}` : ''));
   }
 
   return h('div', { className: 'pf-card ft-sheet', 'data-testid': 'ft-close' },

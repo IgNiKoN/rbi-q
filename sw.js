@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.29-b951899d',
+  version: '2026.10.29-84a54542',
   date: '2026-10-29',
-  digest: 'b951899d',
+  digest: '84a54542',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -76,9 +76,9 @@ const APP_RELEASE = {
     "js/dist/planfact/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"planfact"],
     "js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"planfact"],
     "js/dist/planfact/chunks/xlsx-writer-C1YpHX_s.js": ["70ba43f300adeb4d",12722,"planfact"],
-    "js/dist/planfact/planfact.js": ["d3c564cfcedef963",1661407,"planfact"],
+    "js/dist/planfact/planfact.js": ["76e7cb92b5fc5df5",1691920,"planfact"],
     "js/dist/platform-admin/platform-admin.js": ["ce93570c6c17f382",26360,"platform-admin"],
-    "js/dist/platform/platform.js": ["99f6ef7aad012d6e",776640,""],
+    "js/dist/platform/platform.js": ["8e34339d1309a15c",788394,""],
     "js/dist/rbi-construction-acceptance.js": ["bc64aaa6db993c9c",14605,"construction"],
     "js/dist/rbi-construction-defects.js": ["234ce71f41917c30",12286,"construction"],
     "js/dist/rbi-construction-units.js": ["24fc5f9644437f65",17075,"construction"],
@@ -114,10 +114,10 @@ const APP_RELEASE = {
     "js/modules/knowledge/knowledge.render.js": ["5ce05b4b1684a07d",28972,""],
     "js/modules/knowledge/knowledge.state.js": ["74b4b8a91892d562",7772,""],
     "js/modules/knowledge/twi.docx-export.js": ["bd5c958a5c92c51a",28903,""],
-    "js/modules/modules.manifest.d.ts": ["f25a004e302f8c62",663,""],
+    "js/modules/modules.manifest.d.ts": ["0f8375887572f52d",811,""],
     "js/modules/modules.manifest.js": ["12bd76b9dd6d6fb7",1998,""],
     "js/modules/planfact/index.js": ["e359f78f83fb07a3",12512,""],
-    "js/modules/planfact/planfact.manifest.js": ["4d183f618590d216",4204,""],
+    "js/modules/planfact/planfact.manifest.js": ["bdc6ca52a16d87c3",5018,""],
     "js/modules/quality/features/ai/ai.actions.js": ["b5df7b5087c13a32",258679,"quality"],
     "js/modules/quality/features/ai/ai.manifest.js": ["be59786506d712f7",1460,""],
     "js/modules/quality/features/ai/ai.module.js": ["f1aa6232f6d1a16c",14877,"quality"],

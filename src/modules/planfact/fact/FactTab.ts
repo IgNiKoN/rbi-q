@@ -77,11 +77,14 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   const projectRef = useRef(projectId);
   projectRef.current = projectId;
   const myPerms = perms[projectId] || [];
-  // P2-0060: без сети — только просмотр (ввод факта без сети — P2-0064): «Внести» видна неактивной, исправления и решения РП — с сетью
+  // P2-0064: без сети факт вносится (запись на телефоне, уйдёт сама) — одной строкой и пачкой (offline.input манифеста);
+  // исправление и решение РП — только с сетью (P2-0060: кнопка неактивна, «Нужен интернет»)
   const noNet = useInputBlocked('planfact', 'fact');
+  const noNetEdit = useInputBlocked('planfact', 'correct');
   const mayCreate = myPerms.includes(FACT_CREATE) && !isArchived(project);   // архивный объект — только просмотр
   const canCreate = mayCreate && !noNet;
-  const canApprove = myPerms.includes(FACT_APPROVE) && !noNet;
+  const canFix = mayCreate && !noNetEdit;
+  const canApprove = myPerms.includes(FACT_APPROVE) && !noNetEdit;
   const place = path.length ? path[path.length - 1] : null;
   const area = useMyArea(projectId);
 
@@ -165,7 +168,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   if (mode === 'chessboard') {
     return h('div', { className: 'pj-tab ft-tab ft-tab--wide', 'data-testid': 'ft-tab' },
       h(ProjectPicker, { list, value: projectId, onChange: setProjectId }),
-      projectId ? h(ChessboardTab, { projects, ctx: { api, projectId, me, canCreate, canApprove, noNet: mayCreate && noNet, brigades, lastBrigade, onBrigade: rememberBrigade } }) : null);
+      projectId ? h(ChessboardTab, { projects, ctx: { api, projectId, me, canCreate, canFix, canApprove, noNet: mayCreate && noNet, brigades, lastBrigade, onBrigade: rememberBrigade } }) : null);
   }
 
   const rel = (pos: FactPosition): string => {
@@ -176,7 +179,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
 
   /** P2-0022: «Внести факт» открывает то же окно, что в «Шахматке» (на телефоне — шторка). */
   function entryWindow(pos: FactPosition): ReactElement {
-    return h(FactWindow, { key: pos.position_id, api, pos, place: pos.location_path, brigades, lastBrigade, onBrigade: rememberBrigade, me, canCreate, canApprove, projectId,
+    return h(FactWindow, { key: pos.position_id, api, pos, place: pos.location_path, brigades, lastBrigade, onBrigade: rememberBrigade, me, canCreate, canFix, canApprove, projectId,
       onClose: () => setOpenId(''), onSaved: (msg) => { setOpenId(''); setNotice(msg); void refresh(); }, onChanged: () => { void refresh(); } });
   }
 
@@ -235,7 +238,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
               onDone: (msg) => { setClosing(false); setNotice(msg); void refresh(); } })
           : null,
         historyId && rows.find((p) => p.position_id === historyId)
-          ? h(FactHistory, { api, pos: rows.find((p) => p.position_id === historyId)!, me, canApprove, canCreate, onClose: () => setHistoryId(''), onChanged: () => { void refresh(); } })
+          ? h(FactHistory, { api, pos: rows.find((p) => p.position_id === historyId)!, me, canApprove, canFix, onClose: () => setHistoryId(''), onChanged: () => { void refresh(); } })
           : null,
         place && positions === null ? h('div', { className: 'pf-muted' }, 'Загрузка…') : null,
         place && positions && !rows.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'ft-empty' }, emptyText(area, 'Для этого места нет работ: позиции появляются после подтверждения ВОР.')) : null,

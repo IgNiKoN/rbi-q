@@ -57,10 +57,14 @@ export function FactEntryForm(props: {
     setBusy(true); setError('');
     onBrigade(brigade);
     const r = await api.add(pos.position_id, { brigadeId: brigade, date, qty: q, workers, manHours: mh, note: val('note'), ...(period ? { periodFrom: from } : {}),
-      ...(behalf.value ? { onBehalf: behalf.value } : {}) });
+      ...(behalf.value ? { onBehalf: behalf.value } : {}),
+      view: { title: `${pos.work_name} · ${pos.location_path} · ${fmtQty(q)} ${pos.unit_code}`, positionId: pos.position_id, locationPath: pos.location_path,
+        workName: pos.work_name, unit: pos.unit_code, qty: q, date, brigade: brigades.find((b) => b.id === brigade)?.name || '' } });
     setBusy(false);
     if (!r.ok) { setError(r.message); return; }
-    onSaved(r.value.status === 'pending_approval'
+    onSaved(r.value.status === 'queued'
+      ? `Сохранено на телефоне: ${fmtQty(q)} ${pos.unit_code} — уйдёт на сервер само, когда появится связь`
+      : r.value.status === 'pending_approval'
       ? `Записано, но объём выше допуска плана — ждёт подтверждения РП (в итог пока не входит)`
       : `Записано: ${fmtQty(q)} ${pos.unit_code}${period ? ' ' + fmtPeriod(from, date) : ''}`);
   }

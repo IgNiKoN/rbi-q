@@ -12,8 +12,8 @@ const STATUS: Record<FactStatus, string> = { accepted: 'Принято', pending
 export const fmtWhen = (iso: string): string => { try { return new Date(iso).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }); } catch { return iso; } };
 const fmtDate = (d: string): string => { try { return new Date(d + 'T00:00:00').toLocaleDateString('ru-RU'); } catch { return d; } };
 
-export function FactHistory(props: { api: FactApi; pos: FactPosition; me: string; canApprove: boolean; canCreate: boolean; onClose: () => void; onChanged: () => void }): ReactElement {
-  const { api, pos, me, canApprove, canCreate, onClose, onChanged } = props;
+export function FactHistory(props: { api: FactApi; pos: FactPosition; me: string; canApprove: boolean; /** исправить свою запись (право внести факт и есть сеть, P2-0064) */ canFix: boolean; onClose: () => void; onChanged: () => void }): ReactElement {
+  const { api, pos, me, canApprove, canFix, onClose, onChanged } = props;
   const [rows, setRows] = useState<FactHistoryRow[] | null>(null);
   const [editId, setEditId] = useState('');
   const [error, setError] = useState('');
@@ -28,7 +28,7 @@ export function FactHistory(props: { api: FactApi; pos: FactPosition; me: string
 
   const canEdit = (e: FactHistoryRow): boolean => (e.status === 'accepted' || e.status === 'pending_approval')
     && !(rows || []).some((x) => x.corrects_id === e.id && (x.status === 'accepted' || x.status === 'pending_approval'))
-    && (canApprove || (canCreate && e.created_by_email === me));
+    && (canApprove || (canFix && e.created_by_email === me));
 
   async function correct(ev: FormEvent, e: FactHistoryRow, cancel: boolean): Promise<void> {
     ev.preventDefault();

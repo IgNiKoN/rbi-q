@@ -71,7 +71,7 @@ function GridTable(props: { grid: Grid; corner: string; sel: Sel | null; onPick:
 /** Где позиция внутри ячейки: квартира («Секция 1 · кв. 5») или «на этаже»; путь без названия корпуса. */
 const where = (p: FactPosition): string => (p.location_type === 'apartment' ? p.location_path.split(' · ').slice(1).filter((x) => !/^эт\.|этаж/i.test(x)).join(' · ') : 'на этаже');
 
-export interface CellCtx { api: FactApi; projectId: string; me: string; canCreate: boolean; canApprove: boolean; /** P2-0060: право есть, но нет сети */ noNet?: boolean; brigades: Brigade[]; lastBrigade: string; onBrigade: (id: string) => void }
+export interface CellCtx { api: FactApi; projectId: string; me: string; canCreate: boolean; /** исправить свою запись — только с сетью (P2-0064) */ canFix: boolean; canApprove: boolean; /** P2-0060: право есть, но нет сети */ noNet?: boolean; brigades: Brigade[]; lastBrigade: string; onBrigade: (id: string) => void }
 
 /** Панель ячейки: сводка, позиции места, окно быстрого ввода по позиции, «История», «Закрыть этаж». На ПК — сбоку, на телефоне — шторкой. */
 function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: FactPosition[]; floor: boolean; onClose: () => void; onChanged: (msg: string) => void }): ReactElement {
@@ -103,7 +103,7 @@ function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: Fac
         : null,
       closing ? h(FloorClose, { api: ctx.api, projectId: ctx.projectId, place: { id: '', name: title }, positions: list, brigades: ctx.brigades, lastBrigade: ctx.lastBrigade, onBrigade: ctx.onBrigade,
         me: ctx.me, onClose: () => setClosing(false), onDone: done }) : null,
-      histPos ? h(FactHistory, { api: ctx.api, pos: histPos, me: ctx.me, canApprove: ctx.canApprove, canCreate: ctx.canCreate, onClose: () => setHistoryId(''), onChanged: () => onChanged('') }) : null,
+      histPos ? h(FactHistory, { api: ctx.api, pos: histPos, me: ctx.me, canApprove: ctx.canApprove, canFix: ctx.canFix, onClose: () => setHistoryId(''), onChanged: () => onChanged('') }) : null,
       h('div', { className: 'cb-list', 'data-testid': 'cb-list' }, list.map((p) => {
         const pct = percent(p.fact_qty, p.plan_qty);
         return h('div', { key: p.position_id, className: 'cb-pos', 'data-position-id': p.position_id },

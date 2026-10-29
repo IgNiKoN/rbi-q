@@ -33,11 +33,15 @@ export const sends = new Map();
 /** P2-0061: отправки строк любой таблицы — «таблица:id» → сколько раз (повтор той же строки — +1). */
 export const sendsAll = new Map();
 export const flow = { inflight: 0, maxInflight: 0, hung: 0 };
+/** P2-0064: факт с телефона (pf_fact_submit): id с телефона → ответ сервера (повтор — прежний ответ); calls — сколько раз пришло;
+ *  entries — сколько записей факта создано (дубль был бы > 1 на id); reject — RegExp по тексту записи: отказ сервера с причиной. */
+export const fact = { byId: new Map(), calls: new Map(), entries: 0, reject: null };
 const held = [];
 /** Сбросить погоду и содержимое сервера перед сценарием. */
 export function resetNet() {
   Object.assign(net, { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [], reject: null });
   rows.clear(); files.clear(); sends.clear(); sendsAll.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
+  fact.byId.clear(); fact.calls.clear(); fact.entries = 0; fact.reject = null;
 }
 /** «Зависшие» запросы обрываются (связь пропала окончательно). */
 export function releaseHeld() { held.splice(0).forEach((s) => s.destroy()); }
@@ -99,6 +103,18 @@ const RPC = {
   pf_vor_list_profiles: () => [],
   pf_fact_positions: (u, a) => POSITIONS.filter((p) => !a.p_location || p.location_id === a.p_location),
   pf_fact_pending: () => [],
+  // P2-0064 (051): одна запись или пачка с id с телефона — повтор с тем же id возвращает прежний ответ, новой записи нет
+  pf_fact_submit: (u, a) => {
+    const id = String(a.p_client_id || ''); const e = a.p_entry || {};
+    fact.calls.set(id, (fact.calls.get(id) || 0) + 1);
+    if (fact.byId.has(id)) return { ...fact.byId.get(id), repeat: true };
+    if (fact.reject && fact.reject.test(JSON.stringify(e))) return { __status: 400, code: '22023', message: 'Бригада в архиве — выберите действующую' };
+    const n = e.kind === 'batch' ? (e.items || []).length : 1;
+    fact.entries += n;
+    const v = e.kind === 'batch' ? { batch_id: 'bt-' + id, accepted: n, pending: 0 } : { id: 'fe-' + id, status: Number(e.qty) > 40 ? 'pending_approval' : 'accepted' };
+    fact.byId.set(id, v);
+    return v;
+  },
   pf_summary_positions: () => POSITIONS.map((p) => ({ position_id: p.position_id, location_id: p.location_id, location_path: p.location_path, work_type_id: 'wt-1',
     work_name: 'Кладка стен', unit_code: 'м³', plan_qty: 40, fact_qty: p.fact_qty, pct: (p.fact_qty / 40) * 100, rest_qty: 40 - p.fact_qty, fact7: 0, fact14: 0,
     pending_qty: 0, forecast_finish: null, delta_days: null, plan_pct_today: 50, dev_pp: null })),
@@ -182,7 +198,11 @@ function respond(req, res, u, body) {
     if (u.pathname === '/auth/v1/user') return json(res, 200, user);
     if (u.pathname === '/auth/v1/logout') { res.writeHead(204); return res.end(); }
     const m = u.pathname.match(/^\/rest\/v1\/rpc\/([a-z_0-9]+)/);
-    if (m) { let a = {}; try { a = JSON.parse(body || '{}') || {}; } catch { /* не JSON */ } const v = RPC[m[1]] ? RPC[m[1]](user, a) : null; return v && v.__status ? json(res, v.__status, { message: 'Internal error' }) : json(res, 200, v); }
+    if (m) { let a = {}; try { a = JSON.parse(body || '{}') || {}; } catch { /* не JSON */ } const v = RPC[m[1]] ? RPC[m[1]](user, a) : null;
+      // P2-0064: обрыв после того, как сервер выполнил функцию (запись есть, ответ потерян) — drops с re по «RPC имя»
+      const lost = net.drops.find((d) => d.left > 0 && d.re.test('RPC ' + m[1]));
+      if (lost) { lost.left--; return req.socket.destroy(); }
+      return v && v.__status ? json(res, v.__status, { message: v.message || 'Internal error', ...(v.code ? { code: v.code } : {}) }) : json(res, 200, v); }
     if (u.pathname.startsWith('/rest/v1/')) {
       if (req.method === 'GET' || req.method === 'HEAD') return json(res, 200, [], { 'Content-Range': '*/0' });
       return json(res, 201, []);

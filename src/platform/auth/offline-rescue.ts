@@ -25,7 +25,8 @@ export const EMPTY_SLOT_KEY = 'platform2_quality_state_';
  *  новый вид записи появляется здесь, в счётчике «не отправлено» и в «Отправка» без правки кода платформы). */
 export function recordStoresFrom(manifests: ModuleManifestLike[]): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const m of manifests) for (const k of m.sync || []) if (k && k.store && !(k.store in out)) out[k.store] = k.title;
+  // P2-0064: вид с rpc лежит в базе записей устройства (сервис платформы), не в базе Качества — его считает device-send.ts
+  for (const m of manifests) for (const k of m.sync || []) if (k && k.store && !k.rpc && !(k.store in out)) out[k.store] = k.title;
   return out;
 }
 export const RECORD_STORES: Record<string, string> = {
