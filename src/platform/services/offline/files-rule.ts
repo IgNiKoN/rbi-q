@@ -19,6 +19,11 @@ const DAY_MS = 24 * 3600 * 1000;
 export function defaultFilesScope(role: string): FilesScope {
   return FIELD_ROLES.has(role) ? 'mine30' : 'none';
 }
+/** База знаний (документы, TWI, тех. узлы, эталоны) заранее: полевым — все, руководству и гостю — не скачивать (решение владельца 29.10.2026). */
+export type DocsScope = 'all' | 'none';
+export function defaultDocsScope(role: string): DocsScope {
+  return FIELD_ROLES.has(role) ? 'all' : 'none';
+}
 /** Выбор человека важнее правила по роли. */
 export function filesScopeFor(choice: unknown, role: string): FilesScope {
   return FILES_SCOPES.includes(choice as FilesScope) ? (choice as FilesScope) : defaultFilesScope(role);

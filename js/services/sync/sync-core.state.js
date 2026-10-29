@@ -177,9 +177,10 @@ async function rbiProcessBgCacheQueue(options = {}) {
     // P2-0060: лёгкая очередь — в охвате «Фото и PDF заранее» этого человека (роль / выбор): «не скачивать» — ничего,
     // «за 30 дней» / «мои за 30 дней» — только файлы из этого охвата; открытое человеком кэшируется само, как раньше
     const scope = typeof window.rbiAutoCacheScope === 'function' ? window.rbiAutoCacheScope() : 'all';
-    if (scope === 'none') { window.rbiBgCacheQueue = []; return; }
-    if (scope !== 'all' && typeof window.rbiCollectOfflineCacheUrls === 'function') {
-        const allowed = new Set((window.rbiCollectOfflineCacheUrls(scope) || []).map((e) => e && e.url));
+    const docs = typeof window.rbiAutoCacheDocs === 'function' ? window.rbiAutoCacheDocs() : 'all';
+    if (scope === 'none' && docs === 'none') { window.rbiBgCacheQueue = []; return; }
+    if ((scope !== 'all' || docs !== 'all') && typeof window.rbiAutoCacheEntries === 'function') {
+        const allowed = new Set((window.rbiAutoCacheEntries() || []).map((e) => e && e.url));
         window.rbiBgCacheQueue = window.rbiBgCacheQueue.filter((x) => x && allowed.has(x.url));
     }
 
@@ -285,6 +286,12 @@ function rbiMarkCloudDirty() {
 window.rbiMarkCloudDirty = rbiMarkCloudDirty;
 // === RBI FIX: настройка автокэша офлайн-файлов ===
 function rbiIsAutoCacheEnabled() {
+    // P2-0060: при входе платформы решают «Фото и PDF заранее» и «Документы заранее» в «Офлайн по модулям»
+    // (переключатель «Авто-кэш облачных файлов» перенесён туда); без платформы — как раньше, по настройке
+    const f = window.RBI && window.RBI.offlineFiles;
+    if (f && typeof f.scope === 'function' && typeof window.rbiAutoCacheScope === 'function') {
+        return window.rbiAutoCacheScope() !== 'none' || window.rbiAutoCacheDocs() !== 'none';
+    }
     // Полное автокэширование запускаем только когда настройка явно включена.
     return typeof appSettings !== 'undefined' && appSettings.autoCacheCloudFiles === true;
 }

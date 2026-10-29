@@ -8,8 +8,8 @@ import { createOfflineReader, NEED_INTERNET_INPUT, NO_CONNECTION_TEXT, offlineOf
 import type { ModuleOffline, OfflineReader, OfflineResult, ReadOpts, Result } from './offline-read.ts';
 import { deviceUserKey } from '../../auth/quality-bridge.ts';
 import { getClient } from '../../auth/auth.service.ts';
-import { FILES_SCOPES, filesScopeFor, mine30Photos } from './files-rule.ts';
-import type { FilesScope, InspectionLike } from './files-rule.ts';
+import { defaultDocsScope, FILES_SCOPES, filesScopeFor, mine30Photos } from './files-rule.ts';
+import type { DocsScope, FilesScope, InspectionLike } from './files-rule.ts';
 
 type St = { mode?: string; email?: string | null; companyId?: string | null; offline?: boolean };
 type Loader = { getById?: (id: string) => { offline?: unknown } | null };
@@ -184,7 +184,7 @@ export function filesChoice(module = 'quality'): FilesScope | null {
   const v = slot ? readJson<Record<string, string>>(FILES_KEY + slot, {})[module] : undefined;
   return FILES_SCOPES.includes(v as FilesScope) ? (v as FilesScope) : null;
 }
-export function setFilesChoice(module: string, scope: FilesScope | null): void {
+export function setFilesChoice(module: string, scope: FilesScope | DocsScope | null): void {
   const slot = currentSlot();
   if (!slot) return;
   const all = readJson<Record<string, string>>(FILES_KEY + slot, {});
@@ -201,6 +201,13 @@ export function currentFilesScope(): FilesScope {
   if (!keepOffline('quality')) return 'none';
   return filesScopeFor(filesChoice('quality'), qualityRole());
 }
+/** Документы Базы знаний заранее: выбор человека или правило по роли; «держать без сети» Базы знаний выключено — не качать. */
+export function currentDocsScope(): DocsScope {
+  if (!keepOffline('knowledge')) return 'none';
+  const slot = currentSlot();
+  const v = slot ? readJson<Record<string, string>>(FILES_KEY + slot, {}).knowledge : undefined;
+  return v === 'all' || v === 'none' ? v : defaultDocsScope(qualityRole());
+}
 type Perm = { getAssignedProjects?: () => string[]; isRecordInAssignedProjects?: (r: unknown, a: string[]) => boolean };
 /** Осмотр моего объекта: закреплённые объекты (P2-0033); не закреплено — все объекты компании. */
 function isMine(r: InspectionLike): boolean {
@@ -212,6 +219,6 @@ function isMine(r: InspectionLike): boolean {
 export function exposeOfflineFiles(): void {
   if (typeof window === 'undefined') return;
   const w = window as unknown as { RBI?: Record<string, unknown> };
-  (w.RBI = w.RBI || {}).offlineFiles = { scope: currentFilesScope, select: (list: InspectionLike[]) => mine30Photos(list, isMine, Date.now()) };
+  (w.RBI = w.RBI || {}).offlineFiles = { scope: currentFilesScope, docs: currentDocsScope, select: (list: InspectionLike[]) => mine30Photos(list, isMine, Date.now()) };
 }
 exposeOfflineFiles();

@@ -220,6 +220,8 @@ var SettingsRender = {
             <div id="settings-panel-my-device" data-settings-panel="my-device" class="space-y-3" hidden>
                 <!-- P2-0058: «Нет связи · не отправлено: N» — заполняет вход платформы (src/platform/auth/net-status.ts) -->
                 <div id="p2-net-status-slot"></div>
+                <!-- P2-0060: «Офлайн по модулям» (src/platform/services/offline/device-modules.ts, макет утверждён 29.10.2026) -->
+                <div id="p2-offline-modules-slot"></div>
                 <!-- СИНХРОНИЗАЦИЯ КОМАНДЫ -->
                 <details
                     class="bg-[var(--card-bg)] border border-brand-soft rounded-2xl shadow-sm group [&_summary::-webkit-details-marker]:hidden"
@@ -271,32 +273,12 @@ var SettingsRender = {
                                 <span><span data-i18n="settings.body.storage.free_prefix">Свободно:</span> <span id="storage-free">--</span> <span data-i18n="settings.opt.mb">МБ</span></span>
                             </div>
 
-                            <div class="flex justify-between items-center mb-4">
-                                <div>
-                                    <div class="font-bold text-sm" data-i18n="settings.body.storage.auto_cache">Авто-кэш облачных файлов</div>
-                                    <div class="text-rbi-caption text-[var(--text-muted)] mt-1" data-i18n="settings.body.storage.auto_cache_hint">Сохранять фото и PDF для офлайна</div>
-                                </div>
-                                <label class="toggle-switch"><input type="checkbox" id="set-autocache"
-                                        data-settings-action="toggleSetting" data-settings-action-key="autoCacheCloudFiles" data-settings-action-val-type="element" data-action-event="change"><span
-                                        class="toggle-slider"></span></label>
+                            <!-- P2-0060: «Авто-кэш облачных файлов» и «Скачать …» перенесены в «Офлайн по модулям» (выше на этой странице) -->
+                            <div class="mb-3 p-3 rounded-xl border border-dashed border-surface text-rbi-caption text-muted" data-testid="storage-moved">
+                                Авто-кэш и «Скачать …» (30 дней, базу знаний, отчёты, всё) — в блоке «Офлайн по модулям» выше: у каждого модуля «Фото и PDF заранее» и «Скачать сейчас».
                             </div>
-
                             <div id="offline-cache-progress" class="hidden mb-3 text-rbi-caption font-bold text-muted"></div>
 
-                            <div class="grid grid-cols-1 gap-2 mb-3">
-                                <button type="button" data-settings-action="downloadOfflineCacheScope" data-action-arg="days30"
-                                    class="w-full bg-surface text-ink border border-surface py-2.5 rounded-xl font-black text-rbi-caption uppercase active:scale-95 transition-colors">
-                                    <span data-i18n="settings.body.storage.dl_30d">Скачать последние 30 дней</span>
-                                </button>
-                                <button type="button" data-settings-action="downloadOfflineCacheScope" data-action-arg="knowledge"
-                                    class="w-full bg-surface text-ink border border-surface py-2.5 rounded-xl font-black text-rbi-caption uppercase active:scale-95 transition-colors">
-                                    <span data-i18n="settings.body.storage.dl_knowledge">Скачать только базу знаний</span>
-                                </button>
-                                <button type="button" data-settings-action="downloadOfflineCacheScope" data-action-arg="reports"
-                                    class="w-full bg-surface text-ink border border-surface py-2.5 rounded-xl font-black text-rbi-caption uppercase active:scale-95 transition-colors">
-                                    <span data-i18n="settings.body.storage.dl_reports">Скачать отчёты на устройство</span>
-                                </button>
-                            </div>
 
                             <div class="grid grid-cols-3 gap-2 mb-3">
                                 <button data-settings-action="clearPdfCache"
@@ -400,17 +382,6 @@ var SettingsRender = {
                                 </div>
                             </div>
 
-                            <button data-settings-action="downloadOfflineCacheScope" data-action-arg="all"
-                                class="w-full bg-brand-soft text-brand border border-brand-soft py-3 rounded-xl font-black text-rbi-label uppercase active:scale-95 transition-colors flex items-center justify-center gap-2 mb-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 11v6m0 0l-3-3m3 3l3-3">
-                                    </path>
-                                </svg>
-                                <span data-i18n="settings.body.storage.dl_all">Скачать всё для Офлайна</span>
-                            </button>
                         </div>
 
                         <!-- Ручной экспорт -->

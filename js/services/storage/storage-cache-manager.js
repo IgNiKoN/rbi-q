@@ -1187,7 +1187,14 @@ window.RbiStorageManager = {
         return freed;
     },
 
-    async runManualRecoverableCacheCleanup() {
+    /**
+     * Удалить восстановимые локальные копии файлов (есть в облаке); локальные неотправленные не трогаются никогда.
+     * P2-0060 «Очистить скачанное» по модулю: opts.only — 'quality' (фото, планы, отчёты Качества / СК) | 'knowledge' (документы, TWI,
+     * тех. узлы, эталоны, база ассистента); opts.noRefill — не докачивать заново сразу (подтверждение — на экране модуля); opts.silent — без тоста.
+     */
+    async runManualRecoverableCacheCleanup(opts = {}) {
+        const KNOWLEDGE = ['twi_photo', 'twi_pdf', 'node_file', 'custom_doc_pdf', 'assistant_kb_file', 'etalon_file'];
+        const inScope = (entityType) => !opts.only || (opts.only === 'knowledge') === KNOWLEDGE.includes(entityType);
         if (this.cleanupLock) {
             if (typeof showToast === 'function') showToast('⏳ Очистка уже выполняется...');
             return { skipped: true, reason: 'locked' };
@@ -1262,13 +1269,15 @@ window.RbiStorageManager = {
                 if (!cloudUrl) return;
 
                 const sizeBytes = this.payloadBytes(file.data, file);
+                const entityType = file.entityType || file.entity_type || registryItem?.entity_type || this.guessEntityTypeByUrl(cloudUrl);
+                if (!inScope(entityType)) return;
 
                 toEvict.push({
                     id: file.id,
                     cloudUrl,
                     sizeBytes,
                     registryItem,
-                    entityType: file.entityType || file.entity_type || registryItem?.entity_type || this.guessEntityTypeByUrl(cloudUrl)
+                    entityType
                 });
             });
 
@@ -1300,7 +1309,7 @@ window.RbiStorageManager = {
             }
             // RBI NEW: очищаем локальные PDF-отчеты из app_reports.
             // Метаданные отчета и file_url остаются, удаляется только тяжелый file_blob.
-            try {
+            if (opts.only !== 'knowledge') try {
                 // Лёгкие дескрипторы (без ссылки на file_blob) — dbPut идёт после
                 // закрытия курсора, см. предупреждение в dbForEachCursor.
                 const reportsToEvict = [];
@@ -1398,7 +1407,7 @@ window.RbiStorageManager = {
             }
 
             // Ручная очистка — пользователь ждёт повторной докачки при наличии сети.
-            if (deletedCount > 0 && typeof window.rbiRequestFullOfflineCache === 'function') {
+            if (!opts.noRefill && deletedCount > 0 && typeof window.rbiRequestFullOfflineCache === 'function') {
                 window.rbiRequestFullOfflineCache('manual_cleanup');
                 if (typeof window.rbiScheduleFullOfflineCacheIfEnabled === 'function') {
                     window.rbiScheduleFullOfflineCacheIfEnabled(1000);
@@ -1407,7 +1416,7 @@ window.RbiStorageManager = {
 
             if (typeof updateStorageInfo === 'function') updateStorageInfo();
 
-            if (typeof showToast === 'function') {
+            if (!opts.silent && typeof showToast === 'function') {
                 showToast(
                     `✅ Очищено ${(freedBytes / 1024 / 1024).toFixed(1)} МБ. ` +
                     `Удалено локальных копий: ${deletedCount}. ` +

@@ -194,6 +194,23 @@ window.rbiAutoCacheScope = function () {
     const f = window.RBI && window.RBI.offlineFiles;
     try { return f && typeof f.scope === 'function' ? f.scope() : 'all'; } catch (_) { return 'all'; }
 };
+/** P2-0060: документы Базы знаний заранее — свой выбор (all | none); без сервиса офлайна — как раньше (в «всё»). */
+window.rbiAutoCacheDocs = function () {
+    const f = window.RBI && window.RBI.offlineFiles;
+    try { return f && typeof f.docs === 'function' ? f.docs() : 'all'; } catch (_) { return 'all'; }
+};
+const RBI_KNOWLEDGE_KINDS = ['twi_photo', 'twi_pdf', 'node_file', 'custom_doc_pdf', 'assistant_kb_file', 'etalon_file'];
+/** P2-0060: ссылки автокэша этого человека — фото и PDF по охвату Качества (без документов БЗ) + документы БЗ по их выбору. */
+window.rbiAutoCacheEntries = function () {
+    const collect = typeof window.rbiCollectOfflineCacheUrls === 'function' ? window.rbiCollectOfflineCacheUrls : () => [];
+    const q = window.rbiAutoCacheScope();
+    const out = (q === 'none' ? [] : (collect(q) || [])).filter((e) => e && !RBI_KNOWLEDGE_KINDS.includes(e.kind));
+    if (window.rbiAutoCacheDocs() === 'all') {
+        const seen = new Set(out.map((e) => e.url));
+        (collect('knowledge') || []).forEach((e) => { if (e && e.url && !seen.has(e.url)) { seen.add(e.url); out.push(e); } });
+    }
+    return out;
+};
 
 /**
  * Докачка облачных файлов в IDB.
@@ -202,7 +219,8 @@ window.rbiAutoCacheScope = function () {
  *   none — заранее ничего не качается (уже скачанное не удаляется — только «Очистить скачанное»)
  */
 window.downloadMissingCloudFiles = async function (silent = false, scope = 'all') {
-    if (scope === 'auto') scope = window.rbiAutoCacheScope();
+    const auto = scope === 'auto';
+    if (auto && window.rbiAutoCacheScope() === 'none' && window.rbiAutoCacheDocs() === 'none') return;
     if (scope === 'none') return;
     if (window.rbiFileCacheQueueLock) {
         if (!silent && typeof showToast === 'function') showToast('⏳ Докачка файлов уже выполняется');
@@ -282,10 +300,10 @@ window.downloadMissingCloudFiles = async function (silent = false, scope = 'all'
         const collect = typeof window.rbiCollectOfflineCacheUrls === 'function'
             ? window.rbiCollectOfflineCacheUrls
             : () => [];
-        const entries = collect(resolvedScope) || [];
+        const entries = auto ? window.rbiAutoCacheEntries() : (collect(resolvedScope) || []);
 
         // Планы СК (floors / floors_v2 / units_v2) — добираем из IDB (RAM ConstManager уже в collect).
-        if ((resolvedScope === 'all' || !resolvedScope) && typeof window.rbiCollectConstructionPlanPdfUrls === 'function') {
+        if ((resolvedScope === 'all' || (auto && window.rbiAutoCacheScope() === 'all')) && typeof window.rbiCollectConstructionPlanPdfUrls === 'function') {
             try {
                 const planEntries = await window.rbiCollectConstructionPlanPdfUrls();
                 const seen = new Set(entries.map((e) => e && e.url).filter(Boolean));

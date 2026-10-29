@@ -3,7 +3,7 @@
  *  + фото открытых замечаний моих объектов независимо от даты; закрытое более поздним осмотром замечание — не качается. Стенд — tests/offline/files.mjs. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultFilesScope, filesScopeFor, mine30Photos } from '../files-rule.ts';
+import { defaultDocsScope, defaultFilesScope, filesScopeFor, mine30Photos } from '../files-rule.ts';
 import type { InspectionLike } from '../files-rule.ts';
 
 const NOW = Date.parse('2026-10-29T12:00:00Z');
@@ -50,4 +50,8 @@ test('mine30: закреплённых объектов нет (вся комп�
   const pick = mine30Photos(list, () => true, NOW);
   assert.equal(pick.get('x2'), 'all');
   assert.equal(pick.has('x1'), false, 'замечание то же — его последнее фото уже в свежем осмотре');
+});
+
+test('База знаний заранее (решение владельца 29.10): инженеру и подрядчику — все документы, руководству и гостю — не скачивать', () => {
+  assert.deepEqual(['engineer', 'contractor', 'manager', 'director', 'guest'].map(defaultDocsScope), ['all', 'all', 'none', 'none', 'none']);
 });

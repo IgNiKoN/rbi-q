@@ -8,6 +8,7 @@
 import { countUnsent, listPending } from './offline-rescue.ts';
 import { statusHtml, toItems, SYNC_CSS, SYNC_STYLE_ID } from './sync-status.ts';
 import type { IsUnsent } from './offline-rescue.ts';
+import { renderOfflineModules } from '../services/offline/device-modules.ts';
 
 export const NET_STATUS_EVENT = 'rbi:net-status';
 export const DEVICE_PATH = '#/settings/my/device';
@@ -198,6 +199,7 @@ export function startNetStatus(deps: Deps): void {
         journal, journalTotal: events.length }, !!slot.querySelector('details[open]'));
       if (slot.dataset.p2 !== html) { slot.dataset.p2 = html; slot.innerHTML = html; }
       if (!devWired) { devWired = true; slot.addEventListener('click', onDeviceClick); }
+      void renderOfflineModules(doc.getElementById('p2-offline-modules-slot'));   // P2-0060: «Офлайн по модулям» — под журналом
     } finally {
       devBusy = false;
     }

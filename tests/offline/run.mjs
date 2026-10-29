@@ -7,6 +7,7 @@
 // P2-0060: m-hang, m-hang375, m-revoke, m-first, m-other — права и меню сразу из памяти при зависшем сервере (menu.mjs), кадры в menu.json.
 // P2-0060: v-summary375, v-summary1440, v-other, v-prefetch375, v-prefetch1440 — копия для просмотра: Сводка План/Факта без сети, чужой копии нет (view.mjs).
 // P2-0060: f-field, f-manager — «Фото и PDF заранее» по роли: 300 осмотров по 3 объектам за 90 дней (files.mjs), замер в files.json.
+// P2-0060: d-device, d-quality-only, d-screens — «Данные на устройстве → Офлайн по модулям» (device.mjs).
 // P2-0066: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow, r-launch, r-return, r-queue, r-transition, r-size — «выкладка во время работы» (release.mjs), замер в release.json.
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
@@ -18,6 +19,7 @@ import { releaseMeasures, releaseScenarios } from './release.mjs';
 import { menuScenarios, saveMenuMeasures } from './menu.mjs';
 import { saveViewMeasures, viewScenarios } from './view.mjs';
 import { filesScenarios, saveFilesMeasures } from './files.mjs';
+import { deviceScenarios } from './device.mjs';
 import { count, freshProfile, go, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
 
 const args = process.argv.slice(2);
@@ -331,7 +333,7 @@ async function screen(width, scheme) {
 }
 
 const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue, expired, stale14, invalid, cache, otheruser,
-  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out), ...releaseScenarios(out), ...menuScenarios(out), ...viewScenarios(out), ...filesScenarios(out) };
+  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out), ...releaseScenarios(out), ...menuScenarios(out), ...viewScenarios(out), ...filesScenarios(out), ...deviceScenarios(out) };
 const list = pick.length ? pick : Object.keys(SCENARIOS);
 for (const n of list) {
   if (!SCENARIOS[n]) { ok(false, 'нет сценария ' + n); continue; }
