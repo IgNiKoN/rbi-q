@@ -420,13 +420,14 @@
             return true;
         },
 
-        canDeleteItem: function (ownerName) {
+        // P2-0061: (запись, вид) — по общему правилу; (ФИО) — как раньше
+        canDeleteItem: function (ownerName, kindName) {
             var perms = window.RBI.services.permissions;
             if (!perms || typeof perms.canDelete !== 'function') {
                 console.warn('[RBI Knowledge Service] permissions service недоступен');
                 return false;
             }
-            return perms.canDelete(ownerName);
+            return perms.canDelete(ownerName, kindName);
         }
     };
 

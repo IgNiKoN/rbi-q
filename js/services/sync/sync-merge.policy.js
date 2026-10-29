@@ -93,7 +93,7 @@ export function cloudMayOverwrite(p) {
  * P2-0023 этап 6. Единое правило уникальности карты ТИВИ «Технадзор» на пункт чек-листа (на создании).
  * Ищет по ВСЕМ картам (и скрытым фильтром), а не только по видимым.
  * @param {object[]} cards все карты (память + база устройства; дубли по id допустимы)
- * @param {{ checklistKey: string, itemId: string, me: string, canEdit: (owner: string) => boolean }} q
+ * @param {{ checklistKey: string, itemId: string, me: string, canEdit: (card: object) => boolean }} q  (P2-0061: решение — по самой карте)
  * @returns {{ action: 'none' } | { action: 'open', card: object } | { action: 'refuse', card: object }}
  *          open — карта своя (или её можно править) → открыть её; refuse — чужая.
  */
@@ -104,7 +104,7 @@ export function findTwiConflict(cards, q) {
     if (!card) return { action: 'none' };
     const owner = String(card.owner || '').trim();
     const mine = !owner || (q.me && owner === String(q.me).trim());
-    if (mine || (typeof q.canEdit === 'function' && q.canEdit(owner))) return { action: 'open', card };
+    if (mine || (typeof q.canEdit === 'function' && q.canEdit(card))) return { action: 'open', card };
     return { action: 'refuse', card };
 }
 

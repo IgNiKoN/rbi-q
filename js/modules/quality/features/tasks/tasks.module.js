@@ -1802,7 +1802,7 @@ async function _openTaskAction(taskId) {
 
         var postponeCountHtml = task.postponeCount > 0 ? '<span class="absolute -top-1.5 -right-1.5 bg-danger text-white text-rbi-caption w-4 h-4 flex items-center justify-center rounded-full font-black">' + task.postponeCount + '</span>' : '';
         var _permSvc4 = (_ctx && _ctx.permissions) || window.RBI.services.permissions;
-        var canDeleteForever = _permSvc4 ? _permSvc4.canDelete(task.engineerName || task.inspectorName || '', task.assignedToId) : false;
+        var canDeleteForever = _permSvc4 ? _permSvc4.canDelete(task, 'task') : false;
         var deleteForeverBtnHtml = canDeleteForever ? '<button onclick="rbi_deleteTaskForever(\'' + task.id + '\')" class="flex flex-col justify-center items-center p-2 rounded-xl bg-[var(--card-bg)] text-danger font-bold text-rbi-caption uppercase active:scale-95 border border-[var(--card-border)] hover:bg-danger-soft transition-colors"><svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> ' + _t('quality.tasks.action.delete', 'Удалить') + '</button>' : '';
         actionButtonsHtml += '\n            <div class="grid ' + (canDeleteForever ? 'grid-cols-4' : 'grid-cols-3') + ' gap-2 w-full mt-2 pt-2 border-t border-[var(--card-border)]">\n                <button onclick="rbi_postponeTask(\'' + task.id + '\')" class="relative flex flex-col justify-center items-center p-2 rounded-xl bg-[var(--card-bg)] text-ink font-bold text-rbi-caption uppercase active:scale-95 border border-[var(--card-border)] hover:bg-[var(--hover-bg)] transition-colors"><svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg> ' + _t('quality.tasks.action.postpone', 'Сдвинуть') + postponeCountHtml + '</button>\n                <button onclick="rbi_pauseTask(\'' + task.id + '\')" class="flex flex-col justify-center items-center p-2 rounded-xl bg-[var(--card-bg)] text-ink font-bold text-rbi-caption uppercase active:scale-95 border border-[var(--card-border)] hover:bg-[var(--hover-bg)] transition-colors"><svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ' + _t('quality.tasks.action.pause', 'Пауза') + '</button>\n                <button onclick="rbi_cancelTask(\'' + task.id + '\')" class="flex flex-col justify-center items-center p-2 rounded-xl bg-[var(--card-bg)] text-orange-500 dark:text-orange-400 font-bold text-rbi-caption uppercase active:scale-95 border border-[var(--card-border)] hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"><svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg> ' + _t('quality.tasks.action.cancel', 'Отменить') + '</button>\n                ' + deleteForeverBtnHtml + '\n            </div>\n        ';
     }
@@ -1895,7 +1895,7 @@ async function _cancelTask(taskId) {
     var task = window.rbi_tasksData.find(function(t){ return t.id === taskId; });
     if (!task) return;
     var _permSvc6 = (_ctx && _ctx.permissions) || window.RBI.services.permissions;
-    if (!_permSvc6.canDelete(task.engineerName || task.inspectorName || '', task.assignedToId)) {
+    if (!_permSvc6.canDelete(task, 'task')) {
         return showToast(_t('quality.tasks.toast.no_cancel_rights', '⚠️ Нет прав на отмену чужой задачи!'));
     }
     var reason = prompt(_t('quality.tasks.prompt.cancel_reason', 'Укажите причину отмены задачи:'));
@@ -1918,7 +1918,7 @@ async function _deleteTaskForever(taskId) {
     var task = window.rbi_tasksData.find(function(t){ return t.id === taskId; });
     if (!task) return;
     var _permSvc7 = (_ctx && _ctx.permissions) || window.RBI.services.permissions;
-    if (!_permSvc7 || !_permSvc7.canDelete(task.engineerName || task.inspectorName || '', task.assignedToId)) {
+    if (!_permSvc7 || !_permSvc7.canDelete(task, 'task')) {
         return showToast(_t('quality.tasks.toast.no_delete_rights', '⚠️ Нет прав на удаление этой задачи!'));
     }
     if (!confirm(_t('quality.tasks.confirm.delete_forever', 'Удалить задачу навсегда? Это действие необратимо.'))) return;

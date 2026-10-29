@@ -2,7 +2,7 @@
  *  переходное правило по ФИО, id главнее подписи, без входа — ничего не уходит. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accessStamp, canSend, isMine, kindOf, kindsFrom, meFrom, stampAuthor, visible } from '../../services/sync/sync-access.policy.js';
+import { accessStamp, canChange, canSend, isMine, kindOf, kindsFrom, meFrom, stampAuthor, visible } from '../../services/sync/sync-access.policy.js';
 
 const K = kindOf('inspection');
 const U1 = '11111111-1111-4111-8111-111111111111', U2 = '22222222-2222-4222-8222-222222222222', CP = '33333333-3333-4333-8333-333333333333';
@@ -83,4 +83,35 @@ test('без входа — «нужно войти»; неизвестный в
   assert.notEqual(accessStamp(eng()), accessStamp(eng({ objects: ['ЖК Север'] })));
   assert.equal(accessStamp(eng()), accessStamp(eng()));
   assert.equal(accessStamp(null), '');
+});
+
+test('этап 2: каждый вид Качества, СК и Базы знаний описан и решается правилом — моё / чужое / без id', async () => {
+  const { RECORD_STORES } = await import('../../../src/platform/auth/offline-rescue.ts');
+  const me = eng();
+  const cases = { task: 'engineerName', meeting: 'author', intervention: 'owner', fmea: 'author', schedule: 'owner', report: 'created_by',
+    sk_record: 'uploaded_by', etalon: 'owner', document: 'owner', practice: 'author', twi: 'owner' };
+  for (const [name, field] of Object.entries(cases)) {
+    const k = kindOf(name);
+    assert.ok(k && k.store && k.table && k.title, name + ': описание');
+    assert.equal(RECORD_STORES[k.store], k.title, name + ': в списке «не отправлено» из описания');
+    const own = { id: 'x', [field]: 'Иванов Иван', project_canonical_key: 'ЖК Север' };
+    const other = { id: 'y', [field]: 'Петров Пётр', project_canonical_key: 'ЖК Север' };
+    assert.equal(isMine(own, k, me), true, name + ': моё по ФИО');
+    assert.equal(isMine({ ...other, authorId: U1 }, k, me), true, name + ': моё по id');
+    assert.equal(canSend(own, k, me).ok, true, name + ': своё уходит');
+    // чужое: «только автор» — нет; «команда объекта» и «библиотека» — как сервер, да; изменить / удалить на экране — только своё
+    assert.equal(canSend(other, k, me).ok, k.mode !== 'author', name + ': чужое уходит по режиму сервера ' + k.mode);
+    assert.equal(canChange(other, k, me).ok, false, name + ': чужое изменить / удалить нельзя');
+    assert.equal(canChange(own, k, me).ok, true, name + ': своё — можно');
+    assert.equal(canChange(other, k, eng({ actions: ['quality.view', 'quality.edit', 'quality.manage'] })).ok, true, name + ': руководитель — можно');
+  }
+  const t = kindOf('task');
+  assert.equal(isMine({ id: 't', engineerName: 'Петров', assignedToId: U1 }, t, me), true, 'задача, назначенная мне, — моя');
+});
+
+test('этап 2: подрядчик — в режиме «команда объекта» только своя фирма; библиотека — по праву', () => {
+  const me = eng({ actions: ['quality.view', 'quality.edit', 'quality.scope.contractor'], contractorId: CP });
+  assert.equal(canSend({ id: 'm', author: 'Петров', contractorId: CP }, kindOf('meeting'), me).ok, true);
+  assert.equal(canSend({ id: 'm', author: 'Петров', contractorId: 'чужая' }, kindOf('meeting'), me).code, 'contractor');
+  assert.equal(canSend({ id: 'p', author: 'Петров' }, kindOf('practice'), me).ok, true);
 });

@@ -1244,7 +1244,7 @@ function emit(eventName, detail) {
   async function rbi_deleteFmea(id) {
     const record = _getFmea().find(m => String(m.id) === String(id));
     var _permSvc1 = (GameActions._ctx && GameActions._ctx.permissions) || window.RBI.services.permissions;
-    if (record && !_permSvc1.canDelete(record.author)) return showToast(_t('quality.game.toast.fmea_no_delete', '⚠️ Нет прав на удаление чужого FMEA отчета!'));
+    if (record && !_permSvc1.canDelete(record, 'fmea')) return showToast(_t('quality.game.toast.fmea_no_delete', '⚠️ Нет прав на удаление чужого FMEA отчета!'));
 
     if (!confirm(_t('quality.game.confirm.delete_fmea', 'Удалить этот FMEA отчет?'))) return;
     if (record) {

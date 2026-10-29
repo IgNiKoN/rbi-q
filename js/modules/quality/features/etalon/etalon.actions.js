@@ -956,7 +956,7 @@
       const record = etalonActs3.find(c => String(c.id) === String(id));
       // Проверяем права по owner или по inspectorName
       var permSvc = (EtalonActions._ctx && EtalonActions._ctx.permissions) || (window.RBI && window.RBI.services && window.RBI.services.permissions);
-      if (record && permSvc && !permSvc.canDelete(record.owner || record.inspectorName)) return showToast(_t('quality.etalon.toast.no_delete_permission', '⚠️ Нет прав на удаление чужого эталона!'));
+      if (record && permSvc && !permSvc.canDelete(record, 'etalon')) return showToast(_t('quality.etalon.toast.no_delete_permission', '⚠️ Нет прав на удаление чужого эталона!'));
 
       if (!confirm(_t('quality.etalon.confirm.delete', 'Удалить этот Акт-Эталон?'))) return;
       if (record) {

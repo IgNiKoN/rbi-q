@@ -297,8 +297,7 @@ export const HistoryActions = {
             var id = ids[k];
             var found = HistoryState.allRecords.find(function (i) { return String(i.id) === String(id); });
             if (!found) continue;
-            var ownerName = found.inspectorName || found.inspector_name || '';
-            if (perm && !perm.canDelete(ownerName)) {
+            if (perm && !perm.canDelete(found, 'inspection')) {   // P2-0061: по записи (id автора; переходно — ФИО)
                 canDeleteAll = false;
                 break;
             }

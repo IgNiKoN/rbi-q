@@ -1354,7 +1354,7 @@ window.rbi_publishPractice = async function (id) {
 window.rbi_deletePractice = async function (id) {
     const pIndex = window.rbi_practicesData.findIndex(p => p.id === id);
     var _knowSvc2 = (_ctx && _ctx.knowledge) || window.RBI.services.knowledge;
-    if (pIndex !== -1 && !_knowSvc2.canDeleteItem(window.rbi_practicesData[pIndex].author)) {
+    if (pIndex !== -1 && !_knowSvc2.canDeleteItem(window.rbi_practicesData[pIndex], 'practice')) {
         return showToast("⚠️ Инженер может удалить только свою практику. Чужие материалы удаляют заместитель или администратор.");
     }
 
@@ -1429,7 +1429,7 @@ window.rbi_editPractice = function (id) {
     const p = window.rbi_practicesData.find(x => x.id === id);
     if (!p) return;
     var _perms = window.RBI && window.RBI.services && window.RBI.services.permissions;
-    if (_perms && typeof _perms.canEdit === 'function' && !_perms.canEdit(p.owner || p.author)) {
+    if (_perms && typeof _perms.canEdit === 'function' && !_perms.canEdit(p, 'intervention')) {
         return showToast("⚠️ Редактировать можно только свою практику.");
     }
 

@@ -37,75 +37,96 @@ for (const [k, acts] of Object.entries(ROLES)) {
     [CA, U[k], id, k === 'engO1' ? ['o1-mir'] : null, k === 'ctr' ? CP1 : null]);
 }
 
-// обязательные колонки таблицы без значения по умолчанию — заполняются заглушками (как pg_temp.mk в 033)
-const cols = await q(`select a.attname n, format_type(a.atttypid, a.atttypmod) t from pg_attribute a
-  left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
-  where a.attrelid = 'quality.rbi_inspections'::regclass and a.attnum > 0 and not a.attisdropped and a.attnotnull and d.adbin is null
-    and a.attname not in ('id', 'project_code', 'core_company_id', 'core_project_id', 'core_created_by')`);
-const filler = (t) => (t === 'text' ? "'x'" : t === 'uuid' ? 'gen_random_uuid()' : t === 'boolean' ? 'false' : /json/.test(t) ? "'{}'"
+// таблицы с политикой и вид записи устройства (описание `sync` манифеста)
+const TABLES = [['rbi_inspections', 'inspection'], ['rbi_tasks', 'task'], ['project_meetings', 'meeting'], ['project_interventions', 'intervention'],
+  ['project_fmea', 'fmea'], ['project_schedule_stages', 'schedule'], ['shared_reports', 'report'], ['sk_records', 'sk_record'],
+  ['shared_etalons', 'etalon'], ['shared_docs', 'document'], ['shared_practices', 'practice'], ['shared_twi_cards', 'twi']];
+const filler = (t, tag) => (t === 'text' ? `'${tag}'` : t === 'uuid' ? 'gen_random_uuid()' : t === 'boolean' ? 'false' : /json/.test(t) ? "'{}'"
   : /int|numeric|double|real/.test(t) ? '1' : /timestamp/.test(t) ? 'now()' : t === 'date' ? 'current_date' : /\[\]/.test(t) ? "'{}'" : 'null');
-async function row(id, { author = null, engineer = 'x', object = null, cp = null }) {
+const colsOf = {};
+for (const [t] of TABLES) {
+  colsOf[t] = await q(`select a.attname n, format_type(a.atttypid, a.atttypmod) t, a.attnotnull nn, d.adbin is not null def from pg_attribute a
+    left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+    where a.attrelid = ('quality.' || $1)::regclass and a.attnum > 0 and not a.attisdropped`, [t]);
+}
+const SET = ['id', 'project_code', 'core_company_id', 'engineer_name', 'project_canonical_key', 'assigned_to_auth_user_id', 'core_project_id', 'core_created_by'];
+/** Строка таблицы: обязательные колонки — заглушки (как pg_temp.mk в 033); автор вставки — sub (set_author сервера). */
+async function row(t, id, { author = null, engineer = 'x', object = null, cp = null, assignee = null }) {
+  const c = colsOf[t], has = (n) => c.some((x) => x.n === n);
   await db.exec(`reset role; select set_config('request.jwt.claim.sub', '${author || ''}', false)`);
-  const names = ['id', 'project_code', 'core_company_id', 'engineer_name', 'project_canonical_key', ...cols.map((c) => c.n).filter((n) => !['engineer_name', 'project_canonical_key'].includes(n))];
-  const vals = [`'${id}'`, `'${PA}'`, `'${CA}'`, `'${engineer.replace(/'/g, "''")}'`, object === null ? 'null' : `'${object}'`,
-    ...cols.filter((c) => !['engineer_name', 'project_canonical_key'].includes(c.n)).map((c) => filler(c.t))];
-  await db.exec(`insert into quality.rbi_inspections (${names.map((n) => '"' + n + '"').join(',')}) values (${vals.join(',')})`);
-  if (cp) {   // фирма записи — прямо id контрагента (обычно её ставит триггер по названию; здесь — в обход, как перенос данных)
+  const names = ['id', 'core_company_id'], vals = [`'${id}'`, `'${CA}'`];
+  if (has('project_code')) { names.push('project_code'); vals.push(`'${PA}'`); }
+  if (has('engineer_name')) { names.push('engineer_name'); vals.push(`'${engineer.replace(/'/g, "''")}'`); }
+  if (has('project_canonical_key')) { names.push('project_canonical_key'); vals.push(object === null ? 'null' : `'${object}'`); }
+  if (has('assigned_to_auth_user_id') && assignee) { names.push('assigned_to_auth_user_id'); vals.push(`'${assignee}'`); }
+  for (const x of c) if (x.nn && !x.def && !SET.includes(x.n)) { names.push(x.n); vals.push(filler(x.t, id + '-' + x.n)); }
+  await db.exec(`insert into quality.${t} (${names.map((n) => '"' + n + '"').join(',')}) values (${vals.join(',')})`);
+  if (cp && has('core_counterparty_id')) {   // фирма записи — прямо id контрагента (обычно её ставит триггер по названию; здесь — в обход, как перенос данных)
     await db.exec(`select set_config('quality.object_bind', '1', false)`);
-    await q(`update quality.rbi_inspections set core_counterparty_id = $1 where id = $2`, [cp, id]);
+    await q(`update quality.${t} set core_counterparty_id = $1 where id = $2`, [cp, id]);
     await db.exec(`select set_config('quality.object_bind', '', false)`);
   }
   await db.exec(`select set_config('request.jwt.claim.sub', '', false)`);
 }
 const mail = (k) => U[k] + '@test.invalid';
-await row('r-eng-o1', { author: U.eng, object: 'жк север' });
-await row('r-eng-o2', { author: U.eng, object: 'жк юг' });
-await row('r-eng-none', { author: U.eng, object: null });
-await row('r-engO1-o1', { author: U.engO1, object: 'жк север' });
-await row('r-engO1-none', { author: U.engO1, object: null });
-await row('r-other-o1', { author: U.other, object: 'жк север' });
-await row('r-other-o2', { author: U.other, object: 'жк юг' });
-await row('r-other-none', { author: U.other, object: null });
-await row('r-legacy-mail', { author: null, engineer: mail('eng'), object: 'жк север' });        // старая: автор по почте (member_by_email)
-await row('r-cp1', { author: U.other, object: 'жк север', cp: CP1 });
-await row('r-cp2', { author: U.other, object: 'жк юг', cp: CP2 });
-await row('r-ctr-own', { author: U.ctr, object: 'жк север', cp: null });
+for (const [t] of TABLES) {
+  await row(t, 'r-eng-o1', { author: U.eng, object: 'жк север' });
+  await row(t, 'r-eng-o2', { author: U.eng, object: 'жк юг' });
+  await row(t, 'r-eng-none', { author: U.eng, object: null });
+  await row(t, 'r-engO1-o1', { author: U.engO1, object: 'жк север' });
+  await row(t, 'r-engO1-none', { author: U.engO1, object: null });
+  await row(t, 'r-other-o1', { author: U.other, object: 'жк север' });
+  await row(t, 'r-other-o2', { author: U.other, object: 'жк юг' });
+  await row(t, 'r-other-none', { author: U.other, object: null });
+  await row(t, 'r-legacy-mail', { author: null, engineer: mail('eng'), object: 'жк север' });   // старая: автор по почте (member_by_email)
+  await row(t, 'r-cp1', { author: U.other, object: 'жк север', cp: CP1 });
+  await row(t, 'r-cp2', { author: U.other, object: 'жк юг', cp: CP2 });
+  await row(t, 'r-ctr-own', { author: U.ctr, object: 'жк север', cp: null });
+  await row(t, 'r-assigned-eng', { author: U.other, object: 'жк юг', assignee: U.eng });         // задача: назначена инженеру
+}
 
 // ---- сравнение
-const K = kindOf('inspection');
 const asUser = async (u) => db.exec(`reset role;
   select set_config('request.jwt.claim.sub', '${u}', false), set_config('request.jwt.claims', '${JSON.stringify({ sub: u, role: 'authenticated' })}', false),
          set_config('request.headers', '${JSON.stringify({ 'x-company-id': CA })}', false);
   set role authenticated;`);
-const all = (await q(`select id, core_created_by, engineer_name, project_canonical_key, core_counterparty_id from quality.rbi_inspections order by id`));
 let fail = 0, checks = 0;
-const tally = {};
-const out = [];
-for (const k of Object.keys(U)) {
-  await asUser(U[k]);
-  const acc = (await q(`select quality.my_access() a`))[0].a;
-  const me = meFrom({ userId: U[k], email: mail(k), name: 'Сотрудник ' + k, actions: acc.actions,
-    objects: Array.isArray(acc.objects) ? acc.objects.map((o) => o.key) : null, contractorId: acc.contractor ? acc.contractor.id : '' });
-  const seen = new Set((await q(`select id from quality.rbi_inspections`)).map((r) => r.id));
-  for (const r of all) {
-    let canEdit;
-    try {
-      await db.exec('begin');
-      canEdit = (await q(`update quality.rbi_inspections set location = location where id = $1 returning id`, [r.id])).length === 1;
-    } catch { canEdit = false; } finally { await db.exec('rollback').catch(() => {}); await asUser(U[k]); }
-    const rec = { id: r.id, authorId: r.core_created_by || undefined, inspectorName: r.engineer_name, project_canonical_key: r.project_canonical_key || '', contractorId: r.core_counterparty_id || '' };
-    const dv = visible(rec, K, me), de = canSend(rec, K, me);
-    tally[k] = tally[k] || { видно: 0, править: 0 };
-    if (seen.has(r.id)) tally[k].видно++;
-    if (canEdit) tally[k].править++;
-    for (const [what, srv, dev] of [['видно', seen.has(r.id), dv], ['править', canEdit, de.ok]]) {
-      checks++;
-      if (srv !== dev) { fail++; out.push(`FAIL ${k} · ${r.id} · ${what}: сервер ${srv}, устройство ${dev}${de.reason ? ' (' + de.reason + ')' : ''}`); }
+const out = [], tally = {};
+for (const [t, kindName] of TABLES) {
+  const K = kindOf(kindName);
+  const has = (n) => colsOf[t].some((x) => x.n === n);
+  const pick = ['id', ...['core_created_by', 'core_counterparty_id', 'engineer_name', 'project_canonical_key', 'assigned_to_auth_user_id'].filter(has)];
+  const all = await q(`select ${pick.map((n) => '"' + n + '"').join(',')} from quality.${t} order by id`);
+  for (const k of Object.keys(U)) {
+    await asUser(U[k]);
+    const acc = (await q(`select quality.my_access() a`))[0].a;
+    const me = meFrom({ userId: U[k], email: mail(k), name: 'Сотрудник ' + k, actions: acc.actions,
+      objects: Array.isArray(acc.objects) ? acc.objects.map((o) => o.key) : null, contractorId: acc.contractor ? acc.contractor.id : '' });
+    const seen = new Set((await q(`select id from quality.${t}`)).map((r) => r.id));
+    for (const r of all) {
+      let canEdit;
+      try {
+        await db.exec('begin');
+        canEdit = (await q(`update quality.${t} set id = id where id = $1 returning id`, [r.id])).length === 1;
+      } catch { canEdit = false; } finally { await db.exec('rollback').catch(() => {}); await asUser(U[k]); }
+      // запись устройства — как её сохраняет скачивание (id автора, подпись, объект, фирма, кому задача)
+      const nameField = [].concat((K.author || {}).name || [])[0] || 'inspectorName';
+      const rec = { id: r.id, authorId: r.core_created_by || undefined, [nameField]: r.engineer_name || '', project_canonical_key: r.project_canonical_key || '',
+        contractorId: r.core_counterparty_id || '', assignedToId: r.assigned_to_auth_user_id || '' };
+      const dv = visible(rec, K, me), de = canSend(rec, K, me);
+      const key = t + ' · ' + k;
+      tally[key] = tally[key] || [0, 0];
+      if (seen.has(r.id)) tally[key][0]++;
+      if (canEdit) tally[key][1]++;
+      for (const [what, srv, dev] of [['видно', seen.has(r.id), dv], ['править', canEdit, de.ok]]) {
+        checks++;
+        if (srv !== dev) { fail++; out.push(`FAIL ${t} · ${k} · ${r.id} · ${what}: сервер ${srv}, устройство ${dev}${de.reason ? ' (' + de.reason + ')' : ''}`); }
+      }
     }
   }
 }
 await db.exec('reset role');
 console.log(out.join('\n'));
-console.log('Сервер (из ' + all.length + ' записей): ' + Object.entries(tally).map(([k, v]) => `${k} видит ${v.видно}, правит ${v.править}`).join('; '));
-console.log(`Зеркало rbi_inspections: проверок ${checks}, FAIL ${fail}`);
+for (const [t] of TABLES) console.log(t + ': ' + Object.keys(U).map((k) => `${k} ${tally[t + ' · ' + k].join('/')}`).join(', '));
+console.log(`Зеркало ${TABLES.length} таблиц: проверок ${checks}, FAIL ${fail}`);
 process.exit(fail ? 1 : 0);

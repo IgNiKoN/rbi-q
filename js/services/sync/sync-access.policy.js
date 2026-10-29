@@ -97,8 +97,9 @@ function decide(rec, kind, me, what) {
         return { ok: false, code: 'right', reason: 'Не отправлено: нет права на эти записи', hint: 'Попросите администратора компании дать право' };
     }
     const mod = kind.module === 'construction' || String(acts[0] || '').startsWith('construction.') ? 'construction' : 'quality';
-    const mine = isMine(rec, kind, me);
     let mode = kind.mode || 'author';
+    if (mode === 'shared') return { ok: true };   // библиотека компании: право есть — можно (quality.can)
+    const mine = isMine(rec, kind, me);
     if (mode === 'owner') {
         if (has(me, mod + '.manage') || mine) return { ok: true };
         return foreign(rec, kind);
@@ -128,6 +129,15 @@ function foreign(rec, kind) {
 
 /** Можно ли отправить (правка на сервере). */
 export const canSend = (rec, kind, me) => decide(rec, kind, me, 'edit');
+/** Изменить / удалить на экране: можно отправить И (запись моя или я управляю модулем / вся компания). Строже сервера для
+ *  режимов «команда объекта» и «библиотека» — чужое меняет только руководитель (как было на экранах до P2-0061, ТД 238). */
+export function canChange(rec, kind, me) {
+    const d = canSend(rec, kind, me);
+    if (!d.ok || !kind || !me) return d;
+    const mod = kind.module === 'construction' ? 'construction' : 'quality';
+    if (isMine(rec, kind, me) || has(me, mod + '.manage') || has(me, 'quality.scope.company')) return d;
+    return foreign(rec, kind);
+}
 /** Видна ли запись (отбор после скачивания). */
 export const visible = (rec, kind, me) => decide(rec, kind, me, 'view').ok;
 /** Отпечаток доступа: изменился с прошлой попытки — «Не отправлено» перепроверяется (ТД 313). */
@@ -151,5 +161,5 @@ export function deviceMe(w = typeof window !== 'undefined' ? window : {}) {
 }
 
 if (typeof window !== 'undefined') {
-    window.RbiSyncAccess = { kindsFrom, kindOf, meFrom, deviceMe, isMine, stampAuthor, canSend, visible, accessStamp, KINDS };
+    window.RbiSyncAccess = { kindsFrom, kindOf, meFrom, deviceMe, isMine, stampAuthor, canSend, canChange, visible, accessStamp, KINDS };
 }

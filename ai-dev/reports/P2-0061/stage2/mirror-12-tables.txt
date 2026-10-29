@@ -1,0 +1,14 @@
+
+rbi_inspections: eng 4/4, engO1 7/2, mgr 13/13, dir 13/0, comp 13/13, ctr 1/1, viewer 13/0, other 6/6
+rbi_tasks: eng 1/1, engO1 2/0, mgr 6/6, dir 6/0, comp 6/6, ctr 1/1, viewer 6/0, other 6/6
+project_meetings: eng 13/13, engO1 7/7, mgr 13/13, dir 13/0, comp 13/13, ctr 1/1, viewer 13/0, other 13/13
+project_interventions: eng 13/13, engO1 7/7, mgr 13/13, dir 13/0, comp 13/13, ctr 1/1, viewer 13/0, other 13/13
+project_fmea: eng 13/13, engO1 7/7, mgr 13/13, dir 13/0, comp 13/13, ctr 1/1, viewer 13/0, other 13/13
+project_schedule_stages: eng 13/13, engO1 7/7, mgr 13/13, dir 13/0, comp 13/13, ctr 1/1, viewer 13/0, other 13/13
+shared_reports: eng 13/13, engO1 7/7, mgr 13/13, dir 13/0, comp 13/13, ctr 1/1, viewer 13/0, other 13/13
+sk_records: eng 13/13, engO1 7/7, mgr 13/13, dir 13/0, comp 13/13, ctr 1/1, viewer 13/0, other 13/13
+shared_etalons: eng 13/13, engO1 13/13, mgr 13/13, dir 13/0, comp 13/13, ctr 13/13, viewer 13/0, other 13/13
+shared_docs: eng 13/13, engO1 13/13, mgr 13/13, dir 13/0, comp 13/13, ctr 13/13, viewer 13/0, other 13/13
+shared_practices: eng 13/13, engO1 13/13, mgr 13/13, dir 13/0, comp 13/13, ctr 13/13, viewer 13/0, other 13/13
+shared_twi_cards: eng 13/13, engO1 13/13, mgr 13/13, dir 13/0, comp 13/13, ctr 13/13, viewer 13/0, other 13/13
+Зеркало 12 таблиц: проверок 2384, FAIL 0

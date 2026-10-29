@@ -1433,7 +1433,7 @@ export async function saveMeetingBind(meetingId) {
 export async function deleteMeeting(id) {
     const meetIndex = window.rbi_meetingsData.findIndex(m => m.id === id);
     var permSvc = (_ctx && _ctx.permissions) || (window.RBI && window.RBI.services && window.RBI.services.permissions);
-    if (meetIndex !== -1 && permSvc && !permSvc.canDelete(window.rbi_meetingsData[meetIndex].author)) return showToast(_t('quality.meetings.toast.no_delete_rights', '⚠️ Нет прав на удаление чужого протокола!'));
+    if (meetIndex !== -1 && permSvc && !permSvc.canDelete(window.rbi_meetingsData[meetIndex], 'meeting')) return showToast(_t('quality.meetings.toast.no_delete_rights', '⚠️ Нет прав на удаление чужого протокола!'));
 
     if (!confirm(_t('quality.meetings.confirm.delete', 'Удалить этот протокол?'))) return;
     if (meetIndex !== -1) {

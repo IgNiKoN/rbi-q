@@ -427,8 +427,23 @@
             return !!this.getPermissions().canPush;
         },
 
-        // 7. Можно ли редактировать проектные данные
-        canEdit(ownerName = '') {
+        // P2-0061: решение по самой записи — общее правило (js/services/sync/sync-access.policy.js: id автора, объект, фирма,
+        // действия с сервера; переходно — по ФИО). null — вид записи без описания `sync` (решает старая проверка по подписи).
+        _recordRule(rec, kindName) {
+            const SA = window.RbiSyncAccess;
+            const kind = SA && kindName ? SA.kindOf(kindName) : null;
+            if (!SA || !kind) return null;
+            return SA.canChange(rec, kind, SA.deviceMe()).ok;
+        },
+
+        // 7. Можно ли редактировать проектные данные. P2-0061: canEdit(запись, вид) — по общему правилу; canEdit(ФИО) — как раньше
+        canEdit(ownerName = '', kindName) {
+            if (ownerName && typeof ownerName === 'object') {
+                const d = this._recordRule(ownerName, kindName);
+                if (d !== null) return d;
+                const r = ownerName;
+                ownerName = r.owner || r.author || r.inspectorName || r.engineerName || '';
+            }
             if (this.isAdmin()) return true;
             if (this.getCurrentRole() === 'engineer') {
                 const currentEngineerName = this.getCurrentEngineerName();
@@ -438,7 +453,14 @@
         },
 
         // 8. Можно ли удалить конкретную запись. P2-0035b: есть номер учётки владельца и свой — сравниваем номера (ФИО — подпись)
+        // P2-0061: canDelete(запись, вид) — по общему правилу; canDelete(ФИО, id) — прежняя подпись, совместима
         canDelete(ownerName, ownerId) {
+            if (ownerName && typeof ownerName === 'object') {
+                const d = this._recordRule(ownerName, ownerId);
+                if (d !== null) return d;
+                const r = ownerName;
+                return this.canDelete(r.owner || r.author || r.inspectorName || r.engineerName || '', r.authorId);
+            }
             const perms = this.getPermissions();
             if (perms.canDeleteAll) return true;
             if (perms.canDeleteOwn) {

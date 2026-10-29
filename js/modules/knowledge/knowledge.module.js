@@ -237,9 +237,10 @@ function rbi_canEditKnowledgeBase() {
     return perms ? perms.canEditKnowledgeBase() : false;
 }
 
-function rbi_canDeleteKnowledgeItem(ownerName) {
+// P2-0061: (запись, вид) — по общему правилу синхронизации; (ФИО) — как раньше (узлы и прочее без описания `sync`)
+function rbi_canDeleteKnowledgeItem(ownerName, kindName) {
     const perms = _getPermissions();
-    return perms ? perms.canDelete(ownerName) : false;
+    return perms ? perms.canDelete(ownerName, kindName) : false;
 }
 
 function rbi_requireKnowledgeEditRight() {
@@ -800,7 +801,7 @@ function handleTwiAction(action) {
         }
 
         if (action === 'edit') {
-            if (!rbi_canDeleteKnowledgeItem(card?.owner)) {
+            if (!rbi_canDeleteKnowledgeItem(card || '', 'twi')) {
                 showToast('⚠️ Редактировать чужую инструкцию может только заместитель или администратор');
                 return;
             }
@@ -1268,7 +1269,7 @@ window.deleteTwiCard = async function (id) {
     if (id.startsWith('sys_')) return showToast("⚠️ Системные инструкции удалить нельзя!");
 
     const card = customTwiCards.find(c => c.id === id);
-    if (!rbi_canDeleteKnowledgeItem(card?.owner)) {
+    if (!rbi_canDeleteKnowledgeItem(card || '', 'twi')) {
         return showToast("⚠️ Инженер может удалить только свою инструкцию.");
     }
     if (!confirm('Удалить эту инструкцию? В облаке она тоже будет удалена.')) return;
@@ -3258,7 +3259,7 @@ window.saveTwiCard = async function () {
         var conflict = window.RbiSyncMergePolicy
             ? window.RbiSyncMergePolicy.findTwiConflict(allCards, {
                 checklistKey: checklistKey, itemId: itemId, me: me,
-                canEdit: function (owner) { return rbi_canDeleteKnowledgeItem(owner); }
+                canEdit: function (card) { return rbi_canDeleteKnowledgeItem(card, 'twi'); }
             })
             : { action: 'none' };
         if (conflict.action !== 'none') window._rbiMagicTwiPending = false;
@@ -3721,7 +3722,7 @@ function openEditCustomDoc(id) {
     if (String(doc.id).startsWith('sys_')) {
         return showToast('⚠️ Системные документы нельзя редактировать');
     }
-    if (!rbi_canDeleteKnowledgeItem(doc.owner)) {
+    if (!rbi_canDeleteKnowledgeItem(doc, 'document')) {
         return showToast('⚠️ Можно редактировать только свой документ.');
     }
 
@@ -3912,7 +3913,7 @@ async function saveCustomDoc() {
     if (editingId) {
         const memExisting = customDocs.find(d => d.id === editingId);
         if (!memExisting) return showToast('Документ не найден');
-        if (!rbi_canDeleteKnowledgeItem(memExisting.owner)) {
+        if (!rbi_canDeleteKnowledgeItem(memExisting, 'document')) {
             return showToast('⚠️ Можно редактировать только свой документ.');
         }
         // Полный ряд из IDB — иначе slim memory сотрёт extractedText при put
@@ -4033,7 +4034,7 @@ async function saveCustomDoc() {
 // Удаление
 window.deleteCustomDoc = async function (id) {
     const memDoc = customDocs.find(d => d.id === id);
-    if (!rbi_canDeleteKnowledgeItem(memDoc?.owner)) {
+    if (!rbi_canDeleteKnowledgeItem(memDoc || '', 'document')) {
         return showToast("⚠️ Инженер может удалить только свой документ.");
     }
     if (!confirm('Удалить этот документ из базы?')) return;

@@ -1,0 +1,14 @@
+  == s-kinds: инженер — своя и чужая запись каждого вида → своя уходит 1 раз; чужая — как сервер: «только автор» — причина, «команда объекта» и «библиотека» — уходит; удалить чужую нельзя
+PASS s-kinds: «удалить» — своё можно, чужое нельзя (все 9 видов) — {"task":[true,false],"meeting":[true,false],"intervention":[true,false],"fmea":[true,false],"schedule":[true,false],"etalon":[true,false],"practice":[true,false],"twi":[true,false],"document":[true,false]}
+  {"task":{"own":1,"foreign":0,"foreignRec":["blocked","Не отправлено: запись другого сотрудника (Петров Пётр)"]},"meeting":{"own":1,"foreign":1,"foreignRec":["synced",""]},"intervention":{"own":1,"foreign":1,"foreignRec":["synced",""]},"fmea":{"own":1,"foreign":1,"foreignRec":["synced",""]},"schedule":{"own":1,"foreign":1,"foreignRec":["synced",""]},"etalon":{"own":1,"foreign":1,"foreignRec":["synced",""]},"practice":{"own":1,"foreign":1,"foreignRec":["synced",""]},"twi":{"own":1,"foreign":1,"foreignRec":["synced",""]},"document":{"own":1,"foreign":1,"foreignRec":["synced",""]}}
+PASS s-kinds: своя запись каждого вида ушла ровно 1 раз — task 1, meeting 1, intervention 1, fmea 1, schedule 1, etalon 1, practice 1, twi 1, document 1
+PASS s-kinds: чужая задача («только автор») — не ушла, причина видна — {"own":1,"foreign":0,"foreignRec":["blocked","Не отправлено: запись другого сотрудника (Петров Пётр)"]}
+PASS s-kinds: чужие записи «команды объекта» и библиотеки — ушли 1 раз (сервер разрешает) — meeting 1, intervention 1, fmea 1, schedule 1, etalon 1, practice 1, twi 1, document 1
+  == s-rename: инженер, два неотправленных осмотра (новый — с id автора, старый — без id, подпись ФИО) → ФИО сменили → оба ушли ровно 1 раз
+PASS s-rename: новый осмотр записан с id автора (ФИО — подпись) — {"st":"not_synced","authorId":"u-1","name":"Иванов Иван","reason":"","hint":""}
+PASS s-rename: новое ФИО, прежнее запомнено — ["Иванов-Сидоров Иван",["Иванов Иван"]]
+PASS s-rename: свой старый осмотр (прежнее ФИО) после смены ФИО можно удалить — true
+PASS s-rename: новый осмотр ушёл ровно 1 раз — 1
+PASS s-rename: старый осмотр (без id, прежнее ФИО) ушёл ровно 1 раз — 1 {"st":"synced","authorId":"u-1","name":"Иванов Иван","reason":"","hint":""}
+PASS s-rename: старому осмотру дописан id автора — {"st":"synced","authorId":"u-1","name":"Иванов Иван","reason":"","hint":""}
+Итог: PASS 10, FAIL 0

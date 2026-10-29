@@ -8,6 +8,9 @@
  * Демо-записи (id «demo…», признак isDemo) не переносятся.
  */
 
+import { ModulesManifest } from '../../../js/modules/modules.manifest.js';
+import type { ModuleManifestLike } from '../../../js/modules/modules.manifest.js';
+
 export type Rec = Record<string, unknown>;
 export type IsUnsent = (rec: Rec) => boolean;
 
@@ -18,20 +21,16 @@ export const MOVED_AT_FIELD = 'p2_moved_at';
 export const EMPTY_SLOT_KEY = 'platform2_quality_state_';
 
 /** Хранилища с записями работы человека (что он сам записал) и как их назвать в списке. Остальное (настройки, справочники,
- *  очередь, журналы) не переносится. */
+ *  очередь, журналы) не переносится. P2-0061: список строится из описаний `sync` манифестов модулей (один источник —
+ *  новый вид записи появляется здесь, в счётчике «не отправлено» и в «Отправка» без правки кода платформы). */
+export function recordStoresFrom(manifests: ModuleManifestLike[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of manifests) for (const k of m.sync || []) if (k && k.store && !(k.store in out)) out[k.store] = k.title;
+  return out;
+}
 export const RECORD_STORES: Record<string, string> = {
-  app_history: 'Осмотр',
-  rbi_tasks: 'Задача',
-  rbi_meetings: 'Совещание',
-  rbi_interventions: 'Вмешательство',
-  rbi_practices: 'Практика',
-  rbi_etalon_acts: 'Акт эталона',
-  rbi_fmea: 'FMEA',
-  rbi_schedule_stages: 'Этап графика',
-  twi_cards: 'Карта TWI',
-  sk_records: 'Запись СК',
-  app_reports: 'Отчёт',
-  custom_docs: 'Документ',
+  ...recordStoresFrom(ModulesManifest),
+  // Стройконтроль (старый и 2.0) — до описания `sync` в его манифестах (P2-0061, этап 3)
   construction_defects: 'Замечание',
   construction_defects_v2: 'Замечание',
   construction_acceptance: 'Приёмка',

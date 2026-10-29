@@ -30,12 +30,14 @@ export const net = { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 5
 export const rows = new Map();
 export const files = new Set();
 export const sends = new Map();
+/** P2-0061: отправки строк любой таблицы — «таблица:id» → сколько раз (повтор той же строки — +1). */
+export const sendsAll = new Map();
 export const flow = { inflight: 0, maxInflight: 0, hung: 0 };
 const held = [];
 /** Сбросить погоду и содержимое сервера перед сценарием. */
 export function resetNet() {
   Object.assign(net, { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [], reject: null });
-  rows.clear(); files.clear(); sends.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
+  rows.clear(); files.clear(); sends.clear(); sendsAll.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
 }
 /** «Зависшие» запросы обрываются (связь пропала окончательно). */
 export function releaseHeld() { held.splice(0).forEach((s) => s.destroy()); }
@@ -155,6 +157,13 @@ function respond(req, res, u, body) {
     if (net.reject && req.method === 'POST' && u.pathname === '/rest/v1/rbi_inspections' && net.reject.test(body)) {
       flow.rejected = (flow.rejected || 0) + 1;
       return json(res, 403, { code: '42501', message: 'new row violates row-level security policy for table "rbi_inspections"' });
+    }
+    {
+      const tm = u.pathname.match(/^\/rest\/v1\/([a-z_0-9]+)$/);
+      if (tm && (req.method === 'POST' || req.method === 'PATCH')) {
+        let data = []; try { data = [].concat(JSON.parse(body || '[]')); } catch { /* не JSON */ }
+        for (const r of data) if (r && r.id !== undefined) { const k = tm[1] + ':' + r.id; sendsAll.set(k, (sendsAll.get(k) || 0) + 1); }
+      }
     }
     if (req.method === 'POST' && u.pathname === '/rest/v1/rbi_inspections') {
       let data = []; try { data = [].concat(JSON.parse(body || '[]')); } catch { /* не JSON */ }

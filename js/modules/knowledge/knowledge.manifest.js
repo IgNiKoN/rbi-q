@@ -16,6 +16,11 @@ export const KnowledgeManifest = {
     company: { enabledByDefault: true },
     // P2-0060: что модуль умеет без сети (сервис «Офлайн и синхронизация», MODULES.md): view — смотреть, input — вводы ('*' — свой движок), files — фото и PDF заранее
     offline: { view: true, input: [], files: true },
+    // P2-0061: виды записей для общего правила синхронизации (библиотека компании — quality.can на сервере)
+    sync: [
+        { kind: 'practice', store: 'rbi_practices', table: 'shared_practices', title: 'Практика', author: { id: 'authorId', name: ['owner', 'author'] }, mode: 'shared', view: ['quality.view'], edit: ['quality.edit'] },
+        { kind: 'twi', store: 'twi_cards', table: 'shared_twi_cards', title: 'Карта TWI', author: { id: 'authorId', name: ['owner', 'author'] }, mode: 'shared', view: ['quality.view'], edit: ['quality.edit'] }
+    ],
     routes: ['/knowledge', '/knowledge/twi', '/knowledge/docs', '/knowledge/nodes', '/knowledge/etalons'],
     defaultRoute: '/knowledge'
 };

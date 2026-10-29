@@ -2,7 +2,7 @@
 // s-rename — смена ФИО при неотправленных осмотрах (новом с id автора и старом без id) → оба уходят ровно 1 раз;
 // s-foreign — у вошедшего на телефоне осмотры другого сотрудника (по ФИО и по id) → 0 отправок, «Не отправлено: запись другого сотрудника (ФИО)»;
 // s-leader — руководитель отправляет такие осмотры ровно 1 раз. Боевой сервер не используется.
-import { start, stop, stand, sends, resetNet, USER, USER2 } from './servers.mjs';
+import { start, stop, stand, sends, sendsAll, resetNet, USER, USER2 } from './servers.mjs';
 import { freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
 
 const ENGINEER = { actions: ['quality.edit', 'quality.view'], templates: [], projects: null, contractor: null, objects: null, container: null };
@@ -45,6 +45,9 @@ async function rename(out) {
     await open(page, 9000);
     const nm = await page.evaluate(() => window.syncConfig && [window.syncConfig.engineerName, window.syncConfig.previousNames]).catch(() => null);
     ok(!!nm && nm[0] === 'Иванов-Сидоров Иван' && (nm[1] || []).includes('Иванов Иван'), `${tag}: новое ФИО, прежнее запомнено`, JSON.stringify(nm));
+    const canDel = await page.evaluate(async (i) => { const r = (await window.RBI.services.storage.getAll('app_history')).find((x) => x.id === i);
+      return window.RBI.services.permissions.canDelete(r, 'inspection'); }, b).catch((e) => 'ошибка ' + e.message);
+    ok(canDel === true, `${tag}: свой старый осмотр (прежнее ФИО) после смены ФИО можно удалить`, String(canDel));
     await pushUntil(page, [a, b]);
     const [sa, sb] = [sends.get(a) || 0, sends.get(b) || 0];
     const rb = await getRec(page, b);
@@ -88,6 +91,61 @@ async function foreignAndLeader(out, tag) {
   } finally { stand.quality = null; stand.user2Planfact = false; await stop().catch(() => {}); }
 }
 
+/** P2-0061 этап 2: по одной своей и одной чужой записи каждого вида Качества и Базы знаний (инженер, правка Качества). */
+const KINDS = [['task', 'rbi_tasks', 'rbi_tasks', 'engineerName'], ['meeting', 'rbi_meetings', 'project_meetings', 'author'],
+  ['intervention', 'rbi_interventions', 'project_interventions', 'owner'], ['fmea', 'rbi_fmea', 'project_fmea', 'author'],
+  ['schedule', 'rbi_schedule_stages', 'project_schedule_stages', 'owner'], ['etalon', 'rbi_etalon_acts', 'shared_etalons', 'owner'],
+  ['practice', 'rbi_practices', 'shared_practices', 'author'], ['twi', 'twi_cards', 'shared_twi_cards', 'owner'], ['document', 'custom_docs', 'shared_docs', 'owner']];
+async function kinds(out) {
+  const tag = 's-kinds';
+  note(`== ${tag}: инженер — своя и чужая запись каждого вида → своя уходит 1 раз; чужая — как сервер: «только автор» — причина, «команда объекта» и «библиотека» — уходит; удалить чужую нельзя`);
+  freshProfile(out, tag); resetNet(); stand.quality = ENGINEER; stand.names = {};
+  try {
+    await start();
+    const { ctx, page } = await launch(out, tag);
+    await signIn(page);
+    await ctx.setOffline(true);
+    const now = Date.now();
+    await page.evaluate(async ([list, t]) => {
+      const S = window.RBI.services;
+      for (const [kind, store, , field] of list) for (const who of ['own', 'foreign']) {
+        await S.storage.put(store, { id: `${kind}-${who}-${t}`, [field]: who === 'own' ? 'Иванов Иван' : 'Петров Пётр', title: 'SYNC-MARK ' + kind, name: 'SYNC-MARK',
+          date: new Date().toISOString(), createdAt: new Date().toISOString(), project_canonical_key: '', source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced',
+          updatedAt: new Date().toISOString() });
+      }
+    }, [KINDS, now]);
+    // экран «удалить»: по записи (общее правило), чужую — нельзя, свою — можно
+    const del = await page.evaluate(async ([list, t]) => {
+      const P = window.RBI.services.permissions, S = window.RBI.services, out = {};
+      for (const [kind, store] of list) {
+        const all = await S.storage.getAll(store);
+        const own = all.find((r) => r.id === `${kind}-own-${t}`), foreign = all.find((r) => r.id === `${kind}-foreign-${t}`);
+        out[kind] = [P.canDelete(own, kind), P.canDelete(foreign, kind)];
+      }
+      return out;
+    }, [KINDS, now]).catch((e) => ({ err: e.message }));
+    ok(!del.err && Object.values(del).every(([a, b]) => a === true && b === false), `${tag}: «удалить» — своё можно, чужое нельзя (все ${KINDS.length} видов)`, JSON.stringify(del));
+    await ctx.setOffline(false);
+    for (let i = 0; i < 6 && !KINDS.every(([k, , t]) => sendsAll.get(`${t}:${k}-own-${now}`)); i++) {
+      await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {});
+      await page.waitForTimeout(4000);
+    }
+    await page.waitForTimeout(2500);
+    const res = {};
+    for (const [k, store, t] of KINDS) {
+      const r = await page.evaluate(async ([s, id]) => { const x = (await window.RBI.services.storage.getAll(s)).find((y) => y.id === id); return x ? [x.syncStatus || x.sync_status, x.syncBlockReason || ''] : null; }, [store, `${k}-foreign-${now}`]);
+      res[k] = { own: sendsAll.get(`${t}:${k}-own-${now}`) || 0, foreign: sendsAll.get(`${t}:${k}-foreign-${now}`) || 0, foreignRec: r };
+    }
+    note(JSON.stringify(res));
+    ok(KINDS.every(([k]) => res[k].own === 1), `${tag}: своя запись каждого вида ушла ровно 1 раз`, KINDS.map(([k]) => k + ' ' + res[k].own).join(', '));
+    ok(res.task.foreign === 0 && res.task.foreignRec && res.task.foreignRec[0] === 'blocked' && res.task.foreignRec[1] === 'Не отправлено: запись другого сотрудника (Петров Пётр)',
+      `${tag}: чужая задача («только автор») — не ушла, причина видна`, JSON.stringify(res.task));
+    ok(KINDS.filter(([k]) => k !== 'task').every(([k]) => res[k].foreign === 1), `${tag}: чужие записи «команды объекта» и библиотеки — ушли 1 раз (сервер разрешает)`,
+      KINDS.filter(([k]) => k !== 'task').map(([k]) => k + ' ' + res[k].foreign).join(', '));
+    await ctx.close();
+  } finally { stand.quality = null; await stop().catch(() => {}); }
+}
+
 export function syncScenarios(out) {
-  return { 's-rename': () => rename(out), 's-foreign': () => foreignAndLeader(out, 's-foreign'), 's-leader': () => foreignAndLeader(out, 's-leader') };
+  return { 's-kinds': () => kinds(out), 's-rename': () => rename(out), 's-foreign': () => foreignAndLeader(out, 's-foreign'), 's-leader': () => foreignAndLeader(out, 's-leader') };
 }

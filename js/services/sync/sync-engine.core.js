@@ -67,6 +67,31 @@ window.triggerSync = async function (mode = 'silent') {
     }
 };
 
+/**
+ * P2-0061: общее правило перед отправкой записи (js/services/sync/sync-access.policy.js — зеркало сервера, standards/SYNC_AND_ACCESS.md).
+ * Можно — моей записи без id автора дописывается мой id. Нельзя — запись помечается «Не отправлено» (blocked) с причиной, подсказкой
+ * и отпечатком доступа (ТД 313: доступ изменится — перепроверится); та же причина при том же доступе — запись не переписывается.
+ * changed — запись изменилась и её надо сохранить. Вид без описания `sync` — как раньше (решает вызывающий код).
+ */
+function rbiAccessGate(kindName, rec, canPushRole = true) {
+    const SA = window.RbiSyncAccess;
+    const kind = SA && rec ? SA.kindOf(kindName) : null;
+    if (!kind) return { ok: true, changed: false, described: false };
+    const me = SA.deviceMe();
+    const dec = !canPushRole ? { ok: false, reason: 'Не отправлено: роль не подтверждена для отправки', hint: 'Войдите заново или обратитесь к администратору' }
+        : SA.canSend(rec, kind, me);
+    if (dec.ok) return { ok: true, changed: SA.stampAuthor(rec, kind, me), described: true };
+    const stamp = SA.accessStamp(me);
+    const was = rec.syncStatus || rec.sync_status;
+    if (was === 'blocked' && rec.syncBlockReason === dec.reason && rec.syncAccessStamp === stamp) return { ok: false, changed: false, described: true };
+    rec.syncStatus = 'blocked'; rec.sync_status = 'blocked';
+    rec.syncBlockReason = dec.reason || 'Не отправлено'; rec.sync_block_reason = rec.syncBlockReason;
+    rec.syncBlockHint = dec.hint || '';
+    rec.syncAccessStamp = stamp;
+    rec.updatedAt = new Date().toISOString();
+    return { ok: false, changed: true, described: true };
+}
+
 async function rbiProbeAndRun(mode) {
     const NP = window.RbiSyncNetPolicy;
     const net = window.RbiSyncNet;
@@ -1060,24 +1085,8 @@ async function rbiSyncPass(mode = 'silent') {
 
                 // Проверка прав на отправку — P2-0061: общее правило устройства, зеркало серверного (по id автора, объекта, фирмы)
                 {
-                    const SA = window.RbiSyncAccess;
-                    const kind = SA ? SA.kindOf('inspection') : null;
-                    const me = SA ? SA.deviceMe() : null;
-                    const dec = !canPush ? { ok: false, reason: 'Не отправлено: роль не подтверждена для отправки', hint: 'Войдите заново или обратитесь к администратору' }
-                        : SA ? SA.canSend(c, kind, me) : { ok: false, reason: 'Не отправлено: обновите приложение', hint: '' };
-                    if (dec.ok && SA) SA.stampAuthor(c, kind, me);   // переходное правило: моей записи без id — мой id
-                    if (!dec.ok) {
-                        const stamp = SA ? SA.accessStamp(me) : '';
-                        // та же причина при том же доступе — запись уже помечена, не переписывать её на каждом проходе
-                        if (c.syncStatus === 'blocked' && c.syncBlockReason === dec.reason && c.syncAccessStamp === stamp) continue;
-                        c.syncStatus = 'blocked'; c.sync_status = 'blocked';
-                        c.syncBlockReason = dec.reason || 'Не отправлено'; c.sync_block_reason = c.syncBlockReason;
-                        c.syncBlockHint = dec.hint || '';
-                        c.syncAccessStamp = stamp;   // ТД 313: доступ изменится — запись перепроверится
-                        c.updatedAt = new Date().toISOString();
-                        localHistoryToUpdate.push(c);
-                        continue;
-                    }
+                    const gate = rbiAccessGate('inspection', c, canPush);
+                    if (!gate.ok) { if (gate.changed) localHistoryToUpdate.push(c); continue; }
                 }
 
                 const uploadedPhotos = {};
@@ -3029,23 +3038,15 @@ async function rbiSyncPass(mode = 'silent') {
                     rbiNoteAttentionRetry(t.syncAttentionRetryAt);
                     return false;
                 });
-                const taskPushRole = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentRole() : 'guest';
-
-                if (taskPushRole === 'engineer') {
-                    tasks = tasks.filter(t => {
-                        const taskEngineer =
-                            t.engineerName ||
-                            t.inspectorName ||
-                            t.engineer_name ||
-                            t.inspector_name ||
-                            '';
-
-                        return !taskEngineer || taskEngineer === iName;
-                    });
-                }
-
-                if (!(window.RBI.services.permissions ? window.RBI.services.permissions.isEngineerOrAdmin() : ['engineer', 'deputy_manager', 'manager'].includes(taskPushRole))) {
-                    tasks = [];
+                // P2-0061: чьё и можно ли — общее правило (по id автора и исполнителя, объекту, фирме); отсеянное — «Не отправлено» с причиной
+                {
+                    const pass = [];
+                    for (const t of tasks) {
+                        const gate = rbiAccessGate('task', t);
+                        if (gate.changed && typeof dbPut === 'function') await dbPut('rbi_tasks', t);
+                        if (gate.ok) pass.push(t);
+                    }
+                    tasks = pass;
                 }
 
                 actuallyPushedTasks = tasks.length; // Запоминаем для честного счетчика
@@ -3346,26 +3347,26 @@ async function rbiSyncPass(mode = 'silent') {
                         if (typeof dbGetAll !== 'function') return;
                         let items = filterNew(await dbGetAll(storeName) || []);
 
-                        // --- ИСПРАВЛЕНИЕ ЗАЩИТЫ: Если не админ, отправляем только СВОИ записи ---
-                        // ИСКЛЮЧЕНИЕ: Бэклог (feedback), так как инженеры могут лайкать чужие идеи!
-                        const isAdminPush = window.RBI.services.permissions ? window.RBI.services.permissions.isAdmin() : false;
-                        if (!isAdminPush && objectType !== 'feedback') {
-                            const mp = window.RbiSyncMergePolicy;
-                            const permsP = window.RBI.services.permissions;
-                            const assignedP = permsP ? permsP.getAssignedProjects() : [];
-                            items = items.filter(obj => {
-                                // P2-0023: совещание — по назначенным объектам (автор в протоколе = поле «Инспектор»,
-                                // не обязан совпадать с ФИО профиля буква в букву). Права окончательно — сервер.
-                                if (objectType === 'meeting' && mp) {
-                                    return mp.meetingPushAllowed(obj, {
-                                        iName,
-                                        inAssigned: (rec) => !!(permsP && typeof permsP.isRecordInAssignedProjects === 'function'
-                                            && permsP.isRecordInAssignedProjects(rec, assignedP))
-                                    });
-                                }
-                                const objOwner = obj.owner || obj.author || obj.inspectorName || obj.engineerName || '';
-                                return !objOwner || objOwner === iName;
-                            });
+                        // P2-0061: виды с описанием `sync` (совещания, FMEA, вмешательства, этапы, эталоны, практики, TWI, документы) — общее
+                        // правило (как сервер: команда объекта / своя фирма / библиотека компании), отсеянное — «Не отправлено» с причиной.
+                        // Служебные хранилища без описания (справочники, шаблоны, база ИИ) — как раньше: не админ — только свои по подписи.
+                        const SAk = window.RbiSyncAccess ? window.RbiSyncAccess.kindOf(storeName) : null;
+                        if (SAk) {
+                            const pass = [];
+                            for (const obj of items) {
+                                const gate = rbiAccessGate(SAk.kind, obj);
+                                if (gate.changed && typeof dbPut === 'function') await dbPut(storeName, obj);
+                                if (gate.ok) pass.push(obj);
+                            }
+                            items = pass;
+                        } else {
+                            const isAdminPush = window.RBI.services.permissions ? window.RBI.services.permissions.isAdmin() : false;
+                            if (!isAdminPush && objectType !== 'feedback') {
+                                items = items.filter(obj => {
+                                    const objOwner = obj.owner || obj.author || obj.inspectorName || obj.engineerName || '';
+                                    return !objOwner || objOwner === iName;
+                                });
+                            }
                         }
                         // ---------------------------------------------------------------------------------
 
@@ -3564,15 +3565,18 @@ async function rbiSyncPass(mode = 'silent') {
                         }
                     });
 
-                    // Админы могут отправлять (в том числе удалять) чужие отчеты
-                    const isAdmin = window.RBI.services.permissions ? window.RBI.services.permissions.isAdmin() : false;
+                    // P2-0061: чужие отчёты — по общему правилу (как сервер: команда объекта, своя фирма), отсеянное — с причиной
 
                     for (const repId of reportIdsToPush) {
                         // Точечная подгрузка (с file_blob) непосредственно перед отправкой —
                         // чтобы в память попадала только одна запись, а не все REPORTS сразу.
                         const rep = await dbGet(STORES.REPORTS, repId);
                         if (!rep) continue;
-                        if (!isAdmin && rep.created_by && rep.created_by !== iName) continue;
+                        {
+                            const gate = rbiAccessGate('report', rep);
+                            if (gate.changed && typeof dbPut === 'function') await dbPut(STORES.REPORTS, rep);
+                            if (!gate.ok) continue;
+                        }
                         try {
                             // RBI FIX: отчеты, созданные в разных браузерах, должны гарантированно попадать в push.
                             if (!rep.updatedAt && !rep.updated_at) {
@@ -3668,24 +3672,15 @@ async function rbiSyncPass(mode = 'silent') {
                     if (typeof dbGetAll === 'function' && window.supabaseClient) {
                         let skRecs = await dbGetAll(STORES.SK_RECORDS) || [];
 
-                        const skCurrentUser = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentEngineerName() : iName;
-                        const canManageSk = window.RBI.services.permissions ? window.RBI.services.permissions.canManageSK() : false;
-                        const isAdmin = window.RBI.services.permissions ? window.RBI.services.permissions.isAdmin() : false;
-
-                        // ПК СК отправляют только те, кому разрешено
-                        if (!canManageSk) {
-                            skRecs = [];
-                        } else if (!isAdmin) {
-                            // Инженер отправляет только свои загруженные записи.
-                            skRecs = skRecs.filter(r => {
-                                const uploadedBy =
-                                    r.uploaded_by ||
-                                    r.sk_uploaded_by ||
-                                    r.imported_by ||
-                                    '';
-
-                                return uploadedBy === skCurrentUser;
-                            });
+                        // P2-0061: ПК СК — по общему правилу (право «Качество: правка», объект, своя фирма; как сервер), отсеянное — с причиной
+                        {
+                            const pass = [];
+                            for (const r of skRecs.filter(window.isSkRecordDirtyForPush)) {
+                                const gate = rbiAccessGate('sk_record', r);
+                                if (gate.changed && typeof dbPut === 'function') await dbPut(STORES.SK_RECORDS, r);
+                                if (gate.ok) pass.push(r);
+                            }
+                            skRecs = pass;
                         }
 
                         const skRecordsToPush = skRecs.filter(window.isSkRecordDirtyForPush);
