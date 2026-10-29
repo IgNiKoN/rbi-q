@@ -1,6 +1,6 @@
 # P2-0067a — план выкладки (этап 3)
 
-**Статус:** не начат. Сервер и `main` — только после «принято» и отдельного разрешения владельца в чате.
+**Статус:** выполнено 29.10.2026 (раздел 4).
 
 ## 1. Что выкладывается
 
@@ -35,3 +35,19 @@
 - nginx: `cp /etc/nginx/sites-available/rbi-router.bak-p2-0067a /etc/nginx/sites-available/rbi-router` → `nginx -t` → `systemctl reload nginx`.
 - Код: `cd /var/www/rbi-quality && git reset --hard <запомненный HEAD>`.
 - Устройства: старые версии держат `icon-512-2.png` в своём кэше; из сети он им не нужен (стенд `r-transition` со сжатием — PASS).
+
+## 4. Как прошло (29.10.2026)
+
+Разрешение владельца: «Архитектор. принято P2-0067a» → кнопки «Да, выкладываем» и «Всё делаете вы в Chrome».
+
+1. `main` `aecc4ed` → `135bc1e` (перемотка, push из worktree P2-0067a; папка `~/dev/platform-2-core` не трогалась).
+2. Сервер (терминал VNC панели Beget): `git pull --ff-only` → `135bc1e`. `check-release`: версия `2026.10.29-65e7ed0a`, 310 файлов, 29,9 МБ — все совпадают.
+3. Чтение: в `nginx.conf` — `gzip on;` (строка 46), остальное `gzip_*` закомментировано (без `gzip_types` сжимался только HTML); в `rbi-router` — `gzip` нет; в `mime.types` нет `webmanifest` → тип манифеста не трогали (ТД 325).
+4. Копия: `cp -n …/rbi-router …/rbi-router.bak-p2-0067a` (3274 байта); в `sites-enabled` только ссылка на `rbi-router`.
+5. Правка файловым менеджером Beget: 6 строк (комментарий + 5 директив) после `index index.html;` в блоке `app.rbi-q.ru` → 3585 байт.
+6. `nginx -t` — `syntax is ok`, `test is successful` (предупреждения `duplicate value "TLSv1.2"` — были и раньше) → `systemctl reload nginx` → `active`.
+7. Проверка: `content-encoding: gzip` + `vary` у `js/core/bootstrap.js`, `css/style.css`, `locales/ru.json`, `data/system_templates.js`, `index.html`, `sw.js`; `icons/*.png`, `icons/splash-logo.jpg`, `fonts/*.woff2`, `manifest.webmanifest` — без сжатия; `api.rbi-q.ru` отвечает как раньше; `/ai-dev/…` — 404. `check-release` повторно — все 310 совпадают.
+8. Chrome владельца: «План/Факт → ВОР» и «Качество» открываются; новая версия скачалась со сжатием в фоне (`waiting`), при перезапуске включилась, заставка — `splash-logo.jpg`.
+9. Замер «после» (`perf-after-prod.jsonl`): 4G ×4 — форма входа **4,0–4,1 с** (было 14,6), **2,9 МБ** (было 16,0); слабая сеть — **14,9–19,1 с** (было 62,6), 2,7–3,7 МБ (было 12,2); без ограничения сети — 3,8 МБ (было 16,4).
+
+**Откат nginx:** `cp /etc/nginx/sites-available/rbi-router.bak-p2-0067a /etc/nginx/sites-available/rbi-router` → `nginx -t` → `systemctl reload nginx`.
