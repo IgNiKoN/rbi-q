@@ -12095,10 +12095,10 @@ function yv() {
 function xw() {
   const [r, n] = f.useState(yv);
   return f.useEffect(() => {
-    const i = () => n(yv());
-    for (const s of ["online", "offline", "rbi:platform-access"]) window.addEventListener(s, i);
+    const i = () => n(yv()), s = ["online", "offline", "rbi:platform-access", "rbi:platform-net"];
+    for (const o of s) window.addEventListener(o, i);
     return () => {
-      for (const s of ["online", "offline", "rbi:platform-access"]) window.removeEventListener(s, i);
+      for (const o of s) window.removeEventListener(o, i);
     };
   }, []), r;
 }

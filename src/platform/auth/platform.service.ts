@@ -35,6 +35,8 @@ export interface PlatformState {
   confirmedAt?: string | null;
   /** P2-0058: экран «Вход» показан не потому, что не входили: 'stale' — без связи больше 14 дней (данные на устройстве целы). */
   loginReason?: 'stale';
+  /** P2-0060: права и меню — из копии на устройстве, ответ сервера ещё не пришёл (запуск; не «без связи»). */
+  checking?: boolean;
 }
 
 /** Флаги для меню и Настроек (window.RBI.platformMenuAccess): модули выбранной компании, «Компания», «Администрирование платформы». */
@@ -48,6 +50,10 @@ export interface PlatformDeps {
   /** Вошёл ли человек по старому PIN-входу Quality (облако Quality включено и подключено). */
   pinActive: () => boolean;
   now?: () => number;
+  /** P2-0060: сохранённый на устройстве вход (без сети) — чтобы при запуске построить меню по копии прав, не дожидаясь сервера. */
+  storedSession?: () => { email: string | null; issuedAt: number | null } | null;
+  /** P2-0060: сколько ждать ответа сервера о правах, если на устройстве есть их копия (по умолчанию SERVER_WAIT_MS). */
+  serverWaitMs?: number;
 }
 
 /** Ключи устройства — только свои (platform2_*); ключи старого Quality не читаются и не пишутся. */
@@ -59,6 +65,8 @@ export const DEVICE_ACCESS_PREFIX = 'platform2_device_access_';
 /** «Вошёл без связи» — не дольше 14 дней с последнего подтверждения сервером (решение владельца 28.10.2026). */
 export const OFFLINE_DAYS = 14;
 const DAY_MS = 24 * 3600 * 1000;
+/** P2-0060: ответ сервера о правах ждём не дольше — дальше работа по копии, повтор раз в минуту (решение владельца 29.10.2026). */
+export const SERVER_WAIT_MS = 5000;
 
 interface DeviceCopy { at: string; platform: unknown; profile: unknown }
 export function readDeviceCopy(s: PlatformDeps['storage'], email: string): DeviceCopy | null {
@@ -81,6 +89,12 @@ export function noAnswer(r: { error: unknown; status?: number }): boolean {
 }
 export function offlineExpired(confirmed: number | null, now: number): boolean {
   return confirmed === null || now - confirmed > OFFLINE_DAYS * DAY_MS;
+}
+
+/** P2-0060: меню и права при запуске — по копии последнего ответа сервера этому человеку, если она есть и не старше 14 дней;
+ *  иначе ждать сервер (экран загрузки). Сервер затем проверяется в фоне. */
+export function startFromCopy(copy: DeviceCopy | null, issuedAtSec: number | null, now: number): boolean {
+  return !!copy && !offlineExpired(lastConfirmed(copy, issuedAtSec), now);
 }
 
 const EMPTY: PlatformState = { mode: 'none', email: null, isPlatformAdmin: false, companies: [], companyId: null };
@@ -124,6 +138,35 @@ export function accessFor(st: PlatformState): PlatformAccess {
 
 /** Ключ роутера оболочки (js/core/router.js): последний экран модуля, Настройки туда не пишутся. */
 export const LAST_MODULE_HASH_KEY = 'rbi_last_module_hash';
+
+/** P2-0060: отличается ли то, что видит человек (меню, модули, компания, профиль), — признаки «проверяется / без связи» не в счёт. */
+export function accessChanged(a: PlatformState, b: PlatformState): boolean {
+  const view = (s: PlatformState): string => JSON.stringify([s.mode, s.email, s.isPlatformAdmin, s.companyId, s.companies, s.fullName || null,
+    !!s.mustChangePassword, s.userId || null, s.loginReason || null]);
+  return view(a) !== view(b);
+}
+
+/** P2-0060: разделам перечитать данные (событие rbi:platform-access) — права изменились или сервер снова ответил после молчания;
+ *  только «связь пропала» — нет: их запросы к молчащему серверу повисли бы и заняли соединения синхронизации Качества. */
+export function shouldNotifyAccess(prev: PlatformState | null, next: PlatformState): boolean {
+  return !prev || accessChanged(prev, next) || (!!prev.offline && !next.offline);
+}
+
+/** P2-0060: модуль экрана по адресу (для «раздел отозван»); null — экран не модуля (Настройки, главная). */
+export function moduleOfHash(hash: string): string | null {
+  const h = String(hash || '');
+  if (/^#\/planfact(\/|$)/.test(h)) return 'planfact';
+  if (/^#\/quality\/settings(\/|$)/.test(h)) return null;
+  if (/^#\/quality(\/|$)/.test(h)) return 'quality';
+  if (/^#\/construction(-v2)?(\/|$)/.test(h)) return 'construction';
+  return null;
+}
+
+/** P2-0060: ответ сервера отнял модуль открытого экрана (по прежним правам был, по новым нет) — уйти на главную с подсказкой. */
+export function revokedHere(prev: PlatformAccess | null, next: PlatformAccess, hash: string): boolean {
+  const m = moduleOfHash(hash);
+  return !!prev && !!m && prev[m] === true && next[m] !== true;
+}
 
 /**
  * P2-0030: куда вести после входа почтой — последний открытый модуль, если он ещё доступен у компании;
@@ -176,12 +219,26 @@ export function createPlatform(deps: PlatformDeps): Platform {
     return { ...base, offline: true, confirmedAt: confirmed === null ? null : new Date(confirmed).toISOString() };
   }
 
+  type Answer = { data: unknown; error: unknown; status?: number };
+  let asking: Promise<Answer[]> | null = null;
   async function loadEmail(email: string, issuedAt: number | null): Promise<PlatformState> {
     if (!deps.rpc) return fromParts(email, { isPlatformAdmin: false, companies: [] }, { fullName: null, mustChangePassword: false, userId: null });
     // P2-0058: запрос не дошёл или сервер недоступен (нет HTTP-ответа / 5xx) — не ответ «компаний нет»: копия последнего ответа
     // сервера; сервер ответил ошибкой (4xx) — как раньше, по ответу
-    const [pl, pr] = await Promise.all([deps.rpc('pf_my_platform'), deps.rpc('pf_my_profile')]
-      .map((q) => q.catch((e: unknown): { data: unknown; error: unknown; status?: number } => ({ data: null, error: e || 'network', status: 0 }))));
+    // P2-0060: прежний запрос ещё висит (сервер принял и молчит) — ждём его же, а не шлём новый: каждый висящий запрос держит
+    // соединение, а их у браузера к одному серверу 6 — синхронизация Качества осталась бы без связи и после того, как сервер ожил
+    const rpc = deps.rpc;
+    const ask = asking || (asking = Promise.all([rpc('pf_my_platform'), rpc('pf_my_profile')]
+      .map((q) => q.catch((e: unknown): Answer => ({ data: null, error: e || 'network', status: 0 }))))
+      .finally(() => { asking = null; }));
+    // P2-0060: есть копия прав — сервер, который принял запрос и молчит, ждём не дольше SERVER_WAIT_MS (как «нет связи»);
+    // копии нет — ждём ответа (экран загрузки), иначе меню строить не из чего
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const silent: Answer = { data: null, error: 'timeout', status: 0 };
+    const [pl, pr] = readDeviceCopy(deps.storage, email)
+      ? await Promise.race([ask, new Promise<Answer[]>((r) => { timer = setTimeout(() => r([silent, silent]), deps.serverWaitMs ?? SERVER_WAIT_MS); })])
+      : await ask;
+    clearTimeout(timer);
     if (noAnswer(pl) || noAnswer(pr)) return fromDevice(email, issuedAt);
     if (pl.error || pr.error) {
       return fromParts(email, pl.error ? { isPlatformAdmin: false, companies: [] } : parsePlatform(pl.data),
@@ -198,7 +255,18 @@ export function createPlatform(deps: PlatformDeps): Platform {
     return { email: await deps.auth.getEmail(), offline: false, issuedAt: null };
   }
 
+  let booted = false;
   async function refresh(): Promise<PlatformState> {
+    // P2-0060: при запуске — сразу меню по копии прав этого человека (сервер не ждём), ответ сервера в фоне её заменит
+    if (!booted) {
+      booted = true;
+      const stored = deps.storedSession ? deps.storedSession() : null;
+      const copy = stored && stored.email ? readDeviceCopy(deps.storage, stored.email) : null;
+      if (stored && stored.email && startFromCopy(copy, stored.issuedAt, now())) {
+        state = { ...fromDevice(stored.email, stored.issuedAt), offline: false, checking: true };
+        emit();
+      }
+    }
     const ses = await session();
     if (ses.email) {
       // вход не подтверждён сервером (нет связи): сервер не спрашиваем; дольше 14 дней — экран «Вход», данные не трогаем

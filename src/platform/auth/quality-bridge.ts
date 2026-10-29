@@ -287,6 +287,9 @@ function wireStorageToken(deps: BridgeDeps): void {
   void post();
 }
 
+/** P2-0060: что доделать мосту, подключённому по копии при запуске, когда сервер подтвердит вход. */
+const onConfirm = new WeakMap<QualitySync, () => Promise<void>>();
+
 /** Применить состояние платформы к Качеству. Возвращает активный мост или null. */
 export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): Promise<QualitySync | null> {
   if (st.mode === 'none' && !deps.store.getItem(QUALITY_COMPANY_KEY)) return null;
@@ -294,7 +297,9 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
   const user = company && st.email ? deviceUserKey(st.email) : '';
   // P2-0058 (З2): база меняется только по ответу сервера (выбрана другая компания, компании у человека больше нет).
   // Сервер не ответил — устройство остаётся в своей базе: записанное без связи уйдёт из неё, когда связь вернётся.
-  if (st.offline && (company || '') + ':' + user !== (deps.store.getItem(QUALITY_COMPANY_KEY) || '') + ':' + (deps.store.getItem(QUALITY_USER_KEY) || '')) {
+  // P2-0060: права из копии при запуске (сервер ещё не ответил) — так же: базу меняет только ответ сервера
+  const unconfirmed = !!st.offline || !!st.checking;
+  if (unconfirmed && (company || '') + ':' + user !== (deps.store.getItem(QUALITY_COMPANY_KEY) || '') + ':' + (deps.store.getItem(QUALITY_USER_KEY) || '')) {
     return ((deps.win.RBI || {}).qualitySync as QualitySync | null | undefined) || null;
   }
   if (switchDeviceCompany(deps.store, company, user)) { deps.reload(); return null; }
@@ -310,6 +315,9 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
   if (!company || !deps.platformClient || !deps.cfg || !st.email) { rbi.qualitySync = null; return null; }
   const prev = rbi.qualitySync as QualitySync | null | undefined;
   if (prev && prev.companyId === company) {
+    // P2-0060: мост подключён по копии при запуске, сервер подтвердил вход — объекты из списка ядра
+    const upd = !unconfirmed ? onConfirm.get(prev) : undefined;
+    if (upd) { onConfirm.delete(prev); void upd(); }
     // P2-0028: ФИО сменили (Мой профиль / администратор) — новые записи сразу подписываются новым ФИО
     const nm = (st.fullName || '').trim() || st.email;
     if (prev.engineerName !== nm) {
@@ -329,19 +337,31 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
   let copy: { access: Record<string, unknown>; projects: QualityProject[] | null } = { access: {}, projects: null };
   try { copy = { ...copy, ...(JSON.parse(deps.store.getItem(copyKey) || '{}') as typeof copy) }; } catch { /* нет копии */ }
   const saveCopy = (): void => { try { deps.store.setItem(copyKey, JSON.stringify(copy)); } catch { /* приватный режим */ } };
+  let current: QualitySync | null = null;
   const loadAccess = async (pid: string | null): Promise<QualityAccess> => {
-    const { data, error } = await Promise.resolve(client.rpc('my_access', { p_project: pid })).catch((e: unknown) => ({ data: null, error: e || 'network' }));
     const k = pid || '*';
-    if (!error) { copy.access[k] = data; saveCopy(); return parseAccess(data); }
-    return parseAccess(k in copy.access ? copy.access[k] : null);
+    const ask = Promise.resolve(client.rpc('my_access', { p_project: pid })).catch((e: unknown) => ({ data: null, error: e || 'network' }))
+      .then((r) => { if (!r.error) { copy.access[k] = r.data; saveCopy(); } return r; });
+    // P2-0060: права не подтверждены сервером (запуск по копии / без связи) и копия есть — роль сразу по копии, ответ сервера
+    // в фоне: пришёл и отличается — роль обновляется на месте (зависший сервер не держит меню и экран)
+    if (unconfirmed && k in copy.access) {
+      const was = JSON.stringify(copy.access[k]);
+      void ask.then((r) => { if (!r.error && JSON.stringify(r.data) !== was && current && current.projectId === pid) applyRole(parseAccess(r.data)); });
+      return parseAccess(copy.access[k]);
+    }
+    const { data, error } = await ask;
+    return parseAccess(!error ? data : k in copy.access ? copy.access[k] : null);
   };
   // «Синхронизация команды» — только свои объекты (назначения роли); вся компания — все объекты.
   const first = await loadAccess(null);
   const scope = first.projects;
   const cur = st.companies.find((c) => c.id === company);
   // объекты: с ответом сервера — список ядра (и его копия); без связи — копия (сервис ядра на ошибке отдаёт пустой список)
-  const listed = first.container ? null : st.offline ? copy.projects || []
-    : await deps.listProjects(company).then((list) => { copy.projects = list; saveCopy(); return list; }, () => copy.projects || ([] as QualityProject[]));
+  const fresh = (): Promise<QualityProject[]> => deps.listProjects(company).then((list) => { copy.projects = list; saveCopy(); return list; }, () => copy.projects || ([] as QualityProject[]));
+  // P2-0060: при запуске по копии — объекты из копии сразу; список ядра — когда сервер подтвердит вход (сервис ядра на ошибке
+  // связи отдаёт пустой список — спрашивать его до подтверждения значит затереть копию пустотой)
+  const fromCopy = !first.container && !!st.checking && !!copy.projects;
+  const listed = first.container ? null : st.offline || fromCopy ? copy.projects || [] : await fresh();
   // P2-0035: у компании с контейнером объекты ЖК — внутри него; список объектов ядра контейнера не содержит
   const projects = first.container ? [{ id: first.container, name: cur ? cur.name : '' }]
     : (listed || []).filter((p) => scope === null || scope.includes(p.id));
@@ -404,6 +424,8 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
     }
   };
   rbi.qualitySync = sync;
+  current = sync;
+  if (fromCopy) onConfirm.set(sync, () => fresh().then((list) => { sync.projects = list.filter((p) => scope === null || scope.includes(p.id)); }));
   writeConfig(projectId);
   applyRole(await loadAccess(projectId));
   if (deps.win.initSync) await deps.win.initSync();

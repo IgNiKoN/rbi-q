@@ -117,12 +117,21 @@ let hasKs2 = false;
 let demoNav = false;
 let navActive = false;
 
+type P2View = { platform2?: { getState?: () => { mode?: string; offline?: boolean; checking?: boolean } }; platformMenuAccess?: Record<string, boolean> };
+/** P2-0060: права ещё не подтверждены сервером (меню по копии при запуске / без связи) — основные подвкладки по копии прав
+ *  платформы (модуль положен), цены и КС-2 — только по ответу сервера. */
+function accessFromCopy(): boolean {
+  const r = (window as unknown as { RBI?: P2View }).RBI;
+  const st = r && r.platform2 && r.platform2.getState ? r.platform2.getState() : null;
+  return !!st && st.mode === 'email' && (!!st.offline || !!st.checking) && !!r && !!r.platformMenuAccess && r.platformMenuAccess.planfact === true;
+}
+
 /** Подвкладки модуля в нижнем таббаре (телефон/планшет) и nav2 (≥1280) — общий механизм оболочки window.RBI.platformNav. */
 function syncPlatformNav(): void {
   const w = window as unknown as RbiGlobal & ModeMgr;
   w.RBI = w.RBI || {};
   w.RBI.platformNav = navActive
-    ? { id: 'planfact', title: 'План/Факт', items: visibleNavItems(navItems, { directories: hasDirectories, estimate: hasEstimate, ks2: hasKs2, demo: demoNav }).map((i) => ({ path: i.path, label: i.label, icon: i.icon })) }
+    ? { id: 'planfact', title: 'План/Факт', items: visibleNavItems(navItems, { directories: hasDirectories || accessFromCopy(), estimate: hasEstimate, ks2: hasKs2, demo: demoNav }).map((i) => ({ path: i.path, label: i.label, icon: i.icon })) }
     : null;
   if (w.AppModeManager && typeof w.AppModeManager.renderBottomNav === 'function') w.AppModeManager.renderBottomNav();
 }
@@ -233,6 +242,8 @@ export async function init(ctx?: ShellCtx): Promise<void> {
   };
   window.addEventListener('hashchange', onLeave);
   window.addEventListener('rbi:route', onLeave);
+  // P2-0060: права из копии → ответ сервера (или «без связи») — подвкладки пересчитать
+  for (const e of ['rbi:platform-access', 'rbi:platform-net']) window.addEventListener(e, () => { if (navActive) syncPlatformNav(); });
   const router = (window as unknown as { AppRouter?: { addRoute?: (p: string, fn: () => void) => void } }).AppRouter;
   if (router && typeof router.addRoute === 'function' && !(ctx && ctx.externalRoute)) {
     router.addRoute(ROUTE, showView);

@@ -193,7 +193,8 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     setWho(''); setAccess([]); setCompanies([]); setCanEstimate(false); setCanKs2(false); if (onAccess) onAccess(false, false, false);
   }
 
-  if (mode === 'loading') return h('div', { className: 'pf-root pf-muted' }, 'Загрузка…');
+  // P2-0060: без связи (в т. ч. сервер завис при запуске) — «Нужен интернет» сразу, а не «Загрузка…» до ответа сервера
+  if (mode === 'loading' && !offline) return h('div', { className: 'pf-root pf-muted' }, 'Загрузка…');
 
   // P2-0041: строки «почта · компания · роль · Выйти» больше нет — всё это в шапке оболочки и «Настройки → Моё».
   // Без входа — подсказка «демо» с кнопкой «Войти»; несколько компаний — выбор компании в шапке раздела.

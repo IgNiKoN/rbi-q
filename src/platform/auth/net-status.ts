@@ -278,6 +278,7 @@ export function startNetStatus(deps: Deps): void {
   window.addEventListener('online', () => { void recount(true); });
   window.addEventListener('offline', () => { void recount(true); });
   window.addEventListener('rbi:platform-access', () => { void recount(); });
+  window.addEventListener('rbi:platform-net', () => { void recount(); });   // P2-0060: сервер замолчал / ответил
   window.addEventListener('hashchange', () => { setTimeout(render, 300); });
   window.addEventListener('rbi:sync-journal', () => { void fillDevice(); });
   setInterval(() => { void recount(); }, 15000);

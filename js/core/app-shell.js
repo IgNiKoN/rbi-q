@@ -28,7 +28,16 @@
   function platformEntryMode() {
     var p2 = window.RBI && window.RBI.platform2;
     var st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
-    return (st && st.mode) || 'none';
+    if (st && st.mode) return st.mode;
+    // P2-0060: вход платформы ещё не решил — по сохранённому на устройстве: вход почтой — 'email' (без прав меню пустое,
+    // без старого меню Качества и заглушек), выбор «демо» — 'demo'
+    if (!p2) {
+      try {
+        if (localStorage.getItem('platform2-auth')) return 'email';
+        if (localStorage.getItem('platform2_entry') === 'demo') return 'demo';
+      } catch (e) { /* без localStorage — как раньше */ }
+    }
+    return 'none';
   }
 
   /**

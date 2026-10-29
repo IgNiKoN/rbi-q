@@ -23,8 +23,9 @@ export function useOfflineEntry(): boolean {
   const [off, setOff] = useState(isOfflineEntry);
   useEffect(() => {
     const upd = (): void => setOff(isOfflineEntry());
-    for (const e of ['online', 'offline', 'rbi:platform-access']) window.addEventListener(e, upd);
-    return () => { for (const e of ['online', 'offline', 'rbi:platform-access']) window.removeEventListener(e, upd); };
+    const evs = ['online', 'offline', 'rbi:platform-access', 'rbi:platform-net'];   // P2-0060: и смена признака связи
+    for (const e of evs) window.addEventListener(e, upd);
+    return () => { for (const e of evs) window.removeEventListener(e, upd); };
   }, []);
   return off;
 }

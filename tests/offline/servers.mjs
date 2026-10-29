@@ -66,7 +66,11 @@ const RPC = {
   pf_my_profile: (u) => ({ full_name: u.id === USER.id ? 'Иванов Иван' : 'Петров Пётр', must_change_password: false, user_id: u.id }),
   pf_company_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', archived_at: null }],
   pf_my_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', company_id: COMPANY.id }],
-  my_access: () => ACCESS
+  my_access: () => ACCESS,
+  // P2-0060: доступ к компании для План/Факта (подвкладки раздела) — по модулям компании на сервере стенда
+  pf_my_company_access: (u) => u.id === USER.id && COMPANY.modules.includes('planfact') ? [{ company_id: COMPANY.id, company_name: COMPANY.name,
+    can_manage_projects: true, can_manage_units: true, can_manage_roles: true, can_manage_counterparties: true }] : [],
+  pf_my_context: (u) => u.id === USER.id ? [{ company_name: COMPANY.name, role_name: COMPANY.roles[0], project_id: null }] : []
 };
 
 function cors(res) {

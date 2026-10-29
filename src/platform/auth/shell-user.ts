@@ -46,6 +46,8 @@ export async function platformSignOut(fallback: (() => Promise<void>) | null): P
 
 /** Событие оболочки: вход платформы обновил состояние (кто вошёл, компания, модули). */
 export const PLATFORM_ACCESS_EVENT = 'rbi:platform-access';
+/** P2-0060: изменился только признак связи с сервером (права из копии / «без связи» / сервер ответил) — без перезапросов разделов. */
+export const PLATFORM_NET_EVENT = 'rbi:platform-net';
 
 export interface PlatformView {
   email: string;

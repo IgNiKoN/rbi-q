@@ -5,15 +5,15 @@
  * Качество/Стройконтроль при входе почтой — мост quality-bridge.ts (window.RBI.qualitySync).
  */
 import { createClient } from '@supabase/supabase-js';
-import { createAuthService, getClient, readAuthConfig } from './auth.service.ts';
+import { createAuthService, getClient, readAuthConfig, readStoredSession } from './auth.service.ts';
 import { applyQualityBridge, QUALITY_COMPANY_KEY, QUALITY_USER_KEY } from './quality-bridge.ts';
 import { createProjectsService } from '../core/projects.service.ts';
 import type { QualityProject } from './quality-bridge.ts';
-import { createPlatform, homePathFor, LAST_MODULE_HASH_KEY } from './platform.service.ts';
-import type { Platform, PlatformState } from './platform.service.ts';
+import { createPlatform, homePathFor, LAST_MODULE_HASH_KEY, readDeviceCopy, revokedHere, shouldNotifyAccess } from './platform.service.ts';
+import type { Platform, PlatformAccess, PlatformState } from './platform.service.ts';
 import { LOGIN_CSS, renderLoginScreen } from './login-screen.ts';
 import { PASSWORD_CSS, renderMyProfile as drawMyProfile, renderPasswordScreen } from './password-screen.ts';
-import { showShellUser, restoreShellUser } from './shell-user.ts';
+import { showShellUser, restoreShellUser, PLATFORM_NET_EVENT } from './shell-user.ts';
 import { cleanupLegacyDevice, deleteIndexedDb } from './legacy-device.ts';
 import { EMPTY_SLOT_KEY, RESCUE_CSS, moveOrphans, renderRescueSheet, scanOrphans } from './offline-rescue.ts';
 import type { IsUnsent } from './offline-rescue.ts';
@@ -22,7 +22,8 @@ import { startNetStatus } from './net-status.ts';
 type Rbi = Record<string, unknown> & {
   services?: { shell?: { renderSidebar?: () => void; renderMobileModuleMenu?: () => void } };
 };
-type Win = Window & { RBI?: Rbi; AppRouter?: { navigate?: (p: string, replace?: boolean) => void }; AppModeManager?: { renderBottomNav?: () => void } };
+type Win = Window & { RBI?: Rbi; AppRouter?: { navigate?: (p: string, replace?: boolean) => void }; AppModeManager?: { renderBottomNav?: () => void };
+  showToast?: (m: string) => void };
 
 const OVERLAY_ID = 'auth-gate-overlay';
 const STYLE_ID = 'p2-login-style';
@@ -42,6 +43,8 @@ function ensureStyle(): void {
   document.head.appendChild(s);
 }
 
+function localStore(): Storage | null { try { return window.localStorage; } catch { return null; } }
+
 function getPlatform(): Platform {
   if (platform) return platform;
   const cfg = readAuthConfig();
@@ -50,9 +53,11 @@ function getPlatform(): Platform {
   platform = createPlatform({
     auth,
     rpc: client ? async (fn, args) => { const r = await client.rpc(fn, args || {}); return { data: r.data, error: r.error, status: r.status }; } : null,
-    storage: (() => { try { return window.localStorage; } catch { return null; } })(),
+    storage: localStore(),
     // P2-0016: в Платформе 2.0 вход только почтой (+ демо); PIN — в старом приложении РБИ.
-    pinActive: () => false
+    pinActive: () => false,
+    // P2-0060: меню при запуске — по копии прав сохранённого входа, сервер в фоне
+    storedSession: () => { const s = readStoredSession(localStore()); return s ? { email: s.email, issuedAt: s.issuedAt } : null; }
   });
   platform.subscribe(apply);
   if (auth && auth.onAuthChange) auth.onAuthChange(() => { void platform!.refresh(); });
@@ -145,11 +150,22 @@ function renderCompanySwitch(host: HTMLElement | null): void {
   sel.value = st.companyId || '';
 }
 
+/** P2-0060: текст подсказки, когда ответ сервера отнял раздел, открытый по копии прав. */
+export const ACCESS_CHANGED_TEXT = 'Доступ к разделу изменился';
+let lastAccess: PlatformAccess | null = null;
+let lastState: PlatformState | null = null;
+
 function apply(st: PlatformState): void {
   const r = rbi();
-  r.platformMenuAccess = getPlatform().access();
+  const access = getPlatform().access();
+  const revoked = revokedHere(lastAccess, access, window.location.hash);
+  lastAccess = access;
+  const notify = shouldNotifyAccess(lastState, st);
+  lastState = st;
+  r.platformMenuAccess = access;
   r.platform2 = api;
-  window.dispatchEvent(new Event('rbi:platform-access'));
+  if (notify) window.dispatchEvent(new Event('rbi:platform-access'));
+  window.dispatchEvent(new Event(PLATFORM_NET_EVENT));   // P2-0060: признак связи — «Нужен интернет», значок, подвкладки
   const shell = r.services?.shell;
   if (shell && typeof shell.renderSidebar === 'function') shell.renderSidebar();
   if (shell && typeof shell.renderMobileModuleMenu === 'function') shell.renderMobileModuleMenu();
@@ -163,6 +179,12 @@ function apply(st: PlatformState): void {
   }
   if (st.mode === 'email' && st.mustChangePassword && st.email) { showPasswordScreen(st.email); return; }   // сначала свой пароль
   if (st.mode === 'none') { passwordShown = false; showLogin(); } else hideLogin();
+  // P2-0060: открытый раздел больше не положен (ответ сервера после копии) — на главную с подсказкой; данные сервер и так не отдаёт
+  if (revoked && st.mode === 'email') {
+    goHome();
+    const t = w().showToast;
+    if (typeof t === 'function') t(ACCESS_CHANGED_TEXT);
+  }
   // P2-0058: без ответа сервера список модулей — по копии прав; копии нет — кэш не трогаем (не чистим по «пустоте»)
   if (!st.offline || st.companies.length > 0) postCacheAllowlist();
   scheduleRetry(st);
@@ -214,7 +236,7 @@ async function applyQuality(st: PlatformState): Promise<void> {
     const shell = rbi().services?.shell;
     if (shell && typeof shell.renderSidebar === 'function') shell.renderSidebar();
     if (shell && typeof shell.renderMobileModuleMenu === 'function') shell.renderMobileModuleMenu();
-    if (!st.offline && st.mode === 'email') void offerRescue();
+    if (!st.offline && !st.checking && st.mode === 'email') void offerRescue();   // P2-0060: после ответа сервера, не по копии
   } catch (e) {
     console.warn('[Platform2] Качество: подключение к хранилищу компании не удалось', e);
   }
@@ -287,9 +309,18 @@ function cleanupLegacy(): void {
   }).catch(() => { /* повтор при следующем открытии */ });
 }
 
+/** P2-0060: вход сохранён, а копии прав на устройстве нет — экран загрузки (не старое меню) до ответа сервера. */
+function loadingUntilServer(): void {
+  const ses = readStoredSession(localStore());
+  if (!ses || !ses.email || readDeviceCopy(localStore(), ses.email)) return;
+  const o = overlay();
+  if (o && !o.querySelector('[data-testid=p2-login]')) o.classList.remove('hidden');
+}
+
 export function start(): Promise<PlatformState> {
   if (!started) {
     cleanupLegacy();
+    loadingUntilServer();
     started = getPlatform().boot();
     // P2-0058: значок «Нет связи · не отправлено: N», плашка при запуске без связи, строка в «Данные на устройстве»
     void started.then(() => startNetStatus({ platform: () => getPlatform().getState(), navigate: (p) => go(p) }));
