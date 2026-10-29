@@ -918,8 +918,8 @@ async function togglePushSettings(element) {
                 navigator.serviceWorker.ready.then(registration => {
                     registration.showNotification("RBI Platform", {
                         body: "Уведомления успешно настроены! Тумблер активирован.",
-                        icon: "./icons/icon-512-2.png",
-                        badge: "./icons/icon-512-2.png",
+                        icon: "./icons/icon-192.png",
+                        badge: "./icons/icon-192.png",
                         vibrate: [200, 100, 200]
                     });
                 });

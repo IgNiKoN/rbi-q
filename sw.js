@@ -2,16 +2,16 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.29-43ca6068',
+  version: '2026.10.29-65e7ed0a',
   date: '2026-10-29',
-  digest: '43ca6068',
+  digest: '65e7ed0a',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
     "css/analytics.desktop.css": ["909efb47e2bdb9fa",118397,""],
     "css/app-shell.desktop.css": ["ede63172f4e50381",13109,""],
     "css/audit.desktop.css": ["1c94cbcc861ff89d",22407,""],
-    "css/brand/rbi.css": ["4153d03ba8b90e97",2650,""],
+    "css/brand/rbi.css": ["d6fc89acf92746e5",2794,""],
     "css/engineer.desktop.css": ["b29889670a009d05",55905,""],
     "css/knowledge.desktop.css": ["18ad35ee263ffca2",130381,""],
     "css/rbi-ui.css": ["9290cab5b13fea70",12437,""],
@@ -57,10 +57,10 @@ const APP_RELEASE = {
     "icons/favicon-16x16.png": ["394740455519b067",930,""],
     "icons/favicon-32x32.png": ["3bfaad230598082a",2857,""],
     "icons/icon-192.png": ["c0983f51427f87b6",57754,""],
-    "icons/icon-512-2.png": ["aa778ccd441d82cf",1886769,""],
     "icons/icon-512.png": ["3f52301ac96dcf24",254500,""],
     "icons/icon-maskable-512.png": ["fa2a6ac20c30f623",202332,""],
-    "index.html": ["4599f6bf5aae01e8",68884,""],
+    "icons/splash-logo.jpg": ["589d20f8f5ee9da6",22872,""],
+    "index.html": ["a473bab8f65ddce2",68885,""],
     "js/core/app-shell.desktop.js": ["d56e70c14d119cc6",8092,""],
     "js/core/app-shell.js": ["abf1812fb2554ee7",52085,""],
     "js/core/app.entry.js": ["27ff777222446034",11218,""],
@@ -206,7 +206,7 @@ const APP_RELEASE = {
     "js/modules/quality/index.js": ["9f82720a2feb8972",853,"quality"],
     "js/modules/quality/manifest.js": ["9cbbf460131d1443",1135,""],
     "js/modules/quality/quality.module.js": ["45ddf8533e8d0b82",3257,"quality"],
-    "js/modules/settings/features/app-mode-utils.js": ["e093b4ca4b27a65c",89246,""],
+    "js/modules/settings/features/app-mode-utils.js": ["fdffbdafd7dda98a",89242,""],
     "js/modules/settings/features/changelog.js": ["b1ede15df69b01d6",85281,""],
     "js/modules/settings/features/cloud-deleted-purge-ui.js": ["d23b0fd665ece0f9",29571,""],
     "js/modules/settings/features/cloud-orphan-urls-ui.js": ["d2a18252f782503c",26090,""],
@@ -633,8 +633,8 @@ self.addEventListener('push', function (event) {
 
   const options = {
     body: data.body,
-    icon: './icons/icon-512-2.png',
-    badge: './icons/icon-512-2.png',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
     vibrate: [200, 100, 200],
     data: {
       url: data.url || '/' // Ссылка, куда перейти при клике
