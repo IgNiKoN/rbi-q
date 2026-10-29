@@ -1275,7 +1275,9 @@ function getSyncBadgeHtml(item) {
 
     if (syncStatus === 'blocked') {
         var reason = item.syncBlockReason || item.sync_block_reason || _t('quality.history.sync.blocked_default', 'Отправка запрещена');
-        var toastMsg = _t('quality.history.sync.reason_prefix', 'Причина: {reason}', { reason: reason });
+        // P2-0061: причина и что делать («Не отправлено: запись другого сотрудника (…)» — «Отправит руководитель или автор…»)
+        var hint = item.syncBlockHint || '';
+        var toastMsg = _t('quality.history.sync.reason_prefix', 'Причина: {reason}', { reason: reason }) + (hint ? '. ' + hint : '');
         return '<button onclick="event.stopPropagation(); showToast(\'' + String(toastMsg).replace(/'/g, "\\'") + '\')" class="px-1.5 py-0.5 rounded bg-danger-soft text-danger border border-danger text-rbi-caption font-bold uppercase ml-1 flex items-center shadow-sm">' + iconBlocked + _t('quality.history.sync.blocked_badge', 'Заблок.') + '</button>';
     }
     // P2-0023 доработка 2: «нужно внимание» — фото пункта нет на устройстве. Пока идут автоповторы —

@@ -2,7 +2,7 @@
 // s-rename — смена ФИО при неотправленных осмотрах (новом с id автора и старом без id) → оба уходят ровно 1 раз;
 // s-foreign — у вошедшего на телефоне осмотры другого сотрудника (по ФИО и по id) → 0 отправок, «Не отправлено: запись другого сотрудника (ФИО)»;
 // s-leader — руководитель отправляет такие осмотры ровно 1 раз. Боевой сервер не используется.
-import { start, stop, stand, sends, sendsAll, resetNet, USER, USER2 } from './servers.mjs';
+import { start, stop, stand, sends, sendsAll, resetNet, net, flow, log as apiLog, USER, USER2 } from './servers.mjs';
 import { freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
 
 const ENGINEER = { actions: ['quality.edit', 'quality.view'], templates: [], projects: null, contractor: null, objects: null, container: null };
@@ -146,6 +146,156 @@ async function kinds(out) {
   } finally { stand.quality = null; await stop().catch(() => {}); }
 }
 
+/** P2-0061 этап 3: Стройконтроль 2.0 — подрядчик отправляет замечания и приёмки своей фирмы (по id контрагента), чужой фирмы — нет (причина). */
+const CP_OWN = '7a7a7a7a-1111-4111-8111-111111111111', CP_OTHER = '7b7b7b7b-2222-4222-8222-222222222222';
+async function contractor(out) {
+  const tag = 's-contractor';
+  note(`== ${tag}: подрядчик «Фирма 1» — замечание и приёмка своей фирмы уходят 1 раз, чужой фирмы — нет, причина «запись другой фирмы»; инженер — свои уходят`);
+  freshProfile(out, tag); resetNet(); stand.names = {};
+  stand.quality = { actions: ['construction.view', 'construction.edit', 'quality.view', 'quality.scope.contractor'], templates: [], projects: null,
+    contractor: { id: CP_OWN, name: 'Фирма 1', keys: [] }, objects: null, container: null };
+  try {
+    await start();
+    let { ctx, page } = await launch(out, tag);
+    await signIn(page);
+    const cp = await page.evaluate(() => window.appSettings && window.appSettings.assignedCounterpartyId).catch(() => null);
+    ok(cp === CP_OWN, `${tag}: фирма подрядчика — id контрагента из ответа сервера`, String(cp));
+    await ctx.setOffline(true);
+    const t = Date.now();
+    const put = (store, id, firm) => page.evaluate(async ([st, i, f]) => window.RBI.services.storage.put(st, { id: i, title: 'SYNC-MARK', owner: 'Иванов Иван', locationId: 'loc-1',
+      core_counterparty_id: f, status: 'issued', source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() }), [store, id, firm]);
+    const ids = { dOwn: 'd-own-' + t, dOther: 'd-other-' + t, aOwn: 'a-own-' + t, aOther: 'a-other-' + t };
+    await put('construction_defects_v2', ids.dOwn, CP_OWN); await put('construction_defects_v2', ids.dOther, CP_OTHER);
+    await put('construction_acceptance_v2', ids.aOwn, CP_OWN); await put('construction_acceptance_v2', ids.aOther, CP_OTHER);
+    await ctx.setOffline(false);
+    const n = (tb, id) => sendsAll.get(tb + ':' + id) || 0;
+    for (let i = 0; i < 6 && !(n('construction_defects_v2', ids.dOwn) && n('construction_acceptance_v2', ids.aOwn)); i++) {
+      await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000);
+    }
+    await page.waitForTimeout(2500);
+    const rec = (st, id) => page.evaluate(async ([s2, i]) => { const x = (await window.RBI.services.storage.getAll(s2)).find((y) => y.id === i); return x ? [x.syncStatus || x.sync_status, x.syncBlockReason || ''] : null; }, [st, id]);
+    const r = { dOwn: n('construction_defects_v2', ids.dOwn), dOther: n('construction_defects_v2', ids.dOther), aOwn: n('construction_acceptance_v2', ids.aOwn),
+      aOther: n('construction_acceptance_v2', ids.aOther), dOtherRec: await rec('construction_defects_v2', ids.dOther), aOtherRec: await rec('construction_acceptance_v2', ids.aOther) };
+    note(JSON.stringify(r));
+    // подрядчик отправляет только замечания («В работу» / «Устранено»; P2-0044), приёмки — нет
+    ok(r.dOwn === 1, `${tag}: замечание своей фирмы ушло ровно 1 раз`, String(r.dOwn));
+    ok(r.dOther === 0 && r.dOtherRec && r.dOtherRec[0] === 'blocked' && r.dOtherRec[1] === 'Не отправлено: запись другой фирмы',
+      `${tag}: замечание чужой фирмы — не ушло, причина «запись другой фирмы»`, JSON.stringify(r.dOtherRec));
+    // приёмки: правка по серверу (row_visible_id) — своей фирмы можно, чужой — нет
+    ok(r.aOwn === 1 && r.aOther === 0 && r.aOtherRec && r.aOtherRec[0] === 'blocked', `${tag}: приёмка своей фирмы ушла 1 раз, чужой — нет (причина)`, `${r.aOwn}/${r.aOther} ${JSON.stringify(r.aOtherRec)}`);
+    await ctx.close();
+    // инженер только Стройконтроля (без прав Качества): свои замечания уходят — раньше не уходило ничего (роль экрана «Директор»)
+    stand.quality = { actions: ['construction.view', 'construction.edit', 'quality.view'], templates: [], projects: null, contractor: null, objects: null, container: null };
+    freshProfile(out, tag + '-eng');
+    ({ ctx, page } = await launch(out, tag + '-eng'));
+    await signIn(page);
+    const e1 = 'd-eng-' + Date.now();
+    await page.evaluate(async (i) => window.RBI.services.storage.put('construction_defects_v2', { id: i, title: 'SYNC-MARK', owner: 'Иванов Иван', locationId: 'loc-1', status: 'issued',
+      source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() }), e1);
+    for (let i = 0; i < 5 && !n('construction_defects_v2', e1); i++) { await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    ok(n('construction_defects_v2', e1) === 1, `${tag}: инженер — своё замечание ушло ровно 1 раз`, String(n('construction_defects_v2', e1)));
+    await ctx.close();
+  } finally { stand.quality = null; await stop().catch(() => {}); }
+}
+
+/** P2-0061 этап 4 (ТД 313): отклонённое сервером уходит само, когда дали права, и по «Отправить снова» — по 1 разу, без дублей. */
+async function rejectRetry(out, width = 375, scheme = 'light') {
+  const tag = 's-reject-retry' + (width > 700 ? '-' + width : '') + (scheme === 'dark' ? '-dark' : '');
+  note(`== ${tag}: сервер отклонил осмотр → права дали → ушёл сам 1 раз; второй — по «Отправить снова» 1 раз; снимки «Отправка» и Истории`);
+  freshProfile(out, tag); resetNet(); stand.quality = ENGINEER; stand.names = {};
+  net.reject = /REJECT-MARK/;
+  try {
+    await start();
+    let { ctx, page } = await launch(out, tag, { width, height: width < 768 ? 812 : 900, scheme });
+    await signIn(page);
+    const t = Date.now(), a = 'rej-a-' + t, b = 'rej-b-' + t;
+    for (const id of [a, b]) await page.evaluate(async (i) => window.RBI.services.inspections.save({ id: i, date: new Date().toISOString(), object: 'ЖК Тестовый',
+      location: 'REJECT-MARK', template: 'Фасад', templateTitle: 'Фасад', status: 'done', inspectorName: 'Иванов Иван' }), id);
+    // чужая запись на телефоне — для снимка: «Не отправлено: запись другого сотрудника»
+    await page.evaluate(async (i) => window.RBI.services.storage.put('app_history', { id: i, date: new Date().toISOString(), object: 'ЖК Тестовый', template: 'Кладка',
+      templateTitle: 'Кладка', status: 'done', inspectorName: 'Петров Пётр', authorId: 'u-2', source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced',
+      updatedAt: new Date().toISOString() }), 'foreign-' + t);
+    for (let i = 0; i < 3; i++) { await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    const rej0 = flow.rejected || 0;
+    const ra = await getRec(page, a);
+    ok(rej0 >= 1 && ra && ra.st === 'blocked' && ra.reason === 'Сервер отклонил: нет прав на эту запись', `${tag}: сервер отклонил — запись на телефоне с причиной`, JSON.stringify(ra) + ' отказов ' + rej0);
+    // ещё проходы при том же доступе — запись не уходит снова (не бьётся в сервер каждый раз)
+    for (let i = 0; i < 2; i++) { await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    ok((flow.rejected || 0) === rej0, `${tag}: при том же доступе отклонённое не отправляется снова`, `${rej0} → ${flow.rejected}`);
+    // снимки: «Данные на устройстве → Отправка» и История
+    await page.evaluate(() => { location.hash = '#/settings/my/device'; }); await page.waitForTimeout(5000);
+    const head = await page.locator('[data-testid=p2-net-device]').innerText().catch(() => '');
+    ok(/^Не ушло: 3/.test(head) && /Не ушло, нужно действие: 3/i.test(head) && /Сервер отклонил: нет прав на эту запись/.test(head) && /Не отправлено: запись другого сотрудника \(Петров Пётр\)/.test(head)
+      && /Отправит руководитель или автор/.test(head) && /Отправить снова/.test(head), `${tag}: «Отправка» — обе причины с подсказками и «Отправить снова»`, head.replace(/\s+/g, ' ').slice(0, 300));
+    await page.locator('[data-testid=p2-net-device]').screenshot({ path: `${out}/${tag}-device.png` }).catch(() => {});
+    await page.evaluate(() => { location.hash = '#/quality/analytics/history'; }); await page.waitForTimeout(6000);
+    await page.getByText('Без объекта').first().click().catch(() => {}); await page.waitForTimeout(1200);
+    await page.getByText('Не указан').first().click().catch(() => {}); await page.waitForTimeout(1200);
+    for (const g of ['Кладка', 'Фасад']) { await page.getByText(g, { exact: true }).first().click().catch(() => {}); await page.waitForTimeout(1000); }
+    await page.screenshot({ path: `${out}/${tag}-history.png` }).catch(() => {});
+    // значок «запрещено» у записи — нажатие показывает причину и что делать
+    await page.locator('button', { hasText: /Заблок/i }).first().click().catch(() => {}); await page.waitForTimeout(700);
+    await page.screenshot({ path: `${out}/${tag}-history-reason.png` }).catch(() => {});
+    // права дали (руководитель), сервер принимает — первая запись уходит сама, без кнопки
+    net.reject = /REJECT-MARK-B-ONLY/;   // сервер больше не отклоняет
+    stand.quality = null;
+    await ctx.close();
+    ({ ctx, page } = await launch(out, tag, { width, height: width < 768 ? 812 : 900, scheme }));
+    await open(page, 9000);
+    for (let i = 0; i < 6 && !(sends.get(a) && sends.get(b)); i++) { await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    ok((sends.get(a) || 0) === 1 && (sends.get(b) || 0) === 1, `${tag}: права дали — отклонённые ушли сами, ровно 1 раз каждая`, `${sends.get(a) || 0}/${sends.get(b) || 0}`);
+    await ctx.close();
+    // «Отправить снова»: сервер отклонил при тех же правах, затем принимает — по кнопке уходит 1 раз
+    stand.quality = ENGINEER; net.reject = /REJECT-MARK/;
+    ({ ctx, page } = await launch(out, tag, { width, height: width < 768 ? 812 : 900, scheme }));
+    await open(page, 9000);
+    const c = 'rej-c-' + Date.now();
+    await page.evaluate(async (i) => window.RBI.services.inspections.save({ id: i, date: new Date().toISOString(), object: 'ЖК Тестовый', location: 'REJECT-MARK',
+      template: 'Фасад', status: 'done', inspectorName: 'Иванов Иван' }), c);
+    for (let i = 0; i < 3; i++) { await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    net.reject = /REJECT-MARK-B-ONLY/;
+    await page.evaluate(() => { location.hash = '#/settings/my/device'; }); await page.waitForTimeout(5000);
+    await page.locator('[data-testid=p2-sync-retry]').click().catch((e) => note('кнопка: ' + e.message.split('\n')[0]));
+    for (let i = 0; i < 6 && !sends.get(c); i++) await page.waitForTimeout(3000);
+    ok((sends.get(c) || 0) === 1, `${tag}: «Отправить снова» — ушла ровно 1 раз`, String(sends.get(c) || 0));
+    await ctx.close();
+  } finally { stand.quality = null; net.reject = null; await stop().catch(() => {}); }
+}
+
+/** P2-0061 этап 4 (ТД 315): задача и замечание Стройконтроля 2.0 уходят до скачивания чужого («своё первым»). */
+async function ownFirst(out) {
+  const tag = 's-own-first';
+  note(`== ${tag}: задача и замечание — отправлены раньше, чем начато скачивание осмотров`);
+  freshProfile(out, tag); resetNet(); stand.names = {};
+  stand.quality = { actions: ['quality.view', 'quality.edit', 'construction.view', 'construction.edit'], templates: [], projects: null, contractor: null, objects: null, container: null };
+  try {
+    await start();
+    const { ctx, page } = await launch(out, tag);
+    await signIn(page);
+    await page.waitForTimeout(3000);
+    const t = Date.now(), task = 'task-' + t, def = 'def-' + t;
+    await page.evaluate(async ([ti, di]) => {
+      const S = window.RBI.services;
+      await S.storage.put('rbi_tasks', { id: ti, title: 'SYNC-MARK', engineerName: 'Иванов Иван', status: 'pending', date: new Date().toISOString(), source: 'local',
+        syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() });
+      await S.storage.put('construction_defects_v2', { id: di, title: 'SYNC-MARK', owner: 'Иванов Иван', locationId: 'loc-1', status: 'issued', source: 'local',
+        syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() });
+    }, [task, def]);
+    const n0 = apiLog.length;
+    await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {});
+    for (let i = 0; i < 10 && !(sendsAll.get('rbi_tasks:' + task) && sendsAll.get('construction_defects_v2:' + def)); i++) await page.waitForTimeout(2000);
+    const L = apiLog.slice(n0);
+    const at = (re) => L.findIndex((x) => re.test(x));
+    const iTask = at(/^POST \/rest\/v1\/rbi_tasks/), iDef = at(/^POST \/rest\/v1\/construction_defects_v2/), iPull = at(/^GET \/rest\/v1\/rbi_inspections/);
+    note(`порядок: задача ${iTask}, замечание ${iDef}, скачивание осмотров ${iPull}`);
+    ok(iTask >= 0 && iDef >= 0 && (iPull < 0 || (iTask < iPull && iDef < iPull)), `${tag}: задача и замечание ушли до скачивания чужого`, `${iTask}/${iDef}/${iPull}`);
+    ok((sendsAll.get('rbi_tasks:' + task) || 0) === 1 && (sendsAll.get('construction_defects_v2:' + def) || 0) === 1, `${tag}: каждая — ровно 1 раз за проход`,
+      `${sendsAll.get('rbi_tasks:' + task) || 0}/${sendsAll.get('construction_defects_v2:' + def) || 0}`);
+    await ctx.close();
+  } finally { stand.quality = null; await stop().catch(() => {}); }
+}
+
 export function syncScenarios(out) {
-  return { 's-kinds': () => kinds(out), 's-rename': () => rename(out), 's-foreign': () => foreignAndLeader(out, 's-foreign'), 's-leader': () => foreignAndLeader(out, 's-leader') };
+  return { 's-reject-retry': () => rejectRetry(out), 's-reject-retry-1440-dark': () => rejectRetry(out, 1440, 'dark'), 's-own-first': () => ownFirst(out),
+    's-contractor': () => contractor(out), 's-kinds': () => kinds(out), 's-rename': () => rename(out), 's-foreign': () => foreignAndLeader(out, 's-foreign'), 's-leader': () => foreignAndLeader(out, 's-leader') };
 }

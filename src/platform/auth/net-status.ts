@@ -5,7 +5,7 @@
  * N — записи работы текущей базы Качества / СК по правилу движка (isUnsentLocal); сама отправка — движок синхронизации.
  * Макет утверждён владельцем 28.10.2026 (reports/P2-0058/stage3/mockups/compare.html).
  */
-import { countUnsent, listPending } from './offline-rescue.ts';
+import { countUnsent, listPending, resetBlocked } from './offline-rescue.ts';
 import { statusHtml, toItems, SYNC_CSS, SYNC_STYLE_ID } from './sync-status.ts';
 import type { IsUnsent } from './offline-rescue.ts';
 import { renderOfflineModules } from '../services/offline/device-modules.ts';
@@ -211,6 +211,13 @@ export function startNetStatus(deps: Deps): void {
     if (act === 'sync' && typeof win.triggerSync === 'function') void win.triggerSync('manual');
     if (act === 'drop' && b.dataset.id && win.HistoryActions?.resolveSyncAttention) void Promise.resolve(win.HistoryActions.resolveSyncAttention(b.dataset.id)).then(() => fillDevice());
     if (act === 'copy') void copyReport(b);
+    // P2-0061 (ТД 313): «Отправить снова» — перепроверить правилом всё «Не отправлено» / «Сервер отклонил» и запустить отправку
+    if (act === 'retry') {
+      const db = win.RBI_DB_NAME || '';
+      void (db && typeof indexedDB !== 'undefined' ? resetBlocked(indexedDB, db) : Promise.resolve(0))
+        .then(() => { if (typeof win.triggerSync === 'function') return win.triggerSync('manual'); })
+        .then(() => fillDevice(), () => fillDevice());
+    }
   }
   async function copyReport(btn: HTMLElement): Promise<void> {
     const J = win.RbiSyncJournal;

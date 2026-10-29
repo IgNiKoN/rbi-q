@@ -42,7 +42,8 @@ test('P2-0059: карточка — «не отправлено: N», откло
   const html = statusHtml({ ...base, offline: true, items, lastOkAt: new Date(2026, 9, 28, 11, 58).toISOString(), probe: 'offline', probeAt: NOW,
     journal: [{ t: '14:31', text: 'не начат · нет ответа сервера', tone: 'warn' }], journalTotal: 1 }, false);
   assert.match(html, /Нет связи · не отправлено: 1/);
-  assert.match(html, /Отклонено сервером: 1/);
+  assert.match(html, /Не ушло, нужно действие: 1/);   // P2-0061: одна группа «само не уйдёт» с кнопкой
+  assert.match(html, /data-act="retry"[^>]*>Отправить снова/);
   assert.match(html, /Сервер отклонил: объект не назначен/);
   assert.match(html, /Последняя успешная отправка: сегодня 11:58/);
   assert.match(html, /Проверка связи: нет ответа, 14:31/);
@@ -52,4 +53,17 @@ test('P2-0059: карточка — «не отправлено: N», откло
   assert.match(ok, /Всё отправлено/);
   assert.match(ok, /Событий пока нет/);
   assert.match(ok, /data-testid="p2-sync-journal" open/);
+});
+
+test('P2-0061: «Не отправлено: …» (решило устройство) и «Сервер отклонил: …» — как записаны, с подсказкой; только такие — «Не ушло: N»', () => {
+  const foreign = { id: 'f', syncStatus: 'blocked', syncBlockReason: 'Не отправлено: запись другого сотрудника (Петров Пётр)', syncBlockHint: 'Отправит руководитель или автор, войдя на этом телефоне' };
+  const rej = { id: 'r', syncStatus: 'blocked', syncBlockReason: 'Сервер отклонил: нет прав на эту запись', syncBlockHint: 'Уйдёт сама, когда вам дадут права, или нажмите «Отправить снова»' };
+  const a = reasonFor(foreign, true, base), b = reasonFor(rej, true, base);
+  assert.deepEqual([a.chip, a.why, a.hint], ['bad', 'Не отправлено: запись другого сотрудника (Петров Пётр)', 'Отправит руководитель или автор, войдя на этом телефоне']);
+  assert.deepEqual([b.why, b.hint], ['Сервер отклонил: нет прав на эту запись', 'Уйдёт сама, когда вам дадут права, или нажмите «Отправить снова»']);
+  const items = toItems([{ store: 'app_history', rec: foreign, rejected: true }, { store: 'rbi_tasks', rec: rej, rejected: true }], base);
+  const html = statusHtml({ ...base, items, lastOkAt: '', probe: null, probeAt: 0, journal: [], journalTotal: 0 }, false);
+  assert.match(html, /<b class="p2s__title">Не ушло: 2<\/b>/);
+  assert.ok(!/Всё отправлено/.test(html), 'не «Всё отправлено», когда само не уйдёт');
+  assert.match(html, /Не ушло, нужно действие: 2/);
 });

@@ -39,6 +39,7 @@ export const SYNC_CSS = `
 .p2s__hint{color:var(--text-muted);font-size:12.5px}
 .p2s__act{min-height:36px;padding:0 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--warning,#b8844a) 45%,transparent);background:transparent;color:var(--text-main);font-weight:700;font-size:12.5px;cursor:pointer}
 .p2s__group{padding:8px 16px;font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:color-mix(in srgb,var(--text-muted) 6%,transparent);border-top:1px solid var(--card-border)}
+.p2s__group--act{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
 .p2s__foot{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 16px;border-top:1px solid var(--card-border);font-size:12.5px;color:var(--text-muted)}
 .p2j summary{list-style:none}.p2j summary::-webkit-details-marker{display:none}
 .p2j__sum{display:flex;align-items:center;gap:10px;padding:14px 16px;min-height:48px;cursor:pointer;font-weight:800;font-size:14px}
@@ -93,6 +94,11 @@ export function reasonFor(r: Rec, rejected: boolean, c: ReasonCtx): Reason {
   const st = String(r.syncStatus ?? r.sync_status ?? '');
   const block = String(r.syncBlockReason ?? r.sync_block_reason ?? '');
   if (rejected) {
+    // P2-0061: причина правила устройства («Не отправлено: …») и отказ сервера («Сервер отклонил: …») — как записаны, с подсказкой
+    const hint = String(r.syncBlockHint ?? '');
+    if (/^(Не отправлено|Сервер отклонил):/.test(block)) {
+      return { chip: 'bad', why: block, hint: hint || 'запись осталась на телефоне; нажмите «Отправить снова», когда дадут права' };
+    }
     const hit = REJECT_RU.find(([re]) => re.test(block));
     return { chip: 'bad', why: 'Сервер отклонил: ' + (hit ? hit[1] : (block ? block.charAt(0).toLowerCase() + block.slice(1) : 'нет прав')),
       hint: 'запись осталась на телефоне; обратитесь к руководителю' };
@@ -133,7 +139,11 @@ export function statusHtml(d: StatusData, journalOpen: boolean): string {
   const rejected = d.items.filter((i) => i.rejected);
   const lastOk = d.lastOkAt ? whenLabel(d.lastOkAt, d.now) : '';
   let head: string;
-  if (!unsent.length) {
+  if (!unsent.length && rejected.length) {
+    // P2-0061: само ничего не уйдёт — не «Всё отправлено», а сколько не ушло (причины — у записей ниже)
+    head = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + ICON_UP + '</div><div><b class="p2s__title">Не ушло: ' + rejected.length + '</b>' +
+      '<span class="p2s__sub">Само не уйдёт — у каждой записи ниже причина и что делать</span></div></div>';
+  } else if (!unsent.length) {
     head = '<div class="p2s__head"><div class="p2s__ico p2s__ico--ok">' + ICON_OK + '</div><div><b class="p2s__title">Всё отправлено</b>' +
       '<span class="p2s__sub">' + (lastOk ? 'Последняя успешная отправка: ' + esc(lastOk) : 'На этом телефоне нет неотправленных записей') + '</span></div></div>';
   } else {
@@ -151,7 +161,9 @@ export function statusHtml(d: StatusData, journalOpen: boolean): string {
     (i.reason.act === 'drop_photos' && i.store === 'app_history' ? '<button class="p2s__act" type="button" data-act="drop" data-id="' + esc(i.id) + '">Отправить без этого фото</button>' : '') +
     '</div></li>';
   const list = unsent.length ? '<ul class="p2s__list">' + unsent.map(row).join('') + '</ul>' : '';
-  const rej = rejected.length ? '<div class="p2s__group">Отклонено сервером: ' + rejected.length + '</div><ul class="p2s__list">' + rejected.map(row).join('') + '</ul>' : '';
+  // P2-0061: всё, что само не уйдёт, — одной группой с причинами и кнопкой «Отправить снова» (ТД 313)
+  const rej = rejected.length ? '<div class="p2s__group p2s__group--act">Не ушло, нужно действие: ' + rejected.length +
+    '<button class="p2s__act" type="button" data-act="retry" data-testid="p2-sync-retry">Отправить снова</button></div><ul class="p2s__list">' + rejected.map(row).join('') + '</ul>' : '';
   const footParts: string[] = [];
   if (unsent.length || rejected.length) footParts.push('Последняя успешная отправка: ' + (lastOk ? esc(lastOk) : 'ещё не было'));
   if (d.probe && d.probeAt) footParts.push('Проверка связи: ' + esc(PROBE_RU[d.probe] || d.probe) + ', ' + hhmm(d.probeAt));

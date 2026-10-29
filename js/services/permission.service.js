@@ -423,6 +423,10 @@
         // 6. Можно ли отправлять данные в облако
         canPush() {
             if (!window.syncConfig || !window.syncConfig.enabled) return false;
+            // P2-0061: вход почтой — по действиям с сервера (правка или управление любым модулем), не по названию роли экрана:
+            // у инженера только Стройконтроля роль экрана «Директор», раньше отправка у него была закрыта целиком
+            const me = window.RbiSyncAccess && typeof window.RbiSyncAccess.deviceMe === 'function' ? window.RbiSyncAccess.deviceMe() : null;
+            if (me) return me.actions.some(function (a) { return /\.(edit|manage)$/.test(a); });
             if (this.getCloudStatus() !== 'approved') return false;
             return !!this.getPermissions().canPush;
         },

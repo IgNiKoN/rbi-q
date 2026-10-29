@@ -104,7 +104,7 @@ function decide(rec, kind, me, what) {
         if (has(me, mod + '.manage') || mine) return { ok: true };
         return foreign(rec, kind);
     }
-    if (me.objects !== null) {
+    if (me.objects !== null && kind.objects !== false) {   // objects: false — права модуля без объектов (Стройконтроль 2.0, row_visible_id)
         const keys = objectKeys(rec, kind);
         if (!keys.length) { if (!mine) return foreign(rec, kind); }
         else if (!(me.inObject ? me.inObject(rec) : keys.some((k) => me.objects.includes(k)))) {

@@ -25,10 +25,11 @@ await q(`insert into quality.project_objects(id, canonical_key, display_name, sy
          ('o1-mir', 'жк север', 'ЖК Север', '{}', $1), ('o2-mir', 'жк юг', 'ЖК Юг', '{}', $1)`, [CA]);
 await db.exec(`select set_config('quality.object_sync', '', false)`);
 await q(`insert into core.counterparties(id, company_id, name, inn, kinds) values ($1, $3, 'Фирма 1', '7701000001', '{contractor}'), ($2, $3, 'Фирма 2', '7701000002', '{contractor}')`, [CP1, CP2, CA]);
+const CE = ['construction.view', 'construction.edit'];
 const ROLES = {
-  eng: ['quality.view', 'quality.edit'], engO1: ['quality.view', 'quality.edit'], mgr: ['quality.view', 'quality.edit', 'quality.manage'],
-  dir: ['quality.view', 'quality.scope.company'], comp: ['quality.view', 'quality.edit', 'quality.scope.company'],
-  ctr: ['quality.view', 'quality.edit', 'quality.scope.contractor'], viewer: ['quality.view'], other: ['quality.view', 'quality.edit']
+  eng: ['quality.view', 'quality.edit', ...CE], engO1: ['quality.view', 'quality.edit', ...CE], mgr: ['quality.view', 'quality.edit', 'quality.manage', ...CE, 'construction.manage'],
+  dir: ['quality.view', 'quality.scope.company', 'construction.view'], comp: ['quality.view', 'quality.edit', 'quality.scope.company', ...CE],
+  ctr: ['quality.view', 'quality.edit', 'quality.scope.contractor', ...CE], viewer: ['quality.view', 'construction.view'], other: ['quality.view', 'quality.edit', ...CE]
 };
 for (const [k, acts] of Object.entries(ROLES)) {
   const [{ id }] = await q(`insert into core.company_roles(company_id, name) values ($1, $2) returning id`, [CA, 'Зеркало ' + k]);
@@ -40,7 +41,8 @@ for (const [k, acts] of Object.entries(ROLES)) {
 // таблицы с политикой и вид записи устройства (описание `sync` манифеста)
 const TABLES = [['rbi_inspections', 'inspection'], ['rbi_tasks', 'task'], ['project_meetings', 'meeting'], ['project_interventions', 'intervention'],
   ['project_fmea', 'fmea'], ['project_schedule_stages', 'schedule'], ['shared_reports', 'report'], ['sk_records', 'sk_record'],
-  ['shared_etalons', 'etalon'], ['shared_docs', 'document'], ['shared_practices', 'practice'], ['shared_twi_cards', 'twi']];
+  ['shared_etalons', 'etalon'], ['shared_docs', 'document'], ['shared_practices', 'practice'], ['shared_twi_cards', 'twi'],
+  ['construction_defects_v2', 'defect_v2'], ['construction_acceptance_v2', 'acceptance_v2'], ['construction_units_v2', 'unit_v2']];
 const filler = (t, tag) => (t === 'text' ? `'${tag}'` : t === 'uuid' ? 'gen_random_uuid()' : t === 'boolean' ? 'false' : /json/.test(t) ? "'{}'"
   : /int|numeric|double|real/.test(t) ? '1' : /timestamp/.test(t) ? 'now()' : t === 'date' ? 'current_date' : /\[\]/.test(t) ? "'{}'" : 'null');
 const colsOf = {};
@@ -60,11 +62,16 @@ async function row(t, id, { author = null, engineer = 'x', object = null, cp = n
   if (has('project_canonical_key')) { names.push('project_canonical_key'); vals.push(object === null ? 'null' : `'${object}'`); }
   if (has('assigned_to_auth_user_id') && assignee) { names.push('assigned_to_auth_user_id'); vals.push(`'${assignee}'`); }
   for (const x of c) if (x.nn && !x.def && !SET.includes(x.n)) { names.push(x.n); vals.push(filler(x.t, id + '-' + x.n)); }
+  // Стройконтроль 2.0: сторож 043 не даёт подрядчику создавать замечания — засев в обход триггеров, автор — явно
+  const raw = t.startsWith('construction_');
+  if (raw && author && has('core_created_by')) { names.push('core_created_by'); vals.push(`'${author}'`); }
+  if (raw) await db.exec(`set session_replication_role = replica`);
   await db.exec(`insert into quality.${t} (${names.map((n) => '"' + n + '"').join(',')}) values (${vals.join(',')})`);
+  if (raw) await db.exec(`set session_replication_role = origin`);
   if (cp && has('core_counterparty_id')) {   // фирма записи — прямо id контрагента (обычно её ставит триггер по названию; здесь — в обход, как перенос данных)
-    await db.exec(`select set_config('quality.object_bind', '1', false)`);
+    await db.exec(`set session_replication_role = replica`);   // без триггеров привязки фирмы — id контрагента как есть
     await q(`update quality.${t} set core_counterparty_id = $1 where id = $2`, [cp, id]);
-    await db.exec(`select set_config('quality.object_bind', '', false)`);
+    await db.exec(`set session_replication_role = origin`);
   }
   await db.exec(`select set_config('request.jwt.claim.sub', '', false)`);
 }
@@ -112,7 +119,7 @@ for (const [t, kindName] of TABLES) {
       // запись устройства — как её сохраняет скачивание (id автора, подпись, объект, фирма, кому задача)
       const nameField = [].concat((K.author || {}).name || [])[0] || 'inspectorName';
       const rec = { id: r.id, authorId: r.core_created_by || undefined, [nameField]: r.engineer_name || '', project_canonical_key: r.project_canonical_key || '',
-        contractorId: r.core_counterparty_id || '', assignedToId: r.assigned_to_auth_user_id || '' };
+        contractorId: r.core_counterparty_id || '', core_counterparty_id: r.core_counterparty_id || '', assignedToId: r.assigned_to_auth_user_id || '' };
       const dv = visible(rec, K, me), de = canSend(rec, K, me);
       const key = t + ' · ' + k;
       tally[key] = tally[key] || [0, 0];

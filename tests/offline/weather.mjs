@@ -182,7 +182,8 @@ async function reasons(width, scheme) {
   ok(/Нет связи · не отправлено: 3/.test(head), `${tag}: «Нет связи · не отправлено: 3»`, head.split('\n')[0]);
   ok(chips.filter((c) => c === 'net').length === 2 && chips.includes('photo') && chips.includes('bad'), `${tag}: причины — «нет связи» ×2, «нет фото», «отклонено»`, JSON.stringify(chips));
   ok(/Нет фото пункта «Армирование»/.test(head) && /Отправить без этого фото/.test(head), `${tag}: «Нет фото пункта «Армирование»» и «Отправить без этого фото»`);
-  ok(/Отклонено сервером: 1/i.test(head) && /Сервер отклонил: нет прав/i.test(head), `${tag}: «Отклонено сервером: 1 — нет прав»`);
+  // P2-0061: «Не ушло, нужно действие» — одной группой с причинами и кнопкой «Отправить снова»
+  ok(/Не ушло, нужно действие: 1/i.test(head) && /Сервер отклонил: нет прав/i.test(head) && /Отправить снова/.test(head), `${tag}: «Не ушло, нужно действие: 1 — Сервер отклонил: нет прав», «Отправить снова»`);
   const chipLabel = await page.locator('[data-testid=p2-net]').getAttribute('aria-label').catch(() => '');
   ok(chipLabel === 'Нет связи, не отправлено: 3', `${tag}: значок в шапке — то же число, что в карточке`, String(chipLabel));
   const jEnd = await page.evaluate(() => window.RbiSyncJournal.list().filter((e) => e.k === 'end').pop() || null);

@@ -78,9 +78,15 @@ function rbiAccessGate(kindName, rec, canPushRole = true) {
     const kind = SA && rec ? SA.kindOf(kindName) : null;
     if (!kind) return { ok: true, changed: false, described: false };
     const me = SA.deviceMe();
+    // ТД 313: отклонённое сервером — снова, только если мой доступ изменился (или нажали «Отправить снова» — отпечаток сброшен)
+    if (rec.syncServerRejected && rec.syncAccessStamp && rec.syncAccessStamp === SA.accessStamp(me)) return { ok: false, changed: false, described: true };
     const dec = !canPushRole ? { ok: false, reason: 'Не отправлено: роль не подтверждена для отправки', hint: 'Войдите заново или обратитесь к администратору' }
         : SA.canSend(rec, kind, me);
-    if (dec.ok) return { ok: true, changed: SA.stampAuthor(rec, kind, me), described: true };
+    if (dec.ok) {
+        const was = !!rec.syncServerRejected;
+        if (was) { delete rec.syncServerRejected; rec.syncAccessStamp = ''; }
+        return { ok: true, changed: SA.stampAuthor(rec, kind, me) || was, described: true };
+    }
     const stamp = SA.accessStamp(me);
     const was = rec.syncStatus || rec.sync_status;
     if (was === 'blocked' && rec.syncBlockReason === dec.reason && rec.syncAccessStamp === stamp) return { ok: false, changed: false, described: true };
@@ -1029,8 +1035,9 @@ async function rbiSyncPass(mode = 'silent') {
                 if (!rpA.attentionRetryDue(i, Date.now())) { rbiNoteAttentionRetry(i.syncAttentionRetryAt); return false; }
             }
 
-            // Уже синхронизированное облачное эхо не отправляем обратно
-            if (source === 'cloud' || status === 'synced') return false;
+            // Уже синхронизированное облачное эхо не отправляем обратно. P2-0061 (ТД 313): отклонённая сервером («blocked») —
+            // не эхо, даже если до P2-0061 ей поставили source 'cloud': её перепроверяет правило
+            if (status === 'synced' || (source === 'cloud' && status !== 'blocked')) return false;
 
             // Любые несинхронизированные / заблокированные / локальные проверки отправляем всегда,
             // даже если они старше последней синхронизации.
@@ -1270,12 +1277,19 @@ async function rbiSyncPass(mode = 'silent') {
                     const rejIds = new Set(inspectionsBatch.map(x => String(x.id)));
                     itemsBatch.length = 0;
                     photosBatch.length = 0;
+                    // P2-0061 (ТД 313): «Сервер отклонил» — запись остаётся своей (source local) и уйдёт снова, когда изменится мой
+                    // доступ (отпечаток), или по «Отправить снова»; повтор — upsert по id, без дубля
+                    const meRej = window.RbiSyncAccess ? window.RbiSyncAccess.deviceMe() : null;
                     localHistoryToUpdate.forEach(c => {
                         if (!rejIds.has(String(c.id))) return;
+                        c.source = 'local';
                         c.syncStatus = 'blocked';
                         c.sync_status = 'blocked';
-                        c.syncBlockReason = 'Ошибка прав доступа (RLS)';
+                        c.syncBlockReason = 'Сервер отклонил: нет прав на эту запись';
                         c.sync_block_reason = c.syncBlockReason;
+                        c.syncBlockHint = 'Уйдёт сама, когда вам дадут права, или нажмите «Отправить снова»';
+                        c.syncServerRejected = true;
+                        c.syncAccessStamp = window.RbiSyncAccess ? window.RbiSyncAccess.accessStamp(meRej) : '';
                     });
                 } else {
                     actuallyPushedChecks += inspectionsBatch.length;
@@ -1322,8 +1336,12 @@ async function rbiSyncPass(mode = 'silent') {
     }
 
     try {
-        // P2-0059 (С5): своё — до скачивания чужого
-        if (canPush) await rbiPushOwnInspections();
+        // P2-0059 (С5): своё — до скачивания чужого; P2-0061 (ТД 315): и задачи, и замечания Стройконтроля 2.0 (ownFirst в описании `sync`)
+        if (canPush) {
+            await rbiPushOwnInspections();
+            await rbiPushTasks();
+            if (typeof dbGetAll === 'function' && window.supabaseClient && typeof STORES !== 'undefined') await pushConstructionDefectsV2();
+        }
         if (showSyncProgress) {
             if (_syncProg()) _syncProg().setStep(1);
         } else if (mode === 'manual') {
@@ -2995,6 +3013,9 @@ async function rbiSyncPass(mode = 'silent') {
         // =====================================================
         // 7.1. PUSH: задачи в rbi_tasks
         // =====================================================
+        // P2-0061 (ТД 315): «своё первым» у задач — та же функция вызывается и в начале прохода, до скачивания чужого;
+        // повтор в проходе отправленное не шлёт (задачи помечаются «отправлено»)
+        async function rbiPushTasks() {
         if (canPush) {
             try {
 
@@ -3049,7 +3070,7 @@ async function rbiSyncPass(mode = 'silent') {
                     tasks = pass;
                 }
 
-                actuallyPushedTasks = tasks.length; // Запоминаем для честного счетчика
+                actuallyPushedTasks += tasks.length; // Запоминаем для честного счетчика (P2-0061: функция зовётся дважды за проход)
 
                 if (tasks.length > 0) {
                     // ИСПРАВЛЕНИЕ: Пакетная отправка (Batch Upsert). 
@@ -3142,6 +3163,8 @@ async function rbiSyncPass(mode = 'silent') {
             }
 
         }
+        }
+        await rbiPushTasks();
         // =====================================================
         // 8. PUSH: рейтинг инженера
         // =====================================================
@@ -3188,7 +3211,7 @@ async function rbiSyncPass(mode = 'silent') {
         }
         // P2-0044: отправка замечаний Стройконтроля 2.0 — отдельным шагом: подрядчику (без права «создавать»)
         // она тоже нужна («В работу», «Устранено»); что он может менять — решает сервер (043, сторож подрядчика).
-        const pushConstructionDefectsV2 = async () => {
+        async function pushConstructionDefectsV2() {   // P2-0061 (ТД 315): объявление — чтобы вызвать и в начале прохода
             // Push замечаний construction-v2 (как legacy const_defect — любой авторизованный push-capable, не только admin)
             if (STORES.CONST_DEFECTS_V2 && typeof window.prepareConstructionDefectV2ForCloud === 'function') {
                 try {
@@ -3198,39 +3221,16 @@ async function rbiSyncPass(mode = 'silent') {
                         const source = d.source || '';
                         return status === 'not_synced' || status === 'blocked' || source === 'local';
                     });
-                    const permsDef = window.RBI && window.RBI.services && window.RBI.services.permissions;
-                    const isAdminDefects = permsDef ? permsDef.isAdmin() : false;
-                    if (!isAdminDefects) {
-                        const roleDef = permsDef && typeof permsDef.getCurrentRole === 'function'
-                            ? permsDef.getCurrentRole()
-                            : '';
-                        const isContractorDef = roleDef === 'contractor';
-                        let myContractorIdDef = '';
-                        if (isContractorDef && permsDef && typeof permsDef.getAssignedContractor === 'function') {
-                            const assignedName = String(permsDef.getAssignedContractor() || '').trim();
-                            const contractorsSvc = window.RBI && window.RBI.services && window.RBI.services.contractors;
-                            if (assignedName && contractorsSvc && typeof contractorsSvc.resolveIdFromNormalized === 'function') {
-                                myContractorIdDef = String(
-                                    contractorsSvc.resolveIdFromNormalized({
-                                        display_name: assignedName,
-                                        contractor_name: assignedName
-                                    }) || ''
-                                ).trim();
-                                if (myContractorIdDef === 'pending') myContractorIdDef = '';
-                            }
+                    // P2-0061: замечания — общее правило (как row_visible_id сервера: своя фирма по id контрагента, без объектов),
+                    // отсеянное — «Не отправлено» с причиной; две копии отбора по названию фирмы и ФИО (замечания, приёмки) удалены
+                    {
+                        const pass = [];
+                        for (const d of defectsToPush) {
+                            const gate = rbiAccessGate('defect_v2', d);
+                            if (gate.changed && typeof dbPut === 'function') await dbPut(STORES.CONST_DEFECTS_V2 || 'construction_defects_v2', d);
+                            if (gate.ok) pass.push(d);
                         }
-                        // P2-0044: своя фирма — по номеру контрагента (core_counterparty_id), без номера — по карточке справочника
-                        const myCpDef = String((window.appSettings && window.appSettings.assignedCounterpartyId) || '').trim();
-                        defectsToPush = defectsToPush.filter(d => {
-                            if (isContractorDef && myCpDef && d.core_counterparty_id) {
-                                return String(d.core_counterparty_id) === myCpDef;
-                            }
-                            if (isContractorDef && myContractorIdDef) {
-                                return String(d.contractorId || d.contractor_id || '') === String(myContractorIdDef);
-                            }
-                            const owner = d.owner || d.created_by || d.author || '';
-                            return !owner || owner === iName;
-                        });
+                        defectsToPush = pass;
                     }
                     for (const item of defectsToPush) {
                         // Upload local:// / data:image из photos + history (+ legacy photo)
@@ -3284,14 +3284,18 @@ async function rbiSyncPass(mode = 'silent') {
                     localStorage.setItem('rbi_cloud_dirty', '1');
                 }
             }
-        };
+        }
 
         // =====================================================
         // 8.1. PUSH: прочие модули через rbi_cloud_objects
         // =====================================================
         if (canPush) {
             try {
-                const canCreatePush = window.RBI.services.permissions ? window.RBI.services.permissions.canCreate() : false;
+                // P2-0061: отправка проектных записей — по действиям с сервера (правка или управление любым модулем), не по названию
+                // роли: у инженера только Стройконтроля роль экрана «Директор» — раньше он не отправлял ничего; каждую запись решает правило
+                const meProj = window.RbiSyncAccess ? window.RbiSyncAccess.deviceMe() : null;
+                const canCreatePush = meProj ? meProj.actions.some(a => /\.(edit|manage)$/.test(a))
+                    : (window.RBI.services.permissions ? window.RBI.services.permissions.canCreate() : false);
                 const projectObjectPushRole = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentRole() : 'guest'; // <-- ВОТ ЭТА СТРОКА
 
                 if (!canCreatePush) {
@@ -4102,34 +4106,15 @@ async function rbiSyncPass(mode = 'silent') {
                                     const source = d.source || '';
                                     return status === 'not_synced' || status === 'blocked' || source === 'local';
                                 });
-                                const permsAcc = window.RBI && window.RBI.services && window.RBI.services.permissions;
-                                const isAdminAcc = permsAcc ? permsAcc.isAdmin() : false;
-                                if (!isAdminAcc) {
-                                    const roleAcc = permsAcc && typeof permsAcc.getCurrentRole === 'function'
-                                        ? permsAcc.getCurrentRole()
-                                        : '';
-                                    const isContractorAcc = roleAcc === 'contractor';
-                                    let myContractorIdAcc = '';
-                                    if (isContractorAcc && permsAcc && typeof permsAcc.getAssignedContractor === 'function') {
-                                        const assignedName = String(permsAcc.getAssignedContractor() || '').trim();
-                                        const contractorsSvc = window.RBI && window.RBI.services && window.RBI.services.contractors;
-                                        if (assignedName && contractorsSvc && typeof contractorsSvc.resolveIdFromNormalized === 'function') {
-                                            myContractorIdAcc = String(
-                                                contractorsSvc.resolveIdFromNormalized({
-                                                    display_name: assignedName,
-                                                    contractor_name: assignedName
-                                                }) || ''
-                                            ).trim();
-                                            if (myContractorIdAcc === 'pending') myContractorIdAcc = '';
-                                        }
+                                // P2-0061: приёмки — общее правило (как замечания), отсеянное — с причиной
+                                {
+                                    const pass = [];
+                                    for (const d of accToPush) {
+                                        const gate = rbiAccessGate('acceptance_v2', d);
+                                        if (gate.changed && typeof dbPut === 'function') await dbPut(STORES.CONST_ACCEPTANCE_V2 || 'construction_acceptance_v2', d);
+                                        if (gate.ok) pass.push(d);
                                     }
-                                    accToPush = accToPush.filter(d => {
-                                        if (isContractorAcc && myContractorIdAcc) {
-                                            return String(d.contractorId || d.contractor_id || '') === String(myContractorIdAcc);
-                                        }
-                                        const owner = d.owner || d.created_by || d.author || '';
-                                        return !owner || owner === iName;
-                                    });
+                                    accToPush = pass;
                                 }
                                 for (const item of accToPush) {
                                     // Upload local:// / data:image из checklist_results.items[].photos
@@ -4211,14 +4196,15 @@ async function rbiSyncPass(mode = 'silent') {
                                     const source = d.source || '';
                                     return status === 'not_synced' || status === 'blocked' || source === 'local';
                                 });
-                                const isAdminUnits = window.RBI.services.permissions
-                                    ? window.RBI.services.permissions.isAdmin()
-                                    : false;
-                                if (!isAdminUnits) {
-                                    unitsToPush = unitsToPush.filter(d => {
-                                        const owner = d.owner || d.created_by || d.author || '';
-                                        return !owner || owner === iName;
-                                    });
+                                // P2-0061: помещения — общее правило (право «Стройконтроль: правка», как quality.can сервера), отсеянное — с причиной
+                                {
+                                    const pass = [];
+                                    for (const d of unitsToPush) {
+                                        const gate = rbiAccessGate('unit_v2', d);
+                                        if (gate.changed && typeof dbPut === 'function') await dbPut(STORES.CONST_UNITS_V2, d);
+                                        if (gate.ok) pass.push(d);
+                                    }
+                                    unitsToPush = pass;
                                 }
                                 for (const item of unitsToPush) {
                                     const cloudItem = window.prepareConstructionUnitV2ForCloud(item);

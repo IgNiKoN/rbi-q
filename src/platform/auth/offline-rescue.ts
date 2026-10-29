@@ -30,13 +30,10 @@ export function recordStoresFrom(manifests: ModuleManifestLike[]): Record<string
 }
 export const RECORD_STORES: Record<string, string> = {
   ...recordStoresFrom(ModulesManifest),
-  // Стройконтроль (старый и 2.0) — до описания `sync` в его манифестах (P2-0061, этап 3)
+  // старый Стройконтроль (v1): описания `sync` нет — на сервере фирма по названию (row_visible 020), ТД; записи не теряются
   construction_defects: 'Замечание',
-  construction_defects_v2: 'Замечание',
   construction_acceptance: 'Приёмка',
-  construction_acceptance_v2: 'Приёмка',
-  construction_units: 'Помещение',
-  construction_units_v2: 'Помещение'
+  construction_units: 'Помещение'
 };
 /** Вложения: переносятся вместе с записью, если запись на них ссылается (фото, снимок чек-листа). */
 export const ATTACHMENT_STORES = ['app_photos', 'checklist_snapshots'];
@@ -174,6 +171,35 @@ export async function countUnsent(idb: IDBFactory, name: string, isUnsent: IsUns
 /** P2-0059 (С8): запись «отклонена сервером» (нет прав) — сама не уйдёт; в счётчик «не отправлено» не входит. */
 export function isRejected(r: Rec): boolean {
   return String(r.syncStatus ?? r.sync_status ?? '') === 'blocked';
+}
+
+/** P2-0061 (ТД 313): «Отправить снова» — у записей «Не отправлено» / «Сервер отклонил» стирается отпечаток доступа: следующая
+ *  синхронизация проверит их правилом заново и отправит, если теперь можно (id записи тот же — дубля нет). Возвращает число записей. */
+export async function resetBlocked(idb: IDBFactory, name: string): Promise<number> {
+  const db = await openExisting(idb, name);
+  if (!db) return 0;
+  let n = 0;
+  try {
+    for (const store of Array.from(db.objectStoreNames)) {
+      if (!(store in RECORD_STORES)) continue;
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(store, 'readwrite');
+        const rq = tx.objectStore(store).openCursor();
+        rq.onsuccess = () => {
+          const c = rq.result;
+          if (!c) return;
+          const r = c.value as Rec;
+          if (isRejected(r)) { n++; c.update({ ...r, syncAccessStamp: '', syncServerRejected: false }); }
+          c.continue();
+        };
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+  } finally {
+    db.close();
+  }
+  return n;
 }
 
 /** P2-0059 (С8): неотправленные и отклонённые записи работы в базе — для списка «что не ушло и почему» (то же правило, что у счётчика). */
