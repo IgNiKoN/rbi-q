@@ -18,6 +18,8 @@ import type { SummaryLinks } from './Attention.ts';
 import { hashParam } from '../ProjectPicker.ts';
 import { AreaBadge } from '../area.ts';
 import { InHead, rememberProject } from '../PageHead.ts';
+import { NEED_INTERNET_INPUT, useInputBlocked } from '../../../platform/services/offline/index.ts';
+import { NeedInternet, NO_COPY_TEXT } from '../../../platform/auth/need-internet.ts';
 
 /** Порядок объектов: сначала самые отстающие (дни отставания с сервера), без данных — в конце. */
 export function byLag(a: SummaryProject, b: SummaryProject): number {
@@ -30,15 +32,18 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
   const { api, save, links } = props;
   const [list, setList] = useState<SummaryProject[] | null>(null);
   const [error, setError] = useState('');
+  const [noCopy, setNoCopy] = useState(false);   // P2-0060: без сети, а копии Сводки на телефоне нет
   const [editing, setEditing] = useState(false);
   // P2-0021: переход «Требует моего участия» → объект (p=…) и блок «Требует внимания» (focus=attention)
   const [sel, setSel] = useState(() => hashParam(window.location.hash, 'p') || 'all');
   const [focus] = useState(() => hashParam(window.location.hash, 'focus'));
   const [period, setPeriod] = useState<Period>(8);
+  const noNet = useInputBlocked('planfact', 'dates');   // P2-0060: без сети даты не правятся (ввод План/Факта без сети — P2-0064)
 
   async function load(): Promise<void> {
     setError('');
     const r = await api.portfolio();
+    setNoCopy(!r.ok && !!(r as { offline?: boolean }).offline);
     if (!r.ok) { setError(r.message); setList([]); return; }
     setList(r.value);
     setSel((x) => (x === 'all' || r.value.some((p) => p.project_id === x) ? x : 'all'));   // объект из перехода, которого нет, — «Все объекты»
@@ -61,6 +66,7 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
   }, [focus, list]);
 
   if (list === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
+  if (noCopy) return h(NeedInternet, { section: '«План/Факт»', testId: 'pf-need-internet', text: NO_COPY_TEXT });
   const sorted = [...list].sort(byLag);
   const opened = sel === 'all' ? (list.length === 1 ? list[0] : null) : list.find((p) => p.project_id === sel) || null;
   const pick = (id: string): void => { setEditing(false); setSel(id); };
@@ -81,12 +87,13 @@ export function SummaryTab(props: { api: SummaryApi; save?: (b: Uint8Array, n: s
         opened ? h(AreaBadge, { key: opened.project_id, projectId: opened.project_id }) : null)   // P2-0048: «Ваша область: …»
     : null;
   const dash = (p: SummaryProject): ReactElement => h('div', { className: 'sm-dash' },
-    h(Dashboard, { api, p, period, links, onDates: p.can_manage ? () => setEditing(true) : undefined, actions: p.can_manage || p.can_thresholds
-      ? [p.can_manage ? h('button', { key: 'd', type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'sm-dates-btn', onClick: () => setEditing(!editing) }, editing ? 'Закрыть даты' : 'Даты проекта') : null,
+    h(Dashboard, { api, p, period, links, onDates: p.can_manage && !noNet ? () => setEditing(true) : undefined, actions: p.can_manage || p.can_thresholds
+      ? [p.can_manage ? h('button', { key: 'd', type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'sm-dates-btn', disabled: noNet,
+          title: noNet ? NEED_INTERNET_INPUT : undefined, onClick: () => setEditing(!editing) }, noNet ? 'Даты проекта · ' + NEED_INTERNET_INPUT : editing ? 'Закрыть даты' : 'Даты проекта') : null,
          // P2-0038: пороги — в «Настройки → Администрирование → Модули → План/Факт»; отсюда — ссылка на объект там
          p.can_thresholds ? h('button', { key: 't', type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'sm-th-btn', onClick: () => openThresholds(p.project_id) }, 'Пороги светофора →') : null]
       : null }),
-    editing && p.can_manage ? h(DatesForm, { api, p, onSaved: () => { setEditing(false); void load(); } }) : null);
+    editing && p.can_manage && !noNet ? h(DatesForm, { api, p, onSaved: () => { setEditing(false); void load(); } }) : null);
   return h('div', { className: 'pj-tab sm-tab', 'data-testid': 'sm-tab' },
     error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
     !error && !list.length ? h('div', { className: 'pf-card pj-empty pf-muted', 'data-testid': 'sm-empty' }, 'Нет проектов: сводка видна по проектам, где у вас есть право просмотра факта.') : null,

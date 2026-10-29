@@ -11,7 +11,8 @@ import { PageTabs } from '../../platform/ui/page.ts';
 import type { ReactElement, ReactNode } from 'react';
 import type { AccessEntry, AuthApi } from '../../platform/auth/auth.service.ts';
 import { PLATFORM_AUTH_CSS } from '../../platform/auth/LoginForm.ts';
-import { NeedInternet, useOfflineEntry } from '../../platform/auth/need-internet.ts';
+import { NeedInternet, NO_COPY_TEXT, isOfflineEntry, useOfflineEntry } from '../../platform/auth/need-internet.ts';
+import { OfflineMark, offlineRead } from '../../platform/services/offline/index.ts';
 import { CompanyScope } from '../../platform/company/CompanyScope.ts';
 import type { CoreApi } from '../../platform/core/core.service.ts';
 import { VorTab } from './vor/VorTab.ts';
@@ -148,18 +149,25 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     const mail = await a.getEmail();
     if (!mail) { reset(); setMode('demo'); return; }
     setWho(mail);
-    setAccess(await a.getAccess());
-    const comp = projects ? await projects.myAccess() : [];
+    // P2-0060: роль и доступ к компании — через копию для просмотра (без сети — по последнему ответу сервера этому человеку);
+    // пустой ответ (так сервисы отвечают и при сбое связи) прежнюю копию не заменяет
+    const keep = <T>(f: () => Promise<T[]>) => async () => ({ ok: true as const, value: await f() });
+    const acc = await offlineRead('planfact', 'access:context', keep(() => a.getAccess()), { keepEmpty: false, quiet: true });
+    setAccess(acc.ok ? acc.value : []);
+    const ca = projects ? await offlineRead('planfact', 'access:companies', keep(() => projects.myAccess()), { keepEmpty: false, quiet: true }) : null;
+    const comp = ca && ca.ok ? ca.value : [];
     setCompanies(comp);
+    // цены и КС-2 — только по ответу сервера (без сети их подвкладок нет; копия цен — этап 3, по праву estimate)
+    const online = !isOfflineEntry();
     let est = false;
-    if (estimate) for (const c of comp) if (await estimate.canUse(c.company_id)) { est = true; break; }
+    if (estimate && online) for (const c of comp) if (await estimate.canUse(c.company_id)) { est = true; break; }
     setCanEstimate(est);
     // «КС-2»: право просмотра или правки хотя бы в одном проекте (сервер проверяет каждый вызов).
     let k2 = false;
-    if (ks2Api && vorApi && comp.length) for (const p of await vorApi.listProjects()) { const pr = await vorApi.permissions(p.id); if (pr.includes(KS2_VIEW) || pr.includes(KS2_EDIT)) { k2 = true; break; } }
+    if (ks2Api && vorApi && comp.length && online) for (const p of await vorApi.listProjects()) { const pr = await vorApi.permissions(p.id); if (pr.includes(KS2_VIEW) || pr.includes(KS2_EDIT)) { k2 = true; break; } }
     setCanKs2(k2);
     if (onAccess) onAccess(comp.length > 0, est, k2);
-    showShellUser(mail, (await a.getAccess())[0]?.role || '');
+    showShellUser(mail, (acc.ok ? acc.value : [])[0]?.role || '');
     setMode('authed');
   }
 
@@ -193,8 +201,11 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     setWho(''); setAccess([]); setCompanies([]); setCanEstimate(false); setCanKs2(false); if (onAccess) onAccess(false, false, false);
   }
 
-  // P2-0060: без связи (в т. ч. сервер завис при запуске) — «Нужен интернет» сразу, а не «Загрузка…» до ответа сервера
-  if (mode === 'loading' && !offline) return h('div', { className: 'pf-root pf-muted' }, 'Загрузка…');
+  // P2-0060: экраны, которые без сети показывают копию для просмотра (остальные — «Нужен интернет», этап 3 карточки)
+  const offlineReady = route.page === 'summary';
+  // без связи (в т. ч. сервер завис при запуске) — «Нужен интернет» сразу, а не «Загрузка…» до ответа сервера
+  if (mode === 'loading') return offline && !offlineReady ? h(NeedInternet, { section: '«План/Факт»', testId: 'pf-need-internet' })
+    : h('div', { className: 'pf-root pf-muted' }, 'Загрузка…');
 
   // P2-0041: строки «почта · компания · роль · Выйти» больше нет — всё это в шапке оболочки и «Настройки → Моё».
   // Без входа — подсказка «демо» с кнопкой «Войти»; несколько компаний — выбор компании в шапке раздела.
@@ -212,6 +223,7 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
   const pageHead = (title: string, tabs?: ReactNode): ReactElement => h('div', { className: 'pf-root pf-dirhead' },
     h('div', { className: 'pf-pagehead' },
       h('h2', { className: 'pf-title' }, title),
+      h(OfflineMark, { module: 'planfact' }),   // P2-0060: «Без сети · данные на …»
       company,
       h('div', { className: 'pf-head-pick', ref: setPickEl, 'data-testid': 'pf-head-pick' }),
       h('div', { className: 'pf-head-actions', ref: setActEl, 'data-testid': 'pf-head-actions' })),
@@ -225,7 +237,9 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
   };
   const go = (sub: Sub): void => nav(`${BASE}/directories/${sub}`);
   // «ВОР»: при доступе к компании; в локальном демо-режиме — только просмотр разбора файла (сервер не нужен).
-  if (offline) return h(NeedInternet, { section: '«План/Факт»', testId: 'pf-need-internet' });
+  if (offline && !offlineReady) return h(NeedInternet, { section: '«План/Факт»', testId: 'pf-need-internet' });
+  // без сети, а раздел с интернетом ещё не открывали — доступа к компании в копии нет: не «нет проектов», а «Нужен интернет»
+  if (offline && mode === 'authed' && !companies.length) return h(NeedInternet, { section: '«План/Факт»', testId: 'pf-need-internet', text: NO_COPY_TEXT });
   const vor = route.page === 'vor' && ((mode === 'authed' && companies.length > 0) || mode === 'demo');
   // «Смета»: только с правом planfact.estimate.manage (сервер проверяет каждый вызов).
   const est = route.page === 'estimate' && mode === 'authed' && canEstimate && estimate && vorApi;

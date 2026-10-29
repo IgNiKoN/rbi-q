@@ -30,7 +30,10 @@ export function useOfflineEntry(): boolean {
   return off;
 }
 
-export function NeedInternet(props: { section: string; testId: string }): ReactElement {
+/** P2-0060: экран, который без сети показывает копию, но его ещё не открывали с интернетом — данных на телефоне нет. */
+export const NO_COPY_TEXT = 'Этот экран ещё не открывали с интернетом — на телефоне нет его данных. Данные Качества и Стройконтроля доступны без связи — осмотры сохраняются на телефоне и отправятся сами.';
+
+export function NeedInternet(props: { section: string; testId: string; text?: string }): ReactElement {
   useEffect(() => { ensureNetCss(document); }, []);
   const a = p2()?.access?.() || {};
   const quality = a.quality === true || a.construction === true;
@@ -41,7 +44,7 @@ export function NeedInternet(props: { section: string; testId: string }): ReactE
   return h('div', { className: 'p2-need', role: 'status', 'data-testid': props.testId },
     h('div', { className: 'p2-need__ico', dangerouslySetInnerHTML: { __html: ICON_OFF.replace(/15/g, '26') } }),
     h('h2', null, 'Нужен интернет'),
-    h('p', null, 'Раздел ' + props.section + ' работает только онлайн. Данные Качества и Стройконтроля доступны без связи — осмотры сохраняются на телефоне и отправятся сами.'),
+    h('p', null, props.text || 'Раздел ' + props.section + ' работает только онлайн. Данные Качества и Стройконтроля доступны без связи — осмотры сохраняются на телефоне и отправятся сами.'),
     h('div', { className: 'p2-need__btns' },
       quality ? h('button', { type: 'button', className: 'p2-nbtn p2-nbtn--primary', onClick: () => go('#/quality') }, 'Открыть Качество') : null,
       h('button', { type: 'button', className: 'p2-nbtn' + (quality ? '' : ' p2-nbtn--primary'), onClick: () => window.dispatchEvent(new Event('platform2:refresh')) }, 'Повторить')));

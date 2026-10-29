@@ -12116,7 +12116,7 @@ function Ew(r) {
     { className: "p2-need", role: "status", "data-testid": r.testId },
     f.createElement("div", { className: "p2-need__ico", dangerouslySetInnerHTML: { __html: _w.replace(/15/g, "26") } }),
     f.createElement("h2", null, "Нужен интернет"),
-    f.createElement("p", null, "Раздел " + r.section + " работает только онлайн. Данные Качества и Стройконтроля доступны без связи — осмотры сохраняются на телефоне и отправятся сами."),
+    f.createElement("p", null, r.text || "Раздел " + r.section + " работает только онлайн. Данные Качества и Стройконтроля доступны без связи — осмотры сохраняются на телефоне и отправятся сами."),
     f.createElement(
       "div",
       { className: "p2-need__btns" },

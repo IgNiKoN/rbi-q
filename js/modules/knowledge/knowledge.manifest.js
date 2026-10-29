@@ -14,6 +14,8 @@ export const KnowledgeManifest = {
     entry: './index.js',
     menu: { section: 'main', label: 'БЗ', order: 9 },
     company: { enabledByDefault: true },
+    // P2-0060: что модуль умеет без сети (сервис «Офлайн и синхронизация», MODULES.md): view — смотреть, input — вводы ('*' — свой движок), files — фото и PDF заранее
+    offline: { view: true, input: [], files: true },
     routes: ['/knowledge', '/knowledge/twi', '/knowledge/docs', '/knowledge/nodes', '/knowledge/etalons'],
     defaultRoute: '/knowledge'
 };

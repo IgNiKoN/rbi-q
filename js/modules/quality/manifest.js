@@ -17,6 +17,8 @@ export const QualityManifest = {
     entry: './index.js',
     menu: { section: 'quality' },
     company: { enabledByDefault: true },
+    // P2-0060: что модуль умеет без сети (сервис «Офлайн и синхронизация», MODULES.md): view — смотреть, input — вводы ('*' — свой движок), files — фото и PDF заранее
+    offline: { view: true, input: ['*'], files: true },
     routes: [
         '/history', '/history/:id',
         '/audit', '/audit/:id',

@@ -60,17 +60,32 @@ function session(user, ttl = 3600) {
   return { access_token: b64({ alg: 'HS256', typ: 'JWT' }) + '.' + b64({ sub: user.id, email: user.email, role: 'authenticated', aud: 'authenticated', exp }) + '.sig',
     token_type: 'bearer', expires_in: ttl, expires_at: exp, refresh_token: 'rt-' + user.id + '-' + exp, user };
 }
+/** P2-0060: второму пользователю стенда тоже дать компанию (План/Факт), его Сводка — с ошибкой сервера (копии у него нет). */
+export const stand = { user2Planfact: false };
+const hasPf = (u) => u.id === USER.id || stand.user2Planfact;
+/** P2-0060: Сводка План/Факта первого пользователя (один объект) — по ней стенд сверяет цифры с сетью и без сети. */
+export const SUMMARY = { project_id: 'p-1', name: 'ЖК Тестовый', code: 'ЖКТ', planned_start: '2026-06-01', planned_finish: '2027-03-31',
+  can_money: true, can_manage: true, has_kp: true, plan_money: 1000000, done_money: 425000, issued_money: 300000, gap_money: 125000, pct_money: 42.5,
+  pace7: 1.2, pace14: 1.1, need_pace: 1.4, days_left: 153, forecast_finish: '2027-05-10', light: 'yellow', light_reason: 'lag_yellow',
+  unpriced_rows: 0, positions: 10, pending: 0, plan_pct_today: 50, lag_pp: 7.5, lag_days: 12, pace_verdict: 'steady', work_days_left: 105,
+  light_yellow_pp: 5, light_red_pp: 15, light_overdue_days: 3, can_thresholds: true };
+const ATTENTION = { stale_days: 7, counts: { no_kp: false, no_dates: false, gap_rows: 0, gap_money: 0, unpriced_rows: 0, stale_positions: 0, pending_entries: 0 },
+  gap: [], unpriced: [], stale: [], completeness: { rows_total: 10, rows_priced: 10, priced_pct: 100, dates_pct: 100, positions_total: 10, positions_placed: 10, placed_pct: 100 } };
 const ACCESS = { actions: ['quality.manage', 'quality.edit', 'quality.view', 'construction.manage', 'construction.view', 'construction.edit'], templates: [], projects: null, contractor: null, objects: null, container: null };
 const RPC = {
-  pf_my_platform: (u) => ({ is_platform_admin: false, companies: u.id === USER.id ? [COMPANY] : [] }),
+  pf_my_platform: (u) => ({ is_platform_admin: false, companies: hasPf(u) ? [COMPANY] : [] }),
   pf_my_profile: (u) => ({ full_name: u.id === USER.id ? 'Иванов Иван' : 'Петров Пётр', must_change_password: false, user_id: u.id }),
   pf_company_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', archived_at: null }],
   pf_my_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', company_id: COMPANY.id }],
   my_access: () => ACCESS,
   // P2-0060: доступ к компании для План/Факта (подвкладки раздела) — по модулям компании на сервере стенда
-  pf_my_company_access: (u) => u.id === USER.id && COMPANY.modules.includes('planfact') ? [{ company_id: COMPANY.id, company_name: COMPANY.name,
+  pf_my_company_access: (u) => hasPf(u) && COMPANY.modules.includes('planfact') ? [{ company_id: COMPANY.id, company_name: COMPANY.name,
     can_manage_projects: true, can_manage_units: true, can_manage_roles: true, can_manage_counterparties: true }] : [],
-  pf_my_context: (u) => u.id === USER.id ? [{ company_name: COMPANY.name, role_name: COMPANY.roles[0], project_id: null }] : []
+  pf_my_context: (u) => hasPf(u) ? [{ company_name: COMPANY.name, role_name: COMPANY.roles[0], project_id: null }] : [],
+  pf_summary_portfolio: (u) => (u.id === USER.id ? [SUMMARY] : { __status: 500 }),
+  pf_summary_attention: () => ATTENTION,
+  pf_summary_worktypes: () => [{ work_type_id: 'wt-1', work_name: 'Кладка стен', units: [{ unit: 'м³', plan: 120, fact: 51, pct: 42.5, rest: 69, fact7: 6, fact14: 11, pending: 0,
+    forecast_finish: '2027-05-10', delta_days: 40, dev_pp: -7.5 }], positions: 10, plan_money: 1000000, done_money: 425000, pct_money: 42.5, unpriced_rows: 0, plan_pct_today: 50 }]
 };
 
 function cors(res) {
@@ -129,7 +144,7 @@ function respond(req, res, u, body) {
     if (u.pathname === '/auth/v1/user') return json(res, 200, user);
     if (u.pathname === '/auth/v1/logout') { res.writeHead(204); return res.end(); }
     const m = u.pathname.match(/^\/rest\/v1\/rpc\/([a-z_0-9]+)/);
-    if (m) return json(res, 200, RPC[m[1]] ? RPC[m[1]](user) : null);
+    if (m) { const v = RPC[m[1]] ? RPC[m[1]](user) : null; return v && v.__status ? json(res, v.__status, { message: 'Internal error' }) : json(res, 200, v); }
     if (u.pathname.startsWith('/rest/v1/')) {
       if (req.method === 'GET' || req.method === 'HEAD') return json(res, 200, [], { 'Content-Range': '*/0' });
       return json(res, 201, []);
