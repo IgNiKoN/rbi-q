@@ -50,4 +50,6 @@
 8. Chrome владельца: «План/Факт → ВОР» и «Качество» открываются; новая версия скачалась со сжатием в фоне (`waiting`), при перезапуске включилась, заставка — `splash-logo.jpg`.
 9. Замер «после» (`perf-after-prod.jsonl`): 4G ×4 — форма входа **4,0–4,1 с** (было 14,6), **2,9 МБ** (было 16,0); слабая сеть — **14,9–19,1 с** (было 62,6), 2,7–3,7 МБ (было 12,2); без ограничения сети — 3,8 МБ (было 16,4).
 
+10. **Тип манифеста (ТД 325)** — владелец спросил, что это, и выбрал «Исправить сейчас»: копия `cp -n /etc/nginx/mime.types /etc/nginx/mime.types.bak-p2-0067a` (5465 байт); в файловом менеджере после `application/rss+xml` (строка 10) — `application/manifest+json webmanifest;` → 5531 байт; `nginx -t` successful → reload → `active`. `manifest.webmanifest` — `content-type: application/manifest+json`; JS / CSS / HTML по-прежнему сжаты; `api.rbi-q.ru` — как раньше; `check-release` — все файлы совпадают. Откат: `cp /etc/nginx/mime.types.bak-p2-0067a /etc/nginx/mime.types` → `nginx -t` → reload.
+
 **Откат nginx:** `cp /etc/nginx/sites-available/rbi-router.bak-p2-0067a /etc/nginx/sites-available/rbi-router` → `nginx -t` → `systemctl reload nginx`.
