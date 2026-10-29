@@ -8,6 +8,8 @@
 import { createElement as h, useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { ObjectsPlaces } from './ObjectsPlaces.ts';
+import { useOfflineEntry } from '../auth/need-internet.ts';
+import { NEED_INTERNET_INPUT } from '../services/offline/offline-read.ts';
 import { newId } from '../core/projects.service.ts';
 import type { CompanyAccess, Division, DictItem, ProjectCard, ProjectCardInput, ProjectDicts, ProjectsApi } from '../core/projects.service.ts';
 import type { CoreApi } from '../core/core.service.ts';
@@ -51,6 +53,7 @@ export function ProjectsTab(props: { api: ProjectsApi; company: CompanyAccess; c
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const noNet = useOfflineEntry();   // P2-0060: без сети — только просмотр (кнопка видна неактивной)
   const can = company.can_manage_projects;
 
   async function load(): Promise<void> {
@@ -230,7 +233,8 @@ export function ProjectsTab(props: { api: ProjectsApi; company: CompanyAccess; c
       h('div', { className: 'pj-titlebox' }, h('h2', { className: 'pj-title' }, archive ? 'Проекты в архиве' : 'Проекты'),
         h('span', { className: 'pf-muted' }, `${visible.length} ${archive ? 'в архиве' : 'проектов'}` + (hasDivs ? ` · подразделений ${divisions.filter((d) => !d.archived_at).length}` : ''))),
       h('div', { className: 'pj-head-actions' }, h(MoreMenu, { testId: 'pj-more', items: more }),
-        can && !archive ? h('button', { type: 'button', className: 'pf-btn pj-main', 'data-testid': 'pj-add', onClick: () => { setError(''); setDialog('create'); } }, '+ Проект') : null)),
+        can && !archive ? h('button', { type: 'button', className: 'pf-btn pj-main', 'data-testid': 'pj-add', disabled: noNet, title: noNet ? NEED_INTERNET_INPUT : undefined,
+          onClick: () => { setError(''); setDialog('create'); } }, noNet ? '+ Проект · ' + NEED_INTERNET_INPUT : '+ Проект') : null)),
     errorBox, noticeBox,
     h('input', { type: 'search', className: 'pj-input pj-search', placeholder: 'Найти проект по названию или коду', value: query, 'aria-label': 'Найти проект',
       'data-testid': 'pj-search', onInput: (e: Event) => setQuery((e.target as HTMLInputElement).value), onChange: (e: Event) => setQuery((e.target as HTMLInputElement).value) }),

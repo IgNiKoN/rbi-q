@@ -5,7 +5,7 @@
 // screen375, screen768, screen1440 — значок «Нет связи · не отправлено: N» 0 → 1 → 0, плашка, «Нужен интернет», «Данные на устройстве».
 // P2-0059: w-offline, w-slow, w-hang, w-flap, w-drop, w-5xx, w-tabs — «погоды» плохой связи (weather.mjs), замер в weather.json.
 // P2-0060: m-hang, m-hang375, m-revoke, m-first, m-other — права и меню сразу из памяти при зависшем сервере (menu.mjs), кадры в menu.json.
-// P2-0060: v-summary375, v-summary1440, v-other — копия для просмотра: Сводка План/Факта без сети, чужой копии нет (view.mjs).
+// P2-0060: v-summary375, v-summary1440, v-other, v-prefetch375, v-prefetch1440 — копия для просмотра: Сводка План/Факта без сети, чужой копии нет (view.mjs).
 // P2-0066: r-deploy, r-middeploy, r-partial, r-tabs, r-chunk, r-requests, r-delta, r-allow, r-launch, r-return, r-queue, r-transition, r-size — «выкладка во время работы» (release.mjs), замер в release.json.
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
@@ -15,7 +15,7 @@ import { start, stop, log as apiLog, marks, mode, COMPANY } from './servers.mjs'
 import { weatherScenarios } from './weather.mjs';
 import { releaseMeasures, releaseScenarios } from './release.mjs';
 import { menuScenarios, saveMenuMeasures } from './menu.mjs';
-import { viewScenarios } from './view.mjs';
+import { saveViewMeasures, viewScenarios } from './view.mjs';
 import { count, freshProfile, go, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
 
 const args = process.argv.slice(2);
@@ -305,7 +305,9 @@ async function screen(width, scheme) {
   ok(c1 === 'Нет связи, не отправлено: 1', `${tag}: записал осмотр — «не отправлено: 1»`, String(c1));
   await page.screenshot({ path: join(out, `${tag}-unsent.png`) });
   await go(page, '#/settings/company/objects', 4000);
-  ok(await needInternet(page).catch(() => false), `${tag}: «Компания» — «Нужен интернет»`);
+  // P2-0060: «Компанию» с интернетом не открывали — «Нужен интернет»: экраном или пометкой экрана (права раздела уже в копии)
+  const coMark = await page.locator('[data-testid=p2-offline-mark]').first().innerText().catch(() => '');
+  ok((await needInternet(page).catch(() => false)) || /Нужен интернет/.test(coMark), `${tag}: «Компания» — «Нужен интернет»`, coMark);
   await page.screenshot({ path: join(out, `${tag}-company.png`), fullPage: true });
   await go(page, '#/planfact', 4000);
   ok(await needInternet(page).catch(() => false), `${tag}: План/Факт — «Нужен интернет»`);
@@ -339,4 +341,5 @@ console.log(`\nИтог: PASS ${pass}, FAIL ${fail}. Запросов к под�
 writeFileSync(join(out, 'report.txt'), results.join('\n') + `\nИтог: PASS ${pass}, FAIL ${fail}\n`);
 if (releaseMeasures.length) writeFileSync(join(out, 'release.json'), JSON.stringify(releaseMeasures, null, 2));
 saveMenuMeasures(out);
+saveViewMeasures(out);
 process.exit(fail ? 1 : 0);

@@ -1,0 +1,28 @@
+[
+  {
+    "tag": "v-prefetch375",
+    "projects": 1,
+    "reads": 18,
+    "bytes": 5342,
+    "perProject": [
+      {
+        "id": "p-1",
+        "reads": 15,
+        "bytes": 4507
+      }
+    ]
+  },
+  {
+    "tag": "v-prefetch1440",
+    "projects": 1,
+    "reads": 18,
+    "bytes": 5342,
+    "perProject": [
+      {
+        "id": "p-1",
+        "reads": 15,
+        "bytes": 4507
+      }
+    ]
+  }
+]

@@ -71,12 +71,39 @@ export const SUMMARY = { project_id: 'p-1', name: 'ЖК Тестовый', code:
   light_yellow_pp: 5, light_red_pp: 15, light_overdue_days: 3, can_thresholds: true };
 const ATTENTION = { stale_days: 7, counts: { no_kp: false, no_dates: false, gap_rows: 0, gap_money: 0, unpriced_rows: 0, stale_positions: 0, pending_entries: 0 },
   gap: [], unpriced: [], stale: [], completeness: { rows_total: 10, rows_priced: 10, priced_pct: 100, dates_pct: 100, positions_total: 10, positions_placed: 10, placed_pct: 100 } };
+/** P2-0060: ВОР, факт и места объекта p-1 (корпус → секция → 3 этажа) — для «заранее» и просмотра без сети. */
+const LOC = (id, parent, type, name, depth, kids, path) => ({ id, parent_id: parent, node_type: type, name, sort_order: 1, area: null, depth, path: path || name, child_count: kids });
+const LOCATIONS = { '': [LOC('b-1', null, 'building', 'Корпус 1', 0, 1)], 'b-1': [LOC('s-1', 'b-1', 'section', 'Секция 1', 1, 3, 'Корпус 1 · Секция 1')],
+  's-1': [1, 2, 3].map((n) => LOC('f-' + n, 's-1', 'floor', 'Этаж ' + n, 2, 0, 'Корпус 1 · Секция 1 · Этаж ' + n)) };
+export const POSITIONS = [1, 2, 3].map((n) => ({ position_id: 'pos-' + n, location_id: 'f-' + n, location_path: 'Корпус 1 · Секция 1 · Этаж ' + n, location_type: 'floor',
+  work_type_id: 'wt-1', work_name: 'Кладка стен', unit_code: 'м³', plan_qty: 40, fact_qty: n * 7, pending_qty: 0, pending_count: 0, last_rejected_note: null }));
+const VOR_POSITIONS = POSITIONS.map((p) => ({ id: p.position_id, location_id: p.location_id, location_path: p.location_path, work_type_id: 'wt-1', work_type: 'Кладка стен',
+  unit_code: 'м³', qty: 40, apartments_note: null, import_id: 'imp-1', file_name: 'ВОР корпус 1.xlsx', source_row_no: 3, revision_no: 1 }));
+const IMPORTS = [{ id: 'imp-1', file_name: 'ВОР корпус 1.xlsx', sheet_name: 'Лист1', status: 'confirmed', row_count: 12, works: 1, positions: 3,
+  created_at: '2026-10-01T10:00:00Z', created_by_email: 'test@stand.local', confirmed_at: '2026-10-01T11:00:00Z', profile_id: null, revision_no: 1,
+  previous_import_id: null, root_import_id: 'imp-1', is_current: true, confirmed_by_email: 'test@stand.local' }];
 const ACCESS = { actions: ['quality.manage', 'quality.edit', 'quality.view', 'construction.manage', 'construction.view', 'construction.edit'], templates: [], projects: null, contractor: null, objects: null, container: null };
 const RPC = {
   pf_my_platform: (u) => ({ is_platform_admin: false, companies: hasPf(u) ? [COMPANY] : [] }),
   pf_my_profile: (u) => ({ full_name: u.id === USER.id ? 'Иванов Иван' : 'Петров Пётр', must_change_password: false, user_id: u.id }),
   pf_company_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', archived_at: null }],
-  pf_my_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', company_id: COMPANY.id }],
+  pf_my_projects: (u) => (hasPf(u) ? [{ id: 'p-1', name: 'ЖК Тестовый', company_id: COMPANY.id, archived_at: null }] : []),
+  pf_my_permissions: (u) => (u.id === USER.id ? ['planfact.fact.view', 'planfact.fact.create', 'planfact.vor.manage'] : []),
+  pf_my_area: () => ({ full: true, locations: [], fact_owner: [], can_on_behalf: false }),
+  pf_vor_list_imports: () => IMPORTS,
+  pf_vor_positions: () => VOR_POSITIONS,
+  pf_vor_list_profiles: () => [],
+  pf_fact_positions: (u, a) => POSITIONS.filter((p) => !a.p_location || p.location_id === a.p_location),
+  pf_fact_pending: () => [],
+  pf_summary_positions: () => POSITIONS.map((p) => ({ position_id: p.position_id, location_id: p.location_id, location_path: p.location_path, work_type_id: 'wt-1',
+    work_name: 'Кладка стен', unit_code: 'м³', plan_qty: 40, fact_qty: p.fact_qty, pct: (p.fact_qty / 40) * 100, rest_qty: 40 - p.fact_qty, fact7: 0, fact14: 0,
+    pending_qty: 0, forecast_finish: null, delta_days: null, plan_pct_today: 50, dev_pp: null })),
+  pf_brigade_list: () => [{ id: 'br-1', name: 'Бригада Иванова', leader_name: 'Иванов', phone: null, archived_at: null, can_manage: true }],
+  pf_list_locations: (u, a) => LOCATIONS[a.p_parent || ''] || [],
+  pf_my_admin_companies: (u) => (u.id === USER.id ? [{ company_id: COMPANY.id, company_name: COMPANY.name }] : []),
+  pf_project_catalog: () => [{ id: 'p-1', name: 'ЖК Тестовый', code: 'ЖКТ', archived_at: null, created_at: '2026-06-01T00:00:00Z', can_manage: true,
+    division_id: null, division_name: null, address: 'Москва', planned_start: '2026-06-01', planned_finish: '2027-03-31', manager_user_id: null, manager_name: null,
+    stage: 'construction', our_role: null, timezone: 'Europe/Moscow', country: 'RU' }],
   my_access: () => ACCESS,
   // P2-0060: доступ к компании для План/Факта (подвкладки раздела) — по модулям компании на сервере стенда
   pf_my_company_access: (u) => hasPf(u) && COMPANY.modules.includes('planfact') ? [{ company_id: COMPANY.id, company_name: COMPANY.name,
@@ -144,7 +171,7 @@ function respond(req, res, u, body) {
     if (u.pathname === '/auth/v1/user') return json(res, 200, user);
     if (u.pathname === '/auth/v1/logout') { res.writeHead(204); return res.end(); }
     const m = u.pathname.match(/^\/rest\/v1\/rpc\/([a-z_0-9]+)/);
-    if (m) { const v = RPC[m[1]] ? RPC[m[1]](user) : null; return v && v.__status ? json(res, v.__status, { message: 'Internal error' }) : json(res, 200, v); }
+    if (m) { let a = {}; try { a = JSON.parse(body || '{}') || {}; } catch { /* не JSON */ } const v = RPC[m[1]] ? RPC[m[1]](user, a) : null; return v && v.__status ? json(res, v.__status, { message: 'Internal error' }) : json(res, 200, v); }
     if (u.pathname.startsWith('/rest/v1/')) {
       if (req.method === 'GET' || req.method === 'HEAD') return json(res, 200, [], { 'Content-Range': '*/0' });
       return json(res, 201, []);

@@ -9,6 +9,12 @@ import type { PlanNodeType } from '../../services/locations/types.ts';
 import type { Result } from '../company/company.service.ts';
 
 import type { CompanyAccess } from './core.service.ts';
+import { copyCall, offlineRead, pruneToMyProjects, rpcRead } from '../services/offline/copy.ts';
+
+/** P2-0060: чтения ядра (объекты, места, единицы) — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
+export const PROJECTS_READS: ReadonlySet<string> = new Set(['pf_my_company_access', 'pf_company_projects', 'pf_list_locations', 'pf_list_units', 'pf_project_catalog', 'pf_company_divisions', 'pf_project_dicts', 'pf_project_places', 'pf_location_path']);
+/** P2-0060: доступ к компании — служебное чтение (в пометку «данные на …» не идёт). */
+const CORE_ACCESS: ReadonlySet<string> = new Set(['pf_my_company_access']);
 export type { CompanyAccess } from './core.service.ts';
 export interface ProjectItem {
   id: string; name: string; code: string | null; archived_at: string | null; created_at: string; can_manage: boolean;
@@ -127,18 +133,22 @@ export interface ProjectsApi {
 export async function fetchMyProjects<T>(): Promise<T[]> {
   const c = getClient();
   if (!c) return [];
-  const { data, error } = await c.rpc('pf_my_projects');
-  return error || !Array.isArray(data) ? [] : (data as T[]);
+  // P2-0060: через копию для просмотра; с сетью сервер назвал мои объекты — копии остальных объектов удаляются (План/Факт, «Компания»)
+  const r = await offlineRead<T[]>('company', 'pf_my_projects', () => rpcRead<T[]>('pf_my_projects'), { quiet: true });
+  if (!r.ok || !Array.isArray(r.value)) return [];
+  if (r.meta && r.meta.from === 'server') {
+    const ids = r.value.map((p) => String((p as { id?: unknown }).id || '')).filter(Boolean);
+    void pruneToMyProjects(ids, ['planfact', 'company']);
+  }
+  return r.value;
 }
 
 /** P2-0048: путь места «Корпус 1 · Секция 2» по id (pf_location_path; нет доступа к проекту — null). Для плашки «Ваша область». */
 export async function fetchLocationPath(locationId: string): Promise<string | null> {
   const c = getClient();
   if (!c) return null;
-  try {
-    const { data, error } = await c.rpc('pf_location_path', { p_location: locationId });
-    return error || typeof data !== 'string' ? null : data;
-  } catch { return null; }
+  const r = await copyCall('company', PROJECTS_READS, 'pf_location_path', { p_location: locationId }, () => rpcRead<unknown>('pf_location_path', { p_location: locationId }));
+  return r.ok && typeof r.value === 'string' ? r.value : null;
 }
 
 /** Число узлов, которое создаст генератор: корпус + N·(секция + M·(этаж + K квартир)). Та же формула, что на сервере. */
@@ -170,11 +180,11 @@ export function createProjectsService(): ProjectsApi | null {
   const c = getClient();
   if (!c) return null;
   async function rows<T>(fn: string, args?: Record<string, unknown>): Promise<T[]> {
-    const { data, error } = await c!.rpc(fn, args);
-    if (error || !Array.isArray(data)) return [];
-    return data as T[];
+    const r = await call<T[]>(fn, args || {});
+    return r.ok && Array.isArray(r.value) ? r.value : [];
   }
-  async function call<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('company', PROJECTS_READS, fn, args, () => send<T>(fn, args), CORE_ACCESS);
+  async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
       return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: (data ?? null) as T };

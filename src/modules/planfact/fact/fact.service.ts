@@ -7,6 +7,10 @@
 import { getClient } from '../../../platform/auth/auth.service.ts';
 import { mapCompanyError } from '../../../platform/company/company.service.ts';
 import type { Result } from '../../../platform/company/company.service.ts';
+import { copyCall } from '../../../platform/services/offline/copy.ts';
+
+/** P2-0060: чтения факта и бригад — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
+export const FACT_READS: ReadonlySet<string> = new Set(['pf_brigade_list', 'pf_fact_positions', 'pf_fact_history', 'pf_fact_pending', 'pf_fact_journal']);
 
 export const FACT_VIEW = 'planfact.fact.view';
 export const FACT_CREATE = 'planfact.fact.create';
@@ -79,7 +83,8 @@ const normPending = (r: FactPendingRow): FactPendingRow => ({ ...r, plan_qty: n(
 export function createFactService(): FactApi | null {
   const c = getClient();
   if (!c) return null;
-  async function call<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('planfact', FACT_READS, fn, args, () => send<T>(fn, args));
+  async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
       return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: (data ?? null) as T };

@@ -1,6 +1,7 @@
 /**
  * ВОР с сервера (P2-0006; редакции — P2-0006b, 046): только функции public.pf_vor_* — права, изоляция компаний и неизменяемость
  * подтверждённой загрузки проверяет сервер; кнопки на экране — подсказка.
+ * P2-0060: чтения — через копию для просмотра (без сети — последние данные), запись без сети не отправляется.
  */
 import { getClient } from '../../../platform/auth/auth.service.ts';
 import { mapCompanyError } from '../../../platform/company/company.service.ts';
@@ -8,6 +9,11 @@ import type { Result } from '../../../platform/company/company.service.ts';
 import type { ParsedRow, RowContext } from './parse.ts';
 import type { BaseRow } from './revision.ts';
 import { fetchMyProjects } from '../../../platform/core/projects.service.ts';
+import { copyCall } from '../../../platform/services/offline/copy.ts';
+
+/** P2-0060: функции-чтения ВОР (копия для просмотра); остальные pf_vor_* — запись. */
+export const VOR_READS: ReadonlySet<string> = new Set(['pf_my_permissions', 'pf_vor_list_imports', 'pf_vor_import_rows', 'pf_vor_list_profiles',
+  'pf_vor_list_work_types', 'pf_vor_dictionary', 'pf_vor_positions', 'pf_vor_revision_base', 'pf_vor_revision_changes']);
 
 export const VOR_MANAGE = 'planfact.vor.manage';
 export const ROWS_CHUNK = 1000;
@@ -82,11 +88,11 @@ export function createVorService(): VorApi | null {
   const c = getClient();
   if (!c) return null;
   async function rows<T>(fn: string, args?: Record<string, unknown>): Promise<T[]> {
-    const { data, error } = await c!.rpc(fn, args);
-    if (error || !Array.isArray(data)) return [];
-    return data as T[];
+    const r = await call<T[]>(fn, args || {});
+    return r.ok && Array.isArray(r.value) ? r.value : [];
   }
-  async function call<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('planfact', VOR_READS, fn, args, () => send<T>(fn, args));
+  async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
       return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: (data ?? null) as T };
@@ -105,10 +111,7 @@ export function createVorService(): VorApi | null {
   }
   return {
     listProjects: () => fetchMyProjects<VorProject>(),
-    async permissions(p) {
-      const { data, error } = await c!.rpc('pf_my_permissions', { p_project: p });
-      return !error && Array.isArray(data) ? (data as string[]) : [];
-    },
+    permissions: (p) => rows<string>('pf_my_permissions', { p_project: p }),
     listImports: (p) => rows<VorImport>('pf_vor_list_imports', { p_project: p }),
     importRows: (i) => rows<VorRow>('pf_vor_import_rows', { p_import: i }),
     async saveDraft(p, list, onProgress) {

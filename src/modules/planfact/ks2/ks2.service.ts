@@ -9,6 +9,10 @@ import type { Result } from '../../../platform/company/company.service.ts';
 import type { Ks2Header, Ks2Snapshot } from './form.ts';
 import { createCoreService } from '../../../platform/core/core.service.ts';
 import type { CounterpartyCard } from '../../../platform/core/counterparties.ts';
+import { copyCall } from '../../../platform/services/offline/copy.ts';
+
+/** P2-0060: чтения КС-2 — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
+export const KS2_READS: ReadonlySet<string> = new Set(['pf_ks2_acts', 'pf_ks2_act', 'pf_ks2_revisions', 'pf_ks2_revision', 'pf_ks2_settings', 'pf_ks2_template']);
 
 export const KS2_VIEW = 'planfact.ks2.view';
 export const KS2_EDIT = 'planfact.ks2.edit';
@@ -67,7 +71,8 @@ export function normActData(d: Ks2ActData): Ks2ActData {
 export function createKs2Service(): Ks2Api | null {
   const c = getClient();
   if (!c) return null;
-  async function call<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('planfact', KS2_READS, fn, args, () => send<T>(fn, args));
+  async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
       return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: (data ?? null) as T };

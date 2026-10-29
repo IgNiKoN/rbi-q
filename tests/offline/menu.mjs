@@ -102,9 +102,10 @@ async function hang(out, width) {
   const last = frames[frames.length - 1] || {};
   ok(last.hash === '#/planfact/vor', `${tag}: адрес остался #/planfact/vor`, String(last.hash));
   ok(!!last.pnav && last.pnav.length > 0 && last.pnav.includes('ВОР'), `${tag}: подвкладки План/Факта есть (ВОР)`, JSON.stringify(last.pnav));
+  // этап 3: без связи ВОР — по копии для просмотра (открывали с сетью при входе) или «Нужен интернет», если копии нет
   const pf = await page.evaluate(() => { const v = document.getElementById('tab-planfact'); return !!v && v.classList.contains('active') && v.getBoundingClientRect().height > 0
-    && !!v.querySelector('[data-testid=pf-need-internet]'); }).catch(() => false);
-  ok(pf, `${tag}: открыт раздел План/Факт (данные — «Нужен интернет» до этапа 2)`);
+    && (!!v.querySelector('[data-testid=pf-need-internet]') || /ВОР/.test(v.innerText)); }).catch(() => false);
+  ok(pf, `${tag}: открыт раздел План/Факт (ВОР — по копии или «Нужен интернет»)`);
 
   // сервер ожил; у компании больше нет Стройконтроля — меню обновляется само (фоновая проверка раз в минуту), без перезагрузки
   const mods = COMPANY.modules.slice();

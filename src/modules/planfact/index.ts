@@ -66,6 +66,10 @@ import type { PlanfactDemo } from './model.ts';
 import { withInboxRefresh } from './inbox/inbox.ts';
 import { INBOX_CSS } from './inbox/InboxTab.ts';
 import demo from './demo-data.json' with { type: 'json' };
+import { prefetchPlanfact } from './prefetch.ts';
+import type { PrefetchStats } from './prefetch.ts';
+import { createAreaService } from './area.ts';
+import { markPrefetched, prefetchDue } from '../../platform/services/offline/copy.ts';
 
 const ROUTE = '#/planfact';
 const VIEW_ID = 'tab-planfact';
@@ -230,6 +234,19 @@ export function showView(): void {
   navActive = true;
   syncPlatformNav();
   window.dispatchEvent(new Event(ROUTE_EVENT));
+}
+
+/** P2-0060: «держать без сети» — заранее скачать основные экраны моих проектов (раз в сутки; force — по кнопке). */
+let prefetching: Promise<PrefetchStats | null> | null = null;
+export function prefetchOffline(opts?: { force?: boolean }): Promise<PrefetchStats | null> {
+  getAuth();
+  if (prefetching) return prefetching;
+  if (!(opts && opts.force) && !prefetchDue('planfact', Date.now())) return Promise.resolve(null);
+  const area = createAreaService();
+  prefetching = prefetchPlanfact({ summary: summaryApi, vor: vorApi, fact: factApi, projects: projectsApi, area: area ? (p) => area.myArea(p) : undefined })
+    .then((st) => { if (!st.stopped) markPrefetched('planfact', st, Date.now()); return st; })
+    .finally(() => { prefetching = null; });
+  return prefetching;
 }
 
 export async function init(ctx?: ShellCtx): Promise<void> {

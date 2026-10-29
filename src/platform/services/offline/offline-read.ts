@@ -10,6 +10,8 @@ import type { CopyStore } from './copy-store.ts';
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string };
 export interface CopyMeta { from: 'server' | 'copy'; at: string; stale: boolean }
+/** Пометка модуля: самая старая показанная копия (null — копий не показано) и сколько чтений экрана без сети не нашлось в копии. */
+export interface CopyStatus { at: string | null; stale: boolean; missed: number }
 export type OfflineResult<T> = { ok: true; value: T; meta: CopyMeta | null } | { ok: false; message: string; offline?: boolean };
 
 /** Что модуль умеет без сети — поле offline манифеста (MODULES.md, сервис «Офлайн и синхронизация»). Нет поля — «Только онлайн». */
@@ -69,21 +71,34 @@ export interface OfflineReader {
   read<T>(module: string, key: string, fetcher: () => Promise<Result<T>>, opts?: ReadOpts): Promise<OfflineResult<T>>;
   /** С сетью выяснилось, к каким объектам есть доступ: копии остальных объектов модуля удаляются. */
   pruneProjects(module: string, allowed: string[]): Promise<number>;
-  /** Самая старая копия, показанная сейчас в модуле (для пометки «данные на …»); null — всё с сервера. */
-  status(module: string): CopyMeta | null;
+  /** Пометка модуля: самая старая показанная копия и пропуски копии на экране; null — всё с сервера. */
+  status(module: string): CopyStatus | null;
+  /** Экран модуля сменился — пропуски прежнего экрана не в счёт. */
+  resetMissed(module: string): void;
   subscribe(cb: () => void): () => void;
-  /** Байт копии модуля у этого человека («Офлайн по модулям»). */
-  size(module: string): Promise<number>;
+  /** Байт копии модуля у этого человека («Офлайн по модулям»); с project — только этого объекта. */
+  size(module: string, project?: string): Promise<number>;
   /** «Очистить скачанное»: копии модуля (или всех модулей) этого человека. */
   clear(module?: string): Promise<number>;
 }
 
 const TIMEOUT = Symbol('timeout');
+/** Отказ сервера по правам (mapCompanyError: 42501 / permission denied → «Нет права на это действие»). */
+const DENIED = /нет права|нет доступа/i;
 
 export function createOfflineReader(deps: ReaderDeps): OfflineReader {
   const now = (): number => (deps.now ? deps.now() : Date.now());
   /** модуль → ключ чтения → время показанной копии */
   const shown = new Map<string, Map<string, string>>();
+  /** модуль → чтения без сети, которых нет в копии (экран не открывали с интернетом) */
+  const missed = new Map<string, Set<string>>();
+  const miss = (module: string, key: string, on: boolean): void => {
+    let m = missed.get(module);
+    if (!m) { if (!on) return; m = new Set(); missed.set(module, m); }
+    const had = m.has(key);
+    if (on) m.add(key); else m.delete(key);
+    if (had !== on) emit();
+  };
   const subs = new Set<() => void>();
   const emit = (): void => { for (const cb of subs) cb(); };
   const note = (module: string, key: string, at: string | null): void => {
@@ -96,8 +111,8 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
 
   async function fromCopy<T>(module: string, key: string, id: string, quiet = false): Promise<OfflineResult<T>> {
     const c = await deps.store.get(id);
-    if (!c) return { ok: false, message: NEED_INTERNET_TEXT, offline: true };
-    if (!quiet) note(module, key, c.at);
+    if (!c) { if (!quiet) miss(module, key, true); return { ok: false, message: NEED_INTERNET_TEXT, offline: true }; }
+    if (!quiet) { note(module, key, c.at); miss(module, key, false); }
     return { ok: true, value: c.data as T, meta: { from: 'copy', at: c.at, stale: isStale(c.at, now()) } };
   }
 
@@ -118,13 +133,15 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
         new Promise<typeof TIMEOUT>((res) => { timer = setTimeout(() => res(TIMEOUT), deps.waitMs ?? READ_WAIT_MS); })]);
       clearTimeout(timer);
       if (r === TIMEOUT || (!r.ok && r.message === NO_CONNECTION_TEXT)) return fromCopy<T>(module, key, id, opts.quiet);
-      if (!r.ok) return r;
+      // сервер отказал по правам — у человека больше нет этих данных: копия удаляется (цены и сметы без права estimate и т. п.)
+      if (!r.ok) { if (DENIED.test(r.message)) { await deps.store.delete(id); note(module, key, null); } return r; }
       const at = new Date(now()).toISOString();
       let bytes = 0;
       try { bytes = JSON.stringify(r.value ?? null).length; } catch { /* не сериализуется — не в копию */ }
       const emptyList = Array.isArray(r.value) && r.value.length === 0;
       if (bytes && !(emptyList && opts.keepEmpty === false)) await deps.store.put({ id, slot, module, key, project: opts.project ?? null, at, bytes, data: r.value });
       note(module, key, null);
+      miss(module, key, false);
       return { ok: true, value: r.value, meta: { from: 'server', at, stale: false } };
     },
     async pruneProjects(module, allowed) {
@@ -136,31 +153,36 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
     },
     status(module) {
       const m = shown.get(module);
-      if (!m || !m.size) return null;
-      const at = [...m.values()].sort()[0];
-      return { from: 'copy', at, stale: isStale(at, now()) };
+      const n = missed.get(module)?.size || 0;
+      if ((!m || !m.size) && !n) return null;
+      const at = m && m.size ? [...m.values()].sort()[0] : null;
+      return { at, stale: at !== null && isStale(at, now()), missed: n };
     },
+    resetMissed(module) { if (missed.get(module)?.size) { missed.delete(module); emit(); } },
     subscribe(cb) { subs.add(cb); return () => { subs.delete(cb); }; },
-    async size(module) {
+    async size(module, project) {
       const slot = deps.slot();
-      return slot ? (await deps.store.list(slot, module)).reduce((a, r) => a + (r.bytes || 0), 0) : 0;
+      return slot ? (await deps.store.list(slot, module)).filter((r) => project === undefined || r.project === project).reduce((a, r) => a + (r.bytes || 0), 0) : 0;
     },
     async clear(module) {
       const slot = deps.slot();
       if (!slot) return 0;
       const all = await deps.store.list(slot, module);
       for (const r of all) await deps.store.delete(r.id);
-      shown.clear(); emit();
+      shown.clear(); missed.clear(); emit();
       return all.length;
     }
   };
 }
 
-/** Пометка: «Без сети · данные на 14:32» (сегодня) или «… на 14:32, 27.10»; старше 14 дней — «данные могли устареть». */
-export function copyMarkText(meta: CopyMeta, now: number): string {
+/** Пометка: «Без сети · данные на 14:32» (сегодня) или «… на 14:32, 27.10»; старше 14 дней — «данные могли устареть»;
+ *  чтений экрана нет в копии — «Нужен интернет для этого экрана» (его не открывали с интернетом). */
+export function copyMarkText(meta: CopyStatus, now: number): string {
+  if (meta.at === null) return 'Без сети · ' + NEED_INTERNET_TEXT + ' — его ещё не открывали с интернетом';
   const d = new Date(meta.at), t = new Date(now);
   const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   const same = d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
   const day = same ? '' : ', ' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0');
+  if (meta.missed) return 'Без сети · Нужен интернет для части экрана · данные на ' + hm + day + (meta.stale ? ' · могли устареть' : '');
   return 'Без сети · данные на ' + hm + day + (meta.stale ? ' · данные могли устареть' : '');
 }

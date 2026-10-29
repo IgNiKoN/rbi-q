@@ -9,6 +9,7 @@ import type { ReactElement } from 'react';
 import type { ProjectsApi } from '../../../platform/core/projects.service.ts';
 import type { Brigade, FactApi, FactPosition } from './fact.service.ts';
 import { FactEntryForm } from './FactEntryForm.ts';
+import { NEED_INTERNET_INPUT } from '../../../platform/services/offline/offline-read.ts';
 import { emptyText, useMyArea } from '../area.ts';
 import { FactHistory } from './FactHistory.ts';
 import { FloorClose } from './FloorClose.ts';
@@ -70,7 +71,7 @@ function GridTable(props: { grid: Grid; corner: string; sel: Sel | null; onPick:
 /** Где позиция внутри ячейки: квартира («Секция 1 · кв. 5») или «на этаже»; путь без названия корпуса. */
 const where = (p: FactPosition): string => (p.location_type === 'apartment' ? p.location_path.split(' · ').slice(1).filter((x) => !/^эт\.|этаж/i.test(x)).join(' · ') : 'на этаже');
 
-export interface CellCtx { api: FactApi; projectId: string; me: string; canCreate: boolean; canApprove: boolean; brigades: Brigade[]; lastBrigade: string; onBrigade: (id: string) => void }
+export interface CellCtx { api: FactApi; projectId: string; me: string; canCreate: boolean; canApprove: boolean; /** P2-0060: право есть, но нет сети */ noNet?: boolean; brigades: Brigade[]; lastBrigade: string; onBrigade: (id: string) => void }
 
 /** Панель ячейки: сводка, позиции места, окно быстрого ввода по позиции, «История», «Закрыть этаж». На ПК — сбоку, на телефоне — шторкой. */
 function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: FactPosition[]; floor: boolean; onClose: () => void; onChanged: (msg: string) => void }): ReactElement {
@@ -115,7 +116,8 @@ function CellPanel(props: { ctx: CellCtx; title: string; v: CellValue; list: Fac
             ? h(FactEntryForm, { api: ctx.api, pos: p, brigades: ctx.brigades, lastBrigade: ctx.lastBrigade, onBrigade: ctx.onBrigade, onCancel: () => setOpenId(''), onSaved: done, projectId: ctx.projectId, me: ctx.me,
                 quick: { historyCount: count, onHistory: () => { setHistoryId(p.position_id); setOpenId(''); } } })
             : h('div', { className: 'pj-actions' },
-                ctx.canCreate ? h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'cb-enter', onClick: () => openForm(p.position_id) }, 'Внести факт') : null,
+                ctx.canCreate ? h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'cb-enter', onClick: () => openForm(p.position_id) }, 'Внести факт')
+                  : ctx.noNet ? h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'cb-enter', disabled: true, title: NEED_INTERNET_INPUT }, 'Внести факт · ' + NEED_INTERNET_INPUT) : null,
                 h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', 'data-testid': 'cb-history', onClick: () => { setHistoryId(historyId === p.position_id ? '' : p.position_id); setOpenId(''); setClosing(false); } }, 'История')));
       }))));
 }

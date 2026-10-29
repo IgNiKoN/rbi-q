@@ -1,10 +1,11 @@
 // P2-0060 этап 2: копия для просмотра — Сводка План/Факта без сети (стенд test:offline).
 // v-summary375 (светлая) / v-summary1440 (тёмная) — с сетью открыть Сводку → закрыть → без сети открыть заново → те же цифры, пометка «Без сети · данные на …»,
-// «Даты проекта» неактивна; v-other — другой пользователь на том же браузере: своей копии нет → «Нужен интернет», цифр первого нет.
+// «Даты проекта» неактивна; v-prefetch375/1440 — заранее «мои проекты» → без сети ВОР, Факт, шахматка, «Компания»; v-other — другой пользователь на том же браузере: своей копии нет → «Нужен интернет», цифр первого нет.
 // Боевой сервер не используется (servers.mjs — подставной, lib.mjs отрезает rbi-q.ru).
 import { join } from 'node:path';
 import { start, stop, resetNet, stand, SUMMARY, APP } from './servers.mjs';
-import { freshProfile, launch, note, ok, signIn } from './lib.mjs';
+import { writeFileSync } from 'node:fs';
+import { freshProfile, go, launch, note, ok, signIn } from './lib.mjs';
 
 /** Текст Сводки без пометки и подписи кнопки дат (они и должны отличаться). */
 const summaryText = (page) => page.evaluate(() => {
@@ -69,12 +70,69 @@ async function other(out) {
     const body = await page.evaluate(() => (document.getElementById('tab-planfact') || document.body).innerText).catch(() => '');
     ok(!body.includes(SUMMARY.name) && !body.includes('42,5'), `${tag}: цифр первого пользователя нет`);
     ok(/Нужен интернет/.test(body), `${tag}: «Нужен интернет»`, body.replace(/\s+/g, ' ').slice(0, 140));
-    ok(!(await page.locator('[data-testid=p2-offline-mark]').count()), `${tag}: пометки «данные на …» нет — данных экрана нет`);
+    const mark = await page.locator('[data-testid=p2-offline-mark]').first().innerText().catch(() => '');
+    ok(!/данные на/.test(mark), `${tag}: пометки «данные на …» нет — данных экрана нет`, mark);
     await page.screenshot({ path: join(out, tag + '.png') });
     await ctx.close();
   } finally { stand.user2Planfact = false; }
 }
 
+const text = (page) => page.evaluate(() => (document.querySelector('#tab-planfact.active, #tab-planfact') || document.body).innerText.replace(/\s+/g, ' ')).catch(() => '');
+const needNet = (page) => page.locator('[data-testid=pf-need-internet], [data-testid=co-need-internet]').count().catch(() => 0);
+
+/** «Держать без сети»: вход с сетью, ВОР и Факт не открывать — заранее скачалось само; без сети ВОР, Факт, шахматка, места видны. */
+async function prefetch(out, width) {
+  const tag = 'v-prefetch' + width;
+  note(`== ${tag}: с сетью — заранее «мои проекты» (ВОР и Факт не открывали) → без сети ВОР, Факт, шахматка, места`);
+  freshProfile(out, tag); resetNet();
+  await start();
+  let { ctx, page } = await launch(out, tag, { width, height: 900 });
+  await signIn(page);
+  await go(page, '#/settings/company/objects', 6000);   // ядро платформы: «Компания → Проекты» — открыто с сетью (копия того, что открывали)
+  const coOnline = await page.evaluate(() => document.body.innerText.includes('ЖК Тестовый'));
+  let st = null;
+  for (let i = 0; i < 20 && !st; i++) {
+    await page.waitForTimeout(1500);
+    st = await page.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('platform2_offline_prefetch:'));
+      return k ? JSON.parse(localStorage.getItem(k)).planfact || null : null; });
+  }
+  ok(!!st, `${tag}: заранее скачалось само (без нажатий, после запуска)`, st ? JSON.stringify(st.stats) : 'нет');
+  if (st) { measures.push({ tag, ...st.stats }); note('заранее: ' + JSON.stringify(st.stats)); }
+  const pp = st && st.stats && st.stats.perProject && st.stats.perProject[0];
+  ok(!!pp && pp.bytes < 20 * 1024 * 1024, `${tag}: заранее на проект < 20 МБ`, pp ? (pp.bytes / 1024).toFixed(1) + ' КБ, чтений ' + pp.reads : '');
+  await ctx.close(); await stop();
+
+  ({ ctx, page } = await launch(out, tag, { width, height: 900, offline: true }));
+  await page.goto(APP + '/#/planfact/vor/positions').catch(() => {}); await page.waitForTimeout(8000);
+  let t = await text(page);
+  ok(!(await needNet(page)) && t.includes('Кладка стен'), `${tag}: без сети ВОР → Позиции (не открывали) — видны`, t.slice(0, 120));
+  ok(/Без сети · данные на/.test(t) && /только просмотр/.test(t), `${tag}: пометка «данные на …» и «только просмотр»`);
+  await page.screenshot({ path: join(out, tag + '-vor.png'), fullPage: true });
+  await go(page, '#/planfact/fact/chessboard', 5000);
+  t = await text(page);
+  ok(!(await needNet(page)) && /Этаж|Секция 1|Корпус 1/.test(t), `${tag}: без сети шахматка — места видны`, t.slice(0, 120));
+  await page.screenshot({ path: join(out, tag + '-chess.png'), fullPage: true });
+  await go(page, '#/planfact/fact', 5000);
+  t = await text(page);
+  ok(!(await needNet(page)) && /Корпус 1/.test(t), `${tag}: без сети Факт → Ввод — места видны`, t.slice(0, 120));
+  const enter = page.locator('[data-testid=ft-enter], [data-testid=cb-enter]');
+  ok(!(await enter.count()) || await enter.first().isDisabled(), `${tag}: «Внести» без сети неактивна (если есть)`);
+  await go(page, '#/settings/company/objects', 5000);
+  const co = await page.evaluate(() => document.body.innerText).catch(() => '');
+  ok(!coOnline || (co.includes('ЖК Тестовый') && !(await needNet(page))), `${tag}: ядро платформы («Компания → Проекты», открывали с сетью) — без сети видно`);
+  const add = page.locator('[data-testid=pj-add]');
+  ok(!(await add.count()) || await add.first().isDisabled(), `${tag}: «+ Проект» без сети неактивна`);
+  ok(/только просмотр/.test(co), `${tag}: в «Компании» — «только просмотр»`);
+  await page.screenshot({ path: join(out, tag + '-company.png'), fullPage: true });
+  const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  ok(wide <= 0, `${tag}: без прокрутки вбок`, String(wide));
+  await ctx.close();
+}
+
+export const measures = [];
+export function saveViewMeasures(out) { if (measures.length) writeFileSync(join(out, 'prefetch.json'), JSON.stringify(measures, null, 2)); }
+
 export function viewScenarios(out) {
-  return { 'v-summary375': () => summary(out, 375), 'v-summary1440': () => summary(out, 1440, 'dark'), 'v-other': () => other(out) };
+  return { 'v-summary375': () => summary(out, 375), 'v-summary1440': () => summary(out, 1440, 'dark'), 'v-other': () => other(out),
+    'v-prefetch375': () => prefetch(out, 375), 'v-prefetch1440': () => prefetch(out, 1440) };
 }

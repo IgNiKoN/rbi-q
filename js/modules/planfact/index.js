@@ -150,12 +150,38 @@ function mountSettings(el) {
 }
 function unmountSettings() { if (loaded && typeof loaded.unmountSettings === 'function') loaded.unmountSettings(); }
 
+/**
+ * P2-0060: «держать без сети» — заранее скачать основные экраны моих проектов в копию для просмотра (в бандле: prefetchOffline).
+ * Связь подтверждена сервером, модуль положен, на устройстве прошлый раз — больше суток назад (точное «пора» по «компания +
+ * пользователь» и выбор «держать без сети» проверяет бандл). Через 8 с после запуска — не мешать первой загрузке. По кнопке — offlinePrefetch.
+ */
+var PREFETCH_DEVICE_KEY = 'platform2_offline_prefetch_last';
+var PREFETCH_EVERY_MS = 24 * 3600 * 1000;
+var prefetchAsked = false;
+function prefetchNow(force) {
+    return loadBundle().then(function (m) { return typeof m.prefetchOffline === 'function' ? m.prefetchOffline({ force: !!force }) : null; });
+}
+function maybePrefetch() {
+    if (prefetchAsked) return;
+    var p2 = window.RBI && window.RBI.platform2;
+    var st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
+    if (!st || st.mode !== 'email' || st.offline || st.checking || navigator.onLine === false || !isAllowed()) return;
+    var last = 0;
+    try { last = Number(localStorage.getItem(PREFETCH_DEVICE_KEY) || 0); } catch (_) { /* без localStorage — как в первый раз */ }
+    if (Date.now() - last < PREFETCH_EVERY_MS) return;
+    prefetchAsked = true;
+    setTimeout(function () { prefetchNow(false).catch(function () { prefetchAsked = false; }); }, 8000);
+}
+
 export function init(ctx) {
     savedCtx = ctx || null;
     var rbi = (window.RBI = window.RBI || {});
     rbi.platformPanels = Object.assign(rbi.platformPanels || {}, {
         planfact: { mount: mountSettings, unmount: unmountSettings, allowed: function () { return thresholdsAllowed; } }
     });
+    rbi.offlinePrefetch = Object.assign(rbi.offlinePrefetch || {}, { planfact: prefetchNow });   // P2-0060: «Скачать сейчас» (Данные на устройстве)
+    window.addEventListener('rbi:platform-access', maybePrefetch);
+    window.addEventListener('rbi:platform-net', maybePrefetch);
     window.addEventListener('rbi:platform-access', refreshSettingsAccess);
     refreshSettingsAccess();
     var router = window.AppRouter;
@@ -172,6 +198,7 @@ export function init(ctx) {
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') void refreshInbox(); });
     route();
     void refreshInbox();
+    maybePrefetch();
 }
 
 export function mount(el) { return loadBundle().then(function (m) { m.mount(el); }); }

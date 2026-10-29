@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.29-2f158131',
+  version: '2026.10.29-a9464aad',
   date: '2026-10-29',
-  digest: '2f158131',
+  digest: 'a9464aad',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -71,14 +71,14 @@ const APP_RELEASE = {
     "js/core/views.js": ["2aee99732cc01597",31332,""],
     "js/dist/company/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"company"],
     "js/dist/company/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"company"],
-    "js/dist/company/company.js": ["08992b9da5f72a36",1319707,"company"],
+    "js/dist/company/company.js": ["7abb6f892bae0c67",1332617,"company"],
     "js/dist/construction-v2.js": ["bd467d9eb8e86e71",333846,"construction-v2"],
     "js/dist/planfact/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"planfact"],
     "js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"planfact"],
     "js/dist/planfact/chunks/xlsx-writer-C1YpHX_s.js": ["70ba43f300adeb4d",12722,"planfact"],
-    "js/dist/planfact/planfact.js": ["54e00014f8e82862",1645411,"planfact"],
+    "js/dist/planfact/planfact.js": ["c7b00d09b2af83f7",1654639,"planfact"],
     "js/dist/platform-admin/platform-admin.js": ["ce93570c6c17f382",26360,"platform-admin"],
-    "js/dist/platform/platform.js": ["dc33e5d263ee2e0b",724107,""],
+    "js/dist/platform/platform.js": ["11b1f0e641728017",732053,""],
     "js/dist/rbi-construction-acceptance.js": ["bc64aaa6db993c9c",14605,"construction"],
     "js/dist/rbi-construction-defects.js": ["234ce71f41917c30",12286,"construction"],
     "js/dist/rbi-construction-units.js": ["24fc5f9644437f65",17075,"construction"],
@@ -115,7 +115,7 @@ const APP_RELEASE = {
     "js/modules/knowledge/knowledge.state.js": ["74b4b8a91892d562",7772,""],
     "js/modules/knowledge/twi.docx-export.js": ["bd5c958a5c92c51a",28903,""],
     "js/modules/modules.manifest.js": ["12bd76b9dd6d6fb7",1998,""],
-    "js/modules/planfact/index.js": ["a38744e12f566593",10513,""],
+    "js/modules/planfact/index.js": ["e05d37b9b49fa9ef",12503,""],
     "js/modules/planfact/planfact.manifest.js": ["4d183f618590d216",4204,""],
     "js/modules/quality/features/ai/ai.actions.js": ["b5df7b5087c13a32",258679,"quality"],
     "js/modules/quality/features/ai/ai.manifest.js": ["be59786506d712f7",1460,""],

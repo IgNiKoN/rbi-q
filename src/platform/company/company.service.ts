@@ -4,6 +4,10 @@
 import { getClient } from '../auth/auth.service.ts';
 import { fetchMyProjects } from '../core/projects.service.ts';
 import { createCoreService } from '../core/core.service.ts';
+import { copyCall } from '../services/offline/copy.ts';
+
+/** P2-0060: чтения «Компании» (роли, люди, журнал) — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
+export const COMPANY_READS: ReadonlySet<string> = new Set(['pf_my_admin_companies', 'pf_permission_catalog', 'pf_list_company_roles', 'pf_list_company_members', 'pf_list_company_audit', 'pf_list_quality_objects']);
 
 export interface CompanyRef { company_id: string; company_name: string }
 export interface CatalogRow { action: string; description: string }
@@ -83,11 +87,11 @@ export function createCompanyService(): CompanyApi | null {
   const c = getClient();
   if (!c) return null;
   async function rows<T>(fn: string, args?: Record<string, unknown>): Promise<T[]> {
-    const { data, error } = await c!.rpc(fn, args);
-    if (error || !Array.isArray(data)) return [];
-    return data as T[];
+    const r = await call<T[]>(fn, args || {});
+    return r.ok && Array.isArray(r.value) ? r.value : [];
   }
-  async function call<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('company', COMPANY_READS, fn, args, () => send<T>(fn, args));
+  async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
       return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: (data ?? null) as T };

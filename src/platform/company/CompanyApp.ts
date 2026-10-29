@@ -12,7 +12,8 @@
  * здесь — только внутренние вкладки «Сотрудники · Роли и права» и строка «почта · компания · Выйти».
  */
 import { createElement as h, useEffect, useRef, useState } from 'react';
-import { NeedInternet, useOfflineEntry } from '../auth/need-internet.ts';
+import { NeedInternet, NO_COPY_TEXT, useOfflineEntry } from '../auth/need-internet.ts';
+import { OFFLINE_HINT, OfflineMark, useScreenChange } from '../services/offline/index.ts';
 import type { ReactElement } from 'react';
 import type { AuthApi } from '../auth/auth.service.ts';
 import { openPlatformLogin, platformSignOut } from '../auth/shell-user.ts';
@@ -109,7 +110,8 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
   const [tab, setTab] = useState<Tab | null>(tabFromHash(window.location.hash));
   const [rights, setRights] = useState<CompanyRights>({ admin: false, projects: false, units: false });
   const tabsRef = useRef<HTMLDivElement | null>(null);
-  const offline = useOfflineEntry();   // P2-0058: вошёл почтой, связи нет — «Нужен интернет» (офлайн «Компании» — этап В)
+  const offline = useOfflineEntry();   // P2-0060: без сети — просмотр по копии; копии нет — «Нужен интернет»
+  useScreenChange('company', String(tab));   // пропуски копии — по текущей вкладке
   // телефон: активная вкладка видна в полосе (прокрутка только полосы, не страницы)
   useEffect(() => {
     const strip = tabsRef.current;
@@ -169,7 +171,6 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
     setWho(''); setCompanies([]); setCompanyId(''); setRights({ admin: false, projects: false, units: false }); setMode('login');
   }
 
-  if (offline) return h(NeedInternet, { section: '«Компания»', testId: 'co-need-internet' });
   if (!auth || !api) {
     return h('div', { className: 'pf-root pf-muted', 'data-testid': 'co-offline' }, 'Раздел «Компания» работает только с сервером — вход не настроен.');
   }
@@ -187,6 +188,8 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
         : companies.length ? ' · ' + companies[0].company_name : null),
     h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: logout }, 'Выйти'));
 
+  // без сети, а раздел с интернетом не открывали — прав «Компании» в копии нет: не «нет права», а «Нужен интернет»
+  if (offline && mode === 'noaccess') return h(NeedInternet, { section: '«Компания»', testId: 'co-need-internet', text: NO_COPY_TEXT });
   if (mode === 'noaccess') {
     return h('div', null, bar,
       h('div', { className: 'pf-root pf-muted', 'data-testid': 'co-noaccess' }, 'Нет права управлять компанией. Раздел доступен администратору компании (проекты и единицы — тем, кто их ведёт).'));
@@ -208,6 +211,8 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
   const inner = INNER_TABS.includes(cur) ? INNER_TABS.filter((t) => tabs.includes(t)) : [];
   return h('div', null, bar,
     h('div', { className: 'pf-root co-root', 'data-company-tab': cur },
+      offline ? h('div', { className: 'co-offline', role: 'note', 'data-testid': 'co-offline-hint' }, h(OfflineMark, { module: 'company' }),
+        h('span', { className: 'pf-muted' }, OFFLINE_HINT)) : null,
       inner.length > 1 ? h('div', { className: 'co-head' },
         h('div', { className: 'co-tabs', role: 'tablist', 'data-testid': 'co-tabs', ref: tabsRef },
           inner.map((id) => h('button', { key: id, type: 'button', role: 'tab', 'aria-selected': cur === id, 'data-tab': id,
@@ -217,6 +222,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
 
 export const COMPANY_CSS = SETTINGS_UI_CSS + PATTERNS_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT_CSS + COUNTERPARTIES_CSS + `
 .co-root{max-width:1200px}
+.co-offline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12px;margin-bottom:12px}
 .co-head{margin-bottom:16px}
 .co-tabs{display:flex;flex-wrap:wrap;gap:6px}
 .co-tab{min-height:44px;font-size:14px;font-weight:600;padding:9px 14px;border-radius:10px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);cursor:pointer;white-space:nowrap;text-align:center}

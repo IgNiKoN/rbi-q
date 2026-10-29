@@ -105,8 +105,8 @@ test('пустой ответ с keepEmpty: false прежнюю копию не
 
 test('пометка: «данные на 14:32» сегодня, с датой — раньше; старше 14 дней — «данные могли устареть»; всё с сервера — нет пометки', async () => {
   const at = new Date(2026, 9, 29, 14, 32).getTime();
-  assert.equal(copyMarkText({ from: 'copy', at: new Date(at).toISOString(), stale: false }, at + 3600e3), 'Без сети · данные на 14:32');
-  assert.equal(copyMarkText({ from: 'copy', at: new Date(at).toISOString(), stale: false }, at + 2 * DAY), 'Без сети · данные на 14:32, 29.10');
+  assert.equal(copyMarkText({ at: new Date(at).toISOString(), stale: false, missed: 0 }, at + 3600e3), 'Без сети · данные на 14:32');
+  assert.equal(copyMarkText({ at: new Date(at).toISOString(), stale: false, missed: 0 }, at + 2 * DAY), 'Без сети · данные на 14:32, 29.10');
   assert.equal(isStale(new Date(NOW - 15 * DAY).toISOString(), NOW), true);
   assert.equal(isStale(new Date(NOW - 13 * DAY).toISOString(), NOW), false);
   const { env, reader } = setup();
@@ -161,4 +161,33 @@ test('служебные чтения (права, доступ) пометку 
   const r = await reader.read('planfact', 'access:companies', ok([]), { quiet: true });
   assert.ok(r.ok && r.meta!.from === 'copy');
   assert.equal(reader.status('planfact'), null);
+});
+
+test('сервер отказал по правам («Нет права…») — копия этого чтения удаляется; другая ошибка сервера — копия остаётся', async () => {
+  const { env, reader, store } = setup();
+  await reader.read('planfact', 'pf_price_list:{}', ok([{ price: 100 }]));
+  await reader.read('planfact', 'pf_price_list:{}', async () => ({ ok: false, message: 'Не удалось выполнить. Попробуйте ещё раз' }));
+  assert.equal(store.size(), 1, 'сбой сервера — копия цела');
+  await reader.read('planfact', 'pf_price_list:{}', async () => ({ ok: false, message: 'Нет права на это действие' }));
+  assert.equal(store.size(), 0, 'право отняли — цен на телефоне нет');
+  env.offline = true;
+  assert.equal((await reader.read('planfact', 'pf_price_list:{}', ok([]))).ok, false);
+});
+
+test('без сети экрана нет в копии — пометка «Нужен интернет для этого экрана»; часть есть — «часть данных не скачана»; новый экран — заново', async () => {
+  const { env, reader } = setup();
+  await reader.read('company', 'pf_list_company_roles', ok([1]));
+  env.offline = true;
+  await reader.read('company', 'pf_list_company_members', ok([]));
+  let st = reader.status('company')!;
+  assert.equal(st.at, null);
+  assert.equal(st.missed, 1);
+  assert.equal(copyMarkText(st, NOW), 'Без сети · Нужен интернет для этого экрана — его ещё не открывали с интернетом');
+  await reader.read('company', 'pf_list_company_roles', ok([]));
+  st = reader.status('company')!;
+  assert.ok(copyMarkText(st, NOW).startsWith('Без сети · Нужен интернет для части экрана · данные на '));
+  reader.resetMissed('company');
+  assert.equal(reader.status('company')!.missed, 0);
+  await reader.read('company', 'x', ok(1), { quiet: true });
+  assert.equal(reader.status('company')!.missed, 0, 'служебные чтения пропуском не считаются');
 });

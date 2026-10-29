@@ -8,6 +8,12 @@ import { mapCompanyError } from '../company/company.service.ts';
 import type { Result } from '../company/company.service.ts';
 import { cleanRequisites } from './counterparties.ts';
 import type { Counterparty, CounterpartyDraft, ProjectCounterparties } from './counterparties.ts';
+import { copyCall } from '../services/offline/copy.ts';
+
+/** P2-0060: чтения ядра (доступ, контрагенты) — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
+export const CORE_READS: ReadonlySet<string> = new Set(['pf_my_company_access', 'pf_counterparties_list', 'pf_project_counterparties']);
+/** P2-0060: доступ к компании — служебное чтение (в пометку «данные на …» не идёт). */
+const CORE_ACCESS: ReadonlySet<string> = new Set(['pf_my_company_access']);
 
 /** Компании пользователя и что он может в справочниках (pf_my_company_access; кнопки — подсказка, проверяет сервер). */
 export interface CompanyAccess {
@@ -29,11 +35,11 @@ export function createCoreService(): CoreApi | null {
   const c = getClient();
   if (!c) return null;
   async function rows<T>(fn: string, args?: Record<string, unknown>): Promise<T[]> {
-    const { data, error } = await c!.rpc(fn, args);
-    if (error || !Array.isArray(data)) return [];
-    return data as T[];
+    const r = await call<T[]>(fn, args || {});
+    return r.ok && Array.isArray(r.value) ? r.value : [];
   }
-  async function call<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('company', CORE_READS, fn, args, () => send<T>(fn, args), CORE_ACCESS);
+  async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
       return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: (data ?? null) as T };

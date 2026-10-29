@@ -10,6 +10,10 @@ import { getClient } from '../../platform/auth/auth.service.ts';
 import { mapCompanyError } from '../../platform/company/company.service.ts';
 import type { Result } from '../../platform/company/company.service.ts';
 import { fetchLocationPath } from '../../platform/core/projects.service.ts';
+import { copyCall, rpcRead } from '../../platform/services/offline/copy.ts';
+
+/** P2-0060: моя область и владельцы факта места — через копию для просмотра. */
+const AREA_READS: ReadonlySet<string> = new Set(['pf_my_area', 'pf_place_fact_owners']);
 
 /** pf_my_area: full — весь проект; locations — узлы назначений; fact_owner — узлы, где я отвечаю за факт ('project' — весь проект). */
 export interface MyArea { full: boolean; locations: string[]; fact_owner: string[]; can_on_behalf: boolean }
@@ -33,14 +37,18 @@ export function createAreaService(): AreaApi | null {
   if (!c) return null;
   return {
     async myArea(project) {
-      try { const { data, error } = await c.rpc('pf_my_area', { p_project: project }); return error ? null : normArea(data); } catch { return null; }
+      const r = await copyCall('planfact', AREA_READS, 'pf_my_area', { p_project: project }, () => rpcRead<unknown>('pf_my_area', { p_project: project }));
+      return r.ok ? normArea(r.value) : null;
     },
     locationPath: fetchLocationPath,   // мастер-данные — через ядро (один вход)
     async placeOwners(loc) {
-      try {
-        const { data, error } = await c.rpc('pf_place_fact_owners', { p_location: loc });
-        return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: Array.isArray(data) ? data as FactOwner[] : [] };
-      } catch (e) { return { ok: false, message: mapCompanyError({ message: e instanceof Error ? e.message : '' }) }; }
+      const r = await copyCall('planfact', AREA_READS, 'pf_place_fact_owners', { p_location: loc }, async () => {
+        try {
+          const { data, error } = await c.rpc('pf_place_fact_owners', { p_location: loc });
+          return error ? { ok: false as const, message: mapCompanyError(error) } : { ok: true as const, value: Array.isArray(data) ? data as FactOwner[] : [] };
+        } catch (e) { return { ok: false as const, message: mapCompanyError({ message: e instanceof Error ? e.message : '' }) }; }
+      });
+      return r;
     }
   };
 }

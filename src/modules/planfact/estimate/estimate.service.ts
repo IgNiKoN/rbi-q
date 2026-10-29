@@ -6,6 +6,10 @@ import { getClient } from '../../../platform/auth/auth.service.ts';
 import { mapCompanyError } from '../../../platform/company/company.service.ts';
 import type { Result } from '../../../platform/company/company.service.ts';
 import { chunks } from '../vor/vor.service.ts';
+import { copyCall } from '../../../platform/services/offline/copy.ts';
+
+/** P2-0060: чтения цен и смет (сервер отдаёт их только по праву estimate; отказ — копия удаляется) — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
+export const ESTIMATE_READS: ReadonlySet<string> = new Set(['pf_price_list', 'pf_price_history', 'pf_estimate_list', 'pf_estimate_rows', 'pf_estimate_overheads', 'pf_kp_list', 'pf_kp_get', 'pf_overhead_template']);
 
 export const ESTIMATE_MANAGE = 'planfact.estimate.manage';
 const PRICES_CHUNK = 2000;
@@ -90,7 +94,8 @@ function lineIn(l: OverheadLine & { sort?: number }): OverheadLine {
 export function createEstimateService(): EstimateApi | null {
   const c = getClient();
   if (!c) return null;
-  async function call<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('planfact', ESTIMATE_READS, fn, args, () => send<T>(fn, args));
+  async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
       return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: (data ?? null) as T };

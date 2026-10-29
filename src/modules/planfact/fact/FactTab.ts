@@ -22,6 +22,7 @@ import { FactWindow, FACT_WINDOW_CSS } from './FactWindow.ts';
 import { initialProjectId, isArchived, ProjectPicker } from '../ProjectPicker.ts';
 import { emptyText, useMyArea } from '../area.ts';
 import { isTopPlace } from '../../../services/locations/types.ts';
+import { NEED_INTERNET_INPUT, useInputBlocked } from '../../../platform/services/offline/index.ts';
 
 const PAGE = 100;
 const NODE_LABEL: Record<string, string> = { object: 'Объект', building: 'Корпус', section: 'Секция', floor: 'Этаж', apartment: 'Квартира', other: 'Место' };
@@ -70,8 +71,11 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
 
   const project = list?.find((p) => p.id === projectId);
   const myPerms = perms[projectId] || [];
-  const canCreate = myPerms.includes(FACT_CREATE) && !isArchived(project);   // архивный объект — только просмотр
-  const canApprove = myPerms.includes(FACT_APPROVE);
+  // P2-0060: без сети — только просмотр (ввод факта без сети — P2-0064): «Внести» видна неактивной, исправления и решения РП — с сетью
+  const noNet = useInputBlocked('planfact', 'fact');
+  const mayCreate = myPerms.includes(FACT_CREATE) && !isArchived(project);   // архивный объект — только просмотр
+  const canCreate = mayCreate && !noNet;
+  const canApprove = myPerms.includes(FACT_APPROVE) && !noNet;
   const place = path.length ? path[path.length - 1] : null;
   const area = useMyArea(projectId);
 
@@ -147,7 +151,7 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   if (mode === 'chessboard') {
     return h('div', { className: 'pj-tab ft-tab ft-tab--wide', 'data-testid': 'ft-tab' },
       h(ProjectPicker, { list, value: projectId, onChange: setProjectId }),
-      projectId ? h(ChessboardTab, { projects, ctx: { api, projectId, me, canCreate, canApprove, brigades, lastBrigade, onBrigade: rememberBrigade } }) : null);
+      projectId ? h(ChessboardTab, { projects, ctx: { api, projectId, me, canCreate, canApprove, noNet: mayCreate && noNet, brigades, lastBrigade, onBrigade: rememberBrigade } }) : null);
   }
 
   const rel = (pos: FactPosition): string => {
@@ -248,7 +252,8 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
                   p.last_rejected_note ? h('span', { className: 'ft-bad', 'data-testid': 'ft-rejected' }, `Отклонено РП: ${p.last_rejected_note}`) : null),
                 h('b', { className: 'ft-pct' + (pct > 100 ? ' ft-pct--over' : ''), 'data-testid': 'ft-pct' }, fmtPct(pct)),
                 h('span', { className: 'ft-acts' },
-                  canCreate ? h('button', { type: 'button', className: 'pf-btn ft-small-btn', 'data-testid': 'ft-enter', onClick: () => { setOpenId(p.position_id); setHistoryId(''); setClosing(false); } }, 'Внести') : null,
+                  canCreate ? h('button', { type: 'button', className: 'pf-btn ft-small-btn', 'data-testid': 'ft-enter', onClick: () => { setOpenId(p.position_id); setHistoryId(''); setClosing(false); } }, 'Внести')
+                    : mayCreate && noNet ? h('button', { type: 'button', className: 'pf-btn ft-small-btn', 'data-testid': 'ft-enter', disabled: true, title: NEED_INTERNET_INPUT, 'aria-label': 'Внести — ' + NEED_INTERNET_INPUT }, 'Внести') : null,
                   h('button', { type: 'button', className: 'pf-btn pf-btn--ghost ft-small-btn', 'data-testid': 'ft-history-btn', onClick: () => { setHistoryId(historyId === p.position_id ? '' : p.position_id); setClosing(false); } }, 'История')),
                 h('span', { className: 'ft-chev', 'aria-hidden': 'true' }));
             }))

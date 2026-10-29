@@ -9,7 +9,11 @@
 import { getClient } from '../../../platform/auth/auth.service.ts';
 import { mapCompanyError } from '../../../platform/company/company.service.ts';
 import type { Result } from '../../../platform/company/company.service.ts';
-import { offlineRead, offlineReader } from '../../../platform/services/offline/index.ts';
+import { copyCall } from '../../../platform/services/offline/copy.ts';
+
+/** P2-0060: чтения Сводки и «Входящих» — через копию для просмотра; даты и пороги — запись, без сети не отправляется. */
+export const SUMMARY_READS: ReadonlySet<string> = new Set(['pf_summary_portfolio', 'pf_summary_worktypes', 'pf_summary_positions', 'pf_summary_ks2_gap',
+  'pf_summary_weekly', 'pf_summary_places', 'pf_summary_attention', 'pf_my_inbox']);
 
 export type Light = 'green' | 'yellow' | 'red' | 'grey';
 export type LightReason = 'no_kp' | 'no_prices' | 'no_dates' | 'done' | 'lag_red' | 'overdue' | 'finish_near' | 'lag_yellow' | 'lag_days' | 'on_track';
@@ -116,7 +120,8 @@ export const normInbox = (r: InboxRow): InboxRow => ({
 export function createSummaryService(): SummaryApi | null {
   const c = getClient();
   if (!c) return null;
-  async function call<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('planfact', SUMMARY_READS, fn, args, () => send<T>(fn, args));
+  async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
       return error ? { ok: false, message: mapCompanyError(error) } : { ok: true, value: (data ?? null) as T };
@@ -125,23 +130,15 @@ export function createSummaryService(): SummaryApi | null {
     }
   }
   const list = async <T>(r: Promise<Result<T[]>>, f: (v: T) => T): Promise<Result<T[]>> => { const x = await r; return x.ok ? { ok: true, value: (x.value || []).map(f) } : x; };
-  // P2-0060: копия — по ключу чтения и объекту (доступ к объекту отняли — его копия удаляется)
-  const copy = <T>(key: string, project: string | null, read: () => Promise<Result<T>>): Promise<Result<T>> =>
-    offlineRead('planfact', 'summary:' + key, read, { project });
   return {
-    portfolio: async () => {
-      const r = await offlineRead('planfact', 'summary:portfolio', () => list(call<SummaryProject[]>('pf_summary_portfolio', {}), normProject));
-      // с сетью сервер назвал объекты со сводкой — копии остальных объектов План/Факта у этого человека удаляются
-      if (r.ok && r.meta && r.meta.from === 'server') void offlineReader().pruneProjects('planfact', r.value.map((x) => x.project_id));
-      return r;
-    },
-    workTypes: (p) => copy('worktypes:' + p, p, () => list(call<SummaryWorkType[]>('pf_summary_worktypes', { p_project: p }), normWorkType)),
-    positions: (p, wt) => copy('positions:' + p + ':' + (wt || '*'), p, () => list(call<SummaryPosition[]>('pf_summary_positions', { p_project: p, p_work_type: wt }), normPosition)),
-    ks2Gap: (p) => copy('ks2gap:' + p, p, () => list(call<Ks2GapRow[]>('pf_summary_ks2_gap', { p_project: p }), normGap)),
+    portfolio: () => list(call<SummaryProject[]>('pf_summary_portfolio', {}), normProject),
+    workTypes: (p) => list(call<SummaryWorkType[]>('pf_summary_worktypes', { p_project: p }), normWorkType),
+    positions: (p, wt) => list(call<SummaryPosition[]>('pf_summary_positions', { p_project: p, p_work_type: wt }), normPosition),
+    ks2Gap: (p) => list(call<Ks2GapRow[]>('pf_summary_ks2_gap', { p_project: p }), normGap),
     setDates: (p, s, f) => call('pf_project_set_dates', { p_project: p, p_start: s, p_finish: f }),
-    weekly: (p, w) => copy('weekly:' + p + ':' + w, p, () => list(call<SummaryWeek[]>('pf_summary_weekly', { p_project: p, p_weeks: w }), normWeek)),
-    places: (p, l) => copy('places:' + p + ':' + (l || '*'), p, () => list(call<SummaryPlace[]>('pf_summary_places', { p_project: p, p_location: l }), normPlace)),
-    attention: (p) => copy('attention:' + p, p, () => call<SummaryAttention>('pf_summary_attention', { p_project: p })),
+    weekly: (p, w) => list(call<SummaryWeek[]>('pf_summary_weekly', { p_project: p, p_weeks: w }), normWeek),
+    places: (p, l) => list(call<SummaryPlace[]>('pf_summary_places', { p_project: p, p_location: l }), normPlace),
+    attention: (p) => call<SummaryAttention>('pf_summary_attention', { p_project: p }),
     setThresholds: (p, y, r, d) => call('pf_project_set_thresholds', { p_project: p, p_yellow_pp: y, p_red_pp: r, p_overdue_days: d }),
     inbox: () => list(call<InboxRow[]>('pf_my_inbox', {}), normInbox),
   };
