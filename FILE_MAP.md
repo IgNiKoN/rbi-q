@@ -124,6 +124,7 @@
 | Старый адрес сервера, как подключить | `docs/SERVERS.md` (ключ не копируется) | подключать после P2-0004 |
 | Service worker | `sw.js`: кэш `platform2-v<версия>`, удаляет только свои кэши; API пропускается по пути `/(rest|auth|functions|realtime)/v1/` | |
 | Версия приложения (P2-0066) | опись и номер — `scripts/app-version.mjs` (`npm run build:version`, участок `<app-version>` в `sw.js`), правило файлов — `scripts/app-files.mjs` (и для `release-rbi-q.mjs`); установка целиком, вкладка = версия — `sw.js` (`installVersion`, `serveApp`, `cleanupVersions`, `p2-app-meta`); строка версии и переключение — `js/shared/pwa-update.utils.js` (+ правила `app-update.policy.js`), ранний участок `index.html` (при запуске); сторож — `js/shared/__tests__/app-version.test.js`; стенд — `tests/offline/release.mjs` | |
+| Быстрое первое открытие (P2-0067a) | логотип заставки — `icons/splash-logo.jpg` (оригинал — `docs/assets/splash-logo-original-1254.png`, папка `docs/assets/` — исходники картинок, в приложение не входят); замер — `tests/perf/first-open.mjs`; сжатие на стенде — `tests/offline/servers.mjs` (`site.gzip`, флаг `--gzip`); правка nginx и откат — `ai-dev/reports/P2-0067a/release-plan.md` |
 | IndexedDB | `js/services/storage/storage-db.core.js:4` `PLATFORM2_DB` | |
 | Выключатель модуля | `js/modules/modules.manifest.js` `isModuleEnabled()`; manifest `enabled` | |
 | Общий пункт меню модулей Platform 2.0 | `js/core/app-shell.js` `getPlatformMenuItems()` (ПК + мобильное меню) ← `moduleLoader.getMenuItems()` (`menu.section:'platform'`, `menu.path`) | |
