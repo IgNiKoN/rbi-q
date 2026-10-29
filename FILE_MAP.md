@@ -149,6 +149,7 @@
 - [`ai-dev/specs/`](ai-dev/specs/) — согласованные решения по блокам (ВОР, смета, КП, КС-2).
 - Дизайн-система Platform 2.0 (Claude Design System): https://claude.ai/artifact/Bs4civLNjGjHhixGy2HRWW — токены и компоненты; правила — `ai-dev/standards/DESIGN_SYSTEM.md`.
 - Размер блоков и контрольные точки: `ai-dev/standards/BLOCK_SIZING.md`.
+- Вес приложения (первый экран, модули по требованию, библиотеки, картинки): `ai-dev/standards/WEIGHT_BUDGET.md`; замер — `tests/perf/first-open.mjs`.
 - Роли: **две** — ADR-062 в `ai-dev/standards/DECISIONS_2026-10-20.md`.
 
 ## Что найти → с чего начать
