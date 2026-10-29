@@ -313,3 +313,36 @@ test('P2-0022: «Период» — «с … по …», проверки дат
   const second = s.calls.filter((c: any) => c.fn === 'add')[1].args as any;
   assert.equal(second.periodFrom, undefined, '«День» — без периода (вызов как до 030)');
 });
+
+test('P2-0068: подсказки ВОР — после показа экрана, строки загрузок параллельно, при переходах по местам не перезапрашиваются; не загрузились — список без подсказок', async () => {
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const s = setup();
+  const log: string[] = []; let inflight = 0, most = 0;
+  s.vor.positions = async () => { log.push('positions'); return [{ id: 'p5', import_id: 'i1', source_row_no: 43 }, { id: 'pk', import_id: 'i2', source_row_no: 7 }]; };
+  s.vor.importRows = async (imp: string) => {
+    log.push('rows:' + imp); inflight++; most = Math.max(most, inflight); await wait(20); inflight--;
+    return imp === 'i1' ? [{ row_no: 42, kind: 'group', number: null, name: '3 Стены' }, { row_no: 43, kind: 'work', number: '3.1', name: 'Затирка' }] : [{ row_no: 7, kind: 'work', number: '7.2', name: 'Окраска' }];
+  };
+  const places = s.projects.listLocations;
+  s.projects.listLocations = async (p: string, parent: string | null) => { log.push('places'); return places(p, parent); };
+  const el = mount(s);
+  await tick();
+  assert.ok(el.querySelector('[data-location-id="b1"]'), 'места показаны');
+  await wait(100); await tick();
+  assert.deepEqual(log.slice(0, 2), ['places', 'positions'], 'ВОР целиком — только после показа мест');
+  assert.deepEqual(log.slice(2).sort(), ['rows:i1', 'rows:i2']);
+  assert.equal(most, 2, 'строки загрузок ВОР — параллельно, не по одной');
+  await toFloor5(el);
+  assert.equal(card(el, 'p5').querySelector('[data-testid="ft-vor"]').textContent, '№ 3.1 · Стены');
+  assert.equal(card(el, 'pk').querySelector('[data-testid="ft-vor"]').textContent, '№ 7.2');
+  await wait(100); await tick();
+  assert.equal(log.filter((x) => x !== 'places').length, 3, 'переходы по местам подсказки не перезапрашивают');
+
+  const bad = setup();
+  bad.vor.positions = async () => { throw new Error('нет сети'); };
+  const el2 = mount(bad);
+  await wait(100); await toFloor5(el2);
+  assert.equal(el2.querySelectorAll('[data-position-id]').length, 2, 'список работ на месте');
+  assert.equal(el2.querySelector('[data-testid="ft-vor"]'), null, 'без подсказок');
+  assert.equal(el2.querySelector('[role="alert"]'), null, 'и без ошибки');
+});

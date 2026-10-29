@@ -5,7 +5,7 @@
  * записей); права и допуск перебора — тоже.
  */
 import { StatusBadge } from '../../../platform/ui/index.ts';
-import { createElement as h, useEffect, useState } from 'react';
+import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { VorApi, VorProject } from '../vor/vor.service.ts';
 import type { LocationNode, ProjectsApi } from '../../../platform/core/projects.service.ts';
@@ -25,6 +25,10 @@ import { isTopPlace } from '../../../services/locations/types.ts';
 import { NEED_INTERNET_INPUT, useInputBlocked } from '../../../platform/services/offline/index.ts';
 
 const PAGE = 100;
+/** P2-0068: после того, как браузер нарисовал текущее состояние экрана. */
+const afterPaint = (fn: () => void): void => {
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => setTimeout(fn, 0)); else setTimeout(fn, 0);
+};
 const NODE_LABEL: Record<string, string> = { object: 'Объект', building: 'Корпус', section: 'Секция', floor: 'Этаж', apartment: 'Квартира', other: 'Место' };
 const lastKey = (company: string): string => `pf-last-brigade:${company}`;
 /** Последняя бригада на устройстве (общая для «Факта» и закрытия из реестра позиций). */
@@ -70,6 +74,8 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   const [error, setError] = useState('');
 
   const project = list?.find((p) => p.id === projectId);
+  const projectRef = useRef(projectId);
+  projectRef.current = projectId;
   const myPerms = perms[projectId] || [];
   // P2-0060: без сети — только просмотр (ввод факта без сети — P2-0064): «Внести» видна неактивной, исправления и решения РП — с сетью
   const noNet = useInputBlocked('planfact', 'fact');
@@ -110,21 +116,29 @@ export function FactTab(props: { api: FactApi; vor: VorApi; projects: ProjectsAp
   useEffect(() => {
     if (!projectId || !project) return;
     setNotice(''); setError(''); setKids({}); setRoots([]);
-    void enterPlace(projectId, []);
+    setHints(hintsCache.current.get(projectId) || new Map());
+    // P2-0068: подсказки — когда места показаны и нарисованы (ВОР целиком тяжела для слабого телефона)
+    let gone = false;
+    void enterPlace(projectId, []).then(() => afterPaint(() => { if (!gone) void loadHints(projectId); }));
     setLastBrigade(readLast(project.company_id));
     void api.listBrigades(project.company_id, false).then(setBrigades);
     void loadPending(projectId, (perms[projectId] || []).includes(FACT_APPROVE));
-    void loadHints(projectId);
+    return () => { gone = true; };
   }, [projectId]);
 
-  /** Номер и раздел ВОР у позиций проекта (подсказка под названием работы). Не загрузилось — список без подсказок. */
+  /** Номер и раздел ВОР у позиций проекта (подсказка под названием работы). Не загрузилось — список без подсказок.
+   *  P2-0068: строки загрузок ВОР — параллельно; полученное для проекта повторно не запрашивается. */
+  const hintsCache = useRef(new Map<string, Map<string, string>>());
   async function loadHints(pid: string): Promise<void> {
-    setHints(new Map());
+    if (hintsCache.current.has(pid)) return;
     try {
       const pos = await vor.positions(pid, null);
-      const byImport = new Map<string, HintRow[]>();
-      for (const imp of Array.from(new Set(pos.map((p) => p.import_id)))) byImport.set(imp, await vor.importRows(imp));
-      setHints(vorHints(pos, byImport));
+      const imports = Array.from(new Set(pos.map((p) => p.import_id)));
+      const rows = await Promise.all(imports.map((imp) => vor.importRows(imp)));
+      const byImport = new Map<string, HintRow[]>(imports.map((imp, i) => [imp, rows[i]]));
+      const next = vorHints(pos, byImport);
+      hintsCache.current.set(pid, next);
+      setHints((cur) => (pid === projectRef.current ? next : cur));
     } catch { /* подсказка необязательна */ }
   }
 
