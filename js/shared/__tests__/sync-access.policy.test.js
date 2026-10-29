@@ -2,7 +2,7 @@
  *  переходное правило по ФИО, id главнее подписи, без входа — ничего не уходит. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accessStamp, canChange, canSend, isMine, kindOf, kindsFrom, meFrom, stampAuthor, visible } from '../../services/sync/sync-access.policy.js';
+import { accessStamp, canChange, canSend, isMine, keepPulled, kindOf, kindsFrom, meFrom, stampAuthor, visible } from '../../services/sync/sync-access.policy.js';
 
 const K = kindOf('inspection');
 const U1 = '11111111-1111-4111-8111-111111111111', U2 = '22222222-2222-4222-8222-222222222222', CP = '33333333-3333-4333-8333-333333333333';
@@ -114,4 +114,41 @@ test('этап 2: подрядчик — в режиме «команда объ
   assert.equal(canSend({ id: 'm', author: 'Петров', contractorId: CP }, kindOf('meeting'), me).ok, true);
   assert.equal(canSend({ id: 'm', author: 'Петров', contractorId: 'чужая' }, kindOf('meeting'), me).code, 'contractor');
   assert.equal(canSend({ id: 'p', author: 'Петров' }, kindOf('practice'), me).ok, true);
+});
+
+test('этап 5: модуль выключен у компании — «Не отправлено: модуль … выключен», запись не теряется; включён — как обычно', () => {
+  const me = eng({ actions: ['quality.view', 'quality.edit', 'construction.view', 'construction.edit'], modules: ['quality', 'planfact'] });
+  const r = canSend({ id: 'd', owner: 'Иванов Иван' }, kindOf('defect_v2'), me);
+  assert.equal(r.code, 'module');
+  assert.equal(r.reason, 'Не отправлено: модуль «Стройконтроль» выключен у компании');
+  assert.match(r.hint, /сохранена на телефоне/);
+  assert.equal(canSend(rec(), K, me).ok, true, 'Качество включено — осмотр уходит');
+  assert.equal(canSend({ id: 'd', owner: 'Иванов Иван' }, kindOf('defect_v2'), { ...me, modules: null }).ok, true, 'модули неизвестны — решает сервер');
+});
+
+test('этап 5: отбор после скачивания — по правилу; «Только мои» — по id автора, чужое ФИО со своим id — моё', () => {
+  const me = eng({ objects: ['ЖК Север'] });
+  const meet = kindOf('meeting');
+  assert.equal(keepPulled({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Север' }, meet, me, false), true);
+  assert.equal(keepPulled({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Юг' }, meet, me, false), false, 'чужой объект');
+  assert.equal(keepPulled({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Север' }, meet, me, true), false, '«Только мои» — чужое нет');
+  assert.equal(keepPulled({ id: 'm', author: 'Петров', authorId: U1, project_canonical_key: 'ЖК Север' }, meet, me, true), true, 'моё по id');
+  assert.equal(keepPulled({ id: 'm' }, meet, null, true), true, 'без «кто я» — решает сервер');
+  const ctr = eng({ actions: ['quality.view', 'quality.edit', 'quality.scope.contractor'], contractorId: CP });
+  assert.equal(keepPulled({ id: 'm', author: 'Петров', contractorId: CP }, meet, ctr, true), true, 'подрядчику «Только мои» не сужает его фирму (как раньше)');
+  assert.equal(keepPulled({ id: 'm', author: 'Петров' }, meet, eng({ actions: ['quality.view', 'quality.edit', 'quality.manage'] }), true), true, 'руководителю — тоже');
+  assert.equal(keepPulled({ id: 'x' }, null, me, true), true, 'вид без описания — как раньше');
+});
+
+test('этап 5: новый вид записи — одна строка описания: он в списке «не отправлено», в правиле и в отправке «объектов»', async () => {
+  const { recordStoresFrom } = await import('../../../src/platform/auth/offline-rescue.ts');
+  const manifests = [{ id: 'demo', sync: [{ kind: 'note', store: 'demo_notes', table: 'demo_notes', title: 'Заметка', objectType: 'demo_note',
+    author: { id: 'authorId', name: ['owner'] }, mode: 'author', view: ['quality.view'], edit: ['quality.edit'], ownFirst: true }] }];
+  const kinds = kindsFrom(manifests);
+  assert.equal(recordStoresFrom(manifests).demo_notes, 'Заметка');
+  const k = kindOf('demo_notes', kinds);
+  assert.equal(canSend({ id: 'n', owner: 'Иванов Иван' }, k, eng()).ok, true);
+  assert.equal(canSend({ id: 'n', owner: 'Петров' }, k, eng()).code, 'foreign');
+  const { objectKinds } = await import('../../services/sync/sync-access.policy.js');
+  assert.deepEqual(objectKinds(kinds).map((x) => x.kind), ['note'], 'отправка «объектов» берёт вид из описания');
 });

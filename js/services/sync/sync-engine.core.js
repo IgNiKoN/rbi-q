@@ -1846,8 +1846,14 @@ async function rbiSyncPass(mode = 'silent') {
 
             const role = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentRole() : 'guest';
             const taskDataScope = window.RBI.services.permissions ? window.RBI.services.permissions.getDataScope(role) : 'none';
+            // P2-0061 (ТД 149): вход почтой — охват задач решает сервер (record_visible: автор и исполнитель по id, объекты, фирма по id),
+            // телефон не сужает запрос по роли экрана и названию фирмы; «Только мои» — по id (автор или исполнитель)
+            const meTasks = window.RbiSyncAccess ? window.RbiSyncAccess.deviceMe() : null;
 
-            if (taskDataScope === 'none') {
+            if (meTasks) {
+                if (window.syncConfig.syncMode === 'personal') taskQuery = own(taskQuery, 'assigned_to_auth_user_id');
+            }
+            else if (taskDataScope === 'none') {
                 taskQuery = taskQuery.eq('id', 'impossible_id');
             }
             else if (taskDataScope === 'ownContractor') {
@@ -3464,13 +3470,20 @@ async function rbiSyncPass(mode = 'silent') {
                         }
                     };
 
-                    // Синхронизация проектных модулей
-                    await syncTableData('rbi_meetings', 'rbi_meetingsData', 'meeting');
-                    await syncTableData('rbi_interventions', 'rbi_interventionsData', 'intervention');
-                    await syncTableData('rbi_practices', 'rbi_practicesData', 'practice');
-                    await syncTableData('rbi_schedule_stages', 'rbi_scheduleData', 'schedule');
-                    await syncTableData('rbi_fmea', 'rbi_fmeaRecords', 'fmea');
-                    await syncTableData('rbi_etalon_acts', 'etalonActsArray', 'etalon');
+                    // Синхронизация проектных модулей. P2-0061: виды с описанием `sync` и общей отправкой «объектов» — по описаниям
+                    // манифестов (совещания, вмешательства, практики, этапы, FMEA, эталоны, документы, TWI; новый вид — одна строка)
+                    const SAo = window.RbiSyncAccess;
+                    const objKinds = SAo ? SAo.objectKinds(SAo.KINDS) : [];
+                    const byDescription = new Set(objKinds.map(k => k.store));
+                    for (const k of objKinds) await syncTableData(k.store, k.memory || '_sys_dummy', k.objectType);
+                    if (!SAo) {   // правило не загрузилось — прежний список
+                        await syncTableData('rbi_meetings', 'rbi_meetingsData', 'meeting');
+                        await syncTableData('rbi_interventions', 'rbi_interventionsData', 'intervention');
+                        await syncTableData('rbi_practices', 'rbi_practicesData', 'practice');
+                        await syncTableData('rbi_schedule_stages', 'rbi_scheduleData', 'schedule');
+                        await syncTableData('rbi_fmea', 'rbi_fmeaRecords', 'fmea');
+                        await syncTableData('rbi_etalon_acts', 'etalonActsArray', 'etalon');
+                    }
                     // Синхронизация модулей Стройконтроля (Иерархия, Дефекты на планах, Приемка)
                     await syncTableData('construction_buildings', '_sys_dummy', 'const_building');
                     await syncTableData('construction_floors', '_sys_dummy', 'const_floor');
@@ -3480,9 +3493,9 @@ async function rbiSyncPass(mode = 'silent') {
 
                     // Синхронизация новых таблиц Справочников
                     // Синхронизация новых таблиц Справочников
-                    await syncTableData('custom_docs', 'customDocs', 'custom_doc');
-                    await syncTableData('custom_nodes', 'customNodes', 'custom_node');
-                    await syncTableData('twi_cards', 'customTwiCards', 'custom_twi_card');
+                    if (!byDescription.has('custom_docs')) await syncTableData('custom_docs', 'customDocs', 'custom_doc');
+                    if (!byDescription.has('custom_nodes')) await syncTableData('custom_nodes', 'customNodes', 'custom_node');
+                    if (!byDescription.has('twi_cards')) await syncTableData('twi_cards', 'customTwiCards', 'custom_twi_card');
 
                     // C2b: sync project_objects / object_aliases отключён — SoT = locations
                     // (case-ветки в push-pull сохранены для отката; сюда не заходим)

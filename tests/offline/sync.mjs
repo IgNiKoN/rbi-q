@@ -2,8 +2,9 @@
 // s-rename — смена ФИО при неотправленных осмотрах (новом с id автора и старом без id) → оба уходят ровно 1 раз;
 // s-foreign — у вошедшего на телефоне осмотры другого сотрудника (по ФИО и по id) → 0 отправок, «Не отправлено: запись другого сотрудника (ФИО)»;
 // s-leader — руководитель отправляет такие осмотры ровно 1 раз. Боевой сервер не используется.
-import { start, stop, stand, sends, sendsAll, resetNet, net, flow, log as apiLog, USER, USER2 } from './servers.mjs';
+import { start, stop, stand, sends, sendsAll, resetNet, net, flow, log as apiLog, USER, USER2, COMPANY } from './servers.mjs';
 import { freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
+import { pullScopeScenario } from './pull-scope.mjs';
 
 const ENGINEER = { actions: ['quality.edit', 'quality.view'], templates: [], projects: null, contractor: null, objects: null, container: null };
 
@@ -295,7 +296,65 @@ async function ownFirst(out) {
   } finally { stand.quality = null; await stop().catch(() => {}); }
 }
 
+/** P2-0061 этап 5: модуль выключен у компании — его записи на телефоне не теряются и не уходят, причина «модуль … выключен»; другие уходят. */
+async function moduleOff(out) {
+  const tag = 's-module-off';
+  note(`== ${tag}: у компании выключен Стройконтроль — замечание остаётся на телефоне с причиной, осмотр Качества уходит`);
+  freshProfile(out, tag); resetNet(); stand.names = {};
+  const was = COMPANY.modules.slice();
+  COMPANY.modules = ['quality', 'planfact'];
+  stand.quality = { actions: ['quality.view', 'quality.edit', 'construction.view', 'construction.edit'], templates: [], projects: null, contractor: null, objects: null, container: null };
+  try {
+    await start();
+    const { ctx, page } = await launch(out, tag);
+    await signIn(page);
+    const t = Date.now(), d = 'mod-d-' + t, i = 'mod-i-' + t;
+    await page.evaluate(async ([di, ii]) => {
+      const S = window.RBI.services;
+      await S.storage.put('construction_defects_v2', { id: di, title: 'SYNC-MARK', owner: 'Иванов Иван', locationId: 'loc-1', status: 'issued', source: 'local',
+        syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() });
+      await S.inspections.save({ id: ii, date: new Date().toISOString(), object: 'SYNC-MARK', template: 'Кладка', status: 'done', inspectorName: 'Иванов Иван' });
+    }, [d, i]);
+    for (let k = 0; k < 5 && !sends.get(i); k++) { await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    const r = await page.evaluate(async (x) => { const y = (await window.RBI.services.storage.getAll('construction_defects_v2')).find((z) => z.id === x);
+      return y ? [y.syncStatus || y.sync_status, y.syncBlockReason || ''] : null; }, d);
+    ok((sends.get(i) || 0) === 1, `${tag}: осмотр Качества ушёл 1 раз`, String(sends.get(i) || 0));
+    ok((sendsAll.get('construction_defects_v2:' + d) || 0) === 0 && !!r && r[0] === 'blocked' && r[1] === 'Не отправлено: модуль «Стройконтроль» выключен у компании',
+      `${tag}: замечание выключенного модуля — на телефоне, не ушло, причина видна`, JSON.stringify(r));
+    await ctx.close();
+  } finally { COMPANY.modules = was; stand.quality = null; await stop().catch(() => {}); }
+}
+
+/** P2-0061 этап 5 (п. 3а карточки): новый вид записи — одна строка описания; движок, правило и «Отправка» подхватывают его без правки кода.
+ *  На стенде описание добавляется в работающее приложение (как строка в манифесте) — для «узлов» библиотеки (custom_nodes), у которых описания нет. */
+async function newKind(out) {
+  const tag = 's-new-kind';
+  note(`== ${tag}: строка описания «узлы» (режим «только автор») → своя запись ушла 1 раз, чужая — «Не отправлено: запись другого сотрудника»`);
+  freshProfile(out, tag); resetNet(); stand.quality = ENGINEER; stand.names = {};
+  try {
+    await start();
+    const { ctx, page } = await launch(out, tag);
+    await signIn(page);
+    const t = Date.now(), own = 'node-own-' + t, other = 'node-other-' + t;
+    await page.evaluate(async ([a, b]) => {
+      // одна строка описания (так же, как в поле sync манифеста модуля)
+      window.RbiSyncAccess.KINDS.stand_node = { module: 'knowledge', kind: 'stand_node', store: 'custom_nodes', table: 'shared_nodes', title: 'Узел',
+        objectType: 'custom_node', memory: 'customNodes', author: { id: 'authorId', name: ['owner'] }, mode: 'author', view: ['quality.view'], edit: ['quality.edit'] };
+      const S = window.RBI.services;
+      for (const [id, who] of [[a, 'Иванов Иван'], [b, 'Петров Пётр']]) await S.storage.put('custom_nodes', { id, owner: who, title: 'SYNC-MARK', source: 'local',
+        syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() });
+    }, [own, other]);
+    for (let k = 0; k < 5 && !sendsAll.get('shared_nodes:' + own); k++) { await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    const r = await page.evaluate(async (x) => { const y = (await window.RBI.services.storage.getAll('custom_nodes')).find((z) => z.id === x);
+      return y ? [y.syncStatus || y.sync_status, y.syncBlockReason || ''] : null; }, other);
+    ok((sendsAll.get('shared_nodes:' + own) || 0) === 1, `${tag}: своя запись нового вида ушла ровно 1 раз`, String(sendsAll.get('shared_nodes:' + own) || 0));
+    ok((sendsAll.get('shared_nodes:' + other) || 0) === 0 && !!r && r[0] === 'blocked' && r[1] === 'Не отправлено: запись другого сотрудника (Петров Пётр)',
+      `${tag}: чужая — по правилу, с причиной (движок не правился)`, JSON.stringify(r));
+    await ctx.close();
+  } finally { stand.quality = null; await stop().catch(() => {}); }
+}
+
 export function syncScenarios(out) {
-  return { 's-reject-retry': () => rejectRetry(out), 's-reject-retry-1440-dark': () => rejectRetry(out, 1440, 'dark'), 's-own-first': () => ownFirst(out),
+  return { 's-module-off': () => moduleOff(out), 's-new-kind': () => newKind(out), 's-pull-scope': pullScopeScenario(out), 's-reject-retry': () => rejectRetry(out), 's-reject-retry-1440-dark': () => rejectRetry(out, 1440, 'dark'), 's-own-first': () => ownFirst(out),
     's-contractor': () => contractor(out), 's-kinds': () => kinds(out), 's-rename': () => rename(out), 's-foreign': () => foreignAndLeader(out, 's-foreign'), 's-leader': () => foreignAndLeader(out, 's-leader') };
 }

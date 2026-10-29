@@ -1,0 +1,6 @@
+  == s-pull-scope: одни и те же ответы сервера → что осталось на телефоне (подрядчик «Фирма 1», инженер «Только мои», инженер «Вся команда»)
+  s-pull-scope-ctr: {"meetings":["m-f1","m-other","m-own"],"me":null,"probe":null,"kind":null}
+  s-pull-scope-mine: {"meetings":["m-own"],"me":null,"probe":null,"kind":null}
+  s-pull-scope-team: {"meetings":["m-f1","m-f2","m-other","m-own"],"me":null,"probe":null,"kind":null}
+  скачано: {"contractor":{"meetings":["m-f1","m-other","m-own"],"me":null,"probe":null,"kind":null},"personal":{"meetings":["m-own"],"me":null,"probe":null,"kind":null},"team":{"meetings":["m-f1","m-f2","m-other","m-own"],"me":null,"probe":null,"kind":null}}
+{"contractor":{"meetings":["m-f1","m-other","m-own"],"me":null,"probe":null,"kind":null},"personal":{"meetings":["m-own"],"me":null,"probe":null,"kind":null},"team":{"meetings":["m-f1","m-f2","m-other","m-own"],"me":null,"probe":null,"kind":null}}

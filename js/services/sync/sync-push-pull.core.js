@@ -473,6 +473,8 @@ window.pullCloudObjects = async function (objectType, lastPullTimeStr = '', mode
     const rowDataScope = window.RBI.services.permissions ? window.RBI.services.permissions.getDataScope(role) : 'none';
     const myProjects = window.RBI.services.permissions ? window.RBI.services.permissions.getAssignedProjects() : [];
     const myContrName = typeof appSettings !== 'undefined' ? (appSettings.contractorName || appSettings.assignedContractor || '') : '';
+    const pullKind = window.RbiSyncAccess ? window.RbiSyncAccess.kindOf(tableName) : null;
+    const pullMe = pullKind ? window.RbiSyncAccess.deviceMe() : null;
 
     for (const row of data || []) {
         let obj = {};
@@ -499,9 +501,13 @@ window.pullCloudObjects = async function (objectType, lastPullTimeStr = '', mode
         obj._deleted = obj.is_deleted;
         if (obj.is_deleted) obj._deletedAt = row.deleted_at || row.updated_at;
         if (row.owner || row.created_by) obj.owner = row.owner || row.created_by;
+        if (row.core_created_by) obj.authorId = row.core_created_by;   // P2-0061: автор — id учётной записи (ставит сервер)
 
-        // RLS фильтрация на клиенте (защита от "чужих" данных для инженера)
-        if (!isShared) {
+        // P2-0061 (ТД 149): вид с описанием `sync` — отбор общим правилом (по id автора, объекту, id фирмы; «Только мои» — по id),
+        // без отбора по названию фирмы и ФИО; вид без описания — как раньше
+        if (pullKind) {
+            if (!window.RbiSyncAccess.keepPulled(obj, pullKind, pullMe, window.syncConfig && window.syncConfig.syncMode === 'personal')) continue;
+        } else if (!isShared) {
             const itemProject = obj.project_canonical_key || obj.project || '';
             const itemContr = obj.contractor_name || obj.contractor || '';
             const itemEngineer = obj.engineer_name || obj.inspector_name || obj.created_by || '';

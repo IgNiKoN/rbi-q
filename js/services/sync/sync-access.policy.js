@@ -21,12 +21,17 @@ export function kindsFrom(manifests) {
     return out;
 }
 const KINDS = kindsFrom(ModulesManifest);
-/** Описание вида записи по имени или по хранилищу. */
+/** Виды, которые уходят общей отправкой «объектов» (pushCloudObject): у описания есть objectType. Новый такой вид — одна строка. */
+export function objectKinds(kinds = KINDS) {
+    return Object.values(kinds).filter((k) => k && k.objectType && k.store);
+}
+/** Описание вида записи по имени, хранилищу устройства или таблице сервера. */
 export function kindOf(nameOrStore, kinds = KINDS) {
     if (kinds[nameOrStore]) return kinds[nameOrStore];
-    return Object.values(kinds).find((k) => k.store === nameOrStore) || null;
+    return Object.values(kinds).find((k) => k.store === nameOrStore) || Object.values(kinds).find((k) => k.table === nameOrStore) || null;
 }
 
+const MODULE_TITLES = { quality: 'Качество', construction: 'Стройконтроль' };
 const clean = (v) => String(v == null ? '' : v).trim();
 const low = (v) => clean(v).toLowerCase();
 /** Ключ объекта для сравнения — как quality.object_clean: без регистра, лишних пробелов и кавычек. */
@@ -50,6 +55,8 @@ export function meFrom(src) {
         actions: Array.isArray(s.actions) ? s.actions.map(String) : [],
         objects: Array.isArray(s.objects) ? s.objects.map(objClean).filter(Boolean) : null,
         contractorId: clean(s.contractorId),
+        // модули, включённые у компании (null — неизвестно: решает сервер); выключенный — записи на телефоне, причина видна
+        modules: Array.isArray(s.modules) ? s.modules.map(String) : null,
         // как запись узнаёт свой объект: на устройстве — справочник объектов (по id, ключу, синонимам), как record_keys сервера
         inObject: typeof s.inObject === 'function' ? s.inObject : null
     };
@@ -93,6 +100,11 @@ function decide(rec, kind, me, what) {
     if (!kind) return { ok: false, code: 'kind', reason: 'Не отправлено: неизвестный вид записи', hint: 'Обновите приложение' };
     if (!me) return { ok: false, code: 'login', reason: 'Не отправлено: нужно войти', hint: 'Войдите на этом телефоне — запись уйдёт сама' };
     const acts = (what === 'view' ? kind.view : kind.edit) || [];
+    const modKey = String(acts[0] || '').split('.')[0];
+    if (me.modules && modKey && !me.modules.includes(modKey)) {
+        return { ok: false, code: 'module', reason: 'Не отправлено: модуль «' + (MODULE_TITLES[modKey] || modKey) + '» выключен у компании',
+            hint: 'Запись сохранена на телефоне; уйдёт, когда администратор компании включит модуль' };
+    }
     if (!acts.some((a) => has(me, a))) {
         return { ok: false, code: 'right', reason: 'Не отправлено: нет права на эти записи', hint: 'Попросите администратора компании дать право' };
     }
@@ -140,6 +152,18 @@ export function canChange(rec, kind, me) {
 }
 /** Видна ли запись (отбор после скачивания). */
 export const visible = (rec, kind, me) => decide(rec, kind, me, 'view').ok;
+/** Отбор после скачивания (ТД 149): видна по правилу (сервер уже отобрал — это страховка, а не замена) и, в режиме «Только мои»,
+ *  моя по id автора (переходно — по подписи). Без «кто я» — оставить (решает сервер), чтобы не потерять скачанное. */
+export function keepPulled(rec, kind, me, personal) {
+    if (!kind || !me) return true;
+    if (!visible(rec, kind, me)) return false;
+    return !personal || !personalApplies(kind, me) || isMine(rec, kind, me);
+}
+/** «Только мои» сужает того, кто правит только своё (как раньше — инженер); руководителю, «вся компания» и подрядчику (его фирма) — нет. */
+function personalApplies(kind, me) {
+    const mod = String((kind.edit || [])[0] || 'quality.').split('.')[0];
+    return has(me, mod + '.edit') && !has(me, mod + '.manage') && !has(me, 'quality.scope.company') && !has(me, 'quality.scope.contractor');
+}
 /** Отпечаток доступа: изменился с прошлой попытки — «Не отправлено» перепроверяется (ТД 313). */
 export function accessStamp(me) {
     if (!me) return '';
@@ -154,12 +178,15 @@ export function deviceMe(w = typeof window !== 'undefined' ? window : {}) {
     const c = w.syncConfig || {};
     const st = w.appSettings || {};
     const P = w.RBI.services && w.RBI.services.permissions;
-    return meFrom({ userId: c.authUserId || qs.userId, name: c.engineerName || qs.engineerName, email: qs.email,
+    const p2 = w.RBI.platform2 && typeof w.RBI.platform2.getState === 'function' ? w.RBI.platform2.getState() : null;
+    const comp = p2 && Array.isArray(p2.companies) ? p2.companies.find((x) => x && x.id === qs.companyId) : null;
+    return meFrom({
+        modules: comp && Array.isArray(comp.modules) ? comp.modules : null, userId: c.authUserId || qs.userId, name: c.engineerName || qs.engineerName, email: qs.email,
         names: qs.names || c.previousNames, actions: qs.actions, objects: qs.objects === undefined ? null : qs.objects,
         contractorId: st.assignedCounterpartyId,
         inObject: P && typeof P.isRecordInAssignedProjects === 'function' ? (rec) => !!P.isRecordInAssignedProjects(rec, P.getAssignedProjects()) : null });
 }
 
 if (typeof window !== 'undefined') {
-    window.RbiSyncAccess = { kindsFrom, kindOf, meFrom, deviceMe, isMine, stampAuthor, canSend, canChange, visible, accessStamp, KINDS };
+    window.RbiSyncAccess = { kindsFrom, objectKinds, kindOf, meFrom, deviceMe, isMine, stampAuthor, canSend, canChange, visible, keepPulled, accessStamp, KINDS };
 }

@@ -18,8 +18,8 @@ export const KnowledgeManifest = {
     offline: { view: true, input: [], files: true },
     // P2-0061: виды записей для общего правила синхронизации (библиотека компании — quality.can на сервере)
     sync: [
-        { kind: 'practice', store: 'rbi_practices', table: 'shared_practices', title: 'Практика', author: { id: 'authorId', name: ['owner', 'author'] }, mode: 'shared', view: ['quality.view'], edit: ['quality.edit'] },
-        { kind: 'twi', store: 'twi_cards', table: 'shared_twi_cards', title: 'Карта TWI', author: { id: 'authorId', name: ['owner', 'author'] }, mode: 'shared', view: ['quality.view'], edit: ['quality.edit'] }
+        { kind: 'practice', objectType: 'practice', memory: 'rbi_practicesData', store: 'rbi_practices', table: 'shared_practices', title: 'Практика', author: { id: 'authorId', name: ['owner', 'author'] }, mode: 'shared', view: ['quality.view'], edit: ['quality.edit'] },
+        { kind: 'twi', objectType: 'custom_twi_card', memory: 'customTwiCards', store: 'twi_cards', table: 'shared_twi_cards', title: 'Карта TWI', author: { id: 'authorId', name: ['owner', 'author'] }, mode: 'shared', view: ['quality.view'], edit: ['quality.edit'] }
     ],
     routes: ['/knowledge', '/knowledge/twi', '/knowledge/docs', '/knowledge/nodes', '/knowledge/etalons'],
     defaultRoute: '/knowledge'
