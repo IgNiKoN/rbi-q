@@ -15,7 +15,7 @@ const summaryText = (page) => page.evaluate(() => {
   c.querySelectorAll('[data-testid=sm-dates-btn]').forEach((b) => b.remove());
   return c.innerText.replace(/\s+/g, ' ').trim();
 }).catch(() => null);
-const markText = (page) => page.locator('[data-testid=p2-offline-mark]').first().innerText().catch(() => '');
+const markText = (page) => page.locator('[data-testid=p2-offline-mark]:visible').first().innerText().catch(() => '');
 const openSummary = async (page) => { await page.goto(APP + '/#/planfact').catch((e) => note('goto: ' + e.message.split('\n')[0])); await page.waitForTimeout(8000); };
 
 async function summary(out, width, scheme = 'light') {
@@ -70,7 +70,7 @@ async function other(out) {
     const body = await page.evaluate(() => (document.getElementById('tab-planfact') || document.body).innerText).catch(() => '');
     ok(!body.includes(SUMMARY.name) && !body.includes('42,5'), `${tag}: цифр первого пользователя нет`);
     ok(/Нужен интернет/.test(body), `${tag}: «Нужен интернет»`, body.replace(/\s+/g, ' ').slice(0, 140));
-    const mark = await page.locator('[data-testid=p2-offline-mark]').first().innerText().catch(() => '');
+    const mark = await page.locator('[data-testid=p2-offline-mark]:visible').first().innerText().catch(() => '');
     ok(!/данные на/.test(mark), `${tag}: пометки «данные на …» нет — данных экрана нет`, mark);
     await page.screenshot({ path: join(out, tag + '.png') });
     await ctx.close();
@@ -98,6 +98,14 @@ async function prefetch(out, width) {
   }
   ok(!!st, `${tag}: заранее скачалось само (без нажатий, после запуска)`, st ? JSON.stringify(st.stats) : 'нет');
   if (st) { measures.push({ tag, ...st.stats }); note('заранее: ' + JSON.stringify(st.stats)); }
+  let co = null;   // ядро платформы: заранее — через 10 с после запуска
+  for (let i = 0; i < 20 && !co; i++) {
+    co = await page.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('platform2_offline_prefetch:'));
+      return k ? JSON.parse(localStorage.getItem(k)).company || null : null; });
+    if (!co) await page.waitForTimeout(1500);
+  }
+  ok(!!co, `${tag}: ядро платформы — заранее скачалось само`, co ? JSON.stringify(co.stats) : 'нет');
+  if (co) { measures.push({ tag: tag + '-core', ...co.stats }); note('ядро заранее: ' + JSON.stringify(co.stats)); }
   const pp = st && st.stats && st.stats.perProject && st.stats.perProject[0];
   ok(!!pp && pp.bytes < 20 * 1024 * 1024, `${tag}: заранее на проект < 20 МБ`, pp ? (pp.bytes / 1024).toFixed(1) + ' КБ, чтений ' + pp.reads : '');
   await ctx.close(); await stop();
@@ -115,14 +123,35 @@ async function prefetch(out, width) {
   await go(page, '#/planfact/fact', 5000);
   t = await text(page);
   ok(!(await needNet(page)) && /Корпус 1/.test(t), `${tag}: без сети Факт → Ввод — места видны`, t.slice(0, 120));
+  // «Ввод» по этажу (не открывали): Корпус 1 → Секция 1 → Этаж 2 — позиции из всех позиций проекта, без «Нужен интернет»
+  for (const [id, name] of [['b-1', 'Корпус 1'], ['s-1', 'Секция 1'], ['f-2', 'Этаж 2']]) {   // ПК — дерево мест, телефон — плитки
+    const node = page.locator(`[data-testid=ft-tree] [data-location-id="${id}"]:visible`);
+    await ((await node.count()) ? node.first() : page.locator('[data-testid=ft-children] button', { hasText: name }).first()).click().catch(() => {});
+    await page.waitForTimeout(1500);
+  }
+  const rows = await page.locator('.ft-row').count();
+  const markF = await page.locator('[data-testid=p2-offline-mark]:visible').first().innerText().catch(() => '');
+  ok(rows >= 1 && !/Нужен интернет/.test(markF), `${tag}: без сети «Ввод» → Этаж 2 (не открывали) — позиции места видны`, rows + ' поз. · ' + markF);
+  await page.screenshot({ path: join(out, tag + '-fact-floor.png'), fullPage: true });
   const enter = page.locator('[data-testid=ft-enter], [data-testid=cb-enter]');
   ok(!(await enter.count()) || await enter.first().isDisabled(), `${tag}: «Внести» без сети неактивна (если есть)`);
+  await go(page, '#/planfact/fact/journal', 5000);
+  t = await text(page);
+  const markJ = await page.locator('[data-testid=p2-offline-mark]:visible').first().innerText().catch(() => '');
+  ok(!(await needNet(page)) && !/Нужен интернет/.test(markJ), `${tag}: без сети Журнал (30 дней, не открывали) — из копии`, markJ);
+  await go(page, '#/planfact/inbox', 4000);
+  const markI = await page.locator('[data-testid=p2-offline-mark]:visible').first().innerText().catch(() => '');
+  ok(!(await needNet(page)) && !/Нужен интернет/.test(markI), `${tag}: без сети Входящие (не открывали) — из копии`, markI);
+  await go(page, '#/settings/company/members', 5000);
+  const markM = await page.locator('[data-testid=p2-offline-mark]:visible').first().innerText().catch(() => '');
+  const missM = await page.evaluate(() => (window.RBI.offlineCopy ? window.RBI.offlineCopy.missedKeys('company') : [])).catch(() => []);
+  ok(!(await needNet(page)) && !/Нужен интернет/.test(markM), `${tag}: без сети ядро платформы → Сотрудники и доступ (не открывали) — из копии`, markM + ' ' + JSON.stringify(missM));
   await go(page, '#/settings/company/objects', 5000);
-  const co = await page.evaluate(() => document.body.innerText).catch(() => '');
-  ok(!coOnline || (co.includes('ЖК Тестовый') && !(await needNet(page))), `${tag}: ядро платформы («Компания → Проекты», открывали с сетью) — без сети видно`);
+  const coText = await page.evaluate(() => document.body.innerText).catch(() => '');
+  ok(!coOnline || (coText.includes('ЖК Тестовый') && !(await needNet(page))), `${tag}: ядро платформы («Компания → Проекты», открывали с сетью) — без сети видно`);
   const add = page.locator('[data-testid=pj-add]');
   ok(!(await add.count()) || await add.first().isDisabled(), `${tag}: «+ Проект» без сети неактивна`);
-  ok(/только просмотр/.test(co), `${tag}: в «Компании» — «только просмотр»`);
+  ok(/только просмотр/.test(coText), `${tag}: в «Компании» — «только просмотр»`);
   await page.screenshot({ path: join(out, tag + '-company.png'), fullPage: true });
   const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   ok(wide <= 0, `${tag}: без прокрутки вбок`, String(wide));

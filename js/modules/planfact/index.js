@@ -155,7 +155,7 @@ function unmountSettings() { if (loaded && typeof loaded.unmountSettings === 'fu
  * Связь подтверждена сервером, модуль положен, на устройстве прошлый раз — больше суток назад (точное «пора» по «компания +
  * пользователь» и выбор «держать без сети» проверяет бандл). Через 8 с после запуска — не мешать первой загрузке. По кнопке — offlinePrefetch.
  */
-var PREFETCH_DEVICE_KEY = 'platform2_offline_prefetch_last';
+var PREFETCH_DEVICE_KEY = 'platform2_offline_prefetch_last:planfact';
 var PREFETCH_EVERY_MS = 24 * 3600 * 1000;
 var prefetchAsked = false;
 function prefetchNow(force) {

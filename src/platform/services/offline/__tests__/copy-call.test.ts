@@ -3,7 +3,7 @@
  *  (для удаления копии без доступа) по прежним ответам; «держать без сети» и «пора заранее»; заранее «мои проекты» (prefetchPlanfact). */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { copyCall, keepOffline, lastPrefetch, markPrefetched, offlineReader, prefetchDue, projectOf, setKeepOffline } from '../copy.ts';
+import { copyCall, keepOffline, lastPrefetch, markPrefetched, offlineReader, placePath, prefetchDue, projectOf, setKeepOffline } from '../copy.ts';
 import { NEED_INTERNET_INPUT } from '../offline-read.ts';
 import { prefetchPlanfact } from '../../../../modules/planfact/prefetch.ts';
 
@@ -63,18 +63,22 @@ test('«держать без сети»: по умолчанию у модул�
   setKeepOffline('planfact', true);
 });
 
-test('заранее «мои проекты»: Сводка, ВОР, Факт, шахматка — по проектам с правом fact.view; без него — только ВОР; без сети — ничего', async () => {
+test('заранее «мои проекты» (почти всё): Сводка, Входящие, ВОР со строками, Факт с журналом, шахматка, КС-2 и сметы — по праву; без сети — ничего', async () => {
   st.offline = false;
   const calls: string[] = [];
   const r = <T>(name: string, v: T) => async (..._a: unknown[]) => { calls.push(name); return v; };
   const res = <T>(name: string, v: T) => async (..._a: unknown[]) => { calls.push(name); return { ok: true as const, value: v }; };
   const deps: N = {
-    summary: { portfolio: res('portfolio', []), weekly: res('weekly', []), places: res('places', []), workTypes: res('worktypes', []), positions: res('spositions', []),
+    summary: { portfolio: res('portfolio', []), inbox: res('inbox', []), weekly: res('weekly', []), places: res('places', []), workTypes: res('worktypes', []), positions: res('spositions', []),
       ks2Gap: res('ks2gap', []), attention: res('attention', null) },
     vor: { listProjects: r('projects', [{ id: 'p-1', company_id: 'c-1' }, { id: 'p-2', company_id: 'c-1' }]),
-      permissions: async (p: string) => { calls.push('perms:' + p); return p === 'p-1' ? ['planfact.fact.view'] : ['planfact.vor.manage']; },
-      listImports: r('imports', []), positions: r('vpositions', []) },
-    fact: { pending: res('pending', []), positions: res('fpositions', []), listBrigades: r('brigades', []) },
+      permissions: async (p: string) => { calls.push('perms:' + p); return p === 'p-1' ? ['planfact.fact.view', 'planfact.ks2.view'] : ['planfact.vor.manage', 'planfact.estimate.manage']; },
+      listImports: r('imports', []), listProfiles: r('profiles', []), positions: r('vpositions', [{ import_id: 'imp-1' }, { import_id: 'imp-1' }]), importRows: r('importrows', []) },
+    fact: { pending: res('pending', []), positions: res('fpositions', []), listBrigades: r('brigades', []),
+      journal: async (_p: string, from: string, to: string) => { calls.push('journal:' + from + '..' + to); return { ok: true, value: [] }; } },
+    ks2: { settings: res('ks2settings', null), acts: res('ks2acts', []) },
+    estimate: { listEstimates: r('estimates', []) },
+    today: '2026-10-29',
     projects: { listLocations: async (_p: string, parent: string | null) => { calls.push('loc:' + (parent || '')); return parent ? [] : [{ id: 'b-1', child_count: 0 }]; } }
   };
   const stats = await prefetchPlanfact(deps);
@@ -83,8 +87,27 @@ test('заранее «мои проекты»: Сводка, ВОР, Факт, 
   assert.equal(calls.filter((c) => c === 'weekly').length, 1, 'Сводка — только по объекту с fact.view');
   assert.equal(calls.filter((c) => c === 'imports').length, 2, 'ВОР — по обоим');
   assert.equal(calls.filter((c) => c === 'brigades').length, 1, 'бригады — раз на компанию');
+  assert.equal(calls.filter((c) => c === 'importrows').length, 2, 'строки загрузки — по разу на загрузку в каждом объекте');
+  assert.ok(calls.includes('inbox') && calls.includes('journal:2026-09-30..2026-10-29'), 'Входящие и журнал 30 дней — тем же ключом, что экран');
+  assert.deepEqual([calls.includes('ks2acts'), calls.includes('estimates')], [true, true], 'КС-2 и сметы — по праву');
+  assert.equal(calls.filter((c) => c === 'ks2acts').length, 1, 'КС-2 — только где есть право');
   assert.equal(stats.reads, calls.length);
   st.offline = true;
   assert.equal((await prefetchPlanfact(deps)).stopped, 'нет связи');
+  st.offline = false;
+});
+
+test('чтения нет в копии, а экран собирает его из других копий (позиции места — из всех позиций проекта): ответ без «Нужен интернет»', async () => {
+  st.offline = false;
+  const LOC = new Set(['pf_list_locations', 'pf_fact_positions']);
+  await copyCall('company', LOC, 'pf_list_locations', { p_project: 'p-1', p_parent: 's-1' }, async () => ({ ok: true, value: [{ id: 'f-2', node_type: 'floor', path: 'К1 · С1 · Этаж 2' }] }));
+  assert.equal(placePath('f-2'), 'К1 · С1 · Этаж 2');
+  st.offline = true;
+  const r = await copyCall('planfact', LOC, 'pf_fact_positions', { p_project: 'p-1', p_location: 'f-2' }, async () => ({ ok: true, value: [] }), undefined,
+    async () => ({ ok: true, value: ['из всех позиций'] }));
+  assert.deepEqual(r.ok && r.value, ['из всех позиций']);
+  assert.equal(offlineReader().status('planfact')?.missed || 0, 0, 'не пропуск — пометка «Нужен интернет» не зажигается');
+  const none = await copyCall('planfact', LOC, 'pf_fact_positions', { p_project: 'p-1', p_location: 'f-9' }, async () => ({ ok: true, value: [] }), undefined, async () => null);
+  assert.equal(none.ok, false, 'собрать не из чего — «Нужен интернет»');
   st.offline = false;
 });

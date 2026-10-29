@@ -107,12 +107,39 @@ function showView() {
     if (router && typeof router.navigate === 'function') router.navigate('#/settings/company', true);
 }
 
+/**
+ * P2-0060: «держать без сети» ядра платформы — заранее скачать экраны «Компании» в копию для просмотра (в бандле: prefetchOffline).
+ * Тому, кто управляет компанией, объектами или единицами; связь подтверждена сервером; на устройстве прошлый раз — больше суток назад
+ * (точное «пора» по «компания + пользователь» и выбор «держать без сети» проверяет бандл). Через 10 с после запуска. По кнопке — offlinePrefetch.
+ */
+var PREFETCH_DEVICE_KEY = 'platform2_offline_prefetch_last:company';
+var PREFETCH_EVERY_MS = 24 * 3600 * 1000;
+var prefetchAsked = false;
+function prefetchNow(force) {
+    return loadBundle().then(function (m) { return typeof m.prefetchOffline === 'function' ? m.prefetchOffline({ force: !!force }) : null; });
+}
+function maybePrefetch() {
+    if (prefetchAsked) return;
+    var p2 = window.RBI && window.RBI.platform2;
+    var st = p2 && typeof p2.getState === 'function' ? p2.getState() : null;
+    if (!st || st.mode !== 'email' || st.offline || st.checking || navigator.onLine === false || !allowed()) return;
+    var last = 0;
+    try { last = Number(localStorage.getItem(PREFETCH_DEVICE_KEY) || 0); } catch (_) { /* без localStorage — как в первый раз */ }
+    if (Date.now() - last < PREFETCH_EVERY_MS) return;
+    prefetchAsked = true;
+    setTimeout(function () { prefetchNow(false).catch(function () { prefetchAsked = false; }); }, 10000);
+}
+
 export function init() {
     var rbi = (window.RBI = window.RBI || {});
+    rbi.offlinePrefetch = Object.assign(rbi.offlinePrefetch || {}, { company: prefetchNow });   // P2-0060: «Скачать сейчас»
+    window.addEventListener('rbi:platform-access', maybePrefetch);
+    window.addEventListener('rbi:platform-net', maybePrefetch);
     rbi.platformPanels = Object.assign(rbi.platformPanels || {}, { company: { mount: mount, unmount: unmount, allowed: allowed, rights: rights, tabs: tabs, mountHome: mountHome } });
     // Право пропало (выход, смена компании) — снять экран; право на объекты/единицы — перепросить.
     window.addEventListener('rbi:platform-access', function () { if (!allowed()) unmount(); refreshDirs(); });
     refreshDirs();
+    maybePrefetch();
     var router = window.AppRouter;
     if (router && typeof router.addRoute === 'function') {
         router.addRoute('#/company', showView);

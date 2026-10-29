@@ -75,6 +75,10 @@ export interface OfflineReader {
   status(module: string): CopyStatus | null;
   /** Экран модуля сменился — пропуски прежнего экрана не в счёт. */
   resetMissed(module: string): void;
+  /** Какие чтения экрана без сети не нашлись в копии (для «Данные на устройстве» и проверки). */
+  missedKeys(module: string): string[];
+  /** Чтения нет в копии, но экран собрал его из других копий (позиции места — из всех позиций проекта) — не пропуск. */
+  resolveMiss(module: string, key: string): void;
   subscribe(cb: () => void): () => void;
   /** Байт копии модуля у этого человека («Офлайн по модулям»); с project — только этого объекта. */
   size(module: string, project?: string): Promise<number>;
@@ -159,6 +163,8 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
       return { at, stale: at !== null && isStale(at, now()), missed: n };
     },
     resetMissed(module) { if (missed.get(module)?.size) { missed.delete(module); emit(); } },
+    resolveMiss(module, key) { miss(module, key, false); },
+    missedKeys(module) { return [...(missed.get(module) || [])]; },
     subscribe(cb) { subs.add(cb); return () => { subs.delete(cb); }; },
     async size(module, project) {
       const slot = deps.slot();

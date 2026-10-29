@@ -9,7 +9,7 @@ import type { PlanNodeType } from '../../services/locations/types.ts';
 import type { Result } from '../company/company.service.ts';
 
 import type { CompanyAccess } from './core.service.ts';
-import { copyCall, offlineRead, pruneToMyProjects, rpcRead } from '../services/offline/copy.ts';
+import { copyCall, isLeafPlace, offlineRead, pruneToMyProjects, rpcRead } from '../services/offline/copy.ts';
 
 /** P2-0060: чтения ядра (объекты, места, единицы) — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
 export const PROJECTS_READS: ReadonlySet<string> = new Set(['pf_my_company_access', 'pf_company_projects', 'pf_list_locations', 'pf_list_units', 'pf_project_catalog', 'pf_company_divisions', 'pf_project_dicts', 'pf_project_places', 'pf_location_path']);
@@ -197,7 +197,13 @@ export function createProjectsService(): ProjectsApi | null {
     listProjects: (company) => rows<ProjectItem>('pf_company_projects', { p_company: company }),
     createProject: (company, name, code) => call<string>('pf_create_project', { p_company: company, p_name: name, p_code: code || null }),
     updateProject: (id, name, code, archived) => call('pf_update_project', { p_project: id, p_name: name, p_code: code || null, p_archived: archived }),
-    listLocations: (project, parent) => rows<LocationNode>('pf_list_locations', { p_project: project, p_parent: parent }),
+    // P2-0060: без сети у места без вложенных (по дереву в копии) вложенных нет — пусто, без «Нужен интернет»
+    listLocations: async (project, parent) => {
+      const r = await copyCall<LocationNode[]>('company', PROJECTS_READS, 'pf_list_locations', { p_project: project, p_parent: parent },
+        () => send<LocationNode[]>('pf_list_locations', { p_project: project, p_parent: parent }), CORE_ACCESS,
+        parent ? async () => (isLeafPlace(parent) ? { ok: true, value: [] } : null) : undefined);
+      return r.ok && Array.isArray(r.value) ? r.value : [];
+    },
     addLocation: (project, parent, type, name) => call<string>('pf_add_location', { p_project: project, p_parent: parent, p_type: type, p_name: name }),
     renameLocation: (id, name) => call('pf_rename_location', { p_location: id, p_name: name }),
     deleteLocation: (id, cascade) => call<number>('pf_delete_location', { p_location: id, p_cascade: cascade }),

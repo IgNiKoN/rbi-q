@@ -7,7 +7,7 @@
 import { getClient } from '../../../platform/auth/auth.service.ts';
 import { mapCompanyError } from '../../../platform/company/company.service.ts';
 import type { Result } from '../../../platform/company/company.service.ts';
-import { copyCall } from '../../../platform/services/offline/copy.ts';
+import { copyCall, placePath } from '../../../platform/services/offline/copy.ts';
 
 /** P2-0060: чтения факта и бригад — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
 export const FACT_READS: ReadonlySet<string> = new Set(['pf_brigade_list', 'pf_fact_positions', 'pf_fact_history', 'pf_fact_pending', 'pf_fact_journal']);
@@ -83,7 +83,8 @@ const normPending = (r: FactPendingRow): FactPendingRow => ({ ...r, plan_qty: n(
 export function createFactService(): FactApi | null {
   const c = getClient();
   if (!c) return null;
-  const call = <T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> => copyCall('planfact', FACT_READS, fn, args, () => send<T>(fn, args));
+  const call = <T = null>(fn: string, args: Record<string, unknown>, fromOther?: () => Promise<Result<T> | null>): Promise<Result<T>> =>
+    copyCall('planfact', FACT_READS, fn, args, () => send<T>(fn, args), undefined, fromOther);
   async function send<T = null>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
     try {
       const { data, error } = await c!.rpc(fn, args);
@@ -103,7 +104,15 @@ export function createFactService(): FactApi | null {
     },
     saveBrigade: (company, id, name, leader, phone) => call<string>('pf_brigade_save', { p_company: company, p_id: id, p_name: name, p_leader: leader || null, p_phone: phone || null }),
     archiveBrigade: (id, archived) => call('pf_brigade_archive', { p_brigade: id, p_archived: archived }),
-    positions: (project, location) => list<FactPosition>('pf_fact_positions', { p_project: project, p_location: location }, normPosition),
+    // P2-0060: без сети позиций этого места в копии нет — из всех позиций проекта (скачаны заранее) по поддереву места, как сервер
+    positions: async (project, location) => {
+      const r = await call<FactPosition[]>('pf_fact_positions', { p_project: project, p_location: location }, location ? async () => {
+        const path = placePath(location);
+        const all = path ? await call<FactPosition[]>('pf_fact_positions', { p_project: project, p_location: null }) : null;
+        return all && all.ok ? { ok: true, value: (all.value || []).filter((p) => p.location_id === location || p.location_path === path || p.location_path.startsWith(path + ' · ')) } : null;
+      } : undefined);
+      return r.ok ? { ok: true, value: (r.value || []).map(normPosition) } : r;
+    },
     history: (position) => list<FactHistoryRow>('pf_fact_history', { p_position: position }, normHistory),
     pending: (project) => list<FactPendingRow>('pf_fact_pending', { p_project: project }, normPending),
     add: (position, e) => e.onBehalf

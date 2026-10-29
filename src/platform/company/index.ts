@@ -23,6 +23,9 @@ import { UNITS_CSS } from './UnitsTab.ts';
 import type { CompanyApi } from './company.service.ts';
 import { createAuthService, readAuthConfig } from '../auth/auth.service.ts';
 import type { AuthApi } from '../auth/auth.service.ts';
+import { prefetchCore } from './prefetch.ts';
+import type { CorePrefetchStats } from './prefetch.ts';
+import { markPrefetched, prefetchDue } from '../services/offline/copy.ts';
 import { PLATFORM_AUTH_CSS } from '../auth/LoginForm.ts';
 import { P2_PAGE_CSS, P2_REGISTRY_CSS, P2_TREE_CSS, P2_UI_CSS } from '../ui/index.ts';
 
@@ -86,6 +89,18 @@ export function isMounted(): boolean {
 
 /** P2-0013: маршрут #/company и видимость подраздела держит обёртка js/modules/company/index.js (бандл грузится только при доступе);
  *  право «Компания» — по ответу сервера через вход платформы (RBI.platformMenuAccess.company), здесь не перепроверяется. */
+/** P2-0060: «держать без сети» ядра платформы — заранее скачать экраны «Компании» (раз в сутки; force — по кнопке). */
+let prefetching: Promise<CorePrefetchStats | null> | null = null;
+export function prefetchOffline(opts?: { force?: boolean }): Promise<CorePrefetchStats | null> {
+  getAuth();
+  if (prefetching) return prefetching;
+  if (!(opts && opts.force) && !prefetchDue('company', Date.now())) return Promise.resolve(null);
+  prefetching = prefetchCore({ api, core, projects })
+    .then((st) => { if (!st.stopped) markPrefetched('company', st, Date.now()); return st; })
+    .finally(() => { prefetching = null; });
+  return prefetching;
+}
+
 export async function init(): Promise<void> {
   // ничего: обёртка сама регистрирует панель Настроек и маршрут
 }

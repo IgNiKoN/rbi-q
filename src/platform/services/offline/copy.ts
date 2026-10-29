@@ -27,11 +27,18 @@ export function offlineNow(): boolean {
 }
 
 const HOLDER = '__platform2OfflineReader';
+/** Для проверки на стенде и «Данные на устройстве»: window.RBI.offlineCopy — то же, что offlineReader(). */
+function expose(r: OfflineReader): void {
+  if (typeof window === 'undefined') return;
+  const w = window as unknown as { RBI?: Record<string, unknown> };
+  (w.RBI = w.RBI || {}).offlineCopy = r;
+}
 export function offlineReader(): OfflineReader {
   const g = globalThis as unknown as Record<string, OfflineReader | undefined>;
   if (!g[HOLDER]) {
     const store = typeof indexedDB !== 'undefined' ? idbCopyStore(indexedDB) : memoryCopyStore();
     g[HOLDER] = createOfflineReader({ store, slot: currentSlot, offline: offlineNow });
+    expose(g[HOLDER]!);
   }
   return g[HOLDER]!;
 }
@@ -72,6 +79,8 @@ export async function quietly<T>(f: () => Promise<T>): Promise<T> {
 
 /** Объект (проект) чтения: p_project или ранее увиденная запись этого объекта (импорт ВОР, позиция, место, акт…). */
 const memo = new Map<string, string>();
+const paths = new Map<string, string>();
+const leaves = new Set<string>();
 const REF_ARGS = ['p_import', 'p_position', 'p_location', 'p_act', 'p_revision', 'p_estimate', 'p_object', 'p_parent'];
 const REF_FIELDS = ['id', 'import_id', 'position_id', 'location_id', 'act_id', 'estimate_id', 'revision_id'];
 export function projectOf(args: Record<string, unknown> | undefined): string | null {
@@ -81,10 +90,14 @@ export function projectOf(args: Record<string, unknown> | undefined): string | n
   return null;
 }
 function remember(project: string | null, value: unknown): void {
-  if (!project) return;
   for (const r of Array.isArray(value) ? value : [value]) {
     if (!r || typeof r !== 'object') continue;
-    for (const k of REF_FIELDS) { const v = (r as Record<string, unknown>)[k]; if (typeof v === 'string') memo.set(v, project); }
+    const o = r as Record<string, unknown>;
+    if (typeof o.id === 'string' && typeof o.path === 'string' && typeof o.node_type === 'string') {
+      paths.set(o.id, o.path);
+      if (Number(o.child_count) === 0) leaves.add(o.id); else leaves.delete(o.id);
+    }
+    if (project) for (const k of REF_FIELDS) { const v = o[k]; if (typeof v === 'string') memo.set(v, project); }
   }
 }
 const stable = (v: unknown): string => JSON.stringify(v, (_k, x) => (x && typeof x === 'object' && !Array.isArray(x)
@@ -95,20 +108,32 @@ const stable = (v: unknown): string => JSON.stringify(v, (_k, x) => (x && typeof
  * удаления копии без доступа); остальное — запись: без сети не отправляется (ничего не начато — ничего не теряется).
  */
 export async function copyCall<T>(module: string, reads: ReadonlySet<string>, fn: string, args: Record<string, unknown> | undefined,
-  run: () => Promise<Result<T>>, quietReads?: ReadonlySet<string>): Promise<Result<T>> {
+  run: () => Promise<Result<T>>, quietReads?: ReadonlySet<string>, fromOther?: () => Promise<Result<T> | null>): Promise<Result<T>> {
   if (!reads.has(fn)) return offlineNow() ? { ok: false, message: NEED_INTERNET_INPUT } : run();
   const project = projectOf(args);
   const quiet = quietDepth > 0 || ACCESS_READS.has(fn) || !!(quietReads && quietReads.has(fn));
-  const r = await offlineRead(module, fn + ':' + stable(args || {}), run, { project, quiet });
-  if (r.ok) remember(project, r.value);
+  const key = fn + ':' + stable(args || {});
+  const r = await offlineRead(module, key, run, { project, quiet });
+  if (r.ok) { remember(project, r.value); return r; }
+  // этого чтения в копии нет, а экран может собрать его из других копий (fromOther) — без новых запросов
+  if ((r as { offline?: boolean }).offline && fromOther) {
+    const o = await fromOther();
+    if (o && o.ok) { offlineReader().resolveMiss(module, key); return o; }
+  }
   return r;
 }
+
+/** Место без вложенных (по прочитанному дереву) — его «вложенные места» без сети известны: пусто. */
+export function isLeafPlace(id: string): boolean { return leaves.has(id); }
+
+/** Путь места («Корпус 1 · Секция 1 · Этаж 2») по id — из прочитанных деревьев мест (для позиций места без сети). */
+export function placePath(id: string): string | null { return paths.get(id) ?? null; }
 
 /** «Держать без сети» и «заранее» — настройки устройства у «компания + пользователь» (localStorage, без данных — только флаги и время). */
 const KEEP_KEY = 'platform2_offline_keep:';
 const PREFETCH_KEY = 'platform2_offline_prefetch:';
-/** Время последнего «заранее» на устройстве (любой вход) — обёртка модуля решает, грузить ли код модуля (раз в сутки). */
-export const PREFETCH_DEVICE_KEY = 'platform2_offline_prefetch_last';
+/** Время последнего «заранее» модуля на устройстве (любой вход; + ':' + модуль) — обёртка модуля решает, грузить ли код (раз в сутки). */
+export const PREFETCH_DEVICE_KEY = 'platform2_offline_prefetch_last:';
 export const PREFETCH_EVERY_MS = 24 * 3600 * 1000;
 const ls = (): Storage | null => { try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; } };
 const readJson = <T>(k: string, d: T): T => { try { return JSON.parse(ls()?.getItem(k) || 'null') ?? d; } catch { return d; } };
@@ -142,7 +167,7 @@ export function markPrefetched(module: string, stats: unknown, now: number): voi
   const slot = currentSlot();
   if (!slot) return;
   writeJson(PREFETCH_KEY + slot, { ...readJson<Record<string, PrefetchRun>>(PREFETCH_KEY + slot, {}), [module]: { at: new Date(now).toISOString(), stats } });
-  try { ls()?.setItem(PREFETCH_DEVICE_KEY, String(now)); } catch { /* приватный режим */ }
+  try { ls()?.setItem(PREFETCH_DEVICE_KEY + module, String(now)); } catch { /* приватный режим */ }
 }
 
 /** С сетью сервер назвал мои объекты (pf_my_projects): копии остальных объектов у этого человека удаляются во всех модулях. */

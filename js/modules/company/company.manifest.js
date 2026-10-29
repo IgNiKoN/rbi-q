@@ -14,6 +14,8 @@ export const CompanyManifest = {
     enabled: true,
     entry: './index.js',
     // Пункта в боковом меню нет: «Компания» — подраздел Настроек (#/settings/company), виден при праве security.roles.assign.
+    // P2-0060: ядро платформы без сети — смотреть (копия для просмотра); вводы — с сетью (сервис «Офлайн и синхронизация», MODULES.md)
+    offline: { view: true, input: [], files: false },
     routes: ['/company'],
     defaultRoute: '/company'
 };

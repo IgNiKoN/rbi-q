@@ -243,7 +243,8 @@ export function prefetchOffline(opts?: { force?: boolean }): Promise<PrefetchSta
   if (prefetching) return prefetching;
   if (!(opts && opts.force) && !prefetchDue('planfact', Date.now())) return Promise.resolve(null);
   const area = createAreaService();
-  prefetching = prefetchPlanfact({ summary: summaryApi, vor: vorApi, fact: factApi, projects: projectsApi, area: area ? (p) => area.myArea(p) : undefined })
+  prefetching = prefetchPlanfact({ summary: summaryApi, vor: vorApi, fact: factApi, projects: projectsApi, ks2: ks2Api, estimate: estimateApi,
+    area: area ? (p) => area.myArea(p) : undefined })
     .then((st) => { if (!st.stopped) markPrefetched('planfact', st, Date.now()); return st; })
     .finally(() => { prefetching = null; });
   return prefetching;
