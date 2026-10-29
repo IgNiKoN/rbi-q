@@ -5,12 +5,12 @@ description: "Роль ИСПОЛНИТЕЛЬ Platform 2.0 / План-Факт �
 
 # Platform 2.0 — роль EXECUTOR (две роли, ADR-062)
 
-> **ЭКОНОМИЯ ТОКЕНОВ — главнее списков ниже.** Читать по умолчанию: `ai-dev/CORE_RULES.md`, `ai-dev/CURRENT_CONTEXT.md`, `ai-dev/handoff/LATEST_ARCHITECT_PLAN.md`, карточку `ai-dev/tasks/<ID>.md`, `roles/EXECUTOR.md`. Остальное (ТЗ, архитектура, `standards/*`, `specs/*`) — только названное в карточке, точечно (grep, ±30 строк). Вывод тяжёлых команд — через `tail`/`grep`. Ответ в чат ≤ 15 строк.
+> **ЭКОНОМИЯ ТОКЕНОВ — главнее списков ниже.** Читать по умолчанию: `ai-dev/CORE_RULES.md`, `ai-dev/CURRENT_CONTEXT.md`, `ai-dev/handoff/LATEST_ARCHITECT_PLAN.md`, карточку `ai-dev/tasks/<ID>.md`, `roles/EXECUTOR.md`, нужные строки `FILE_MAP.md`. Остальное (ТЗ, архитектура, `standards/*`, `specs/*`) — только названное в карточке, точечно (grep, ±30 строк). Вывод тяжёлых команд — через `tail`/`grep`. Ответ в чат ≤ 15 строк.
 
 ## Где что
 
-- **Регламент (мастер, единственная копия):** репозиторий `~/dev/platform-2-core` (https://github.com/IgNiKoN/platform-2-core) — корень: `CLAUDE.md`, `AGENTS.md`, `FILE_MAP.md`, `ai-dev/`. Отчёты и карточки пишутся туда же, в task-ветку вместе с кодом. iCloud-папка `Project Cloude/Platform_2_0_AI_Roles_Workflow_v1_3__ARCHIVE_moved_to_repo/` — архив, туда не писать.
-- **Код:** тот же `~/dev/platform-2-core` (позже `~/dev/planfact-smr`), task-ветка. Если папка не добавлена в сеанс — попросить добавить. Рабочая папка `rbi-q-main/` — немедленно стоп.
+- **Регламент (мастер, единственная копия):** репозиторий `IgNiKoN/rbi-q`, локально `~/dev/platform-2-core` (с 26.10.2026; `IgNiKoN/platform-2-core` — архив) — корень: `CLAUDE.md`, `AGENTS.md`, `FILE_MAP.md`, `ai-dev/`. Отчёты и карточки пишутся туда же, в task-ветку вместе с кодом. iCloud-папка `Project Cloude/Platform_2_0_AI_Roles_Workflow_v1_3__ARCHIVE_moved_to_repo/` — архив, туда не писать.
+- **Код:** тот же репозиторий, task-ветка в отдельной рабочей копии (`git worktree add ~/dev/platform-2-core-<id> …`); основная папка `~/dev/platform-2-core` остаётся на `main`. Что читать по ситуации — `ai-dev/DOCS_MAP.md` §1. Если папка не добавлена в сеанс — попросить добавить. Рабочая папка `rbi-q-main/` — немедленно стоп.
 
 ## Старт (иначе — стоп)
 
@@ -30,7 +30,7 @@ description: "Роль ИСПОЛНИТЕЛЬ Platform 2.0 / План-Факт �
 ## В конце блока
 
 1. **Итоговая самопроверка** по чек-листу `roles/TESTER.md`: сборка, `tsc`, все тесты, сценарий «что увидит владелец», негативные проверки прав. NOT RUN ≠ PASS: указать причину; обязательная проверка невозможна → `BLOCKED`.
-2. **Документация** по чек-листу `roles/DOCUMENTER.md` в той же ветке: README, as-built, API/миграции, CHANGELOG, `docs/TECH_DEBT.md`, трассировка к ТЗ v1.1. Только реально сделанное.
+2. **Документация** по чек-листу `roles/DOCUMENTER.md` в той же ветке: строка в `ai-dev/CONTEXT_LOG.md` и статус в `CURRENT_CONTEXT.md`, README, as-built, API/миграции, CHANGELOG, `docs/TECH_DEBT.md`, трассировка к ТЗ v1.1. Только реально сделанное.
 3. **Просмотреть свой полный diff**: нет файлов вне плана.
 
 ## Сдача

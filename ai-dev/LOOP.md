@@ -68,4 +68,4 @@ AGENTS §3: production RBI/Quality не изменять; новые Supabase-о
 
 ## 9. Скилы
 
-Копии скилов — `ai-dev/skills-backup/`. Актуальные под ADR-062: `platform2-architect`, `platform2-executor`. `platform2-verify` — отключить в настройках скилов.
+Навыки ролей хранятся **в репозитории**: `.claude/skills/platform2-architect/`, `.claude/skills/platform2-executor/` (решение владельца 29.10.2026) — правятся обычным коммитом. На компьютере владельца `~/.claude/skills/<навык>` — ссылки на них в основной папке `~/dev/platform-2-core` (она всегда на `main`). Старые копии в аккаунте Claude (`platform2-architect`, `platform2-executor`, `platform2-verify`) — выключить в настройках навыков; `platform2-verify` — в архиве (`ai-dev/archive/skills-backup/`), ролей две (ADR-062).

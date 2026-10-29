@@ -9,6 +9,7 @@ description: "Роль АРХИТЕКТОР Platform 2.0 / План-Факт С�
 
 ## Где регламент
 
+- **Этот навык** лежит в репозитории: `.claude/skills/platform2-architect/SKILL.md` (правка — обычным коммитом; в `~/.claude/skills/` — ссылка на основную папку).
 - **Регламент и код (единственная копия, с 26.10.2026):** репозиторий `IgNiKoN/rbi-q`, локально `~/dev/platform-2-core`. Начинать с его `CLAUDE.md` → `ai-dev/CORE_RULES.md` → `ai-dev/CURRENT_CONTEXT.md`.
 - В Cowork: точка входа `Project Cloude/CLAUDE.md`; если папка репозитория не добавлена в сеанс — попросить добавить. `Архив/Platform_2_0_AI_Roles_Workflow_v1_3__ARCHIVE_moved_to_repo/` — архив, не редактировать.
 - Каталог модулей: `ai-dev/reference/MODULES.md` — единственная копия; копий в iCloud больше нет (ревизия 29.10.2026), не создавать их.

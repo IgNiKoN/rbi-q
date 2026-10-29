@@ -12,6 +12,6 @@
 | `navigation/MODULE_FILE_MAP_TEMPLATE.md` | шаблон для отдельного репозитория `planfact-smr`, который не создавался | — |
 | `navigation/FILE_MAP_v1_3_history.md` | старая шапка `FILE_MAP.md`, ревизия `379cc5f`, маршрут v1.3 | `FILE_MAP.md`, `ai-dev/DOCS_MAP.md` |
 | `reference/DEV_READINESS_AUDIT_2026-10-20.md`, `LEGACY_AI_TRANSFER_AUDIT.md` | аудит снимка и старого `_ai` перед стартом | — |
-| `skills-backup/*.original.md` | первые версии навыков | `ai-dev/skills-backup/*.SKILL.md` |
+| `skills-backup/*.original.md`, `platform2-verify.SKILL.md` | первые версии навыков; навык Тестера / Документатора (ролей две, ADR-062) | `.claude/skills/platform2-*/SKILL.md` |
 
 Ссылки внутри архивных файлов указывают на места, где файлы лежали раньше; часть из них теперь не открывается — это нормально.
