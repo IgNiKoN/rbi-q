@@ -187,6 +187,9 @@
                 syncStatus: 'not_synced',
                 sync_status: 'not_synced'
             }));
+            // P2-0061: автор — id учётной записи (ФИО — подпись); у моей записи без id он дописывается, чужую не трогаем
+            var acc = window.RbiSyncAccess;
+            if (acc) acc.stampAuthor(normalized, acc.kindOf('inspection'), acc.deviceMe());
             await window.RBI.services.storage.put(getHistoryStore(), normalized);
             markSyncDirty();
             if (window.RBI.services.contractorMetrics) {

@@ -986,10 +986,8 @@ async function rbiSyncPass(mode = 'silent') {
             currentHistory = typeof dbGetAll === 'function' ? (await dbGetAll('app_history') || []) : [];
         }
 
-        // Если не админ, отправляем только свои проверки
-        if (window.RBI.services.permissions && !window.RBI.services.permissions.isAdmin()) {
-            currentHistory = currentHistory.filter(i => i.inspectorName === iName);
-        }
+        // P2-0061: «чьё и можно ли» решает общее правило (sync-access.policy.js) ниже, у каждой записи — с причиной;
+        // раньше здесь чужие по ФИО молча отсеивались и навсегда оставались «не отправлено».
 
         // Блокируем "эхо" облачных проверок, но не теряем старые несинхронизированные записи
         currentHistory = currentHistory.filter(i => {
@@ -1060,46 +1058,22 @@ async function rbiSyncPass(mode = 'silent') {
                     } catch (err) { }
                 }
 
-                // Проверка прав на отправку
-                if (c.source === 'local' || c.importedFromBackup) {
-                    const currentRole = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentRole() : 'guest';
-                    const currentEngineer = window.RBI.services.permissions ? window.RBI.services.permissions.getCurrentEngineerName() : (window.syncConfig?.engineerName || '');
-                    const assignedProjects = window.RBI.services.permissions ? window.RBI.services.permissions.getAssignedProjects() : (appSettings?.assignedProjects || []);
-                    const recProject = c.project_canonical_key || c.projectName || '';
-                    const recEngineer = c.inspectorName || c.inspector_name || '';
-
-                    let allowedToPush = false;
-                    let blockReason = '';
-
-                    if (!canPush) {
-                        blockReason = 'Роль не подтверждена для отправки';
-                    } else if (window.RBI.services.permissions ? window.RBI.services.permissions.isAdmin() : ['manager', 'deputy_manager'].includes(currentRole)) {
-                        allowedToPush = true;
-                    } else if (currentRole === 'engineer') {
-                        const ownerOk = !recEngineer || recEngineer === currentEngineer;
-                        // Согласовано с filterByDataScope('ownProjectOrOwnRecords',
-                        // permission.service.js): пустой assignedProjects больше НЕ
-                        // разрешает push по любому объекту — только записи без
-                        // назначенного проекта (свои же). Раньше пустой список
-                        // трактовался как "доступ ко всему", что противоречило
-                        // чтению того же инженера (см. current_plan.md §2).
-                        const isUnassignedProject = recProject === 'unknown' || recProject === '';
-                        const projectOk = (!assignedProjects || assignedProjects.length === 0)
-                            ? isUnassignedProject
-                            : (window.RBI.services.permissions && typeof window.RBI.services.permissions.isRecordInAssignedProjects === 'function'
-                                ? window.RBI.services.permissions.isRecordInAssignedProjects(c, assignedProjects)
-                                : assignedProjects.includes(recProject));
-
-                        if (ownerOk && projectOk) allowedToPush = true;
-                        else if (!ownerOk) blockReason = 'Запись создана другим инженером';
-                        else blockReason = 'Объект не назначен пользователю';
-                    } else {
-                        blockReason = 'Эта роль не может отправлять проектные данные';
-                    }
-
-                    if (!allowedToPush) {
+                // Проверка прав на отправку — P2-0061: общее правило устройства, зеркало серверного (по id автора, объекта, фирмы)
+                {
+                    const SA = window.RbiSyncAccess;
+                    const kind = SA ? SA.kindOf('inspection') : null;
+                    const me = SA ? SA.deviceMe() : null;
+                    const dec = !canPush ? { ok: false, reason: 'Не отправлено: роль не подтверждена для отправки', hint: 'Войдите заново или обратитесь к администратору' }
+                        : SA ? SA.canSend(c, kind, me) : { ok: false, reason: 'Не отправлено: обновите приложение', hint: '' };
+                    if (dec.ok && SA) SA.stampAuthor(c, kind, me);   // переходное правило: моей записи без id — мой id
+                    if (!dec.ok) {
+                        const stamp = SA ? SA.accessStamp(me) : '';
+                        // та же причина при том же доступе — запись уже помечена, не переписывать её на каждом проходе
+                        if (c.syncStatus === 'blocked' && c.syncBlockReason === dec.reason && c.syncAccessStamp === stamp) continue;
                         c.syncStatus = 'blocked'; c.sync_status = 'blocked';
-                        c.syncBlockReason = blockReason || 'Отправка запрещена'; c.sync_block_reason = c.syncBlockReason;
+                        c.syncBlockReason = dec.reason || 'Не отправлено'; c.sync_block_reason = c.syncBlockReason;
+                        c.syncBlockHint = dec.hint || '';
+                        c.syncAccessStamp = stamp;   // ТД 313: доступ изменится — запись перепроверится
                         c.updatedAt = new Date().toISOString();
                         localHistoryToUpdate.push(c);
                         continue;
@@ -1701,6 +1675,7 @@ async function rbiSyncPass(mode = 'silent') {
                     projectId: h.projectId || h.project_id || '',
 
                     inspectorName: h.engineer_name || '',
+                    authorId: h.core_created_by || '',   // P2-0061: автор — id учётной записи (сервер ставит сам)
                     contractorName: h.contractor_name || '',
                     contractorId: h.contractorId || h.contractor_id || '',
                     templateKey: h.template_key || '',

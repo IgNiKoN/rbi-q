@@ -111,12 +111,8 @@ async function run(out, tag, role) {
     await page.waitForTimeout(3000);
     sent = sends.get(unsent.id) || 0;
     const l2 = await local();
-    if (role === 'field' && sent === 0) {
-      // На стенде осмотр инженера с закреплённым объектом не уходит и на исходном коде (main aecc4ed, тот же сценарий) — вне P2-0060,
-      // ТД; что докачка его не тронула — проверено выше, отправка после докачки — в f-manager
-      note(`${tag}: отправка осмотра инженером на стенде не работает и до P2-0060 (ТД) — ${JSON.stringify(l2)}`);
-      ok(l2.st !== 'synced' && l2.blob, `${tag}: неотправленный осмотр и его фото на телефоне ждут отправки (не пропали)`, JSON.stringify(l2));
-    } else ok(sent === 1 && l2.st === 'synced' && l2.cloud, `${tag}: неотправленный осмотр с фото ушёл на сервер ровно 1 раз`, `отправок ${sent}, ${JSON.stringify(l2)}`);
+    // P2-0061: осмотр инженера с закреплённым объектом уходит (автор — id учётной записи, правило устройства = серверу)
+    ok(sent === 1 && l2.st === 'synced' && l2.cloud, `${tag}: неотправленный осмотр с фото ушёл на сервер ровно 1 раз`, `отправок ${sent}, ${JSON.stringify(l2)}`);
     await ctx.close();
   } finally { stand.quality = null; await stop().catch(() => {}); }
 }

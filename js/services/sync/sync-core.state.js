@@ -3,6 +3,7 @@ import { pullPagedByIds } from './sync-pull.policy.js';
 import './sync-retry.policy.js';
 import './sync-net.policy.js'; // window.RbiSyncNetPolicy (P2-0059)
 import './sync-journal.policy.js'; // window.RbiSyncJournalPolicy (P2-0059)
+import './sync-access.policy.js'; // window.RbiSyncAccess — правило «кто я / моё / можно» (P2-0061)
 import './sync-merge.policy.js'; // window.RbiSyncMergePolicy (P2-0023 этап 5) // window.RbiSyncRetryPolicy для sync-engine/sync-auth (P2-0023 этап 4)
 /* Файл: js/sync.js (Исправленная версия сборки объектов) */
 console.log("✅ SYNC.JS загружен браузером!");

@@ -17,6 +17,23 @@ const STASH_PREFIX = 'platform2_quality_state_';
 const PROJECT_PREFIX = 'platform2_quality_project_';
 /** P2-0058: копия последних ответов сервера Качества (my_access по объектам, список объектов) — «компания:пользователь». */
 export const QUALITY_ACCESS_COPY_PREFIX = 'platform2_quality_access_';
+/** P2-0061: прежние ФИО человека в компании («компания:пользователь») — переходное правило «моё» для записей без id автора. */
+export const QUALITY_NAMES_PREFIX = 'platform2_quality_names_';
+/** P2-0061: прежние ФИО из памяти устройства (без повторов, не больше 10). */
+export function readNames(store: Store, key: string): string[] {
+  try { const v = JSON.parse(store.getItem(QUALITY_NAMES_PREFIX + key) || '[]') as unknown; return Array.isArray(v) ? v.map(String).filter(Boolean).slice(-10) : []; } catch { return []; }
+}
+/** P2-0061: текущее ФИО → память устройства; сменилось с прошлого раза (в том числе пока приложение было закрыто) —
+ *  прежнее уходит в список (текущее в списке не держится). Возвращает прежние ФИО. */
+export function trackName(store: Store, key: string, current: string): string[] {
+  const list = readNames(store, key);
+  const now = (current || '').trim();
+  const last = (store.getItem(QUALITY_NAMES_PREFIX + key + ':now') || '').trim();
+  if (last && last !== now && !list.includes(last)) list.push(last);
+  const out = list.filter((n) => n !== now).slice(-10);
+  try { store.setItem(QUALITY_NAMES_PREFIX + key, JSON.stringify(out)); if (now) store.setItem(QUALITY_NAMES_PREFIX + key + ':now', now); } catch { /* приватный режим */ }
+  return out;
+}
 
 /** Ключи устройства со состоянием синхронизации Качества — у каждой компании свои. */
 export const SYNC_STATE_KEYS = [
@@ -240,12 +257,16 @@ export interface QualitySync {
   actions: string[];
   /** P2-0028: имя инженера в записях Качества — ФИО учётки (без ФИО — почта). */
   engineerName?: string;
+  /** P2-0061: id учётной записи, прежние ФИО, ключи закреплённых объектов (null — все) — «кто я» правила синхронизации. */
+  userId?: string;
+  names?: string[];
+  objects?: string[] | null;
   selectProject(id: string): Promise<void>;
 }
 
 interface SyncWin {
   supabaseClient?: unknown;
-  syncConfig?: { enabled?: boolean; engineerName?: string; projectCode?: string; pinHash?: string | null; syncMode?: string; authUserId?: string | null };
+  syncConfig?: { enabled?: boolean; engineerName?: string; projectCode?: string; pinHash?: string | null; syncMode?: string; authUserId?: string | null; previousNames?: string[] };
   appSettings?: Record<string, unknown>;
   applySyncConnect?: (name: string, code: string, pin: string | null) => Promise<void>;
   initSync?: () => Promise<void>;
@@ -321,9 +342,11 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
     // P2-0028: ФИО сменили (Мой профиль / администратор) — новые записи сразу подписываются новым ФИО
     const nm = (st.fullName || '').trim() || st.email;
     if (prev.engineerName !== nm) {
+      // P2-0061: прежнее ФИО запоминается — неотправленные записи со старой подписью остаются «моими» и уходят
+      prev.names = trackName(deps.store, company + ':' + user, nm);
       prev.engineerName = nm;
       const c = deps.win.syncConfig;
-      if (c) { c.engineerName = nm; deps.store.setItem('rbi_sync_config', JSON.stringify(c)); }
+      if (c) { c.engineerName = nm; c.previousNames = prev.names; deps.store.setItem('rbi_sync_config', JSON.stringify(c)); }
       if (deps.win.appSettings) pinAccess(deps.win.appSettings, { engineerName: nm });
     }
     return prev;
@@ -375,6 +398,7 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
 
   const applyRole = (a: QualityAccess): void => {
     sync.actions = a.actions;
+    sync.objects = a.objects;   // P2-0061: null — все объекты (как сервер), иначе ключи закреплённых
     sync.role = roleFor(a.actions);
     // Фирма подрядчика — из назначения роли (020). Закреплённые объекты Качества (033) — экрану ключами объектов, как в старом
     // профиле (assignedProjects): старые фильтры и выбор объекта работают как раньше; что видно — решает сервер. Все объекты — [].
@@ -396,6 +420,7 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
     c.enabled = !!pid;
     c.engineerName = engineerName;
     c.authUserId = st.userId || null;   // P2-0035b: «своё» в Качестве — по номеру учётки (ФИО — подпись)
+    c.previousNames = sync.names || [];   // P2-0061: переходное правило «моё»
     c.projectCode = pid || '';
     c.pinHash = null;
     if (!c.syncMode) c.syncMode = 'personal';
@@ -408,6 +433,9 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
     companyName: cur ? cur.name : '',
     email,
     engineerName,
+    userId: st.userId || '',
+    names: trackName(deps.store, company + ':' + user, engineerName),
+    objects: null,
     projects,
     projectId,
     role: 'guest',

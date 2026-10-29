@@ -62,7 +62,8 @@ function session(user, ttl = 3600) {
     token_type: 'bearer', expires_in: ttl, expires_at: exp, refresh_token: 'rt-' + user.id + '-' + exp, user };
 }
 /** P2-0060: второму пользователю стенда тоже дать компанию (План/Факт), его Сводка — с ошибкой сервера (копии у него нет). */
-export const stand = { user2Planfact: false, quality: null };
+/** P2-0061: names — ФИО пользователей стенда по id (смена ФИО в «Сотрудниках»); по умолчанию «Иванов Иван» / «Петров Пётр». */
+export const stand = { user2Planfact: false, quality: null, names: {} };
 const hasPf = (u) => u.id === USER.id || stand.user2Planfact;
 /** P2-0060: Сводка План/Факта первого пользователя (один объект) — по ней стенд сверяет цифры с сетью и без сети. */
 export const SUMMARY = { project_id: 'p-1', name: 'ЖК Тестовый', code: 'ЖКТ', planned_start: '2026-06-01', planned_finish: '2027-03-31',
@@ -86,7 +87,7 @@ const IMPORTS = [{ id: 'imp-1', file_name: 'ВОР корпус 1.xlsx', sheet_n
 const ACCESS = { actions: ['quality.manage', 'quality.edit', 'quality.view', 'construction.manage', 'construction.view', 'construction.edit'], templates: [], projects: null, contractor: null, objects: null, container: null };
 const RPC = {
   pf_my_platform: (u) => ({ is_platform_admin: false, companies: hasPf(u) ? [COMPANY] : [] }),
-  pf_my_profile: (u) => ({ full_name: u.id === USER.id ? 'Иванов Иван' : 'Петров Пётр', must_change_password: false, user_id: u.id }),
+  pf_my_profile: (u) => ({ full_name: stand.names[u.id] || (u.id === USER.id ? 'Иванов Иван' : 'Петров Пётр'), must_change_password: false, user_id: u.id }),
   pf_company_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', archived_at: null }],
   pf_my_projects: (u) => (hasPf(u) ? [{ id: 'p-1', name: 'ЖК Тестовый', company_id: COMPANY.id, archived_at: null }] : []),
   pf_my_permissions: (u) => (u.id === USER.id ? ['planfact.fact.view', 'planfact.fact.create', 'planfact.vor.manage'] : []),
