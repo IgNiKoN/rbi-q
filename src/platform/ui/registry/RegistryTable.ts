@@ -7,6 +7,9 @@
  * группировка, колонки, виды и ссылка — в меню «⋯». На телефоне — та же одна строка.
  * P2-0046: quick — фильтр одним нажатием, кнопками со счётчиками («Все 6 · Черновики 1 · Выданы 4»); compact — строка телефона
  * (2–3 главных поля одной строкой вместо карточки «подпись: значение»); selectMode — галочки появляются после «Выбрать».
+ * P2-0068: строки рисуются порциями по CHUNK — следующая дорисовывается при прокрутке к концу списка и по «Показать ещё (N)»;
+ * счётчики, «Выбрать всё», итоги групп и выгрузка — по всем отфильтрованным строкам; смена вида — снова первая порция;
+ * открытая строка (openKey) дорисовывается, даже если она дальше порции.
  * Цвета — только токены дизайн-системы (tokens.ts, StatusBadge). Бизнес-API не вызывает.
  */
 import { createElement as h, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,6 +30,8 @@ export function registryRows<T>(rows: T[], o: { filters: RegistryFilter<T>[]; co
 }
 
 const TONES: Status[] = ['red', 'yellow', 'blue', 'green', 'grey'];
+/** P2-0068: строк в одной порции (как «Показать ещё» в «Вводе факта»). */
+export const REGISTRY_CHUNK = 100;
 
 export interface RegistryProps<T> {
   testId: string;
@@ -117,6 +122,25 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
   const allSel = ordered.length > 0 && selRows.length === ordered.length;
   const saved = p.views ? listViews(p.views) : [];
 
+  // P2-0068: сколько строк нарисовано. Порция привязана к виду — новый фильтр, сортировка или группировка начинают с первой.
+  const viewKey = JSON.stringify([state.f, state.overdue, state.sort, state.group]);
+  const [page, setPage] = useState({ key: viewKey, n: REGISTRY_CHUNK });
+  if (page.key !== viewKey) setPage({ key: viewKey, n: REGISTRY_CHUNK });   // возврат к прежнему виду — тоже с первой порции
+  const drawable = groups ? groups.filter((g) => !closed[g.key]).flatMap((g) => g.rows) : list;
+  const openAt = p.openKey ? drawable.findIndex((r) => rowKey(r) === p.openKey) : -1;
+  const limit = Math.max(page.key === viewKey ? page.n : REGISTRY_CHUNK, openAt + 1);
+  const rest = Math.max(0, drawable.length - limit);
+  const showMore = (): void => setPage({ key: viewKey, n: limit + REGISTRY_CHUNK });
+  const moreRowsRef = useRef<HTMLButtonElement | null>(null);
+  // Подгрузка при прокрутке: кнопка «Показать ещё» подъехала к экрану — дорисовать следующую порцию (кнопка остаётся запасным путём).
+  useEffect(() => {
+    const el = moreRowsRef.current;
+    if (!rest || !el || typeof IntersectionObserver !== 'function') return undefined;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) showMore(); }, { rootMargin: '600px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [rest, limit, viewKey]);
+
   const setSort = (id: string): void => {
     const cur = state.sort && state.sort.id === id ? state.sort.dir : null;
     onState({ ...state, sort: cur === 'asc' ? { id, dir: 'desc' } : cur === 'desc' ? null : { id, dir: 'asc' } });
@@ -169,18 +193,24 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
       h(StatusBadge, { key: t, status: t, label: String(c[t]), title: p.toneLabel?.[t], testId: 'p2-reg-count' })));
   };
 
+  // Порция считается по строкам открытых групп (свёрнутые — один заголовок); с первой открытой группы, до строк которой порция
+  // не дошла, группы не рисуются — порядок групп на экране не меняется.
+  let budget = limit, stop = false;
   const body = groups
     ? groups.map((g) => {
         const open = !closed[g.key];
+        if (stop || (open && budget <= 0 && g.rows.length)) { stop = true; return null; }
+        const part = open ? g.rows.slice(0, budget) : [];
+        budget -= part.length;
         return h('tbody', { key: g.key, 'data-group': g.key },
           h('tr', { className: 'p2-reg__group' }, h('td', { colSpan: visible.length + (checks ? 1 : 0) + (p.compact ? 1 : 0) + (p.rowActions ? 1 : 0) },
             h('button', { type: 'button', className: 'p2-reg__gbtn', 'aria-expanded': open, 'data-testid': 'p2-reg-group', onClick: () => setClosed({ ...closed, [g.key]: open }) },
               h('span', { 'aria-hidden': 'true', className: 'p2-reg__chev' }, open ? '▾' : '▸'),
               h('b', null, g.key), h('span', { className: 'p2-reg__total' }, `Всего: ${g.rows.length}`)),
             counters(g.rows))),
-          open ? g.rows.map(rowEl) : null);
+          part.map(rowEl));
       })
-    : h('tbody', null, list.map(rowEl));
+    : h('tbody', null, list.slice(0, limit).map(rowEl));
 
   const draft = panel || state;
   const overdueOn = !!p.isOverdue || p.overdueHint !== undefined;
@@ -287,5 +317,6 @@ export function RegistryTable<T>(p: RegistryProps<T>): ReactElement {
     list.length
       ? h('div', { className: 'p2-reg__scroll' }, h('table', { className: 'p2-reg__table' }, head, body))
       : h('div', { className: 'pf-card pj-empty p2-reg__muted', 'data-testid': 'p2-reg-empty' }, rows.length ? 'Ничего не найдено — измените или сбросьте фильтры.' : p.empty),
+    rest ? h('button', { type: 'button', ref: moreRowsRef, className: 'pf-btn pf-btn--ghost p2-reg__more-rows', 'data-testid': 'p2-reg-more-rows', onClick: showMore }, `Показать ещё (${rest})`) : null,
     filterPanel);
 }

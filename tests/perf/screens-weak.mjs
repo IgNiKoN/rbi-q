@@ -1,6 +1,6 @@
 // P2-0068: скорость основных экранов на слабом телефоне (основа — замер Архитектора 29.10.2026, reports/P2-0068/baseline/). Запуск из корня репозитория.
 // Стенд «без сети» (подставной сервер) + наполнение крупным объектом: 3 секции × 25 этажей × 12 квартир = 900 квартир, 4500 позиций ВОР.
-// node tests/perf/screens-weak.mjs --cpu 6 [--only planfact]
+// node tests/perf/screens-weak.mjs --cpu 6 [--only planfact] [--width 1440 — экран ПК, по умолчанию телефон 375 px] [--shots end] [--out папка]
 import { chromium } from 'playwright-core';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { start, stop, APP, API, COMPANY } from '../offline/servers.mjs';
@@ -10,6 +10,8 @@ const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i
 const CPU = Number(opt('cpu', 6));
 const OUT = opt('out', 'perf-out');
 const QUALITY_N = Number(opt('quality', 1000));
+const WIDTH = Number(opt('width', 375));
+const SHOT_END = opt('shots') === 'end';
 mkdirSync(OUT, { recursive: true });
 
 // ---- наполнение: дерево мест и позиции
@@ -84,7 +86,8 @@ const SCREENS = [
 const rpcSeen = new Set();
 const browser = await chromium.launch();
 await start();
-const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: 'ru-RU' });
+const phone = WIDTH < 768;
+const ctx = await browser.newContext({ viewport: { width: WIDTH, height: phone ? 812 : 900 }, isMobile: phone, hasTouch: phone, deviceScaleFactor: phone ? 2 : 1, locale: 'ru-RU' });
 const page = await ctx.newPage();
 await page.route(/rbi-q\.ru/, (r) => r.abort());
 await page.route(API + '/rest/v1/rpc/**', async (r) => {
@@ -143,6 +146,8 @@ async function measure(label, hash, pass) {
       dom: document.getElementsByTagName('*').length, heapMB: performance.memory ? +(performance.memory.usedJSHeapSize / 1e6).toFixed(0) : null,
       text: (document.querySelector('#app-content, main') || document.body).innerText.replace(/\s+/g, ' ').slice(0, 110) };
   }, lt0);
+  const shot = `${OUT}/cpu${CPU}-w${WIDTH}-${pass}-${hash.replace(/[#/]+/g, '_')}`;
+  await page.screenshot({ path: shot + '.png' }).catch(() => {});   // экран сразу после открытия, до прокрутки
   // прокрутка: самый длинный прокручиваемый блок, 3 с, сколько кадров успел нарисовать телефон
   const scroll = await page.evaluate(() => new Promise((res) => {
     const els = [document.scrollingElement, ...document.querySelectorAll('*')].filter((e) => e && e.scrollHeight - e.clientHeight > 300 && (e === document.scrollingElement || /auto|scroll/.test(getComputedStyle(e).overflowY)));
@@ -153,8 +158,12 @@ async function measure(label, hash, pass) {
       if (t - t0 < 3000) requestAnimationFrame(step); else { el.scrollTop = 0; res({ fps: Math.round(frames / 3), slowFrames: slow, heightPx: el.scrollHeight }); } };
     requestAnimationFrame(step);
   }));
-  const shot = `${OUT}/cpu${CPU}-${pass}-${hash.replace(/[#/]+/g, '_')}.png`;
-  await page.screenshot({ path: shot }).catch(() => {});
+  if (SHOT_END && scroll) {   // --shots end: второй снимок — после прокрутки к концу (видно, что строки дорисовываются)
+    await page.evaluate(() => { const e = document.scrollingElement; e.scrollTop = e.scrollHeight; });
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: shot + '-end.png' }).catch(() => {});
+    await page.evaluate(() => { document.scrollingElement.scrollTop = 0; });
+  }
   const row = { label, pass, cpu: CPU, readyMs: ready, ...info, scroll };
   console.log(JSON.stringify(row));
   return row;
@@ -165,6 +174,6 @@ console.log(JSON.stringify(out[0]));
 for (const pass of ['первый', 'повтор']) for (const [label, hash] of SCREENS) out.push(await measure(label, hash, pass));
 out.push({ errors: [...new Set(errors)].slice(0, 20), rpc: [...rpcSeen].sort() });
 console.log(JSON.stringify(out.at(-1)));
-writeFileSync(`${OUT}/cpu${CPU}.json`, JSON.stringify(out, null, 1));
+writeFileSync(`${OUT}/cpu${CPU}${phone ? '' : '-w' + WIDTH}.json`, JSON.stringify(out, null, 1));
 await browser.close(); await stop();
 process.exit(0);

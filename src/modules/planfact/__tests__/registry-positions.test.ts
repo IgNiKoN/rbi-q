@@ -107,6 +107,9 @@ test('экран на подставном сервере: 600 позиций, �
   const r = stand.add('p3-1-1', 20, T, 'pending_approval'); stand.decide(r.id, false, 'не выполнено');   // отклонено
   const box = await mount(h(PositionsRegistry, { fact: stand.fact, summary: stand.summary, projectId: 'pr1', companyId: 'c1', user: 'pto@x', today: T }));
   assert.match(box.querySelector('[data-testid="p2-reg-shown"]').textContent, /Показано: 600 из 600/);
+  // P2-0068: рисуется порция 100 строк — дальние группы появляются по «Показать ещё»
+  assert.deepEqual(qa(box, 'tbody[data-group]').map((x) => x.getAttribute('data-group')), ['Корпус 1']);
+  for (let more; (more = box.querySelector('[data-testid="p2-reg-more-rows"]'));) click(more);
   const groups = qa(box, 'tbody[data-group]');
   assert.deepEqual(groups.map((x) => x.getAttribute('data-group')), ['Корпус 1', 'Корпус 2', 'Корпус 3']);
   assert.match(groups[0].querySelector('[data-testid="p2-reg-group"]').textContent, /Всего: 200/);

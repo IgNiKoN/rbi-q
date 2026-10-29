@@ -7,6 +7,7 @@ export const P2_REGISTRY_CSS = `
 .p2-reg__tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .p2-reg__right{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto}
 .p2-reg__more{min-width:44px;font-size:18px;line-height:1;padding:6px 10px}
+.p2-reg__more-rows{align-self:center;min-height:44px}
 .p2-reg__pop[hidden]{display:none}
 .p2-reg__pop.p2-reg__pop--right{left:auto;right:0}
 .p2-reg__item{font:inherit;font-size:13px;text-align:left;min-height:36px;padding:6px 8px;border:0;border-radius:8px;background:transparent;color:var(--text-main);cursor:pointer}
