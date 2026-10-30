@@ -29,6 +29,8 @@ declare
   v_test uuid[]; v_del uuid[]; v_keep uuid[]; v_run uuid[];
   v_rep text := '';
   r record;
+  rn record;      -- шаг 3: своя переменная, ключ всегда текстом (у таблиц ключ то uuid, то text — P2-0075 доработка №1, ошибка 42804)
+  v_idtype text;  -- настоящий тип ключа таблицы — для удаления по индексу
   v_n bigint; v_skip bigint;
   t text; k int;
   -- «REST…» по таблицам: таблица | компания строки | поле названия | ключ
@@ -126,6 +128,14 @@ begin
                returning id, company_id)
     insert into pf_cleanup_gone select 'role_assignments', id::text, company_id from d;
   end if;
+  -- строки Качества, у которых удаляемый проект — объект (core_object_id, ссылка без каскада: объект Качества «REST…» отражён
+  -- в ядре проектом-объектом), — раньше самих проектов (P2-0075 доработка №1)
+  for r in select c.table_name from information_schema.columns c join information_schema.tables tt
+             on tt.table_schema = c.table_schema and tt.table_name = c.table_name and tt.table_type = 'BASE TABLE'
+           where c.table_schema = 'quality' and c.column_name = 'core_object_id' loop
+    execute format('with d as (delete from quality.%I where core_object_id = any($1) and core_company_id = any($2) returning core_company_id)
+                    insert into pf_cleanup_gone select %L, null, core_company_id from d', r.table_name, r.table_name) using v_del, v_test;
+  end loop;
   -- проекты «REST…»: места и данные Качества — каскадом с проектом
   v_skip := 0;
   for r in select id, company_id from core.projects where id = any(v_del) loop
@@ -141,18 +151,20 @@ begin
   for k in 1..array_length(v_names, 1) loop
     continue when v_names[k][1] in ('core.projects', 'planfact.vor_imports', 'planfact.vor_source_rows', 'planfact.estimates');
     v_skip := 0;
-    for r in execute format(
+    select format_type(a.atttypid, a.atttypmod) into v_idtype from pg_attribute a
+    where a.attrelid = v_names[k][1]::regclass and a.attname = v_names[k][4] and not a.attisdropped;
+    for rn in execute format(
         case when v_names[k][1] = 'core.locations' then
           -- место «REST…» со всеми вложенными, сначала самые глубокие
           'with recursive sub(id, company_id, depth) as (select id, company_id, 0 from core.locations where company_id = any($1) and name like ''REST%%''
              union select l.id, l.company_id, s.depth + 1 from core.locations l join sub s on l.parent_id = s.id)
-           select id, company_id cid from sub group by id, company_id order by max(depth) desc'
-        else 'select %4$s id, %2$s cid from %1$s where %2$s = any($1) and %3$s like ''REST%%''' end,
+           select id::text id, company_id::uuid cid from sub group by id, company_id order by max(depth) desc'
+        else 'select %4$s::text id, (%2$s)::uuid cid from %1$s where %2$s = any($1) and %3$s like ''REST%%''' end,
         v_names[k][1], v_names[k][2], v_names[k][3], v_names[k][4]) using v_test loop
       begin
-        execute format('delete from %s where %s = $1', v_names[k][1], v_names[k][4]) using r.id;
+        execute format('delete from %s where %s = $1::%s', v_names[k][1], v_names[k][4], v_idtype) using rn.id;
         get diagnostics v_n = row_count;
-        if v_n > 0 then insert into pf_cleanup_gone values (split_part(v_names[k][1], '.', 2), r.id::text, r.cid); end if;
+        if v_n > 0 then insert into pf_cleanup_gone values (split_part(v_names[k][1], '.', 2), rn.id, rn.cid); end if;
       exception when foreign_key_violation then v_skip := v_skip + 1;
       end;
     end loop;

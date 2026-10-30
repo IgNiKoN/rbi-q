@@ -134,6 +134,12 @@ begin
          (gen_random_uuid(), pm::text, 'obychnyi', 'ООО Обычный подрядчик', ca, pm);
   insert into quality.rbi_inspections(id, project_code, core_company_id, core_project_id)
   values ('REST-018-1-insp', pk::text, ca, pk), ('insp-ok-1', pm::text, ca, pm);
+  -- P2-0075 доработка №1: «REST…» в таблицах Качества с текстовым ключом (объекты, места) — после таблиц с ключом uuid
+  -- (на боевой сухой прогон падал 42804: тип ключа менялся между таблицами одного цикла)
+  insert into quality.project_objects(id, canonical_key, display_name, project_code, core_company_id, core_project_id)
+  values ('po-rest-1', 'rest-045-obj', 'REST-045 объект', pk::text, ca, pk), ('po-ok-1', 'obychnyi-obj', 'Обычный объект', pm::text, ca, pm);
+  insert into quality.location_nodes(id, "displayName", canonical_key, core_company_id, core_project_id)
+  values ('ln-rest-1', 'REST-045 место', 'rest-045-mesto', ca, pk), ('ln-ok-1', 'Обычное место', 'obychnoe-mesto', ca, pm);
 
   -- Бета: архивный «REST…» — удаляется; основной — остаётся
   p := pg_temp.full_project(cb, u[4], u[5], u[6], 'REST-ВОР бета', 'REST-ВОР бета', true);

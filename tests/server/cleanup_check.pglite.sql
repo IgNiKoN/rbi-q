@@ -64,6 +64,10 @@ begin
     res := res || pg_temp.t(n = 0, 'Качество: строки «REST-…» убраны (' || n || ')');
     select count(*) into n from quality.rbi_inspections where id = 'insp-ok-1';
     res := res || pg_temp.t(n = 1, 'Качество: обычная строка на месте');
+    select count(*) into n from quality.project_objects where id = 'po-ok-1';
+    res := res || pg_temp.t(n = 1, 'Качество: обычный объект (ключ текстом) на месте');
+    select count(*) into n from quality.location_nodes where id = 'ln-ok-1';
+    res := res || pg_temp.t(n = 1, 'Качество: обычное место (ключ текстом) на месте');
     -- «REST…» в тестовых компаниях: остались только постоянный объект и вид работ, на который ссылается ВОР обычного проекта
     select string_agg(x, ', ' order by x) into v from (
       select 'проект ' || name x from core.projects where name like 'REST%'
@@ -80,7 +84,9 @@ begin
       union all select 'контрагент ' || name from core.counterparties where name like 'REST%'
       union all select 'подразделение ' || name from core.divisions where name like 'REST%'
       union all select 'место ' || name from core.locations where name like 'REST%'
-      union all select 'подрядчик Качества ' || display_name from quality.contractor_directory where display_name like 'REST%') z;
+      union all select 'подрядчик Качества ' || display_name from quality.contractor_directory where display_name like 'REST%'
+      union all select 'объект Качества ' || display_name from quality.project_objects where display_name like 'REST%'
+      union all select 'место Качества ' || "displayName" from quality.location_nodes where "displayName" like 'REST%') z;
     res := res || pg_temp.t(v = 'вид работ REST-вид занят, проект REST-автопроверки', 'осталось «REST…»: ' || coalesce(v, 'ничего'));
     -- записи компании без «REST…» — на месте
     res := res || pg_temp.t((select count(*) from core.divisions where name = 'Отдел продаж') = 1

@@ -2,6 +2,7 @@
 // node tests/server/cleanup.pglite.mjs
 // 1) засев → dry (отчёт «СУХОЙ ПРОГОН») → проверка «ничего не изменилось» → apply → проверка → apply ещё раз (удалено 0) → проверка;
 // 2) засев + запись «REST…» в нетестовой компании → dry и apply — отказ «вне тестовых компаний», ничего не изменилось.
+// Засев включает «REST…» в таблицах Качества с текстовым ключом после таблиц с ключом uuid (P2-0075 доработка №1, ошибка 42804).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
