@@ -9,7 +9,9 @@ import { createAuthService, getClient, readAuthConfig, readStoredSession } from 
 import { applyQualityBridge, QUALITY_COMPANY_KEY, QUALITY_USER_KEY } from './quality-bridge.ts';
 import { createProjectsService } from '../core/projects.service.ts';
 import type { QualityProject } from './quality-bridge.ts';
-import { createPlatform, homePathFor, LAST_MODULE_HASH_KEY, readDeviceCopy, readWorkActions, revokedHere, shouldNotifyAccess, welcomeSeen } from './platform.service.ts';
+import { createPlatform, homePathFor, LAST_MODULE_HASH_KEY, markWelcomeSeen, readDeviceCopy, readWorkActions, revokedHere, shouldNotifyAccess, WELCOME_PATH, welcomeSeen } from './platform.service.ts';
+import { renderWelcome, WELCOME_BODY_CLASS, WELCOME_CSS, welcomeTiles } from './welcome-screen.ts';
+import { ModulesManifest } from '../../../js/modules/modules.manifest.js';
 import type { Platform, PlatformAccess, PlatformState } from './platform.service.ts';
 import { LOGIN_CSS, renderLoginScreen } from './login-screen.ts';
 import { PASSWORD_CSS, renderMyProfile as drawMyProfile, renderPasswordScreen } from './password-screen.ts';
@@ -23,7 +25,8 @@ import { startDeviceSend } from '../services/offline/device-send.ts';
 type Rbi = Record<string, unknown> & {
   services?: { shell?: { renderSidebar?: () => void; renderMobileModuleMenu?: () => void } };
 };
-type Win = Window & { RBI?: Rbi; AppRouter?: { navigate?: (p: string, replace?: boolean) => void }; AppModeManager?: { renderBottomNav?: () => void };
+type Win = Window & { RBI?: Rbi; AppRouter?: { navigate?: (p: string, replace?: boolean) => void; addRoute?: (p: string, fn: () => void) => void; renderRoute?: () => void };
+  updateBodyPadding?: () => void; AppModeManager?: { renderBottomNav?: () => void };
   showToast?: (m: string) => void };
 
 const OVERLAY_ID = 'auth-gate-overlay';
@@ -39,7 +42,7 @@ function ensureStyle(): void {
   if (document.getElementById(STYLE_ID)) return;
   const s = document.createElement('style');
   s.id = STYLE_ID;
-  s.textContent = LOGIN_CSS + PASSWORD_CSS + `
+  s.textContent = LOGIN_CSS + PASSWORD_CSS + WELCOME_CSS + `
 .p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}`;
   document.head.appendChild(s);
 }
@@ -136,9 +139,9 @@ function goHome(): void {
   if (p) go(p);
 }
 
-function go(path: string): void {
+function go(path: string, replace = true): void {
   const r = w().AppRouter;
-  if (r && typeof r.navigate === 'function') r.navigate(path, true); else window.location.hash = path;
+  if (r && typeof r.navigate === 'function') r.navigate(path, replace); else window.location.hash = path;
 }
 
 /** «Компания: …» в «Настройки → Платформа» (вызывают Настройки при показе). Одна компания — переключателя нет. */
@@ -199,6 +202,8 @@ function apply(st: PlatformState): void {
   if (!st.offline || st.companies.length > 0) postCacheAllowlist();
   scheduleRetry(st);
   void applyQuality(st);
+  wireWelcome();   // P2-0074: роутер оболочки мог появиться позже запуска входа
+  if (st.mode === 'email' && window.location.hash === WELCOME_PATH) drawWelcome();   // сменились права или компания — плитки заново
 }
 
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -308,6 +313,93 @@ function postCacheAllowlist(): void {
   } catch { /* без кэша приложения — ничего */ }
 }
 
+/** P2-0074: экран приветствия #/welcome — свой вид в оболочке (как обёртка План/Факта), подвкладок модуля нет. */
+const WELCOME_VIEW_ID = 'tab-welcome';
+let welcomeWired = false;
+/** Текущий показ приветствия (до ухода с экрана): анимировать ли и что уже нарисовано. */
+let welcomeVisit: { key: string; animate: boolean; at: number; email: string } | null = null;
+/** Анимация приветствия (welcome-screen.ts) — около 1,2 с. */
+const WELCOME_ANIM_MS = 1300;
+
+function welcomeView(): HTMLElement {
+  let el = document.getElementById(WELCOME_VIEW_ID);
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = WELCOME_VIEW_ID;
+  el.className = 'view-section';
+  const anchor = document.getElementById('tab-mode-placeholder');
+  if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor.nextSibling);
+  else (document.getElementById('app-content') || document.body).appendChild(el);
+  return el;
+}
+
+/** Нарисовать приветствие: первый показ учётки на устройстве — с анимацией, дальше без; плитки — по текущим правам. */
+function drawWelcome(): void {
+  if (window.location.hash !== WELCOME_PATH) return;
+  const st = getPlatform().getState();
+  if (st.mode !== 'email' || !st.email) {   // демо — приветствия нет; никто не вошёл — поверх «Вход»
+    const p = homePath();
+    if (p && p !== WELCOME_PATH) go(p);
+    return;
+  }
+  ensureStyle();
+  const el = welcomeView();
+  document.querySelectorAll('.view-section').forEach((n) => n.classList.remove('active'));
+  el.classList.add('active');
+  el.classList.remove('hidden');
+  const header = document.getElementById('main-header');
+  if (header) header.style.display = 'block';
+  document.body.classList.add(WELCOME_BODY_CLASS);
+  // анимация решается один раз на показ экрана (данные входа приходят частями — перерисовка не должна её сбрасывать);
+  // «приветствие было» — когда анимация доиграла или человек ушёл с экрана: первый вход один раз перезагружает страницу
+  // (база компании, quality-bridge), и приветствие после перезагрузки должно сыграть снова
+  if (!welcomeVisit) {
+    const email = st.email;
+    welcomeVisit = { key: '', animate: !welcomeSeen(localStore(), email), at: Date.now(), email };
+    if (welcomeVisit.animate) setTimeout(() => markWelcomeSeen(localStore(), email), WELCOME_ANIM_MS);
+    else markWelcomeSeen(localStore(), email);
+  }
+  const cur = st.companies.find((c) => c.id === st.companyId) || null;
+  const tiles = welcomeTiles(getPlatform().access(), ModulesManifest);
+  const key = JSON.stringify([st.email, st.fullName, cur && cur.id, tiles.map((t) => t.id)]);
+  if (welcomeVisit.key === key && el.querySelector('[data-testid=p2-welcome]')) return;   // те же человек, компания и разделы
+  const animate = welcomeVisit.animate && (!welcomeVisit.key || Date.now() - welcomeVisit.at < WELCOME_ANIM_MS);
+  welcomeVisit.key = key;
+  renderWelcome(el, { name: st.fullName || st.email, company: cur ? cur.name : null, role: cur && cur.roles[0] ? cur.roles[0] : null,
+    tiles, animate, open: (p) => go(p, false) });
+  const pad = w().updateBodyPadding;
+  if (typeof pad === 'function') pad();
+  fitWelcome();
+}
+
+/** Отступ сверху под закреплённую шапку телефона (оболочка считает его только для экранов модулей, layout.utils). */
+function fitWelcome(): void {
+  const el = document.getElementById(WELCOME_VIEW_ID);
+  if (!el || window.location.hash !== WELCOME_PATH) return;
+  const h = document.getElementById('main-header');
+  const shown = !!h && getComputedStyle(h).display !== 'none' && getComputedStyle(h).position === 'fixed';
+  el.style.paddingTop = shown ? Math.max(0, Math.round(h!.getBoundingClientRect().bottom)) + 'px' : '';
+}
+
+/** Маршрут #/welcome в роутере оболочки; уход с экрана снимает его класс с body. */
+function wireWelcome(): void {
+  if (welcomeWired) return;
+  const r = w().AppRouter;
+  if (!r || typeof r.addRoute !== 'function') return;
+  welcomeWired = true;
+  r.addRoute(WELCOME_PATH, () => { void (started || start()).then(drawWelcome); });
+  window.addEventListener('rbi:route', (e) => {
+    const path = (e as CustomEvent<{ path?: string }>).detail?.path;
+    if (path !== WELCOME_PATH) {
+      document.body.classList.remove(WELCOME_BODY_CLASS);
+      if (welcomeVisit) markWelcomeSeen(localStore(), welcomeVisit.email);
+      welcomeVisit = null;
+    }
+  });
+  window.addEventListener('resize', fitWelcome);
+  if (window.location.hash === WELCOME_PATH && typeof r.renderRoute === 'function') r.renderRoute();
+}
+
 /** Запуск при открытии (оболочка). Повторный вызов — то же состояние; экран входа показывается, если никто не вошёл. */
 /** P2-0032: разовая чистка старого приложения РБИ на этом устройстве (не задерживает вход). */
 function cleanupLegacy(): void {
@@ -329,6 +421,7 @@ function loadingUntilServer(): void {
 
 export function start(): Promise<PlatformState> {
   if (!started) {
+    wireWelcome();
     cleanupLegacy();
     loadingUntilServer();
     started = getPlatform().boot();

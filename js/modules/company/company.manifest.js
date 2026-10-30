@@ -8,6 +8,8 @@ export const CompanyManifest = {
     id: 'company',
     role: 'module',
     title: 'Компания',
+    // P2-0074: строка «что тут делают» на плитке приветствия (src/platform/auth/welcome-screen.ts)
+    summary: 'Сотрудники и роли, объекты и места, справочники',
     icon: 'users',
     version: '0.1.0',
     status: 'active',

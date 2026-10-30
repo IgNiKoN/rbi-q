@@ -11,6 +11,8 @@ export const QualityManifest = {
     id: 'quality',
     role: 'module',
     title: 'Качество',
+    // P2-0074: строка «что тут делают» на плитке приветствия (src/platform/auth/welcome-screen.ts)
+    summary: 'Осмотры на объекте по чек-листам, замечания инженеру, аналитика',
     icon: 'check-circle',
     version: '1.0.0',
     status: 'active',

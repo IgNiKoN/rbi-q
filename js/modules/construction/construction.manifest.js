@@ -10,6 +10,8 @@ export const ConstructionManifest = {
     id: 'construction',
     role: 'module',
     title: 'Стройконтроль',
+    // P2-0074: строка «что тут делают» на плитке приветствия (src/platform/auth/welcome-screen.ts)
+    summary: 'Замечания подрядчикам на плане, приёмка работ, передача квартир',
     icon: 'hard-hat',
     version: '1.0.0',
     status: 'active',

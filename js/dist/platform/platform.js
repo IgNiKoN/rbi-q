@@ -1,8 +1,8 @@
-const Xi = Symbol.for("@supabase/supabase-js.traceContextExtractor");
-function Qi() {
-  return globalThis[Xi];
+const ho = Symbol.for("@supabase/supabase-js.traceContextExtractor");
+function fo() {
+  return globalThis[ho];
 }
-function sr(t, e) {
+function cr(t, e) {
   var r = {};
   for (var n in t) Object.prototype.hasOwnProperty.call(t, n) && e.indexOf(n) < 0 && (r[n] = t[n]);
   if (t != null && typeof Object.getOwnPropertySymbols == "function")
@@ -10,7 +10,7 @@ function sr(t, e) {
       e.indexOf(n[s]) < 0 && Object.prototype.propertyIsEnumerable.call(t, n[s]) && (r[n[s]] = t[n[s]]);
   return r;
 }
-function Zi(t, e, r, n) {
+function po(t, e, r, n) {
   function s(i) {
     return i instanceof r ? i : new r(function(o) {
       o(i);
@@ -37,8 +37,8 @@ function Zi(t, e, r, n) {
     c((n = n.apply(t, e || [])).next());
   });
 }
-const eo = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e);
-class cn extends Error {
+const go = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e);
+class mn extends Error {
   constructor(e, r = "FunctionsError", n) {
     super(e), this.name = r, this.context = n;
   }
@@ -50,26 +50,26 @@ class cn extends Error {
     };
   }
 }
-class to extends cn {
+class mo extends mn {
   constructor(e) {
     super("Failed to send a request to the Edge Function", "FunctionsFetchError", e);
   }
 }
-class En extends cn {
+class jn extends mn {
   constructor(e) {
     super("Relay Error invoking the Edge Function", "FunctionsRelayError", e);
   }
 }
-class An extends cn {
+class Pn extends mn {
   constructor(e) {
     super("Edge Function returned a non-2xx status code", "FunctionsHttpError", e);
   }
 }
-var Nr;
+var Br;
 (function(t) {
   t.Any = "any", t.ApNortheast1 = "ap-northeast-1", t.ApNortheast2 = "ap-northeast-2", t.ApSouth1 = "ap-south-1", t.ApSoutheast1 = "ap-southeast-1", t.ApSoutheast2 = "ap-southeast-2", t.CaCentral1 = "ca-central-1", t.EuCentral1 = "eu-central-1", t.EuWest1 = "eu-west-1", t.EuWest2 = "eu-west-2", t.EuWest3 = "eu-west-3", t.SaEast1 = "sa-east-1", t.UsEast1 = "us-east-1", t.UsWest1 = "us-west-1", t.UsWest2 = "us-west-2";
-})(Nr || (Nr = {}));
-class ro {
+})(Br || (Br = {}));
+class yo {
   /**
    * Creates a new Functions client bound to an Edge Functions URL.
    *
@@ -93,8 +93,8 @@ class ro {
    * })
    * ```
    */
-  constructor(e, { headers: r = {}, customFetch: n, region: s = Nr.Any } = {}) {
-    this.url = e, this.headers = r, this.region = s, this.fetch = eo(n);
+  constructor(e, { headers: r = {}, customFetch: n, region: s = Br.Any } = {}) {
+    this.url = e, this.headers = r, this.region = s, this.fetch = go(n);
   }
   /**
    * Updates the authorization header
@@ -238,7 +238,7 @@ class ro {
    * ```
    */
   invoke(e) {
-    return Zi(this, arguments, void 0, function* (r, n = {}) {
+    return po(this, arguments, void 0, function* (r, n = {}) {
       var s, i;
       let o, a, l;
       try {
@@ -250,8 +250,8 @@ class ro {
         let y;
         const _ = !!c && Object.keys(c).some((j) => j.toLowerCase() === "content-type");
         d && !_ ? typeof Blob < "u" && d instanceof Blob || d instanceof ArrayBuffer ? (f["Content-Type"] = d.type || "application/octet-stream", y = d) : typeof d == "string" ? (f["Content-Type"] = "text/plain", y = d) : typeof FormData < "u" && d instanceof FormData ? y = d : (f["Content-Type"] = "application/json", y = JSON.stringify(d)) : d && typeof d != "string" && !(typeof Blob < "u" && d instanceof Blob) && !(d instanceof ArrayBuffer) && !(typeof FormData < "u" && d instanceof FormData) ? y = JSON.stringify(d) : y = d;
-        let v = p;
-        h && (a = new AbortController(), o = setTimeout(() => a.abort(), h), p ? (v = a.signal, l = () => a.abort(), p.addEventListener("abort", l)) : v = a.signal);
+        let w = p;
+        h && (a = new AbortController(), o = setTimeout(() => a.abort(), h), p ? (w = a.signal, l = () => a.abort(), p.addEventListener("abort", l)) : w = a.signal);
         const E = yield this.fetch(m.toString(), {
           method: u || "POST",
           // headers priority is (high to low):
@@ -260,21 +260,21 @@ class ro {
           // 3. default Content-Type header
           headers: Object.assign(Object.assign(Object.assign({}, f), this.headers), c),
           body: y,
-          signal: v
+          signal: w
         }).catch((j) => {
-          throw new to(j);
+          throw new mo(j);
         }), R = E.headers.get("x-relay-error");
         if (R && R === "true")
-          throw new En(E);
+          throw new jn(E);
         if (!E.ok)
-          throw new An(E);
-        let x = ((s = E.headers.get("Content-Type")) !== null && s !== void 0 ? s : "text/plain").split(";")[0].trim().toLowerCase(), I;
-        return x === "application/json" ? I = yield E.json() : x === "application/octet-stream" || x === "application/pdf" ? I = yield E.blob() : x === "text/event-stream" ? I = E : x === "multipart/form-data" ? I = yield E.formData() : I = yield E.text(), { data: I, error: null, response: E };
+          throw new Pn(E);
+        let A = ((s = E.headers.get("Content-Type")) !== null && s !== void 0 ? s : "text/plain").split(";")[0].trim().toLowerCase(), I;
+        return A === "application/json" ? I = yield E.json() : A === "application/octet-stream" || A === "application/pdf" ? I = yield E.blob() : A === "text/event-stream" ? I = E : A === "multipart/form-data" ? I = yield E.formData() : I = yield E.text(), { data: I, error: null, response: E };
       } catch (c) {
         return {
           data: null,
           error: c,
-          response: c instanceof An || c instanceof En ? c.context : void 0
+          response: c instanceof Pn || c instanceof jn ? c.context : void 0
         };
       } finally {
         o && clearTimeout(o), l && ((i = n.signal) === null || i === void 0 || i.removeEventListener("abort", l));
@@ -282,7 +282,7 @@ class ro {
     });
   }
 }
-var ze = class extends Error {
+var Xe = class extends Error {
   /**
   * @example
   * ```ts
@@ -309,42 +309,42 @@ var ze = class extends Error {
     };
   }
 };
-const Xs = 3, xn = (t) => Math.min(1e3 * 2 ** t, 3e4), no = [520, 503], Qs = [
+const ai = 3, Nn = (t) => Math.min(1e3 * 2 ** t, 3e4), _o = [520, 503], li = [
   "GET",
   "HEAD",
   "OPTIONS"
 ];
-function ct(t) {
+function mt(t) {
   "@babel/helpers - typeof";
-  return ct = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
+  return mt = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
     return typeof e;
   } : function(e) {
     return e && typeof Symbol == "function" && e.constructor === Symbol && e !== Symbol.prototype ? "symbol" : typeof e;
-  }, ct(t);
+  }, mt(t);
 }
-function so(t, e) {
-  if (ct(t) != "object" || !t) return t;
+function wo(t, e) {
+  if (mt(t) != "object" || !t) return t;
   var r = t[Symbol.toPrimitive];
   if (r !== void 0) {
     var n = r.call(t, e);
-    if (ct(n) != "object") return n;
+    if (mt(n) != "object") return n;
     throw new TypeError("@@toPrimitive must return a primitive value.");
   }
   return (e === "string" ? String : Number)(t);
 }
-function io(t) {
-  var e = so(t, "string");
-  return ct(e) == "symbol" ? e : e + "";
+function vo(t) {
+  var e = wo(t, "string");
+  return mt(e) == "symbol" ? e : e + "";
 }
-function oo(t, e, r) {
-  return (e = io(e)) in t ? Object.defineProperty(t, e, {
+function bo(t, e, r) {
+  return (e = vo(e)) in t ? Object.defineProperty(t, e, {
     value: r,
     enumerable: !0,
     configurable: !0,
     writable: !0
   }) : t[e] = r, t;
 }
-function Tn(t, e) {
+function $n(t, e) {
   var r = Object.keys(t);
   if (Object.getOwnPropertySymbols) {
     var n = Object.getOwnPropertySymbols(t);
@@ -354,18 +354,18 @@ function Tn(t, e) {
   }
   return r;
 }
-function Oe(t) {
+function $e(t) {
   for (var e = 1; e < arguments.length; e++) {
     var r = arguments[e] != null ? arguments[e] : {};
-    e % 2 ? Tn(Object(r), !0).forEach(function(n) {
-      oo(t, n, r[n]);
-    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(t, Object.getOwnPropertyDescriptors(r)) : Tn(Object(r)).forEach(function(n) {
+    e % 2 ? $n(Object(r), !0).forEach(function(n) {
+      bo(t, n, r[n]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(t, Object.getOwnPropertyDescriptors(r)) : $n(Object(r)).forEach(function(n) {
       Object.defineProperty(t, n, Object.getOwnPropertyDescriptor(r, n));
     });
   }
   return t;
 }
-function Rn(t, e) {
+function Ln(t, e) {
   return new Promise((r) => {
     if (e != null && e.aborted) {
       r();
@@ -380,13 +380,13 @@ function Rn(t, e) {
     e == null || e.addEventListener("abort", s);
   });
 }
-function ao(t, e, r, n) {
-  return !(!n || r >= Xs || !Qs.includes(t) || !no.includes(e));
+function ko(t, e, r, n) {
+  return !(!n || r >= ai || !li.includes(t) || !_o.includes(e));
 }
-async function Zs(t, e, r, n) {
+async function ci(t, e, r, n) {
   let s = 0;
   for (; ; ) {
-    const l = Oe({}, r.headers);
+    const l = $e({}, r.headers);
     s > 0 && (l["X-Retry-Count"] = String(s));
     let c;
     try {
@@ -398,24 +398,24 @@ async function Zs(t, e, r, n) {
       });
     } catch (u) {
       var i;
-      if ((u == null ? void 0 : u.name) === "AbortError" || (u == null ? void 0 : u.code) === "ABORT_ERR" || (u == null ? void 0 : u.name) === "TimeoutError" && (!((i = r.signal) === null || i === void 0) && i.aborted) || !Qs.includes(r.method)) throw u;
-      if (n && s < Xs) {
-        const d = xn(s);
-        s++, await Rn(d, r.signal);
+      if ((u == null ? void 0 : u.name) === "AbortError" || (u == null ? void 0 : u.code) === "ABORT_ERR" || (u == null ? void 0 : u.name) === "TimeoutError" && (!((i = r.signal) === null || i === void 0) && i.aborted) || !li.includes(r.method)) throw u;
+      if (n && s < ai) {
+        const d = Nn(s);
+        s++, await Ln(d, r.signal);
         continue;
       }
       throw u;
     }
-    if (ao(r.method, c.status, s, n)) {
+    if (ko(r.method, c.status, s, n)) {
       var o, a;
-      const u = (o = (a = c.headers) === null || a === void 0 ? void 0 : a.get("Retry-After")) !== null && o !== void 0 ? o : null, d = u !== null ? Math.max(0, parseInt(u, 10) || 0) * 1e3 : xn(s);
-      await c.text(), s++, await Rn(d, r.signal);
+      const u = (o = (a = c.headers) === null || a === void 0 ? void 0 : a.get("Retry-After")) !== null && o !== void 0 ? o : null, d = u !== null ? Math.max(0, parseInt(u, 10) || 0) * 1e3 : Nn(s);
+      await c.text(), s++, await Ln(d, r.signal);
       continue;
     }
     return c;
   }
 }
-var lo = class {
+var So = class {
   /**
   * Creates a builder configured for a specific PostgREST request.
   *
@@ -564,7 +564,7 @@ var lo = class {
       r.headers.forEach((l, c) => {
         o[c] = l;
       });
-      const a = await Zs(n, r.url.toString(), {
+      const a = await ci(n, r.url.toString(), {
         method: r.method,
         headers: o,
         body: JSON.stringify(r.body, (l, c) => typeof c == "bigint" ? c.toString() : c),
@@ -578,10 +578,10 @@ var lo = class {
       const d = o == null ? void 0 : o.cause;
       if (d) {
         var p, h, f, g;
-        const _ = (p = d == null ? void 0 : d.message) !== null && p !== void 0 ? p : "", v = (h = d == null ? void 0 : d.code) !== null && h !== void 0 ? h : "";
+        const _ = (p = d == null ? void 0 : d.message) !== null && p !== void 0 ? p : "", w = (h = d == null ? void 0 : d.code) !== null && h !== void 0 ? h : "";
         l = `${(f = o == null ? void 0 : o.name) !== null && f !== void 0 ? f : "FetchError"}: ${o == null ? void 0 : o.message}`, l += `
 
-Caused by: ${(g = d == null ? void 0 : d.name) !== null && g !== void 0 ? g : "Error"}: ${_}`, v && (l += ` (${v})`), d != null && d.stack && (l += `
+Caused by: ${(g = d == null ? void 0 : d.name) !== null && g !== void 0 ? g : "Error"}: ${_}`, w && (l += ` (${w})`), d != null && d.stack && (l += `
 ${d.stack}`);
       } else {
         var m;
@@ -619,7 +619,7 @@ ${d.stack}`);
         else try {
           n = JSON.parse(h);
         } catch {
-          if (r = { message: h }, n = null, e.shouldThrowOnError) throw new ze({
+          if (r = { message: h }, n = null, e.shouldThrowOnError) throw new Xe({
             message: h,
             details: "",
             hint: "",
@@ -636,7 +636,7 @@ ${d.stack}`);
           message: "JSON object requested, multiple (or no) rows returned"
         }, n = null, s = null, i = 406, o = "Not Acceptable", e.shouldThrowOnError) {
           var u;
-          throw new ze(Oe(Oe({}, r), {}, { hint: (u = r.hint) !== null && u !== void 0 ? u : "" }));
+          throw new Xe($e($e({}, r), {}, { hint: (u = r.hint) !== null && u !== void 0 ? u : "" }));
         }
       } else n.length === 1 ? n = n[0] : n = null;
     } else {
@@ -646,7 +646,7 @@ ${d.stack}`);
       } catch {
         t.status === 404 && d === "" ? (i = 204, o = "No Content") : r = { message: d };
       }
-      if (r && e.shouldThrowOnError) throw new ze(r);
+      if (r && e.shouldThrowOnError) throw new Xe(r);
     }
     return {
       success: r === null,
@@ -766,7 +766,7 @@ ${d.stack}`);
   overrideTypes() {
     return this;
   }
-}, co = class extends lo {
+}, Eo = class extends So {
   throwOnError() {
     return super.throwOnError();
   }
@@ -1577,8 +1577,8 @@ ${d.stack}`);
     return this.headers.append("Prefer", "handling=strict"), this.headers.append("Prefer", `max-affected=${t}`), this;
   }
 };
-const On = /* @__PURE__ */ new RegExp("[,()]");
-var Fe = class extends co {
+const Dn = /* @__PURE__ */ new RegExp("[,()]");
+var Je = class extends Eo {
   throwOnError() {
     return super.throwOnError();
   }
@@ -1786,7 +1786,7 @@ var Fe = class extends co {
   * ```
   */
   in(t, e) {
-    const r = Array.from(new Set(e)).map((n) => typeof n == "string" && On.test(n) ? `"${n}"` : `${n}`).join(",");
+    const r = Array.from(new Set(e)).map((n) => typeof n == "string" && Dn.test(n) ? `"${n}"` : `${n}`).join(",");
     return this.url.searchParams.append(t, `in.(${r})`), this;
   }
   /**
@@ -1796,7 +1796,7 @@ var Fe = class extends co {
   * @param values - The values array to filter with
   */
   notIn(t, e) {
-    const r = Array.from(new Set(e)).map((n) => typeof n == "string" && On.test(n) ? `"${n}"` : `${n}`).join(",");
+    const r = Array.from(new Set(e)).map((n) => typeof n == "string" && Dn.test(n) ? `"${n}"` : `${n}`).join(",");
     return this.url.searchParams.append(t, `not.in.(${r})`), this;
   }
   contains(t, e) {
@@ -2054,7 +2054,7 @@ var Fe = class extends co {
   filter(t, e, r) {
     return this.url.searchParams.append(t, `${e}.${r}`), this;
   }
-}, uo = class {
+}, xo = class {
   /**
   * Creates a query builder scoped to a Postgres table or view.
   *
@@ -2908,7 +2908,7 @@ var Fe = class extends co {
     const { head: r = !1, count: n } = e ?? {}, s = r ? "HEAD" : "GET";
     let i = !1;
     const o = (t ?? "*").split("").map((c) => /\s/.test(c) && !i ? "" : (c === '"' && (i = !i), c)).join(""), { url: a, headers: l } = this.cloneRequestState();
-    return a.searchParams.set("select", o), n && l.append("Prefer", `count=${n}`), new Fe({
+    return a.searchParams.set("select", o), n && l.append("Prefer", `count=${n}`), new Je({
       method: s,
       url: a,
       headers: l,
@@ -3048,7 +3048,7 @@ var Fe = class extends co {
         i.searchParams.set("columns", l.join(","));
       }
     }
-    return new Fe({
+    return new Je({
       method: s,
       url: i,
       headers: o,
@@ -3286,7 +3286,7 @@ var Fe = class extends co {
         a.searchParams.set("columns", u.join(","));
       }
     }
-    return new Fe({
+    return new Je({
       method: o,
       url: a,
       headers: l,
@@ -3448,7 +3448,7 @@ var Fe = class extends co {
   update(t, { count: e } = {}) {
     var r;
     const n = "PATCH", { url: s, headers: i } = this.cloneRequestState();
-    return e && i.append("Prefer", `count=${e}`), new Fe({
+    return e && i.append("Prefer", `count=${e}`), new Je({
       method: n,
       url: s,
       headers: i,
@@ -3589,7 +3589,7 @@ var Fe = class extends co {
   delete({ count: t } = {}) {
     var e;
     const r = "DELETE", { url: n, headers: s } = this.cloneRequestState();
-    return t && s.append("Prefer", `count=${t}`), new Fe({
+    return t && s.append("Prefer", `count=${t}`), new Je({
       method: r,
       url: n,
       headers: s,
@@ -3600,12 +3600,12 @@ var Fe = class extends co {
     });
   }
 };
-function ho(t, e) {
+function Ao(t, e) {
   try {
     const o = JSON.parse(t);
     if (o && typeof o == "object" && !Array.isArray(o)) {
       var r, n, s, i;
-      return new ze({
+      return new Xe({
         message: String((r = o.message) !== null && r !== void 0 ? r : t),
         details: (n = o.details) !== null && n !== void 0 ? n : "",
         hint: (s = o.hint) !== null && s !== void 0 ? s : "",
@@ -3614,19 +3614,19 @@ function ho(t, e) {
     }
   } catch {
   }
-  return new ze({
+  return new Xe({
     message: t || e,
     details: "",
     hint: "",
     code: ""
   });
 }
-function Cn(t, e, r) {
+function Un(t, e, r) {
   var n;
   const s = t;
   return {
     success: !1,
-    error: new ze({
+    error: new Xe({
       message: `${(n = s == null ? void 0 : s.name) !== null && n !== void 0 ? n : "FetchError"}: ${s == null ? void 0 : s.message}`,
       details: "",
       hint: "",
@@ -3638,7 +3638,7 @@ function Cn(t, e, r) {
     statusText: r
   };
 }
-var fo = class ei {
+var To = class ui {
   /**
   * Creates a PostgREST client.
   *
@@ -3689,16 +3689,16 @@ var fo = class ei {
         const f = () => {
           clearTimeout(p), d.abort();
         };
-        return h.addEventListener("abort", f, { once: !0 }), l(c, Oe(Oe({}, u), {}, { signal: d.signal })).finally(() => {
+        return h.addEventListener("abort", f, { once: !0 }), l(c, $e($e({}, u), {}, { signal: d.signal })).finally(() => {
           clearTimeout(p), h.removeEventListener("abort", f);
         });
       }
-      return l(c, Oe(Oe({}, u), {}, { signal: d.signal })).finally(() => clearTimeout(p));
+      return l(c, $e($e({}, u), {}, { signal: d.signal })).finally(() => clearTimeout(p));
     } : this.fetch = l, this.retry = a;
   }
   from(e) {
     if (!e || typeof e != "string" || e.trim() === "") throw new Error("Invalid relation name: relation must be a non-empty string.");
-    return new uo(new URL(`${this.url}/${e}`), {
+    return new xo(new URL(`${this.url}/${e}`), {
       headers: new Headers(this.headers),
       schema: this.schemaName,
       fetch: this.fetch,
@@ -3716,7 +3716,7 @@ var fo = class ei {
   * @category Database
   */
   schema(e) {
-    return new ei(this.url, {
+    return new ui(this.url, {
       headers: this.headers,
       schema: e,
       fetch: this.fetch,
@@ -3757,18 +3757,18 @@ var fo = class ei {
     let o;
     try {
       var a;
-      o = await Zs(i, `${e.url}/`, {
+      o = await ci(i, `${e.url}/`, {
         method: "GET",
         headers: s
       }, (a = e.retry) !== null && a !== void 0 ? a : !0);
     } catch (c) {
-      return Cn(c, 0, "");
+      return Un(c, 0, "");
     }
     let l;
     try {
       l = await o.text();
     } catch (c) {
-      return Cn(c, o.status, o.statusText);
+      return Un(c, o.status, o.statusText);
     }
     if (o.ok) try {
       return {
@@ -3783,7 +3783,7 @@ var fo = class ei {
     }
     return {
       success: !1,
-      error: ho(l, o.statusText),
+      error: Ao(l, o.statusText),
       data: null,
       count: null,
       status: o.status,
@@ -3965,7 +3965,7 @@ var fo = class ei {
       l.searchParams.append(h, f);
     })) : (a = "POST", c = r);
     const p = new Headers(this.headers);
-    return d ? p.set("Prefer", i ? `count=${i},return=minimal` : "return=minimal") : i && p.set("Prefer", `count=${i}`), new Fe({
+    return d ? p.set("Prefer", i ? `count=${i},return=minimal` : "return=minimal") : i && p.set("Prefer", `count=${i}`), new Je({
       method: a,
       url: l,
       headers: p,
@@ -3977,7 +3977,7 @@ var fo = class ei {
     });
   }
 };
-class po {
+class Ro {
   /**
    * Static-only utility – prevent instantiation.
    */
@@ -4066,24 +4066,24 @@ Suggested solution: ${e.workaround}`), new Error(r);
     }
   }
 }
-const go = "2.118.0", mo = `realtime-js/${go}`, yo = "1.0.0", ti = "2.0.0", _o = ti, vo = 1e4, wo = 15e3, bo = 1e4, ko = 100, ve = {
+const Oo = "2.118.0", Co = `realtime-js/${Oo}`, Io = "1.0.0", di = "2.0.0", jo = di, Po = 1e4, No = 15e3, $o = 1e4, Lo = 100, Ee = {
   closed: "closed",
   errored: "errored",
   joined: "joined",
   joining: "joining",
   leaving: "leaving"
-}, ri = {
+}, hi = {
   close: "phx_close",
   error: "phx_error",
   join: "phx_join",
   leave: "phx_leave",
   access_token: "access_token"
-}, Lr = {
+}, qr = {
   connecting: "connecting",
   closing: "closing",
   closed: "closed"
 };
-class So {
+class Do {
   constructor(e) {
     this.HEADER_LENGTH = 1, this.USER_BROADCAST_PUSH_META_LENGTH = 6, this.KINDS = { userBroadcastPush: 3, userBroadcast: 4 }, this.BINARY_ENCODING = 0, this.JSON_ENCODING = 1, this.BROADCAST_EVENT = "broadcast", this.allowedMetadataKeys = [], this.allowedMetadataKeys = e ?? [];
   }
@@ -4172,21 +4172,21 @@ var N;
 (function(t) {
   t.abstime = "abstime", t.bool = "bool", t.date = "date", t.daterange = "daterange", t.float4 = "float4", t.float8 = "float8", t.int2 = "int2", t.int4 = "int4", t.int4range = "int4range", t.int8 = "int8", t.int8range = "int8range", t.json = "json", t.jsonb = "jsonb", t.money = "money", t.numeric = "numeric", t.oid = "oid", t.reltime = "reltime", t.text = "text", t.time = "time", t.timestamp = "timestamp", t.timestamptz = "timestamptz", t.timetz = "timetz", t.tsrange = "tsrange", t.tstzrange = "tstzrange";
 })(N || (N = {}));
-const In = (t, e, r = {}) => {
+const Bn = (t, e, r = {}) => {
   var n;
   const s = (n = r.skipTypes) !== null && n !== void 0 ? n : [];
-  return e ? Object.keys(e).reduce((i, o) => (i[o] = Eo(o, t, e, s), i), {}) : {};
-}, Eo = (t, e, r, n) => {
+  return e ? Object.keys(e).reduce((i, o) => (i[o] = Uo(o, t, e, s), i), {}) : {};
+}, Uo = (t, e, r, n) => {
   const s = e.find((a) => a.name === t), i = s == null ? void 0 : s.type, o = r[t];
-  return i && !n.includes(i) ? ni(i, o) : $r(o);
-}, ni = (t, e) => {
+  return i && !n.includes(i) ? fi(i, o) : Mr(o);
+}, fi = (t, e) => {
   if (t.charAt(0) === "_") {
     const r = t.slice(1, t.length);
-    return Ro(e, r);
+    return Fo(e, r);
   }
   switch (t) {
     case N.bool:
-      return Ao(e);
+      return Bo(e);
     case N.float4:
     case N.float8:
     case N.int2:
@@ -4194,12 +4194,12 @@ const In = (t, e, r = {}) => {
     case N.int8:
     case N.numeric:
     case N.oid:
-      return xo(e);
+      return qo(e);
     case N.json:
     case N.jsonb:
-      return To(e);
+      return Mo(e);
     case N.timestamp:
-      return Oo(e);
+      return Ho(e);
     // Format to be consistent with PostgREST
     case N.abstime:
     // To allow users to cast it based on Timezone
@@ -4220,11 +4220,11 @@ const In = (t, e, r = {}) => {
     // To allow users to cast it based on Timezone
     case N.tsrange:
     case N.tstzrange:
-      return $r(e);
+      return Mr(e);
     default:
-      return $r(e);
+      return Mr(e);
   }
-}, $r = (t) => t, Ao = (t) => {
+}, Mr = (t) => t, Bo = (t) => {
   switch (t) {
     case "t":
       return !0;
@@ -4233,14 +4233,14 @@ const In = (t, e, r = {}) => {
     default:
       return t;
   }
-}, xo = (t) => {
+}, qo = (t) => {
   if (typeof t == "string") {
     const e = parseFloat(t);
     if (!Number.isNaN(e))
       return e;
   }
   return t;
-}, To = (t) => {
+}, Mo = (t) => {
   if (typeof t == "string")
     try {
       return JSON.parse(t);
@@ -4248,7 +4248,7 @@ const In = (t, e, r = {}) => {
       return t;
     }
   return t;
-}, Ro = (t, e) => {
+}, Fo = (t, e) => {
   if (typeof t != "string")
     return t;
   const r = t.length - 1, n = t[r];
@@ -4260,19 +4260,19 @@ const In = (t, e, r = {}) => {
     } catch {
       i = o ? o.split(",") : [];
     }
-    return i.map((a) => ni(e, a));
+    return i.map((a) => fi(e, a));
   }
   return t;
-}, Oo = (t) => typeof t == "string" ? t.replace(" ", "T") : t, si = (t) => {
+}, Ho = (t) => typeof t == "string" ? t.replace(" ", "T") : t, pi = (t) => {
   const e = new URL(t);
   return e.protocol = e.protocol.replace(/^ws/i, "http"), e.pathname = e.pathname.replace(/\/+$/, "").replace(/\/socket\/websocket$/i, "").replace(/\/socket$/i, "").replace(/\/websocket$/i, ""), e.pathname === "" || e.pathname === "/" ? e.pathname = "/api/broadcast" : e.pathname = e.pathname + "/api/broadcast", e.href;
 };
-var We = (t) => typeof t == "function" ? (
+var Qe = (t) => typeof t == "function" ? (
   /** @type {() => T} */
   t
 ) : function() {
   return t;
-}, Co = typeof self < "u" ? self : null, He = typeof window < "u" ? window : null, se = Co || He || globalThis, Io = "2.0.0", jo = 1e4, Po = 1e3, No = 100, ie = (
+}, zo = typeof self < "u" ? self : null, Ge = typeof window < "u" ? window : null, oe = zo || Ge || globalThis, Wo = "2.0.0", Ko = 1e4, Vo = 1e3, Jo = 100, ae = (
   /** @type {const} */
   { connecting: 0, open: 1, closing: 2, closed: 3 }
 ), W = (
@@ -4284,7 +4284,7 @@ var We = (t) => typeof t == "function" ? (
     joining: "joining",
     leaving: "leaving"
   }
-), de = (
+), pe = (
   /** @type {const} */
   {
     close: "phx_close",
@@ -4293,18 +4293,18 @@ var We = (t) => typeof t == "function" ? (
     reply: "phx_reply",
     leave: "phx_leave"
   }
-), Dr = (
+), Fr = (
   /** @type {const} */
   {
     longpoll: "longpoll",
     websocket: "websocket"
   }
-), Lo = (
+), Go = (
   /** @type {const} */
   {
     complete: 4
   }
-), Ur = "base64url.bearer.phx.", St = class {
+), Hr = "base64url.bearer.phx.", Rt = class {
   /**
    * Initializes the Push
    * @param {Channel} channel - The Channel
@@ -4381,7 +4381,7 @@ var We = (t) => typeof t == "function" ? (
   trigger(t, e) {
     this.channel.trigger(this.refEvent, { status: t, response: e });
   }
-}, ii = class {
+}, gi = class {
   /**
   * @param {() => void} callback
   * @param {(tries: number) => number} timerCalc
@@ -4400,14 +4400,14 @@ var We = (t) => typeof t == "function" ? (
       this.tries = this.tries + 1, this.callback();
     }, this.timerCalc(this.tries + 1));
   }
-}, $o = class {
+}, Yo = class {
   /**
    * @param {string} topic
    * @param {Params | (() => Params)} params
    * @param {Socket} socket
    */
   constructor(t, e, r) {
-    this.state = W.closed, this.topic = t, this.params = We(e || {}), this.socket = r, this.bindings = [], this.bindingRef = 0, this.timeout = this.socket.timeout, this.joinedOnce = !1, this.joinPush = new St(this, de.join, this.params, this.timeout), this.pushBuffer = [], this.stateChangeRefs = [], this.rejoinTimer = new ii(() => {
+    this.state = W.closed, this.topic = t, this.params = Qe(e || {}), this.socket = r, this.bindings = [], this.bindingRef = 0, this.timeout = this.socket.timeout, this.joinedOnce = !1, this.joinPush = new Rt(this, pe.join, this.params, this.timeout), this.pushBuffer = [], this.stateChangeRefs = [], this.rejoinTimer = new gi(() => {
       this.socket.isConnected() && this.rejoin();
     }, this.socket.rejoinAfterMs), this.stateChangeRefs.push(this.socket.onError(() => this.rejoinTimer.reset())), this.stateChangeRefs.push(
       this.socket.onOpen(() => {
@@ -4422,8 +4422,8 @@ var We = (t) => typeof t == "function" ? (
     }), this.onError((n) => {
       this.socket.hasLogger() && this.socket.log("channel", `error ${this.topic}`, n), this.isJoining() && this.joinPush.reset(), this.state = W.errored, this.socket.isConnected() && this.rejoinTimer.scheduleTimeout();
     }), this.joinPush.receive("timeout", () => {
-      this.socket.hasLogger() && this.socket.log("channel", `timeout ${this.topic}`, this.joinPush.timeout), new St(this, de.leave, We({}), this.timeout).send(), this.state = W.errored, this.joinPush.reset(), this.socket.isConnected() && this.rejoinTimer.scheduleTimeout();
-    }), this.on(de.reply, (n, s) => {
+      this.socket.hasLogger() && this.socket.log("channel", `timeout ${this.topic}`, this.joinPush.timeout), new Rt(this, pe.leave, Qe({}), this.timeout).send(), this.state = W.errored, this.joinPush.reset(), this.socket.isConnected() && this.rejoinTimer.scheduleTimeout();
+    }), this.on(pe.reply, (n, s) => {
       this.trigger(this.replyEventName(s), n);
     });
   }
@@ -4450,7 +4450,7 @@ var We = (t) => typeof t == "function" ? (
    * @param {ChannelBindingCallback} callback
    */
   onClose(t) {
-    this.on(de.close, t);
+    this.on(pe.close, t);
   }
   /**
    * Hook into channel errors
@@ -4458,7 +4458,7 @@ var We = (t) => typeof t == "function" ? (
    * @return {number}
    */
   onError(t) {
-    return this.on(de.error, (e) => t(e));
+    return this.on(pe.error, (e) => t(e));
   }
   /**
    * Subscribes on channel events
@@ -4527,7 +4527,7 @@ var We = (t) => typeof t == "function" ? (
   push(t, e, r = this.timeout) {
     if (e = e || {}, !this.joinedOnce)
       throw new Error(`tried to push '${t}' to '${this.topic}' before joining. Use channel.join() before pushing events`);
-    let n = new St(this, t, function() {
+    let n = new Rt(this, t, function() {
       return e;
     }, r);
     return this.canPush() ? n.send() : (n.startTimeout(), this.pushBuffer.push(n)), n;
@@ -4551,8 +4551,8 @@ var We = (t) => typeof t == "function" ? (
   leave(t = this.timeout) {
     this.rejoinTimer.reset(), this.joinPush.cancelTimeout(), this.state = W.leaving;
     let e = () => {
-      this.socket.hasLogger() && this.socket.log("channel", `leave ${this.topic}`), this.trigger(de.close, "leave");
-    }, r = new St(this, de.leave, We({}), t);
+      this.socket.hasLogger() && this.socket.log("channel", `leave ${this.topic}`), this.trigger(pe.close, "leave");
+    }, r = new Rt(this, pe.leave, Qe({}), t);
     return r.receive("ok", () => e()).receive("timeout", () => e()), r.send(), this.canPush() || r.trigger("ok", {}), r;
   }
   /**
@@ -4624,16 +4624,16 @@ var We = (t) => typeof t == "function" ? (
   isLeaving() {
     return this.state === W.leaving;
   }
-}, qt = class {
+}, Wt = class {
   static request(t, e, r, n, s, i, o) {
-    if (se.XDomainRequest) {
-      let a = new se.XDomainRequest();
+    if (oe.XDomainRequest) {
+      let a = new oe.XDomainRequest();
       return this.xdomainRequest(a, t, e, n, s, i, o);
-    } else if (se.XMLHttpRequest) {
-      let a = new se.XMLHttpRequest();
+    } else if (oe.XMLHttpRequest) {
+      let a = new oe.XMLHttpRequest();
       return this.xhrRequest(a, t, e, r, n, s, i, o);
     } else {
-      if (se.fetch && se.AbortController)
+      if (oe.fetch && oe.AbortController)
         return this.fetchRequest(t, e, r, n, s, i, o);
       throw new Error("No suitable XMLHttpRequest implementation found");
     }
@@ -4644,7 +4644,7 @@ var We = (t) => typeof t == "function" ? (
       headers: r,
       body: n
     }, l = null;
-    return s && (l = new AbortController(), setTimeout(() => l.abort(), s), a.signal = l.signal), se.fetch(e, a).then((c) => c.text()).then((c) => this.parseJSON(c)).then((c) => o && o(c)).catch((c) => {
+    return s && (l = new AbortController(), setTimeout(() => l.abort(), s), a.signal = l.signal), oe.fetch(e, a).then((c) => c.text()).then((c) => this.parseJSON(c)).then((c) => o && o(c)).catch((c) => {
       c.name === "AbortError" && i ? i() : o && o(null);
     }), l;
   }
@@ -4660,7 +4660,7 @@ var We = (t) => typeof t == "function" ? (
     for (let [l, c] of Object.entries(n))
       t.setRequestHeader(l, c);
     return t.onerror = () => a && a(null), t.onreadystatechange = () => {
-      if (t.readyState === Lo.complete && a) {
+      if (t.readyState === Go.complete && a) {
         let l = this.parseJSON(t.responseText);
         a(l);
       }
@@ -4691,33 +4691,33 @@ var We = (t) => typeof t == "function" ? (
     let r = t.match(/\?/) ? "&" : "?";
     return `${t}${r}${this.serialize(e)}`;
   }
-}, Do = (t) => {
+}, Xo = (t) => {
   let e = "", r = new Uint8Array(t), n = r.byteLength;
   for (let s = 0; s < n; s++)
     e += String.fromCharCode(r[s]);
   return btoa(e);
-}, De = class {
+}, He = class {
   constructor(t, e) {
-    e && e.length === 2 && e[1].startsWith(Ur) && (this.authToken = atob(e[1].slice(Ur.length))), this.endPoint = null, this.token = null, this.skipHeartbeat = !0, this.reqs = /* @__PURE__ */ new Set(), this.awaitingBatchAck = !1, this.currentBatch = null, this.currentBatchTimer = null, this.batchBuffer = [], this.onopen = function() {
+    e && e.length === 2 && e[1].startsWith(Hr) && (this.authToken = atob(e[1].slice(Hr.length))), this.endPoint = null, this.token = null, this.skipHeartbeat = !0, this.reqs = /* @__PURE__ */ new Set(), this.awaitingBatchAck = !1, this.currentBatch = null, this.currentBatchTimer = null, this.batchBuffer = [], this.onopen = function() {
     }, this.onerror = function() {
     }, this.onmessage = function() {
     }, this.onclose = function() {
-    }, this.pollEndpoint = this.normalizeEndpoint(t), this.readyState = ie.connecting, setTimeout(() => this.poll(), 0);
+    }, this.pollEndpoint = this.normalizeEndpoint(t), this.readyState = ae.connecting, setTimeout(() => this.poll(), 0);
   }
   normalizeEndpoint(t) {
-    return t.replace("ws://", "http://").replace("wss://", "https://").replace(new RegExp("(.*)/" + Dr.websocket), "$1/" + Dr.longpoll);
+    return t.replace("ws://", "http://").replace("wss://", "https://").replace(new RegExp("(.*)/" + Fr.websocket), "$1/" + Fr.longpoll);
   }
   endpointURL() {
-    return qt.appendParams(this.pollEndpoint, { token: this.token });
+    return Wt.appendParams(this.pollEndpoint, { token: this.token });
   }
   closeAndRetry(t, e, r) {
-    this.close(t, e, r), this.readyState = ie.connecting;
+    this.close(t, e, r), this.readyState = ae.connecting;
   }
   ontimeout() {
     this.onerror("timeout"), this.closeAndRetry(1005, "timeout", !1);
   }
   isActive() {
-    return this.readyState === ie.open || this.readyState === ie.connecting;
+    return this.readyState === ae.open || this.readyState === ae.connecting;
   }
   poll() {
     const t = { Accept: "application/json" };
@@ -4741,7 +4741,7 @@ var We = (t) => typeof t == "function" ? (
           this.poll();
           break;
         case 410:
-          this.readyState = ie.open, this.onopen({}), this.poll();
+          this.readyState = ae.open, this.onopen({}), this.poll();
           break;
         case 403:
           this.onerror(403), this.close(1008, "forbidden", !1);
@@ -4759,13 +4759,13 @@ var We = (t) => typeof t == "function" ? (
   // setTimeout 0, which optimizes back-to-back procedural
   // pushes against an empty buffer
   send(t) {
-    typeof t != "string" && (t = Do(t)), this.currentBatch ? this.currentBatch.push(t) : this.awaitingBatchAck ? this.batchBuffer.push(t) : (this.currentBatch = [t], this.currentBatchTimer = setTimeout(() => {
+    typeof t != "string" && (t = Xo(t)), this.currentBatch ? this.currentBatch.push(t) : this.awaitingBatchAck ? this.batchBuffer.push(t) : (this.currentBatch = [t], this.currentBatchTimer = setTimeout(() => {
       this.batchSend(this.currentBatch), this.currentBatch = null;
     }, 0));
   }
   batchSend(t, e = 0) {
     this.awaitingBatchAck = !0;
-    const r = e + No, n = t.slice(e, r);
+    const r = e + Jo, n = t.slice(e, r);
     this.ajax("POST", { "Content-Type": "application/x-ndjson" }, n.join(`
 `), () => this.onerror("timeout"), (s) => {
       !s || s.status !== 200 ? (this.awaitingBatchAck = !1, this.onerror(s && s.status), this.closeAndRetry(1011, "internal server error", !1)) : r < t.length ? this.batchSend(t, r) : this.batchBuffer.length > 0 ? (this.batchSend(this.batchBuffer), this.batchBuffer = []) : this.awaitingBatchAck = !1;
@@ -4774,7 +4774,7 @@ var We = (t) => typeof t == "function" ? (
   close(t, e, r) {
     for (let s of this.reqs)
       s.abort();
-    this.readyState = ie.closed;
+    this.readyState = ae.closed;
     let n = Object.assign({ code: 1e3, reason: void 0, wasClean: !0 }, { code: t, reason: e, wasClean: r });
     this.batchBuffer = [], clearTimeout(this.currentBatchTimer), this.currentBatchTimer = null, typeof CloseEvent < "u" ? this.onclose(new CloseEvent("close", n)) : this.onclose(n);
   }
@@ -4782,11 +4782,11 @@ var We = (t) => typeof t == "function" ? (
     let i, o = () => {
       this.reqs.delete(i), n();
     };
-    i = qt.request(t, this.endpointURL(), e, r, this.timeout, o, (a) => {
+    i = Wt.request(t, this.endpointURL(), e, r, this.timeout, o, (a) => {
       this.reqs.delete(i), this.isActive() && s(a);
     }), this.reqs.add(i);
   }
-}, Uo = class nt {
+}, Qo = class ut {
   /**
    * Initializes the Presence
    * @param {Channel} channel - The Channel
@@ -4804,12 +4804,12 @@ var We = (t) => typeof t == "function" ? (
       }
     }, this.channel.on(n.state, (s) => {
       let { onJoin: i, onLeave: o, onSync: a } = this.caller;
-      this.joinRef = this.channel.joinRef(), this.state = nt.syncState(this.state, s, i, o), this.pendingDiffs.forEach((l) => {
-        this.state = nt.syncDiff(this.state, l, i, o);
+      this.joinRef = this.channel.joinRef(), this.state = ut.syncState(this.state, s, i, o), this.pendingDiffs.forEach((l) => {
+        this.state = ut.syncDiff(this.state, l, i, o);
       }), this.pendingDiffs = [], a();
     }), this.channel.on(n.diff, (s) => {
       let { onJoin: i, onLeave: o, onSync: a } = this.caller;
-      this.inPendingSyncState() ? this.pendingDiffs.push(s) : (this.state = nt.syncDiff(this.state, s, i, o), a());
+      this.inPendingSyncState() ? this.pendingDiffs.push(s) : (this.state = ut.syncDiff(this.state, s, i, o), a());
     });
   }
   /**
@@ -4839,7 +4839,7 @@ var We = (t) => typeof t == "function" ? (
    * @returns {T[]}
    */
   list(e) {
-    return nt.list(this.state, e);
+    return ut.list(this.state, e);
   }
   inPendingSyncState() {
     return !this.joinRef || this.joinRef !== this.channel.joinRef();
@@ -4952,7 +4952,7 @@ var We = (t) => typeof t == "function" ? (
   static clone(e) {
     return JSON.parse(JSON.stringify(e));
   }
-}, Et = {
+}, Ot = {
   HEADER_LENGTH: 1,
   META_LENGTH: 4,
   KINDS: { push: 0, reply: 1, broadcast: 2 },
@@ -5033,7 +5033,7 @@ var We = (t) => typeof t == "function" ? (
     let d = r.decode(t.slice(a, a + o));
     a = a + o;
     let p = t.slice(a, t.byteLength), h = { status: d, response: p };
-    return { join_ref: l, ref: c, topic: u, event: de.reply, payload: h };
+    return { join_ref: l, ref: c, topic: u, event: pe.reply, payload: h };
   },
   /** @private */
   decodeBroadcast(t, e, r) {
@@ -5044,7 +5044,7 @@ var We = (t) => typeof t == "function" ? (
     let l = t.slice(i, t.byteLength);
     return { join_ref: null, ref: null, topic: o, event: a, payload: l };
   }
-}, Bo = class {
+}, Zo = class {
   /** Initializes the Socket *
    *
    * For IE8 support use an ES5-shim (https://github.com/es-shims/es5-shim)
@@ -5056,24 +5056,24 @@ var We = (t) => typeof t == "function" ? (
    * @param {SocketOptions} [opts] - Optional configuration
    */
   constructor(t, e = {}) {
-    this.stateChangeCallbacks = { open: [], close: [], error: [], message: [] }, this.channels = [], this.sendBuffer = [], this.ref = 0, this.fallbackRef = null, this.timeout = e.timeout || jo, this.transport = e.transport || se.WebSocket || De, this.conn = void 0, this.primaryPassedHealthCheck = !1, this.longPollFallbackMs = e.longPollFallbackMs, this.fallbackTimer = null;
+    this.stateChangeCallbacks = { open: [], close: [], error: [], message: [] }, this.channels = [], this.sendBuffer = [], this.ref = 0, this.fallbackRef = null, this.timeout = e.timeout || Ko, this.transport = e.transport || oe.WebSocket || He, this.conn = void 0, this.primaryPassedHealthCheck = !1, this.longPollFallbackMs = e.longPollFallbackMs, this.fallbackTimer = null;
     let r = null;
     try {
-      r = se && se.sessionStorage;
+      r = oe && oe.sessionStorage;
     } catch {
     }
-    this.sessionStore = e.sessionStorage || r, this.establishedConnections = 0, this.defaultEncoder = Et.encode.bind(Et), this.defaultDecoder = Et.decode.bind(Et), this.closeWasClean = !0, this.disconnecting = !1, this.binaryType = e.binaryType || "arraybuffer", this.connectClock = 1, this.pageHidden = !1, this.encode = void 0, this.decode = void 0, this.transport !== De ? (this.encode = e.encode || this.defaultEncoder, this.decode = e.decode || this.defaultDecoder) : (this.encode = this.defaultEncoder, this.decode = this.defaultDecoder);
+    this.sessionStore = e.sessionStorage || r, this.establishedConnections = 0, this.defaultEncoder = Ot.encode.bind(Ot), this.defaultDecoder = Ot.decode.bind(Ot), this.closeWasClean = !0, this.disconnecting = !1, this.binaryType = e.binaryType || "arraybuffer", this.connectClock = 1, this.pageHidden = !1, this.encode = void 0, this.decode = void 0, this.transport !== He ? (this.encode = e.encode || this.defaultEncoder, this.decode = e.decode || this.defaultDecoder) : (this.encode = this.defaultEncoder, this.decode = this.defaultDecoder);
     let n = null;
-    He && He.addEventListener && (He.addEventListener("pagehide", (s) => {
+    Ge && Ge.addEventListener && (Ge.addEventListener("pagehide", (s) => {
       this.conn && (this.disconnect(), n = this.connectClock);
-    }), He.addEventListener("pageshow", (s) => {
+    }), Ge.addEventListener("pageshow", (s) => {
       n === this.connectClock && (n = null, this.connect());
-    }), He.addEventListener("visibilitychange", () => {
+    }), Ge.addEventListener("visibilitychange", () => {
       document.visibilityState === "hidden" ? this.pageHidden = !0 : (this.pageHidden = !1, !this.isConnected() && !this.closeWasClean && this.teardown(() => this.connect()));
     })), this.heartbeatIntervalMs = e.heartbeatIntervalMs || 3e4, this.autoSendHeartbeat = e.autoSendHeartbeat ?? !0, this.heartbeatCallback = e.heartbeatCallback ?? (() => {
     }), this.rejoinAfterMs = (s) => e.rejoinAfterMs ? e.rejoinAfterMs(s) : [1e3, 2e3, 5e3][s - 1] || 1e4, this.reconnectAfterMs = (s) => e.reconnectAfterMs ? e.reconnectAfterMs(s) : [10, 50, 100, 150, 200, 250, 500, 1e3, 2e3][s - 1] || 5e3, this.logger = e.logger || null, !this.logger && e.debug && (this.logger = (s, i, o) => {
       console.log(`${s}: ${i}`, o);
-    }), this.longpollerTimeout = e.longpollerTimeout || 2e4, this.params = We(e.params || {}), this.endPoint = `${t}/${Dr.websocket}`, this.vsn = e.vsn || Io, this.heartbeatTimeoutTimer = null, this.heartbeatTimer = null, this.heartbeatSentAt = null, this.pendingHeartbeatRef = null, this.reconnectTimer = new ii(() => {
+    }), this.longpollerTimeout = e.longpollerTimeout || 2e4, this.params = Qe(e.params || {}), this.endPoint = `${t}/${Fr.websocket}`, this.vsn = e.vsn || Wo, this.heartbeatTimeoutTimer = null, this.heartbeatTimer = null, this.heartbeatSentAt = null, this.pendingHeartbeatRef = null, this.reconnectTimer = new gi(() => {
       if (this.pageHidden) {
         this.log("Not reconnecting as page is hidden!"), this.teardown();
         return;
@@ -5081,13 +5081,13 @@ var We = (t) => typeof t == "function" ? (
       this.teardown(async () => {
         e.beforeReconnect && await e.beforeReconnect(), this.connect();
       });
-    }, this.reconnectAfterMs), this.authToken = e.authToken && We(e.authToken);
+    }, this.reconnectAfterMs), this.authToken = e.authToken && Qe(e.authToken);
   }
   /**
    * Returns the LongPoll transport reference
    */
   getLongPollTransport() {
-    return De;
+    return He;
   }
   /**
    * Disconnects and replaces the active transport
@@ -5112,8 +5112,8 @@ var We = (t) => typeof t == "function" ? (
    * @returns {string}
    */
   endPointURL() {
-    let t = qt.appendParams(
-      qt.appendParams(this.endPoint, this.params()),
+    let t = Wt.appendParams(
+      Wt.appendParams(this.endPoint, this.params()),
       { vsn: this.vsn }
     );
     return t.charAt(0) !== "/" ? t : t.charAt(1) === "/" ? `${this.protocol()}:${t}` : `${this.protocol()}://${location.host}${t}`;
@@ -5139,7 +5139,7 @@ var We = (t) => typeof t == "function" ? (
    * `new Socket("/socket", {params: {user_id: userToken}})`.
    */
   connect(t) {
-    t && (console && console.log("passing params to connect is deprecated. Instead pass :params to the Socket constructor"), this.params = We(t)), !(this.conn && !this.disconnecting) && (this.longPollFallbackMs && this.transport !== De ? this.connectWithFallback(De, this.longPollFallbackMs) : this.transportConnect());
+    t && (console && console.log("passing params to connect is deprecated. Instead pass :params to the Socket constructor"), this.params = Qe(t)), !(this.conn && !this.disconnecting) && (this.longPollFallbackMs && this.transport !== He ? this.connectWithFallback(He, this.longPollFallbackMs) : this.transportConnect());
   }
   /**
    * Logs the message. Override `this.logger` for specialized logging. noops by default
@@ -5228,7 +5228,7 @@ var We = (t) => typeof t == "function" ? (
    */
   transportName(t) {
     switch (t) {
-      case De:
+      case He:
         return "LongPoll";
       default:
         return t.name;
@@ -5240,7 +5240,7 @@ var We = (t) => typeof t == "function" ? (
   transportConnect() {
     this.connectClock++, this.closeWasClean = !1;
     let t;
-    this.authToken && (t = ["phoenix", `${Ur}${btoa(this.authToken()).replace(/=/g, "")}`]), this.conn = new this.transport(this.endPointURL(), t), this.conn.binaryType = this.binaryType, this.conn.timeout = this.longpollerTimeout, this.conn.onopen = () => this.onConnOpen(), this.conn.onerror = (e) => this.onConnError(e), this.conn.onmessage = (e) => this.onConnMessage(e), this.conn.onclose = (e) => this.onConnClose(e);
+    this.authToken && (t = ["phoenix", `${Hr}${btoa(this.authToken()).replace(/=/g, "")}`]), this.conn = new this.transport(this.endPointURL(), t), this.conn.binaryType = this.binaryType, this.conn.timeout = this.longpollerTimeout, this.conn.onopen = () => this.onConnOpen(), this.conn.onerror = (e) => this.onConnError(e), this.conn.onmessage = (e) => this.onConnMessage(e), this.conn.onclose = (e) => this.onConnClose(e);
   }
   getSession(t) {
     return this.sessionStore && this.sessionStore.getItem(t);
@@ -5284,7 +5284,7 @@ var We = (t) => typeof t == "function" ? (
       } catch (t) {
         this.log("error", "error in heartbeat callback", t);
       }
-      this.triggerChanError(new Error("heartbeat timeout")), this.closeWasClean = !1, this.teardown(() => this.reconnectTimer.scheduleTimeout(), Po, "heartbeat timeout");
+      this.triggerChanError(new Error("heartbeat timeout")), this.closeWasClean = !1, this.teardown(() => this.reconnectTimer.scheduleTimeout(), Vo, "heartbeat timeout");
     }
   }
   resetHeartbeat() {
@@ -5314,7 +5314,7 @@ var We = (t) => typeof t == "function" ? (
     }, 150 * r);
   }
   waitForSocketClosed(t, e, r = 1) {
-    if (r === 5 || t.readyState === ie.closed) {
+    if (r === 5 || t.readyState === ae.closed) {
       e();
       return;
     }
@@ -5344,7 +5344,7 @@ var We = (t) => typeof t == "function" ? (
    */
   triggerChanError(t) {
     this.channels.forEach((e) => {
-      e.isErrored() || e.isLeaving() || e.isClosed() || e.trigger(de.error, t);
+      e.isErrored() || e.isLeaving() || e.isClosed() || e.trigger(pe.error, t);
     });
   }
   /**
@@ -5352,11 +5352,11 @@ var We = (t) => typeof t == "function" ? (
    */
   connectionState() {
     switch (this.conn && this.conn.readyState) {
-      case ie.connecting:
+      case ae.connecting:
         return "connecting";
-      case ie.open:
+      case ae.open:
         return "open";
-      case ie.closing:
+      case ae.closing:
         return "closing";
       default:
         return "closed";
@@ -5393,7 +5393,7 @@ var We = (t) => typeof t == "function" ? (
    * @returns {Channel}
    */
   channel(t, e = {}) {
-    let r = new $o(t, e, this);
+    let r = new Yo(t, e, this);
     return this.channels.push(r), r;
   }
   /**
@@ -5487,21 +5487,21 @@ var We = (t) => typeof t == "function" ? (
     e && (this.hasLogger() && this.log("transport", `leaving duplicate topic "${t}"`), e.leave());
   }
 };
-class ot {
+class ft {
   constructor(e, r) {
-    const n = Mo(r);
-    this.presence = new Uo(e.getChannel(), n), this.presence.onJoin((s, i, o) => {
-      const a = ot.onJoinPayload(s, i, o);
+    const n = ta(r);
+    this.presence = new Qo(e.getChannel(), n), this.presence.onJoin((s, i, o) => {
+      const a = ft.onJoinPayload(s, i, o);
       e.getChannel().trigger("presence", a);
     }), this.presence.onLeave((s, i, o) => {
-      const a = ot.onLeavePayload(s, i, o);
+      const a = ft.onLeavePayload(s, i, o);
       e.getChannel().trigger("presence", a);
     }), this.presence.onSync(() => {
       e.getChannel().trigger("presence", { event: "sync" });
     });
   }
   get state() {
-    return ot.transformState(this.presence.state);
+    return ft.transformState(this.presence.state);
   }
   /**
    * @private
@@ -5527,13 +5527,13 @@ class ot {
    *
    */
   static transformState(e) {
-    return e = qo(e), Object.getOwnPropertyNames(e).reduce((r, n) => {
+    return e = ea(e), Object.getOwnPropertyNames(e).reduce((r, n) => {
       const s = e[n];
-      return r[n] = Lt(s), r;
+      return r[n] = qt(s), r;
     }, {});
   }
   static onJoinPayload(e, r, n) {
-    const s = jn(r), i = Lt(n);
+    const s = qn(r), i = qt(n);
     return {
       event: "join",
       key: e,
@@ -5542,7 +5542,7 @@ class ot {
     };
   }
   static onLeavePayload(e, r, n) {
-    const s = jn(r), i = Lt(n);
+    const s = qn(r), i = qt(n);
     return {
       event: "leave",
       key: e,
@@ -5551,26 +5551,26 @@ class ot {
     };
   }
 }
-function Lt(t) {
+function qt(t) {
   return t.metas.map((e) => {
     const r = Object.getOwnPropertyDescriptors(e), n = Object.defineProperties({}, r);
     return n.presence_ref = n.phx_ref, delete n.phx_ref, delete n.phx_ref_prev, n;
   });
 }
-function qo(t) {
+function ea(t) {
   return JSON.parse(JSON.stringify(t));
 }
-function Mo(t) {
+function ta(t) {
   return (t == null ? void 0 : t.events) && { events: t.events };
 }
-function jn(t) {
-  return t != null && t.metas ? Lt(t) : [];
+function qn(t) {
+  return t != null && t.metas ? qt(t) : [];
 }
-var Pn;
+var Mn;
 (function(t) {
   t.SYNC = "sync", t.JOIN = "join", t.LEAVE = "leave";
-})(Pn || (Pn = {}));
-class Fo {
+})(Mn || (Mn = {}));
+class ra {
   get state() {
     return this.presenceAdapter.state;
   }
@@ -5592,10 +5592,10 @@ class Fo {
    * ```
    */
   constructor(e, r) {
-    this.channel = e, this.presenceAdapter = new ot(this.channel.channelAdapter, r);
+    this.channel = e, this.presenceAdapter = new ft(this.channel.channelAdapter, r);
   }
 }
-function Ho(t) {
+function na(t) {
   if (t instanceof Error)
     return t;
   if (typeof t == "string")
@@ -5610,9 +5610,9 @@ function Ho(t) {
   }
   return new Error("channel error: connection lost");
 }
-class zo {
+class sa {
   constructor(e, r, n) {
-    const s = Wo(n);
+    const s = ia(n);
     this.channel = e.getSocket().channel(r, s), this.socket = e;
   }
   get state() {
@@ -5658,7 +5658,7 @@ class zo {
     } catch {
       throw new Error(`tried to push '${e}' to '${this.channel.topic}' before joining. Use channel.subscribe() before pushing events`);
     }
-    if (this.channel.pushBuffer.length > ko) {
+    if (this.channel.pushBuffer.length > Lo) {
       const i = this.channel.pushBuffer.shift();
       i.cancelTimeout(), this.socket.log("channel", `discarded push due to buffer overflow: ${i.event}`, i.payload());
     }
@@ -5669,19 +5669,19 @@ class zo {
     this.channel.joinPush.payload = () => Object.assign(Object.assign({}, r), e);
   }
   canPush() {
-    return this.socket.isConnected() && this.state === ve.joined;
+    return this.socket.isConnected() && this.state === Ee.joined;
   }
   isJoined() {
-    return this.state === ve.joined;
+    return this.state === Ee.joined;
   }
   isJoining() {
-    return this.state === ve.joining;
+    return this.state === Ee.joining;
   }
   isClosed() {
-    return this.state === ve.closed;
+    return this.state === Ee.closed;
   }
   isLeaving() {
-    return this.state === ve.leaving;
+    return this.state === Ee.leaving;
   }
   updateFilterBindings(e) {
     this.channel.filterBindings = e;
@@ -5696,7 +5696,7 @@ class zo {
     return this.channel;
   }
 }
-function Wo(t) {
+function ia(t) {
   return {
     config: Object.assign({
       broadcast: { ack: !1, self: !1 },
@@ -5705,25 +5705,25 @@ function Wo(t) {
     }, t.config)
   };
 }
-const Ko = /[,()"\\]/, Vo = (t) => Ko.test(t) || t !== t.trim(), Jo = (t) => `"${t.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`, Nn = (t) => {
+const oa = /[,()"\\]/, aa = (t) => oa.test(t) || t !== t.trim(), la = (t) => `"${t.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`, Fn = (t) => {
   const e = t === null ? "null" : String(t);
-  return Vo(e) ? Jo(e) : e;
-}, Go = (t) => t === null ? "null" : String(t), Yo = (t, e) => {
+  return aa(e) ? la(e) : e;
+}, ca = (t) => t === null ? "null" : String(t), ua = (t, e) => {
   if (t === "in") {
     const r = Array.isArray(e) ? e : [e];
     if (r.length === 0)
       throw new Error("Realtime `in` filter requires at least one value.");
-    return `in.(${Array.from(new Set(r)).map((s) => Nn(s)).join(",")})`;
+    return `in.(${Array.from(new Set(r)).map((s) => Fn(s)).join(",")})`;
   }
-  return t === "is" ? `is.${Go(e)}` : `${t}.${Nn(e)}`;
+  return t === "is" ? `is.${ca(e)}` : `${t}.${Fn(e)}`;
 };
-class Xo {
+class da {
   constructor() {
     this.filters = [];
   }
   add(e, r, n, s = !1) {
     const i = s ? "not." : "";
-    return this.filters.push(`${e}=${i}${Yo(r, n)}`), this;
+    return this.filters.push(`${e}=${i}${ua(r, n)}`), this;
   }
   /** Match rows where `column` equals `value` (`column=eq.value`). */
   eq(e, r) {
@@ -5806,19 +5806,19 @@ class Xo {
     return this.build();
   }
 }
-var Ln;
+var Hn;
 (function(t) {
   t.ALL = "*", t.INSERT = "INSERT", t.UPDATE = "UPDATE", t.DELETE = "DELETE";
-})(Ln || (Ln = {}));
-var Re;
+})(Hn || (Hn = {}));
+var Ne;
 (function(t) {
   t.BROADCAST = "broadcast", t.PRESENCE = "presence", t.POSTGRES_CHANGES = "postgres_changes", t.SYSTEM = "system";
-})(Re || (Re = {}));
-var he;
+})(Ne || (Ne = {}));
+var ge;
 (function(t) {
   t.SUBSCRIBED = "SUBSCRIBED", t.TIMED_OUT = "TIMED_OUT", t.CLOSED = "CLOSED", t.CHANNEL_ERROR = "CHANNEL_ERROR";
-})(he || (he = {}));
-class fe {
+})(ge || (ge = {}));
+class me {
   get state() {
     return this.channelAdapter.state;
   }
@@ -5872,9 +5872,9 @@ class fe {
       broadcast: { ack: !1, self: !1 },
       presence: { key: "", enabled: !1 },
       private: !1
-    }, r.config), this.channelAdapter = new zo(this.socket.socketAdapter, e, this.params), this.presence = new Fo(this), this._onClose(() => {
+    }, r.config), this.channelAdapter = new sa(this.socket.socketAdapter, e, this.params), this.presence = new ra(this), this._onClose(() => {
       this.socket._remove(this);
-    }), this._updateFilterTransform(), this.broadcastEndpointURL = si(this.socket.socketAdapter.endPointURL()), this.private = this.params.config.private || !1, !this.private && (!((i = (s = this.params.config) === null || s === void 0 ? void 0 : s.broadcast) === null || i === void 0) && i.replay))
+    }), this._updateFilterTransform(), this.broadcastEndpointURL = pi(this.socket.socketAdapter.endPointURL()), this.private = this.params.config.private || !1, !this.private && (!((i = (s = this.params.config) === null || s === void 0 ? void 0 : s.broadcast) === null || i === void 0) && i.replay))
       throw new Error(`tried to use replay on public channel '${this.topic}'. It must be a private channel.`);
   }
   /**
@@ -5899,23 +5899,23 @@ class fe {
   subscribe(e, r = this.timeout) {
     var n, s, i, o;
     if (this.socket.isConnected() || this.socket.connect(), this.channelAdapter.isClosed()) {
-      const { config: { broadcast: a, presence: l, private: c, postgres_changes_options: u } } = this.params, d = (s = (n = this.bindings.postgres_changes) === null || n === void 0 ? void 0 : n.map((m) => m.filter)) !== null && s !== void 0 ? s : [], p = !!this.bindings[Re.PRESENCE] && this.bindings[Re.PRESENCE].length > 0 || ((i = this.params.config.presence) === null || i === void 0 ? void 0 : i.enabled) === !0, h = {}, f = Object.assign({ broadcast: a, presence: Object.assign(Object.assign({}, l), { enabled: p }), postgres_changes: d, private: c }, u ? { postgres_changes_options: u } : {});
+      const { config: { broadcast: a, presence: l, private: c, postgres_changes_options: u } } = this.params, d = (s = (n = this.bindings.postgres_changes) === null || n === void 0 ? void 0 : n.map((m) => m.filter)) !== null && s !== void 0 ? s : [], p = !!this.bindings[Ne.PRESENCE] && this.bindings[Ne.PRESENCE].length > 0 || ((i = this.params.config.presence) === null || i === void 0 ? void 0 : i.enabled) === !0, h = {}, f = Object.assign({ broadcast: a, presence: Object.assign(Object.assign({}, l), { enabled: p }), postgres_changes: d, private: c }, u ? { postgres_changes_options: u } : {});
       this.socket.accessTokenValue && (h.access_token = this.socket.accessTokenValue), this._onError((m) => {
-        e == null || e(he.CHANNEL_ERROR, Ho(m));
-      }), this._onClose(() => e == null ? void 0 : e(he.CLOSED)), this.updateJoinPayload(Object.assign({ config: f }, h)), this._updateFilterMessage();
-      const g = u != null && u.wait && d.length > 0 ? Math.max(r, ((o = u.timeout) !== null && o !== void 0 ? o : wo) + bo) : r;
+        e == null || e(ge.CHANNEL_ERROR, na(m));
+      }), this._onClose(() => e == null ? void 0 : e(ge.CLOSED)), this.updateJoinPayload(Object.assign({ config: f }, h)), this._updateFilterMessage();
+      const g = u != null && u.wait && d.length > 0 ? Math.max(r, ((o = u.timeout) !== null && o !== void 0 ? o : No) + $o) : r;
       this.channelAdapter.subscribe(g).receive("ok", async ({ postgres_changes: m }) => {
         if (this.socket._isManualToken() || this.socket.setAuth(), m === void 0) {
-          e == null || e(he.SUBSCRIBED);
+          e == null || e(ge.SUBSCRIBED);
           return;
         }
         this._updatePostgresBindings(m, e);
       }).receive("error", (m) => {
-        this.state = ve.errored;
+        this.state = Ee.errored;
         const y = Object.values(m).join(", ") || "error";
-        e == null || e(he.CHANNEL_ERROR, new Error(y, { cause: m }));
+        e == null || e(ge.CHANNEL_ERROR, new Error(y, { cause: m }));
       }).receive("timeout", () => {
-        e == null || e(he.TIMED_OUT);
+        e == null || e(ge.TIMED_OUT);
       });
     }
     return this;
@@ -5925,14 +5925,14 @@ class fe {
     const s = this.bindings.postgres_changes, i = (n = s == null ? void 0 : s.length) !== null && n !== void 0 ? n : 0, o = [];
     for (let a = 0; a < i; a++) {
       const l = s[a], { filter: { event: c, schema: u, table: d, filter: p } } = l, h = e && e[a];
-      if (h && h.event === c && fe.isFilterValueEqual(h.schema, u) && fe.isFilterValueEqual(h.table, d) && fe.isFilterValueEqual(h.filter, p))
+      if (h && h.event === c && me.isFilterValueEqual(h.schema, u) && me.isFilterValueEqual(h.table, d) && me.isFilterValueEqual(h.filter, p))
         o.push(Object.assign(Object.assign({}, l), { id: h.id }));
       else {
-        this.unsubscribe(), this.state = ve.errored, r == null || r(he.CHANNEL_ERROR, new Error("mismatch between server and client bindings for postgres changes"));
+        this.unsubscribe(), this.state = Ee.errored, r == null || r(ge.CHANNEL_ERROR, new Error("mismatch between server and client bindings for postgres changes"));
         return;
       }
     }
-    this.bindings.postgres_changes = o, this.state != ve.errored && r && r(he.SUBSCRIBED);
+    this.bindings.postgres_changes = o, this.state != Ee.errored && r && r(ge.SUBSCRIBED);
   }
   /**
    * Returns the current presence state for this channel.
@@ -6138,7 +6138,7 @@ class fe {
    * ```
    */
   on(e, r, n) {
-    const s = this.channelAdapter.isJoined() || this.channelAdapter.isJoining(), i = e === Re.PRESENCE || e === Re.POSTGRES_CHANGES;
+    const s = this.channelAdapter.isJoined() || this.channelAdapter.isJoining(), i = e === Ne.PRESENCE || e === Ne.POSTGRES_CHANGES;
     if (s && i)
       throw this.socket.log("channel", `cannot add \`${e}\` callbacks for ${this.topic} after \`subscribe()\`.`), new Error(`cannot add \`${e}\` callbacks for ${this.topic} after \`subscribe()\`.`);
     return this._on(e, r, n);
@@ -6314,7 +6314,7 @@ class fe {
   _on(e, r, n) {
     var s;
     const i = e.toLocaleLowerCase(), o = r == null ? void 0 : r.filter;
-    if ((o instanceof Xo || typeof o == "object" && o !== null && typeof o.build == "function") && (r = Object.assign(Object.assign({}, r), { filter: o.build() })), i === Re.POSTGRES_CHANGES && ((s = this.bindings[i]) === null || s === void 0 ? void 0 : s.find((u) => fe.isSamePostgresFilter(u.filter, r))))
+    if ((o instanceof da || typeof o == "object" && o !== null && typeof o.build == "function") && (r = Object.assign(Object.assign({}, r), { filter: o.build() })), i === Ne.POSTGRES_CHANGES && ((s = this.bindings[i]) === null || s === void 0 ? void 0 : s.find((u) => me.isSamePostgresFilter(u.filter, r))))
       return this.socket.log("error", `duplicate \`postgres_changes\` binding for ${this.topic} ignored`, r), this;
     const a = this.channelAdapter.on(e, n), l = {
       type: i,
@@ -6364,7 +6364,7 @@ class fe {
   }
   /** @internal */
   _notThisChannelEvent(e, r) {
-    const { close: n, error: s, leave: i, join: o } = ri;
+    const { close: n, error: s, leave: i, join: o } = hi;
     return r && [n, s, i, o].includes(e) && r !== this.joinPush.ref;
   }
   /** @internal */
@@ -6408,7 +6408,7 @@ class fe {
   static isSamePostgresFilter(e, r) {
     var n, s, i, o;
     const a = (s = (n = e == null ? void 0 : e.select) === null || n === void 0 ? void 0 : n.join()) !== null && s !== void 0 ? s : void 0, l = (o = (i = r == null ? void 0 : r.select) === null || i === void 0 ? void 0 : i.join()) !== null && o !== void 0 ? o : void 0;
-    return (e == null ? void 0 : e.event) === (r == null ? void 0 : r.event) && fe.isFilterValueEqual(e == null ? void 0 : e.schema, r == null ? void 0 : r.schema) && fe.isFilterValueEqual(e == null ? void 0 : e.table, r == null ? void 0 : r.table) && fe.isFilterValueEqual(e == null ? void 0 : e.filter, r == null ? void 0 : r.filter) && a === l;
+    return (e == null ? void 0 : e.event) === (r == null ? void 0 : r.event) && me.isFilterValueEqual(e == null ? void 0 : e.schema, r == null ? void 0 : r.schema) && me.isFilterValueEqual(e == null ? void 0 : e.table, r == null ? void 0 : r.table) && me.isFilterValueEqual(e == null ? void 0 : e.filter, r == null ? void 0 : r.filter) && a === l;
   }
   /** @internal */
   _getPayloadRecords(e) {
@@ -6416,12 +6416,12 @@ class fe {
       new: {},
       old: {}
     };
-    return (e.type === "INSERT" || e.type === "UPDATE") && (r.new = In(e.columns, e.record)), (e.type === "UPDATE" || e.type === "DELETE") && (r.old = In(e.columns, e.old_record)), r;
+    return (e.type === "INSERT" || e.type === "UPDATE") && (r.new = Bn(e.columns, e.record)), (e.type === "UPDATE" || e.type === "DELETE") && (r.old = Bn(e.columns, e.old_record)), r;
   }
 }
-class Qo {
+class ha {
   constructor(e, r) {
-    this.socket = new Bo(e, r);
+    this.socket = new Zo(e, r);
   }
   get timeout() {
     return this.socket.timeout;
@@ -6506,10 +6506,10 @@ class Qo {
     return this.socket.isConnected();
   }
   isConnecting() {
-    return this.socket.connectionState() == Lr.connecting;
+    return this.socket.connectionState() == qr.connecting;
   }
   isDisconnecting() {
-    return this.socket.connectionState() == Lr.closing;
+    return this.socket.connectionState() == qr.closing;
   }
   connectionState() {
     return this.socket.connectionState();
@@ -6527,10 +6527,10 @@ class Qo {
     return this.socket;
   }
 }
-const $n = {
+const zn = {
   HEARTBEAT_INTERVAL: 25e3
-}, Zo = [1e3, 2e3, 5e3, 1e4], ea = 1e4;
-function ta() {
+}, fa = [1e3, 2e3, 5e3, 1e4], pa = 1e4;
+function ga() {
   const t = /* @__PURE__ */ new Map();
   return {
     get length() {
@@ -6554,21 +6554,21 @@ function ta() {
     }
   };
 }
-function ra() {
+function ma() {
   try {
     if (typeof globalThis < "u" && globalThis.sessionStorage)
       return globalThis.sessionStorage;
   } catch {
   }
-  return ta();
+  return ga();
 }
-const na = `
+const ya = `
   addEventListener("message", (e) => {
     if (e.data.event === "start") {
       setInterval(() => postMessage({ event: "keepAlive" }), e.data.interval);
     }
   });`;
-class sa {
+class _a {
   get endPoint() {
     return this.socketAdapter.endPoint;
   }
@@ -6655,11 +6655,11 @@ class sa {
    */
   constructor(e, r) {
     var n;
-    if (this.channels = new Array(), this.accessTokenValue = null, this.accessToken = null, this.apiKey = null, this.httpEndpoint = "", this.headers = {}, this.params = {}, this.ref = 0, this.serializer = new So(), this._manuallySetToken = !1, this._authPromise = null, this._authGeneration = 0, this._workerHeartbeatTimer = void 0, this._pendingWorkerHeartbeatRef = null, this._pendingDisconnectTimer = null, this._disconnectOnEmptyChannelsAfterMs = 0, this._resolveFetch = (i) => i ? (...o) => i(...o) : (...o) => fetch(...o), !(!((n = r == null ? void 0 : r.params) === null || n === void 0) && n.apikey))
+    if (this.channels = new Array(), this.accessTokenValue = null, this.accessToken = null, this.apiKey = null, this.httpEndpoint = "", this.headers = {}, this.params = {}, this.ref = 0, this.serializer = new Do(), this._manuallySetToken = !1, this._authPromise = null, this._authGeneration = 0, this._workerHeartbeatTimer = void 0, this._pendingWorkerHeartbeatRef = null, this._pendingDisconnectTimer = null, this._disconnectOnEmptyChannelsAfterMs = 0, this._resolveFetch = (i) => i ? (...o) => i(...o) : (...o) => fetch(...o), !(!((n = r == null ? void 0 : r.params) === null || n === void 0) && n.apikey))
       throw new Error("API key is required to connect to Realtime");
     this.apiKey = r.params.apikey;
     const s = this._initializeOptions(r);
-    this.socketAdapter = new Qo(e, s), this.httpEndpoint = si(e), this.fetch = this._resolveFetch(r == null ? void 0 : r.fetch);
+    this.socketAdapter = new ha(e, s), this.httpEndpoint = pi(e), this.fetch = this._resolveFetch(r == null ? void 0 : r.fetch);
   }
   /**
    * Connects the socket, unless already connected.
@@ -6754,7 +6754,7 @@ class sa {
    * @category Realtime
    */
   connectionState() {
-    return this.socketAdapter.connectionState() || Lr.closed;
+    return this.socketAdapter.connectionState() || qr.closed;
   }
   /**
    * Returns `true` is the connection is open.
@@ -6794,7 +6794,7 @@ class sa {
     if (s)
       return s;
     {
-      const i = new fe(`realtime:${e}`, r, this);
+      const i = new me(`realtime:${e}`, r, this);
       return this._cancelPendingDisconnect(), this.channels.push(i), i;
     }
   }
@@ -6923,9 +6923,9 @@ class sa {
     r === this._authGeneration && (this.accessToken ? this._manuallySetToken = !1 : s && (this._manuallySetToken = !0), this.accessTokenValue != n && (this.accessTokenValue = n, this.channels.forEach((i) => {
       const o = {
         access_token: n,
-        version: mo
+        version: Co
       };
-      i.updateJoinPayload(o), i.joinedOnce && i.channelAdapter.isJoined() && i.channelAdapter.push(ri.access_token, {
+      i.updateJoinPayload(o), i.joinedOnce && i.channelAdapter.isJoined() && i.channelAdapter.push(hi.access_token, {
         access_token: n
       });
     })));
@@ -6994,7 +6994,7 @@ class sa {
     if (e)
       r = e;
     else {
-      const n = new Blob([na], { type: "application/javascript" });
+      const n = new Blob([ya], { type: "application/javascript" });
       r = URL.createObjectURL(n);
     }
     return r;
@@ -7007,14 +7007,14 @@ class sa {
     var r, n, s, i, o, a, l, c, u, d, p, h;
     this.worker = (r = e == null ? void 0 : e.worker) !== null && r !== void 0 ? r : !1, this.accessToken = (n = e == null ? void 0 : e.accessToken) !== null && n !== void 0 ? n : null;
     const f = {};
-    f.timeout = (s = e == null ? void 0 : e.timeout) !== null && s !== void 0 ? s : vo, f.heartbeatIntervalMs = (i = e == null ? void 0 : e.heartbeatIntervalMs) !== null && i !== void 0 ? i : $n.HEARTBEAT_INTERVAL, this._disconnectOnEmptyChannelsAfterMs = (o = e == null ? void 0 : e.disconnectOnEmptyChannelsAfterMs) !== null && o !== void 0 ? o : 2 * ((a = e == null ? void 0 : e.heartbeatIntervalMs) !== null && a !== void 0 ? a : $n.HEARTBEAT_INTERVAL), f.transport = (l = e == null ? void 0 : e.transport) !== null && l !== void 0 ? l : po.getWebSocketConstructor(), f.params = e == null ? void 0 : e.params, f.logger = e == null ? void 0 : e.logger, f.heartbeatCallback = this._wrapHeartbeatCallback(e == null ? void 0 : e.heartbeatCallback), f.sessionStorage = (c = e == null ? void 0 : e.sessionStorage) !== null && c !== void 0 ? c : ra(), f.reconnectAfterMs = (u = e == null ? void 0 : e.reconnectAfterMs) !== null && u !== void 0 ? u : ((_) => Zo[_ - 1] || ea);
+    f.timeout = (s = e == null ? void 0 : e.timeout) !== null && s !== void 0 ? s : Po, f.heartbeatIntervalMs = (i = e == null ? void 0 : e.heartbeatIntervalMs) !== null && i !== void 0 ? i : zn.HEARTBEAT_INTERVAL, this._disconnectOnEmptyChannelsAfterMs = (o = e == null ? void 0 : e.disconnectOnEmptyChannelsAfterMs) !== null && o !== void 0 ? o : 2 * ((a = e == null ? void 0 : e.heartbeatIntervalMs) !== null && a !== void 0 ? a : zn.HEARTBEAT_INTERVAL), f.transport = (l = e == null ? void 0 : e.transport) !== null && l !== void 0 ? l : Ro.getWebSocketConstructor(), f.params = e == null ? void 0 : e.params, f.logger = e == null ? void 0 : e.logger, f.heartbeatCallback = this._wrapHeartbeatCallback(e == null ? void 0 : e.heartbeatCallback), f.sessionStorage = (c = e == null ? void 0 : e.sessionStorage) !== null && c !== void 0 ? c : ma(), f.reconnectAfterMs = (u = e == null ? void 0 : e.reconnectAfterMs) !== null && u !== void 0 ? u : ((_) => fa[_ - 1] || pa);
     let g, m;
-    const y = (d = e == null ? void 0 : e.vsn) !== null && d !== void 0 ? d : _o;
+    const y = (d = e == null ? void 0 : e.vsn) !== null && d !== void 0 ? d : jo;
     switch (y) {
-      case yo:
-        g = (_, v) => v(JSON.stringify(_)), m = (_, v) => v(JSON.parse(_));
+      case Io:
+        g = (_, w) => w(JSON.stringify(_)), m = (_, w) => w(JSON.parse(_));
         break;
-      case ti:
+      case di:
         g = this.serializer.encode.bind(this.serializer), m = this.serializer.decode.bind(this.serializer);
         break;
       default:
@@ -7032,7 +7032,7 @@ class sa {
     await this._waitForAuthIfNeeded(), this.isConnected() || this.connect();
   }
 }
-var ut = class extends Error {
+var yt = class extends Error {
   constructor(t, e) {
     var r;
     super(t), this.name = "IcebergError", this.status = e.status, this.icebergType = e.icebergType, this.icebergCode = e.icebergCode, this.details = e.details, this.isCommitStateUnknown = e.icebergType === "CommitStateUnknownException" || [500, 502, 504].includes(e.status) && ((r = e.icebergType) == null ? void 0 : r.includes("CommitState")) === !0;
@@ -7056,17 +7056,17 @@ var ut = class extends Error {
     return this.status === 419;
   }
 };
-function ia(t, e, r) {
+function wa(t, e, r) {
   const n = new URL(e, t);
   if (r)
     for (const [s, i] of Object.entries(r))
       i !== void 0 && n.searchParams.set(s, i);
   return n.toString();
 }
-async function oa(t) {
+async function va(t) {
   return !t || t.type === "none" ? {} : t.type === "bearer" ? { Authorization: `Bearer ${t.token}` } : t.type === "header" ? { [t.name]: t.value } : t.type === "custom" ? await t.getHeaders() : {};
 }
-function aa(t) {
+function ba(t) {
   const e = t.fetchImpl ?? globalThis.fetch;
   return {
     async request({
@@ -7076,7 +7076,7 @@ function aa(t) {
       body: i,
       headers: o
     }) {
-      const a = ia(t.baseUrl, n, s), l = await oa(t.auth), c = await e(a, {
+      const a = wa(t.baseUrl, n, s), l = await va(t.auth), c = await e(a, {
         method: r,
         headers: {
           ...i ? { "Content-Type": "application/json" } : {},
@@ -7087,7 +7087,7 @@ function aa(t) {
       }), u = await c.text(), d = (c.headers.get("content-type") || "").includes("application/json"), p = d && u ? JSON.parse(u) : u;
       if (!c.ok) {
         const h = d ? p : void 0, f = h == null ? void 0 : h.error;
-        throw new ut(
+        throw new yt(
           (f == null ? void 0 : f.message) ?? `Request failed with status ${c.status}`,
           {
             status: c.status,
@@ -7101,15 +7101,15 @@ function aa(t) {
     }
   };
 }
-function At(t) {
+function Ct(t) {
   return t.join("");
 }
-var la = class {
+var ka = class {
   constructor(t, e = "") {
     this.client = t, this.prefix = e;
   }
   async listNamespaces(t) {
-    const e = t ? { parent: At(t.namespace) } : void 0;
+    const e = t ? { parent: Ct(t.namespace) } : void 0;
     return (await this.client.request({
       method: "GET",
       path: `${this.prefix}/namespaces`,
@@ -7130,14 +7130,14 @@ var la = class {
   async dropNamespace(t) {
     await this.client.request({
       method: "DELETE",
-      path: `${this.prefix}/namespaces/${At(t.namespace)}`
+      path: `${this.prefix}/namespaces/${Ct(t.namespace)}`
     });
   }
   async loadNamespaceMetadata(t) {
     return {
       properties: (await this.client.request({
         method: "GET",
-        path: `${this.prefix}/namespaces/${At(t.namespace)}`
+        path: `${this.prefix}/namespaces/${Ct(t.namespace)}`
       })).data.properties
     };
   }
@@ -7145,10 +7145,10 @@ var la = class {
     try {
       return await this.client.request({
         method: "HEAD",
-        path: `${this.prefix}/namespaces/${At(t.namespace)}`
+        path: `${this.prefix}/namespaces/${Ct(t.namespace)}`
       }), !0;
     } catch (e) {
-      if (e instanceof ut && e.status === 404)
+      if (e instanceof yt && e.status === 404)
         return !1;
       throw e;
     }
@@ -7157,30 +7157,30 @@ var la = class {
     try {
       return await this.createNamespace(t, e);
     } catch (r) {
-      if (r instanceof ut && r.status === 409)
+      if (r instanceof yt && r.status === 409)
         return;
       throw r;
     }
   }
 };
-function Ue(t) {
+function ze(t) {
   return t.join("");
 }
-var ca = class {
+var Sa = class {
   constructor(t, e = "", r) {
     this.client = t, this.prefix = e, this.accessDelegation = r;
   }
   async listTables(t) {
     return (await this.client.request({
       method: "GET",
-      path: `${this.prefix}/namespaces/${Ue(t.namespace)}/tables`
+      path: `${this.prefix}/namespaces/${ze(t.namespace)}/tables`
     })).data.identifiers;
   }
   async createTable(t, e) {
     const r = {};
     return this.accessDelegation && (r["X-Iceberg-Access-Delegation"] = this.accessDelegation), (await this.client.request({
       method: "POST",
-      path: `${this.prefix}/namespaces/${Ue(t.namespace)}/tables`,
+      path: `${this.prefix}/namespaces/${ze(t.namespace)}/tables`,
       body: e,
       headers: r
     })).data.metadata;
@@ -7188,7 +7188,7 @@ var ca = class {
   async updateTable(t, e) {
     const r = await this.client.request({
       method: "POST",
-      path: `${this.prefix}/namespaces/${Ue(t.namespace)}/tables/${t.name}`,
+      path: `${this.prefix}/namespaces/${ze(t.namespace)}/tables/${t.name}`,
       body: e
     });
     return {
@@ -7199,7 +7199,7 @@ var ca = class {
   async dropTable(t, e) {
     await this.client.request({
       method: "DELETE",
-      path: `${this.prefix}/namespaces/${Ue(t.namespace)}/tables/${t.name}`,
+      path: `${this.prefix}/namespaces/${ze(t.namespace)}/tables/${t.name}`,
       query: { purgeRequested: String((e == null ? void 0 : e.purge) ?? !1) }
     });
   }
@@ -7207,7 +7207,7 @@ var ca = class {
     const e = {};
     return this.accessDelegation && (e["X-Iceberg-Access-Delegation"] = this.accessDelegation), (await this.client.request({
       method: "GET",
-      path: `${this.prefix}/namespaces/${Ue(t.namespace)}/tables/${t.name}`,
+      path: `${this.prefix}/namespaces/${ze(t.namespace)}/tables/${t.name}`,
       headers: e
     })).data.metadata;
   }
@@ -7217,11 +7217,11 @@ var ca = class {
     try {
       return await this.client.request({
         method: "HEAD",
-        path: `${this.prefix}/namespaces/${Ue(t.namespace)}/tables/${t.name}`,
+        path: `${this.prefix}/namespaces/${ze(t.namespace)}/tables/${t.name}`,
         headers: e
       }), !0;
     } catch (r) {
-      if (r instanceof ut && r.status === 404)
+      if (r instanceof yt && r.status === 404)
         return !1;
       throw r;
     }
@@ -7230,12 +7230,12 @@ var ca = class {
     try {
       return await this.createTable(t, e);
     } catch (r) {
-      if (r instanceof ut && r.status === 409)
+      if (r instanceof yt && r.status === 409)
         return await this.loadTable({ namespace: t.namespace, name: e.name });
       throw r;
     }
   }
-}, ua = class {
+}, Ea = class {
   /**
    * Creates a new Iceberg REST Catalog client.
    *
@@ -7246,11 +7246,11 @@ var ca = class {
     let e = "v1";
     t.catalogName && (e += `/${t.catalogName}`);
     const r = t.baseUrl.endsWith("/") ? t.baseUrl : `${t.baseUrl}/`;
-    this.client = aa({
+    this.client = ba({
       baseUrl: r,
       auth: t.auth,
       fetchImpl: t.fetch
-    }), this.accessDelegation = (n = t.accessDelegation) == null ? void 0 : n.join(","), this.namespaceOps = new la(this.client, e), this.tableOps = new ca(this.client, e, this.accessDelegation);
+    }), this.accessDelegation = (n = t.accessDelegation) == null ? void 0 : n.join(","), this.namespaceOps = new ka(this.client, e), this.tableOps = new Sa(this.client, e, this.accessDelegation);
   }
   /**
    * Lists all namespaces in the catalog.
@@ -7508,37 +7508,37 @@ var ca = class {
     return this.tableOps.createTableIfNotExists(t, e);
   }
 };
-function dt(t) {
+function _t(t) {
   "@babel/helpers - typeof";
-  return dt = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
+  return _t = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
     return typeof e;
   } : function(e) {
     return e && typeof Symbol == "function" && e.constructor === Symbol && e !== Symbol.prototype ? "symbol" : typeof e;
-  }, dt(t);
+  }, _t(t);
 }
-function da(t, e) {
-  if (dt(t) != "object" || !t) return t;
+function xa(t, e) {
+  if (_t(t) != "object" || !t) return t;
   var r = t[Symbol.toPrimitive];
   if (r !== void 0) {
     var n = r.call(t, e);
-    if (dt(n) != "object") return n;
+    if (_t(n) != "object") return n;
     throw new TypeError("@@toPrimitive must return a primitive value.");
   }
   return (e === "string" ? String : Number)(t);
 }
-function ha(t) {
-  var e = da(t, "string");
-  return dt(e) == "symbol" ? e : e + "";
+function Aa(t) {
+  var e = xa(t, "string");
+  return _t(e) == "symbol" ? e : e + "";
 }
-function fa(t, e, r) {
-  return (e = ha(e)) in t ? Object.defineProperty(t, e, {
+function Ta(t, e, r) {
+  return (e = Aa(e)) in t ? Object.defineProperty(t, e, {
     value: r,
     enumerable: !0,
     configurable: !0,
     writable: !0
   }) : t[e] = r, t;
 }
-function Dn(t, e) {
+function Wn(t, e) {
   var r = Object.keys(t);
   if (Object.getOwnPropertySymbols) {
     var n = Object.getOwnPropertySymbols(t);
@@ -7548,18 +7548,18 @@ function Dn(t, e) {
   }
   return r;
 }
-function A(t) {
+function x(t) {
   for (var e = 1; e < arguments.length; e++) {
     var r = arguments[e] != null ? arguments[e] : {};
-    e % 2 ? Dn(Object(r), !0).forEach(function(n) {
-      fa(t, n, r[n]);
-    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(t, Object.getOwnPropertyDescriptors(r)) : Dn(Object(r)).forEach(function(n) {
+    e % 2 ? Wn(Object(r), !0).forEach(function(n) {
+      Ta(t, n, r[n]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(t, Object.getOwnPropertyDescriptors(r)) : Wn(Object(r)).forEach(function(n) {
       Object.defineProperty(t, n, Object.getOwnPropertyDescriptor(r, n));
     });
   }
   return t;
 }
-var ir = class extends Error {
+var ur = class extends Error {
   constructor(t, e = "storage", r, n) {
     super(t), this.__isStorageError = !0, this.namespace = e, this.name = e === "vectors" ? "StorageVectorsError" : "StorageError", this.status = r, this.statusCode = n;
   }
@@ -7572,44 +7572,44 @@ var ir = class extends Error {
     };
   }
 };
-function or(t) {
+function dr(t) {
   return typeof t == "object" && t !== null && "__isStorageError" in t;
 }
-var Br = class extends ir {
+var zr = class extends ur {
   constructor(t, e, r, n = "storage", s) {
     super(t, n, e, r), this.name = n === "vectors" ? "StorageVectorsApiError" : "StorageApiError", this.status = e, this.statusCode = r, this.code = s;
   }
   toJSON() {
-    return A(A({}, super.toJSON()), {}, { code: this.code });
+    return x(x({}, super.toJSON()), {}, { code: this.code });
   }
-}, oi = class extends ir {
+}, mi = class extends ur {
   constructor(t, e, r = "storage") {
     super(t, r), this.name = r === "vectors" ? "StorageVectorsUnknownError" : "StorageUnknownError", this.originalError = e;
   }
 };
-function Mt(t, e, r) {
-  const n = A({}, t), s = e.toLowerCase();
+function Kt(t, e, r) {
+  const n = x({}, t), s = e.toLowerCase();
   for (const i of Object.keys(n)) i.toLowerCase() === s && delete n[i];
   return n[s] = r, n;
 }
-function pa(t) {
+function Ra(t) {
   const e = {};
   for (const [r, n] of Object.entries(t)) e[r.toLowerCase()] = n;
   return e;
 }
-const ga = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), ma = (t) => {
+const Oa = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), Ca = (t) => {
   if (typeof t != "object" || t === null) return !1;
   const e = Object.getPrototypeOf(t);
   return (e === null || e === Object.prototype || Object.getPrototypeOf(e) === null) && !(Symbol.toStringTag in t) && !(Symbol.iterator in t);
-}, qr = (t) => {
-  if (Array.isArray(t)) return t.map((r) => qr(r));
+}, Wr = (t) => {
+  if (Array.isArray(t)) return t.map((r) => Wr(r));
   if (typeof t == "function" || t !== Object(t)) return t;
   const e = {};
   return Object.entries(t).forEach(([r, n]) => {
     const s = r.replace(/([-_][a-z])/gi, (i) => i.toUpperCase().replace(/[-_]/g, ""));
-    e[s] = qr(n);
+    e[s] = Wr(n);
   }), e;
-}, ya = (t) => !t || typeof t != "string" || t.length === 0 || t.length > 100 || t.trim() !== t || t.includes("/") || t.includes("\\") ? !1 : /^[\w!.\*'() &$@=;:+,?-]+$/.test(t), Mr = (t) => t.split("/").map(encodeURIComponent).join("/"), Un = (t) => {
+}, Ia = (t) => !t || typeof t != "string" || t.length === 0 || t.length > 100 || t.trim() !== t || t.includes("/") || t.includes("\\") ? !1 : /^[\w!.\*'() &$@=;:+,?-]+$/.test(t), Kr = (t) => t.split("/").map(encodeURIComponent).join("/"), Kn = (t) => {
   if (typeof t == "object" && t !== null) {
     const e = t;
     if (typeof e.msg == "string") return e.msg;
@@ -7622,36 +7622,36 @@ const ga = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), ma = (t) => {
     }
   }
   return JSON.stringify(t);
-}, _a = async (t, e, r, n) => {
+}, ja = async (t, e, r, n) => {
   if (t !== null && typeof t == "object" && "json" in t && typeof t.json == "function") {
     const s = t;
     let i = parseInt(String(s.status), 10);
     Number.isFinite(i) || (i = 500), s.json().then((o) => {
       const a = (o == null ? void 0 : o.statusCode) || (o == null ? void 0 : o.code) || i + "";
-      e(new Br(Un(o), i, a, n, o == null ? void 0 : o.code));
+      e(new zr(Kn(o), i, a, n, o == null ? void 0 : o.code));
     }).catch(() => {
       const o = i + "";
-      e(new Br(s.statusText || `HTTP ${i} error`, i, o, n));
+      e(new zr(s.statusText || `HTTP ${i} error`, i, o, n));
     });
-  } else e(new oi(Un(t), t, n));
-}, va = (t, e, r, n) => {
+  } else e(new mi(Kn(t), t, n));
+}, Pa = (t, e, r, n) => {
   const s = {
     method: t,
     headers: (e == null ? void 0 : e.headers) || {}
   };
-  if (t === "GET" || t === "HEAD" || !n) return A(A({}, s), r);
-  if (ma(n)) {
+  if (t === "GET" || t === "HEAD" || !n) return x(x({}, s), r);
+  if (Ca(n)) {
     var i;
     const o = (e == null ? void 0 : e.headers) || {};
     let a;
     for (const [l, c] of Object.entries(o)) l.toLowerCase() === "content-type" && (a = c);
-    s.headers = Mt(o, "Content-Type", (i = a) !== null && i !== void 0 ? i : "application/json"), s.body = JSON.stringify(n);
+    s.headers = Kt(o, "Content-Type", (i = a) !== null && i !== void 0 ? i : "application/json"), s.body = JSON.stringify(n);
   } else s.body = n;
-  return e != null && e.duplex && (s.duplex = e.duplex), A(A({}, s), r);
+  return e != null && e.duplex && (s.duplex = e.duplex), x(x({}, s), r);
 };
-async function Ze(t, e, r, n, s, i, o) {
+async function at(t, e, r, n, s, i, o) {
   return new Promise((a, l) => {
-    t(r, va(e, n, s, i)).then((c) => {
+    t(r, Pa(e, n, s, i)).then((c) => {
       if (!c.ok) throw c;
       if (n != null && n.noResolveJson) return c;
       if (o === "vectors") {
@@ -7660,20 +7660,20 @@ async function Ze(t, e, r, n, s, i, o) {
         if (!u || !u.includes("application/json")) return {};
       }
       return c.json();
-    }).then((c) => a(c)).catch((c) => _a(c, l, n, o));
+    }).then((c) => a(c)).catch((c) => ja(c, l, n, o));
   });
 }
-function ai(t = "storage") {
+function yi(t = "storage") {
   return {
-    get: async (e, r, n, s) => Ze(e, "GET", r, n, s, void 0, t),
-    post: async (e, r, n, s, i) => Ze(e, "POST", r, s, i, n, t),
-    put: async (e, r, n, s, i) => Ze(e, "PUT", r, s, i, n, t),
-    head: async (e, r, n, s) => Ze(e, "HEAD", r, A(A({}, n), {}, { noResolveJson: !0 }), s, void 0, t),
-    remove: async (e, r, n, s, i) => Ze(e, "DELETE", r, s, i, n, t)
+    get: async (e, r, n, s) => at(e, "GET", r, n, s, void 0, t),
+    post: async (e, r, n, s, i) => at(e, "POST", r, s, i, n, t),
+    put: async (e, r, n, s, i) => at(e, "PUT", r, s, i, n, t),
+    head: async (e, r, n, s) => at(e, "HEAD", r, x(x({}, n), {}, { noResolveJson: !0 }), s, void 0, t),
+    remove: async (e, r, n, s, i) => at(e, "DELETE", r, s, i, n, t)
   };
 }
-const wa = ai("storage"), { get: Ke, post: te, put: Ft, head: ba, remove: Ve } = wa, G = ai("vectors");
-var Ye = class {
+const Na = yi("storage"), { get: Ze, post: te, put: Vt, head: $a, remove: et } = Na, G = yi("vectors");
+var nt = class {
   /**
   * Creates a new BaseApiClient instance
   * @param url - Base URL for API requests
@@ -7682,7 +7682,7 @@ var Ye = class {
   * @param namespace - Error namespace ('storage' or 'vectors')
   */
   constructor(t, e = {}, r, n = "storage") {
-    this.shouldThrowOnError = !1, this.url = t, this.headers = pa(e), this.fetch = ga(r), this.namespace = n;
+    this.shouldThrowOnError = !1, this.url = t, this.headers = Ra(e), this.fetch = Oa(r), this.namespace = n;
   }
   /**
   * Enable throwing errors instead of returning them.
@@ -7702,7 +7702,7 @@ var Ye = class {
   * @returns this - For method chaining
   */
   setHeader(t, e) {
-    return this.headers = Mt(this.headers, t, e), this;
+    return this.headers = Kt(this.headers, t, e), this;
   }
   /**
   * Handles API operation with standardized error handling
@@ -7738,7 +7738,7 @@ var Ye = class {
       };
     } catch (r) {
       if (e.shouldThrowOnError) throw r;
-      if (or(r)) return {
+      if (dr(r)) return {
         data: null,
         error: r
       };
@@ -7746,11 +7746,11 @@ var Ye = class {
     }
   }
 };
-let li;
-li = Symbol.toStringTag;
-var ka = class {
+let _i;
+_i = Symbol.toStringTag;
+var La = class {
   constructor(t, e) {
-    this.downloadFn = t, this.shouldThrowOnError = e, this[li] = "StreamDownloadBuilder", this.promise = null;
+    this.downloadFn = t, this.shouldThrowOnError = e, this[_i] = "StreamDownloadBuilder", this.promise = null;
   }
   then(t, e) {
     return this.getPromise().then(t, e);
@@ -7773,7 +7773,7 @@ var ka = class {
       };
     } catch (e) {
       if (t.shouldThrowOnError) throw e;
-      if (or(e)) return {
+      if (dr(e)) return {
         data: null,
         error: e
       };
@@ -7781,14 +7781,14 @@ var ka = class {
     }
   }
 };
-let ci;
-ci = Symbol.toStringTag;
-var Sa = class {
+let wi;
+wi = Symbol.toStringTag;
+var Da = class {
   constructor(t, e) {
-    this.downloadFn = t, this.shouldThrowOnError = e, this[ci] = "BlobDownloadBuilder", this.promise = null;
+    this.downloadFn = t, this.shouldThrowOnError = e, this[wi] = "BlobDownloadBuilder", this.promise = null;
   }
   asStream() {
-    return new ka(this.downloadFn, this.shouldThrowOnError);
+    return new La(this.downloadFn, this.shouldThrowOnError);
   }
   then(t, e) {
     return this.getPromise().then(t, e);
@@ -7811,7 +7811,7 @@ var Sa = class {
       };
     } catch (e) {
       if (t.shouldThrowOnError) throw e;
-      if (or(e)) return {
+      if (dr(e)) return {
         data: null,
         error: e
       };
@@ -7819,19 +7819,19 @@ var Sa = class {
     }
   }
 };
-const hr = {
+const _r = {
   limit: 100,
   offset: 0,
   sortBy: {
     column: "name",
     order: "asc"
   }
-}, Bn = {
+}, Vn = {
   cacheControl: "3600",
   contentType: "text/plain;charset=UTF-8",
   upsert: !1
 };
-var Ea = class extends Ye {
+var Ua = class extends nt {
   constructor(t, e = {}, r, n) {
     super(t, e, n, "storage"), this.bucketId = r;
   }
@@ -7846,11 +7846,11 @@ var Ea = class extends Ye {
     var s = this;
     return s.handleOperation(async () => {
       let i;
-      const o = A(A({}, Bn), n);
-      let a = A(A({}, s.headers), t === "POST" && { "x-upsert": String(o.upsert) });
+      const o = x(x({}, Vn), n);
+      let a = x(x({}, s.headers), t === "POST" && { "x-upsert": String(o.upsert) });
       const l = o.metadata;
-      if (typeof Blob < "u" && r instanceof Blob || typeof FormData < "u" && r instanceof FormData ? i = s.prepareUploadFormData(r, o) : (i = r, a["cache-control"] = `max-age=${o.cacheControl}`, a["content-type"] = o.contentType, o.contentEncoding && (a["content-encoding"] = o.contentEncoding), l && (a["x-metadata"] = s.toBase64(s.encodeMetadata(l))), (typeof ReadableStream < "u" && i instanceof ReadableStream || i && typeof i == "object" && "pipe" in i && typeof i.pipe == "function") && !o.duplex && (o.duplex = "half")), n != null && n.headers) for (const [p, h] of Object.entries(n.headers)) a = Mt(a, p, h);
-      const c = s._removeEmptyFolders(e), u = s._getFinalPath(c), d = await (t == "PUT" ? Ft : te)(s.fetch, `${s.url}/object/${u}`, i, A({ headers: a }, o != null && o.duplex ? { duplex: o.duplex } : {}));
+      if (typeof Blob < "u" && r instanceof Blob || typeof FormData < "u" && r instanceof FormData ? i = s.prepareUploadFormData(r, o) : (i = r, a["cache-control"] = `max-age=${o.cacheControl}`, a["content-type"] = o.contentType, o.contentEncoding && (a["content-encoding"] = o.contentEncoding), l && (a["x-metadata"] = s.toBase64(s.encodeMetadata(l))), (typeof ReadableStream < "u" && i instanceof ReadableStream || i && typeof i == "object" && "pipe" in i && typeof i.pipe == "function") && !o.duplex && (o.duplex = "half")), n != null && n.headers) for (const [p, h] of Object.entries(n.headers)) a = Kt(a, p, h);
+      const c = s._removeEmptyFolders(e), u = s._getFinalPath(c), d = await (t == "PUT" ? Vt : te)(s.fetch, `${s.url}/object/${u}`, i, x({ headers: a }, o != null && o.duplex ? { duplex: o.duplex } : {}));
       return {
         path: c,
         id: d.Id,
@@ -7971,13 +7971,13 @@ var Ea = class extends Ye {
     const i = s._removeEmptyFolders(t), o = s._getFinalPath(i), a = new URL(s.url + `/object/upload/sign/${o}`);
     return a.searchParams.set("token", e), s.handleOperation(async () => {
       let l;
-      const c = A(A({}, Bn), n);
-      let u = A(A({}, s.headers), { "x-upsert": String(c.upsert) });
+      const c = x(x({}, Vn), n);
+      let u = x(x({}, s.headers), { "x-upsert": String(c.upsert) });
       const d = c.metadata;
-      if (typeof Blob < "u" && r instanceof Blob || typeof FormData < "u" && r instanceof FormData ? l = s.prepareUploadFormData(r, c) : (l = r, u["cache-control"] = `max-age=${c.cacheControl}`, u["content-type"] = c.contentType, c.contentEncoding && (u["content-encoding"] = c.contentEncoding), d && (u["x-metadata"] = s.toBase64(s.encodeMetadata(d))), (typeof ReadableStream < "u" && l instanceof ReadableStream || l && typeof l == "object" && "pipe" in l && typeof l.pipe == "function") && !c.duplex && (c.duplex = "half")), n != null && n.headers) for (const [p, h] of Object.entries(n.headers)) u = Mt(u, p, h);
+      if (typeof Blob < "u" && r instanceof Blob || typeof FormData < "u" && r instanceof FormData ? l = s.prepareUploadFormData(r, c) : (l = r, u["cache-control"] = `max-age=${c.cacheControl}`, u["content-type"] = c.contentType, c.contentEncoding && (u["content-encoding"] = c.contentEncoding), d && (u["x-metadata"] = s.toBase64(s.encodeMetadata(d))), (typeof ReadableStream < "u" && l instanceof ReadableStream || l && typeof l == "object" && "pipe" in l && typeof l.pipe == "function") && !c.duplex && (c.duplex = "half")), n != null && n.headers) for (const [p, h] of Object.entries(n.headers)) u = Kt(u, p, h);
       return {
         path: i,
-        fullPath: (await Ft(s.fetch, a.toString(), l, A({ headers: u }, c != null && c.duplex ? { duplex: c.duplex } : {}))).Key
+        fullPath: (await Vt(s.fetch, a.toString(), l, x({ headers: u }, c != null && c.duplex ? { duplex: c.duplex } : {}))).Key
       };
     });
   }
@@ -8022,10 +8022,10 @@ var Ea = class extends Ye {
     var r = this;
     return r.handleOperation(async () => {
       let n = r._getFinalPath(t);
-      const s = A({}, r.headers);
+      const s = x({}, r.headers);
       e != null && e.upsert && (s["x-upsert"] = "true");
       const i = await te(r.fetch, `${r.url}/object/upload/sign/${n}`, {}, { headers: s }), o = new URL(r.url + i.url), a = o.searchParams.get("token");
-      if (!a) throw new ir("No token returned by API");
+      if (!a) throw new ur("No token returned by API");
       return {
         signedUrl: o.toString(),
         path: t,
@@ -8265,7 +8265,7 @@ var Ea = class extends Ye {
     return n.handleOperation(async () => {
       let s = n._getFinalPath(t);
       const i = typeof (r == null ? void 0 : r.transform) == "object" && r.transform !== null && Object.keys(r.transform).length > 0;
-      let o = await te(n.fetch, `${n.url}/object/sign/${s}`, A(A({ expiresIn: e }, i ? { transform: r.transform } : {}), (r == null ? void 0 : r.versionId) != null ? { versionId: r.versionId } : {}), { headers: n.headers });
+      let o = await te(n.fetch, `${n.url}/object/sign/${s}`, x(x({ expiresIn: e }, i ? { transform: r.transform } : {}), (r == null ? void 0 : r.versionId) != null ? { versionId: r.versionId } : {}), { headers: n.headers });
       const a = new URLSearchParams();
       r != null && r.download && a.set("download", r.download === !0 ? "" : r.download), (r == null ? void 0 : r.cacheNonce) != null && a.set("cacheNonce", String(r.cacheNonce));
       const l = a.toString();
@@ -8327,7 +8327,7 @@ var Ea = class extends Ye {
       }, { headers: n.headers }), i = new URLSearchParams();
       r != null && r.download && i.set("download", r.download === !0 ? "" : r.download), (r == null ? void 0 : r.cacheNonce) != null && i.set("cacheNonce", String(r.cacheNonce));
       const o = i.toString();
-      return s.map((a) => A(A({}, a), {}, { signedUrl: a.signedURL ? encodeURI(`${n.url}${a.signedURL}${o ? `&${o}` : ""}`) : null }));
+      return s.map((a) => x(x({}, a), {}, { signedUrl: a.signedURL ? encodeURI(`${n.url}${a.signedURL}${o ? `&${o}` : ""}`) : null }));
     });
   }
   /**
@@ -8398,11 +8398,11 @@ var Ea = class extends Ye {
   download(t, e, r) {
     const n = typeof (e == null ? void 0 : e.transform) == "object" && e.transform !== null && Object.keys(e.transform).length > 0 ? "render/image/authenticated" : "object", s = new URLSearchParams();
     e != null && e.transform && this.applyTransformOptsToQuery(s, e.transform), (e == null ? void 0 : e.cacheNonce) != null && s.set("cacheNonce", String(e.cacheNonce)), (e == null ? void 0 : e.versionId) != null && s.set("versionId", String(e.versionId));
-    const i = s.toString(), o = this._getFinalPath(t), a = () => Ke(this.fetch, `${this.url}/${n}/${o}${i ? `?${i}` : ""}`, {
+    const i = s.toString(), o = this._getFinalPath(t), a = () => Ze(this.fetch, `${this.url}/${n}/${o}${i ? `?${i}` : ""}`, {
       headers: this.headers,
       noResolveJson: !0
     }, r);
-    return new Sa(a, this.shouldThrowOnError);
+    return new Da(a, this.shouldThrowOnError);
   }
   /**
   * Retrieves the details of an existing file.
@@ -8434,7 +8434,7 @@ var Ea = class extends Ye {
     const n = r._getFinalPath(t), s = new URLSearchParams();
     (e == null ? void 0 : e.versionId) != null && s.set("versionId", String(e.versionId));
     const i = s.toString();
-    return r.handleOperation(async () => qr(await Ke(r.fetch, `${r.url}/object/info/${n}${i ? `?${i}` : ""}`, { headers: r.headers })));
+    return r.handleOperation(async () => Wr(await Ze(r.fetch, `${r.url}/object/info/${n}${i ? `?${i}` : ""}`, { headers: r.headers })));
   }
   /**
   * Checks the existence of a file.
@@ -8456,15 +8456,15 @@ var Ea = class extends Ye {
     var e = this;
     const r = e._getFinalPath(t);
     try {
-      return await ba(e.fetch, `${e.url}/object/${r}`, { headers: e.headers }), {
+      return await $a(e.fetch, `${e.url}/object/${r}`, { headers: e.headers }), {
         data: !0,
         error: null
       };
     } catch (s) {
       if (e.shouldThrowOnError) throw s;
-      if (or(s)) {
+      if (dr(s)) {
         var n;
-        const i = s instanceof Br ? s.status : s instanceof oi ? (n = s.originalError) === null || n === void 0 ? void 0 : n.status : void 0;
+        const i = s instanceof zr ? s.status : s instanceof mi ? (n = s.originalError) === null || n === void 0 ? void 0 : n.status : void 0;
         if (i !== void 0 && [400, 404].includes(i)) return {
           data: !1,
           error: s
@@ -8584,7 +8584,7 @@ var Ea = class extends Ye {
   */
   async remove(t) {
     var e = this;
-    return e.handleOperation(async () => await Ve(e.fetch, `${e.url}/object/${e.bucketId}`, { prefixes: t }, { headers: e.headers }));
+    return e.handleOperation(async () => await et(e.fetch, `${e.url}/object/${e.bucketId}`, { prefixes: t }, { headers: e.headers }));
   }
   /**
   * Purges the CDN cache for a single object in this bucket.
@@ -8630,10 +8630,10 @@ var Ea = class extends Ye {
   async purgeCache(t, e, r) {
     var n = this;
     return n.handleOperation(async () => {
-      const s = Mr(n._getFinalPath(t)), i = new URLSearchParams();
+      const s = Kr(n._getFinalPath(t)), i = new URLSearchParams();
       e != null && e.transformations && i.set("transformations", "true");
       const o = i.toString();
-      return await Ve(n.fetch, `${n.url}/cdn/${s}${o ? `?${o}` : ""}`, {}, { headers: n.headers }, r);
+      return await et(n.fetch, `${n.url}/cdn/${s}${o ? `?${o}` : ""}`, {}, { headers: n.headers }, r);
     });
   }
   /**
@@ -8730,7 +8730,7 @@ var Ea = class extends Ye {
   async list(t, e, r) {
     var n = this;
     return n.handleOperation(async () => {
-      const s = e != null && e.sortBy ? A(A({}, hr.sortBy), e.sortBy) : hr.sortBy, i = A(A(A({}, hr), e), {}, {
+      const s = e != null && e.sortBy ? x(x({}, _r.sortBy), e.sortBy) : _r.sortBy, i = x(x(x({}, _r), e), {}, {
         sortBy: s,
         prefix: t || ""
       });
@@ -8787,7 +8787,7 @@ var Ea = class extends Ye {
   async listV2(t, e) {
     var r = this;
     return r.handleOperation(async () => {
-      const n = A({}, t);
+      const n = x({}, t);
       return await te(r.fetch, `${r.url}/object/list-v2/${r.bucketId}`, n, { headers: r.headers }, e);
     });
   }
@@ -8816,12 +8816,12 @@ var Ea = class extends Ye {
     return e.width && t.set("width", e.width.toString()), e.height && t.set("height", e.height.toString()), e.resize && t.set("resize", e.resize), e.format && t.set("format", e.format), e.quality && t.set("quality", e.quality.toString()), t;
   }
 };
-const Aa = "2.118.0", wt = { "X-Client-Info": `storage-js/${Aa}` };
-var xa = class extends Ye {
+const Ba = "2.118.0", At = { "X-Client-Info": `storage-js/${Ba}` };
+var qa = class extends nt {
   constructor(t, e = {}, r, n) {
     const s = new URL(t);
     n != null && n.useNewHostname && /supabase\.(co|in|red)$/.test(s.hostname) && !s.hostname.includes("storage.supabase.") && (s.hostname = s.hostname.replace("supabase.", "storage.supabase."));
-    const i = s.href.replace(/\/$/, ""), o = A(A({}, wt), e);
+    const i = s.href.replace(/\/$/, ""), o = x(x({}, At), e);
     super(i, o, r, "storage");
   }
   /**
@@ -8867,7 +8867,7 @@ var xa = class extends Ye {
     var e = this;
     return e.handleOperation(async () => {
       const r = e.listBucketOptionsToQueryString(t);
-      return await Ke(e.fetch, `${e.url}/bucket${r}`, { headers: e.headers });
+      return await Ze(e.fetch, `${e.url}/bucket${r}`, { headers: e.headers });
     });
   }
   /**
@@ -8912,7 +8912,7 @@ var xa = class extends Ye {
   */
   async getBucket(t) {
     var e = this;
-    return e.handleOperation(async () => await Ke(e.fetch, `${e.url}/bucket/${t}`, { headers: e.headers }));
+    return e.handleOperation(async () => await Ze(e.fetch, `${e.url}/bucket/${t}`, { headers: e.headers }));
   }
   /**
   * Creates a new Storage bucket
@@ -9018,7 +9018,7 @@ var xa = class extends Ye {
   */
   async updateBucket(t, e) {
     var r = this;
-    return r.handleOperation(async () => await Ft(r.fetch, `${r.url}/bucket/${t}`, {
+    return r.handleOperation(async () => await Vt(r.fetch, `${r.url}/bucket/${t}`, {
       id: t,
       name: t,
       public: e.public,
@@ -9096,7 +9096,7 @@ var xa = class extends Ye {
   */
   async deleteBucket(t) {
     var e = this;
-    return e.handleOperation(async () => await Ve(e.fetch, `${e.url}/bucket/${t}`, {}, { headers: e.headers }));
+    return e.handleOperation(async () => await et(e.fetch, `${e.url}/bucket/${t}`, {}, { headers: e.headers }));
   }
   /**
   * Returns the lifecycle policy stored on a bucket.
@@ -9148,7 +9148,7 @@ var xa = class extends Ye {
   */
   async getBucketLifecycle(t) {
     var e = this;
-    return e.handleOperation(async () => await Ke(e.fetch, e.bucketLifecycleUrl(t), { headers: e.headers }));
+    return e.handleOperation(async () => await Ze(e.fetch, e.bucketLifecycleUrl(t), { headers: e.headers }));
   }
   /**
   * Replaces the lifecycle policy on a bucket.
@@ -9198,7 +9198,7 @@ var xa = class extends Ye {
   */
   async updateBucketLifecycle(t, e) {
     var r = this;
-    return r.handleOperation(async () => await Ft(r.fetch, r.bucketLifecycleUrl(t), e, { headers: r.headers }));
+    return r.handleOperation(async () => await Vt(r.fetch, r.bucketLifecycleUrl(t), e, { headers: r.headers }));
   }
   /**
   * Removes the lifecycle policy from a bucket.
@@ -9237,7 +9237,7 @@ var xa = class extends Ye {
   */
   async deleteBucketLifecycle(t) {
     var e = this;
-    return e.handleOperation(async () => await Ve(e.fetch, e.bucketLifecycleUrl(t), {}, { headers: e.headers }));
+    return e.handleOperation(async () => await et(e.fetch, e.bucketLifecycleUrl(t), {}, { headers: e.headers }));
   }
   /**
   * Purges the CDN cache for an entire bucket.
@@ -9281,17 +9281,17 @@ var xa = class extends Ye {
       const s = new URLSearchParams();
       e != null && e.transformations && s.set("transformations", "true");
       const i = s.toString();
-      return await Ve(n.fetch, `${n.url}/cdn/${Mr(t)}${i ? `?${i}` : ""}`, {}, { headers: n.headers }, r);
+      return await et(n.fetch, `${n.url}/cdn/${Kr(t)}${i ? `?${i}` : ""}`, {}, { headers: n.headers }, r);
     });
   }
   bucketLifecycleUrl(t) {
-    return `${this.url}/bucket/${Mr(t)}/lifecycle`;
+    return `${this.url}/bucket/${Kr(t)}/lifecycle`;
   }
   listBucketOptionsToQueryString(t) {
     const e = {};
     return t && ("limit" in t && (e.limit = String(t.limit)), "offset" in t && (e.offset = String(t.offset)), t.search && (e.search = t.search), t.sortColumn && (e.sortColumn = t.sortColumn), t.sortOrder && (e.sortOrder = t.sortOrder)), Object.keys(e).length > 0 ? "?" + new URLSearchParams(e).toString() : "";
   }
-}, Ta = class extends Ye {
+}, Ma = class extends nt {
   /**
   * @alpha
   *
@@ -9321,7 +9321,7 @@ var xa = class extends Ye {
   * ```
   */
   constructor(t, e = {}, r) {
-    const n = t.replace(/\/$/, ""), s = A(A({}, wt), e);
+    const n = t.replace(/\/$/, ""), s = x(x({}, At), e);
     super(n, s, r, "storage");
   }
   /**
@@ -9424,7 +9424,7 @@ var xa = class extends Ye {
       const r = new URLSearchParams();
       (t == null ? void 0 : t.limit) !== void 0 && r.set("limit", t.limit.toString()), (t == null ? void 0 : t.offset) !== void 0 && r.set("offset", t.offset.toString()), t != null && t.sortColumn && r.set("sortColumn", t.sortColumn), t != null && t.sortOrder && r.set("sortOrder", t.sortOrder), t != null && t.search && r.set("search", t.search);
       const n = r.toString(), s = n ? `${e.url}/bucket?${n}` : `${e.url}/bucket`;
-      return await Ke(e.fetch, s, { headers: e.headers });
+      return await Ze(e.fetch, s, { headers: e.headers });
     });
   }
   /**
@@ -9464,7 +9464,7 @@ var xa = class extends Ye {
   */
   async deleteBucket(t) {
     var e = this;
-    return e.handleOperation(async () => await Ve(e.fetch, `${e.url}/bucket/${t}`, {}, { headers: e.headers }));
+    return e.handleOperation(async () => await et(e.fetch, `${e.url}/bucket/${t}`, {}, { headers: e.headers }));
   }
   /**
   * @alpha
@@ -9592,8 +9592,8 @@ var xa = class extends Ye {
   */
   from(t) {
     var e = this;
-    if (!ya(t)) throw new ir("Invalid bucket name: File, folder, and bucket names must follow AWS object key naming guidelines and should avoid the use of any other characters.");
-    const r = new ua({
+    if (!Ia(t)) throw new ur("Invalid bucket name: File, folder, and bucket names must follow AWS object key naming guidelines and should avoid the use of any other characters.");
+    const r = new Ea({
       baseUrl: this.url,
       catalogName: t,
       auth: {
@@ -9620,10 +9620,10 @@ var xa = class extends Ye {
       };
     } });
   }
-}, Ra = class extends Ye {
+}, Fa = class extends nt {
   /** Creates a new VectorIndexApi instance */
   constructor(t, e = {}, r) {
-    const n = t.replace(/\/$/, ""), s = A(A({}, wt), {}, { "Content-Type": "application/json" }, e);
+    const n = t.replace(/\/$/, ""), s = x(x({}, At), {}, { "Content-Type": "application/json" }, e);
     super(n, s, r, "vectors");
   }
   /** Creates a new vector index within a bucket */
@@ -9652,10 +9652,10 @@ var xa = class extends Ye {
       indexName: e
     }, { headers: r.headers }) || {});
   }
-}, Oa = class extends Ye {
+}, Ha = class extends nt {
   /** Creates a new VectorDataApi instance */
   constructor(t, e = {}, r) {
-    const n = t.replace(/\/$/, ""), s = A(A({}, wt), {}, { "Content-Type": "application/json" }, e);
+    const n = t.replace(/\/$/, ""), s = x(x({}, At), {}, { "Content-Type": "application/json" }, e);
     super(n, s, r, "vectors");
   }
   /** Inserts or updates vectors in batch (1-500 per request) */
@@ -9690,10 +9690,10 @@ var xa = class extends Ye {
     if (t.keys.length < 1 || t.keys.length > 500) throw new Error("Keys batch size must be between 1 and 500 items");
     return e.handleOperation(async () => await G.post(e.fetch, `${e.url}/DeleteVectors`, t, { headers: e.headers }) || {});
   }
-}, Ca = class extends Ye {
+}, za = class extends nt {
   /** Creates a new VectorBucketApi instance */
   constructor(t, e = {}, r) {
-    const n = t.replace(/\/$/, ""), s = A(A({}, wt), {}, { "Content-Type": "application/json" }, e);
+    const n = t.replace(/\/$/, ""), s = x(x({}, At), {}, { "Content-Type": "application/json" }, e);
     super(n, s, r, "vectors");
   }
   /** Creates a new vector bucket */
@@ -9716,7 +9716,7 @@ var xa = class extends Ye {
     var e = this;
     return e.handleOperation(async () => await G.post(e.fetch, `${e.url}/DeleteVectorBucket`, { vectorBucketName: t }, { headers: e.headers }) || {});
   }
-}, Ia = class extends Ca {
+}, Wa = class extends za {
   /**
   * @alpha
   *
@@ -9768,7 +9768,7 @@ var xa = class extends Ye {
   * ```
   */
   from(t) {
-    return new ja(this.url, this.headers, t, this.fetch);
+    return new Ka(this.url, this.headers, t, this.fetch);
   }
   /**
   *
@@ -9878,7 +9878,7 @@ var xa = class extends Ye {
     var e = () => super.deleteBucket, r = this;
     return e().call(r, t);
   }
-}, ja = class extends Ra {
+}, Ka = class extends Fa {
   /**
   * @alpha
   *
@@ -9926,7 +9926,7 @@ var xa = class extends Ye {
   */
   async createIndex(t) {
     var e = () => super.createIndex, r = this;
-    return e().call(r, A(A({}, t), {}, { vectorBucketName: r.vectorBucketName }));
+    return e().call(r, x(x({}, t), {}, { vectorBucketName: r.vectorBucketName }));
   }
   /**
   *
@@ -9950,7 +9950,7 @@ var xa = class extends Ye {
   */
   async listIndexes(t = {}) {
     var e = () => super.listIndexes, r = this;
-    return e().call(r, A(A({}, t), {}, { vectorBucketName: r.vectorBucketName }));
+    return e().call(r, x(x({}, t), {}, { vectorBucketName: r.vectorBucketName }));
   }
   /**
   *
@@ -10034,9 +10034,9 @@ var xa = class extends Ye {
   * ```
   */
   index(t) {
-    return new Pa(this.url, this.headers, this.vectorBucketName, t, this.fetch);
+    return new Va(this.url, this.headers, this.vectorBucketName, t, this.fetch);
   }
-}, Pa = class extends Oa {
+}, Va = class extends Ha {
   /**
   *
   * @alpha
@@ -10085,7 +10085,7 @@ var xa = class extends Ye {
   */
   async putVectors(t) {
     var e = () => super.putVectors, r = this;
-    return e().call(r, A(A({}, t), {}, {
+    return e().call(r, x(x({}, t), {}, {
       vectorBucketName: r.vectorBucketName,
       indexName: r.indexName
     }));
@@ -10115,7 +10115,7 @@ var xa = class extends Ye {
   */
   async getVectors(t) {
     var e = () => super.getVectors, r = this;
-    return e().call(r, A(A({}, t), {}, {
+    return e().call(r, x(x({}, t), {}, {
       vectorBucketName: r.vectorBucketName,
       indexName: r.indexName
     }));
@@ -10145,7 +10145,7 @@ var xa = class extends Ye {
   */
   async listVectors(t = {}) {
     var e = () => super.listVectors, r = this;
-    return e().call(r, A(A({}, t), {}, {
+    return e().call(r, x(x({}, t), {}, {
       vectorBucketName: r.vectorBucketName,
       indexName: r.indexName
     }));
@@ -10178,7 +10178,7 @@ var xa = class extends Ye {
   */
   async queryVectors(t) {
     var e = () => super.queryVectors, r = this;
-    return e().call(r, A(A({}, t), {}, {
+    return e().call(r, x(x({}, t), {}, {
       vectorBucketName: r.vectorBucketName,
       indexName: r.indexName
     }));
@@ -10207,12 +10207,12 @@ var xa = class extends Ye {
   */
   async deleteVectors(t) {
     var e = () => super.deleteVectors, r = this;
-    return e().call(r, A(A({}, t), {}, {
+    return e().call(r, x(x({}, t), {}, {
       vectorBucketName: r.vectorBucketName,
       indexName: r.indexName
     }));
   }
-}, Na = class extends xa {
+}, Ja = class extends qa {
   /**
   * Creates a client for Storage buckets, files, analytics, and vectors.
   *
@@ -10254,7 +10254,7 @@ var xa = class extends Ye {
   * ```
   */
   from(t) {
-    return new Ea(this.url, this.headers, t, this.fetch);
+    return new Ua(this.url, this.headers, t, this.fetch);
   }
   /**
   *
@@ -10270,7 +10270,7 @@ var xa = class extends Ye {
   * @returns A StorageVectorsClient instance configured with the current storage settings.
   */
   get vectors() {
-    return new Ia(this.url + "/vector", {
+    return new Wa(this.url + "/vector", {
       headers: this.headers,
       fetch: this.fetch
     });
@@ -10289,16 +10289,16 @@ var xa = class extends Ye {
   * @returns A StorageAnalyticsClient instance configured with the current storage settings.
   */
   get analytics() {
-    return new Ta(this.url + "/iceberg", this.headers, this.fetch);
+    return new Ma(this.url + "/iceberg", this.headers, this.fetch);
   }
 };
-const ui = "2.118.0", pe = 30 * 1e3, st = 3, fr = st * pe, La = 2 * pe, $a = "http://localhost:9999", Da = "supabase.auth.token", Ua = { "X-Client-Info": `gotrue-js/${ui}` }, Fr = "X-Supabase-Api-Version", di = {
+const vi = "2.118.0", ye = 30 * 1e3, dt = 3, wr = dt * ye, Ga = 2 * ye, Ya = "http://localhost:9999", Xa = "supabase.auth.token", Qa = { "X-Client-Info": `gotrue-js/${vi}` }, Vr = "X-Supabase-Api-Version", bi = {
   "2024-01-01": {
     timestamp: Date.parse("2024-01-01T00:00:00.0Z"),
     name: "2024-01-01"
   }
-}, Ba = /^([a-z0-9_-]{4})*($|[a-z0-9_-]{3}$|[a-z0-9_-]{2}$)$/i, Ce = "sb_flow_id", qa = 5, Ma = 600 * 1e3;
-class ht extends Error {
+}, Za = /^([a-z0-9_-]{4})*($|[a-z0-9_-]{3}$|[a-z0-9_-]{2}$)$/i, Le = "sb_flow_id", el = 5, tl = 600 * 1e3;
+class wt extends Error {
   constructor(e, r, n) {
     super(e), this.__isAuthError = !0, this.name = "AuthError", this.status = r, this.code = n;
   }
@@ -10314,43 +10314,43 @@ class ht extends Error {
 function b(t) {
   return typeof t == "object" && t !== null && "__isAuthError" in t;
 }
-class Fa extends ht {
+class rl extends wt {
   constructor(e, r, n) {
     super(e, r, n), this.name = "AuthApiError", this.status = r, this.code = n;
   }
 }
-function qn(t) {
+function Jn(t) {
   return b(t) && t.name === "AuthApiError";
 }
-class re extends ht {
+class ne extends wt {
   constructor(e, r) {
     super(e), this.name = "AuthUnknownError", this.originalError = r;
   }
 }
-class ae extends ht {
+class ue extends wt {
   constructor(e, r, n, s) {
     super(e, n, s), this.name = r, this.status = n;
   }
 }
-class F extends ae {
+class F extends ue {
   constructor() {
     super("Auth session missing!", "AuthSessionMissingError", 400, void 0);
   }
 }
-function xt(t) {
+function It(t) {
   return b(t) && t.name === "AuthSessionMissingError";
 }
-class Be extends ae {
+class We extends ue {
   constructor() {
     super("Auth session or user missing", "AuthInvalidTokenResponseError", 500, void 0);
   }
 }
-class Tt extends ae {
+class jt extends ue {
   constructor(e) {
     super(e, "AuthInvalidCredentialsError", 400, void 0);
   }
 }
-class Rt extends ae {
+class Pt extends ue {
   constructor(e, r = null) {
     super(e, "AuthImplicitGrantRedirectError", 500, void 0), this.details = null, this.details = r;
   }
@@ -10358,10 +10358,10 @@ class Rt extends ae {
     return Object.assign(Object.assign({}, super.toJSON()), { details: this.details });
   }
 }
-function Ha(t) {
+function nl(t) {
   return b(t) && t.name === "AuthImplicitGrantRedirectError";
 }
-class Mn extends ae {
+class Gn extends ue {
   constructor(e, r = null) {
     super(e, "AuthPKCEGrantCodeExchangeError", 500, void 0), this.details = null, this.details = r;
   }
@@ -10369,28 +10369,28 @@ class Mn extends ae {
     return Object.assign(Object.assign({}, super.toJSON()), { details: this.details });
   }
 }
-class za extends ae {
+class sl extends ue {
   constructor() {
     super("PKCE code verifier not found in storage. This can happen if the auth flow was initiated in a different browser or device, or if the storage was cleared. For SSR frameworks (Next.js, SvelteKit, etc.), use @supabase/ssr on both the server and client to store the code verifier in cookies.", "AuthPKCECodeVerifierMissingError", 400, "pkce_code_verifier_not_found");
   }
 }
-class $t extends ae {
+class Mt extends ue {
   constructor(e, r) {
     super(e, "AuthRetryableFetchError", r, void 0);
   }
 }
-function Ot(t) {
+function Nt(t) {
   return b(t) && t.name === "AuthRetryableFetchError";
 }
-class Fn extends ae {
+class Yn extends ue {
   constructor(e = "Refresh result discarded: session state changed mid-flight (e.g., concurrent signOut)") {
     super(e, "AuthRefreshDiscardedError", 409, void 0);
   }
 }
-function Hn(t) {
+function Xn(t) {
   return b(t) && t.name === "AuthRefreshDiscardedError";
 }
-class zn extends ae {
+class Qn extends ue {
   constructor(e, r, n) {
     super(e, "AuthWeakPasswordError", r, "weak_password"), this.reasons = n;
   }
@@ -10398,36 +10398,36 @@ class zn extends ae {
     return Object.assign(Object.assign({}, super.toJSON()), { reasons: this.reasons });
   }
 }
-class Ht extends ae {
+class Jt extends ue {
   constructor(e) {
     super(e, "AuthInvalidJwtError", 400, "invalid_jwt");
   }
 }
-const zt = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split(""), Wn = ` 	
-\r=`.split(""), Wa = (() => {
+const Gt = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split(""), Zn = ` 	
+\r=`.split(""), il = (() => {
   const t = new Array(128);
   for (let e = 0; e < t.length; e += 1)
     t[e] = -1;
-  for (let e = 0; e < Wn.length; e += 1)
-    t[Wn[e].charCodeAt(0)] = -2;
-  for (let e = 0; e < zt.length; e += 1)
-    t[zt[e].charCodeAt(0)] = e;
+  for (let e = 0; e < Zn.length; e += 1)
+    t[Zn[e].charCodeAt(0)] = -2;
+  for (let e = 0; e < Gt.length; e += 1)
+    t[Gt[e].charCodeAt(0)] = e;
   return t;
 })();
-function Kn(t, e, r) {
+function es(t, e, r) {
   if (t !== null)
     for (e.queue = e.queue << 8 | t, e.queuedBits += 8; e.queuedBits >= 6; ) {
       const n = e.queue >> e.queuedBits - 6 & 63;
-      r(zt[n]), e.queuedBits -= 6;
+      r(Gt[n]), e.queuedBits -= 6;
     }
   else if (e.queuedBits > 0)
     for (e.queue = e.queue << 6 - e.queuedBits, e.queuedBits = 6; e.queuedBits >= 6; ) {
       const n = e.queue >> e.queuedBits - 6 & 63;
-      r(zt[n]), e.queuedBits -= 6;
+      r(Gt[n]), e.queuedBits -= 6;
     }
 }
-function hi(t, e, r) {
-  const n = Wa[t];
+function ki(t, e, r) {
+  const n = il[t];
   if (n > -1)
     for (e.queue = e.queue << 6 | n, e.queuedBits += 6; e.queuedBits >= 8; )
       r(e.queue >> e.queuedBits - 8 & 255), e.queuedBits -= 8;
@@ -10437,20 +10437,20 @@ function hi(t, e, r) {
     throw new Error(`Invalid Base64-URL character "${String.fromCharCode(t)}"`);
   }
 }
-function Vn(t) {
+function ts(t) {
   const e = [], r = (o) => {
     e.push(String.fromCodePoint(o));
   }, n = {
     utf8seq: 0,
     codepoint: 0
   }, s = { queue: 0, queuedBits: 0 }, i = (o) => {
-    Ja(o, n, r);
+    ll(o, n, r);
   };
   for (let o = 0; o < t.length; o += 1)
-    hi(t.charCodeAt(o), s, i);
+    ki(t.charCodeAt(o), s, i);
   return e.join("");
 }
-function Ka(t, e) {
+function ol(t, e) {
   if (t <= 127) {
     e(t);
     return;
@@ -10466,17 +10466,17 @@ function Ka(t, e) {
   }
   throw new Error(`Unrecognized Unicode codepoint: ${t.toString(16)}`);
 }
-function Va(t, e) {
+function al(t, e) {
   for (let r = 0; r < t.length; r += 1) {
     let n = t.charCodeAt(r);
     if (n > 55295 && n <= 56319) {
       const s = (n - 55296) * 1024 & 65535;
       n = (t.charCodeAt(r + 1) - 56320 & 65535 | s) + 65536, r += 1;
     }
-    Ka(n, e);
+    ol(n, e);
   }
 }
-function Ja(t, e, r) {
+function ll(t, e, r) {
   if (e.utf8seq === 0) {
     if (t <= 127) {
       r(t);
@@ -10502,34 +10502,34 @@ function Ja(t, e, r) {
     e.codepoint = e.codepoint << 6 | t & 63, e.utf8seq -= 1, e.utf8seq === 0 && r(e.codepoint);
   }
 }
-function Je(t) {
+function tt(t) {
   const e = [], r = { queue: 0, queuedBits: 0 }, n = (s) => {
     e.push(s);
   };
   for (let s = 0; s < t.length; s += 1)
-    hi(t.charCodeAt(s), r, n);
+    ki(t.charCodeAt(s), r, n);
   return new Uint8Array(e);
 }
-function Ga(t) {
+function cl(t) {
   const e = [];
-  return Va(t, (r) => e.push(r)), new Uint8Array(e);
+  return al(t, (r) => e.push(r)), new Uint8Array(e);
 }
-function Ie(t) {
+function De(t) {
   const e = [], r = { queue: 0, queuedBits: 0 }, n = (s) => {
     e.push(s);
   };
-  return t.forEach((s) => Kn(s, r, n)), Kn(null, r, n), e.join("");
+  return t.forEach((s) => es(s, r, n)), es(null, r, n), e.join("");
 }
-function fi(t) {
+function Si(t) {
   return Math.round(Date.now() / 1e3) + t;
 }
-function Ya() {
+function ul() {
   return Symbol("auth-callback");
 }
-const H = () => typeof window < "u" && typeof document < "u", Ee = {
+const H = () => typeof window < "u" && typeof document < "u", Ce = {
   tested: !1,
   writable: !1
-}, pi = () => {
+}, Ei = () => {
   if (!H())
     return !1;
   try {
@@ -10538,17 +10538,17 @@ const H = () => typeof window < "u" && typeof document < "u", Ee = {
   } catch {
     return !1;
   }
-  if (Ee.tested)
-    return Ee.writable;
+  if (Ce.tested)
+    return Ce.writable;
   const t = `lswt-${Math.random()}${Math.random()}`;
   try {
-    globalThis.localStorage.setItem(t, t), globalThis.localStorage.removeItem(t), Ee.tested = !0, Ee.writable = !0;
+    globalThis.localStorage.setItem(t, t), globalThis.localStorage.removeItem(t), Ce.tested = !0, Ce.writable = !0;
   } catch {
-    Ee.tested = !0, Ee.writable = !1;
+    Ce.tested = !0, Ce.writable = !1;
   }
-  return Ee.writable;
+  return Ce.writable;
 };
-function Jn(t) {
+function rs(t) {
   const e = {}, r = new URL(t);
   if (r.hash && r.hash[0] === "#")
     try {
@@ -10561,7 +10561,7 @@ function Jn(t) {
     e[s] = n;
   }), e;
 }
-const gi = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), Xa = (t) => typeof t == "object" && t !== null && "status" in t && "ok" in t && "json" in t && typeof t.json == "function", ge = async (t, e, r) => {
+const xi = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), dl = (t) => typeof t == "object" && t !== null && "status" in t && "ok" in t && "json" in t && typeof t.json == "function", _e = async (t, e, r) => {
   await t.setItem(e, JSON.stringify(r));
 }, z = async (t, e) => {
   const r = await t.getItem(e);
@@ -10575,38 +10575,38 @@ const gi = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), Xa = (t) => typ
 }, K = async (t, e) => {
   await t.removeItem(e);
 };
-class ar {
+class hr {
   constructor() {
-    this.promise = new ar.promiseConstructor((e, r) => {
+    this.promise = new hr.promiseConstructor((e, r) => {
       this.resolve = e, this.reject = r;
     });
   }
 }
-ar.promiseConstructor = Promise;
-function Ct(t) {
+hr.promiseConstructor = Promise;
+function $t(t) {
   const e = t.split(".");
   if (e.length !== 3)
-    throw new Ht("Invalid JWT structure");
+    throw new Jt("Invalid JWT structure");
   for (let n = 0; n < e.length; n++)
-    if (!Ba.test(e[n]))
-      throw new Ht("JWT not in base64url format");
+    if (!Za.test(e[n]))
+      throw new Jt("JWT not in base64url format");
   return {
     // using base64url lib
-    header: JSON.parse(Vn(e[0])),
-    payload: JSON.parse(Vn(e[1])),
-    signature: Je(e[2]),
+    header: JSON.parse(ts(e[0])),
+    payload: JSON.parse(ts(e[1])),
+    signature: tt(e[2]),
     raw: {
       header: e[0],
       payload: e[1]
     }
   };
 }
-async function Qa(t) {
+async function hl(t) {
   return await new Promise((e) => {
     setTimeout(() => e(null), t);
   });
 }
-function Za(t, e) {
+function fl(t, e) {
   return new Promise((n, s) => {
     (async () => {
       for (let i = 0; i < 1 / 0; i++)
@@ -10625,10 +10625,10 @@ function Za(t, e) {
     })();
   });
 }
-function mi(t) {
+function Ai(t) {
   return ("0" + t.toString(16)).substr(-2);
 }
-function el() {
+function pl() {
   const e = new Uint32Array(56);
   if (typeof crypto > "u") {
     const r = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~", n = r.length;
@@ -10637,49 +10637,49 @@ function el() {
       s += r.charAt(Math.floor(Math.random() * n));
     return s;
   }
-  return crypto.getRandomValues(e), Array.from(e, mi).join("");
+  return crypto.getRandomValues(e), Array.from(e, Ai).join("");
 }
-async function tl(t) {
+async function gl(t) {
   const r = new TextEncoder().encode(t), n = await crypto.subtle.digest("SHA-256", r), s = new Uint8Array(n);
   return Array.from(s).map((i) => String.fromCharCode(i)).join("");
 }
-async function rl(t) {
+async function ml(t) {
   if (!(typeof crypto < "u" && typeof crypto.subtle < "u" && typeof TextEncoder < "u"))
     return console.warn("WebCrypto API is not supported. Code challenge method will default to use plain instead of sha256."), t;
-  const r = await tl(t);
+  const r = await gl(t);
   return btoa(r).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-const nl = /^[a-zA-Z0-9_-]{8,64}$/;
-function Dt(t) {
-  return typeof t == "string" && nl.test(t) ? t : null;
+const yl = /^[a-zA-Z0-9_-]{8,64}$/;
+function Ft(t) {
+  return typeof t == "string" && yl.test(t) ? t : null;
 }
-function sl() {
+function _l() {
   if (typeof crypto < "u" && typeof crypto.getRandomValues == "function") {
     const e = new Uint8Array(16);
-    return crypto.getRandomValues(e), Array.from(e, mi).join("");
+    return crypto.getRandomValues(e), Array.from(e, Ai).join("");
   }
   let t = "";
   for (let e = 0; e < 32; e++)
     t += Math.floor(Math.random() * 16).toString(16);
   return t;
 }
-const Ge = (t, e) => `${t}-flow-${e}-code-verifier`, ft = (t) => `${t}-flows-code-verifier`;
-async function un(t, e) {
-  const r = await z(t, ft(e));
-  return Array.isArray(r) ? r.filter((n) => Dt(n) !== null) : [];
+const rt = (t, e) => `${t}-flow-${e}-code-verifier`, vt = (t) => `${t}-flows-code-verifier`;
+async function yn(t, e) {
+  const r = await z(t, vt(e));
+  return Array.isArray(r) ? r.filter((n) => Ft(n) !== null) : [];
 }
-async function il(t, e, r, n, s) {
-  await ge(t, Ge(e, r), n);
-  const i = (await un(t, e)).filter((o) => o !== r);
-  for (i.push(r); i.length > qa; ) {
+async function wl(t, e, r, n, s) {
+  await _e(t, rt(e, r), n);
+  const i = (await yn(t, e)).filter((o) => o !== r);
+  for (i.push(r); i.length > el; ) {
     const o = i.shift();
-    await K(t, Ge(e, o)), s == null || s(o);
+    await K(t, rt(e, o)), s == null || s(o);
   }
-  await ge(t, ft(e), i), await ge(t, `${e}-code-verifier`, n);
+  await _e(t, vt(e), i), await _e(t, `${e}-code-verifier`, n);
 }
-async function ol(t, e, r) {
+async function vl(t, e, r) {
   if (r) {
-    const s = await z(t, Ge(e, r));
+    const s = await z(t, rt(e, r));
     return { verifier: typeof s == "string" ? s : null, flowId: r };
   }
   const n = await z(t, `${e}-code-verifier`);
@@ -10691,41 +10691,41 @@ async function ee(t, e, r) {
     await K(t, n);
     return;
   }
-  const s = Ge(e, r), i = await z(t, s);
+  const s = rt(e, r), i = await z(t, s);
   await K(t, s);
-  const o = await un(t, e), a = o.filter((l) => l !== r);
-  a.length !== o.length && (a.length > 0 ? await ge(t, ft(e), a) : await K(t, ft(e))), i != null && i === await z(t, n) && await K(t, n);
+  const o = await yn(t, e), a = o.filter((l) => l !== r);
+  a.length !== o.length && (a.length > 0 ? await _e(t, vt(e), a) : await K(t, vt(e))), i != null && i === await z(t, n) && await K(t, n);
 }
-async function al(t, e) {
-  const r = await un(t, e);
+async function bl(t, e) {
+  const r = await yn(t, e);
   for (const n of r)
-    await K(t, Ge(e, n));
-  await K(t, ft(e)), await K(t, `${e}-code-verifier`);
+    await K(t, rt(e, n));
+  await K(t, vt(e)), await K(t, `${e}-code-verifier`);
 }
-function ll(t, e) {
+function kl(t, e) {
   const r = t.indexOf("#");
   let n = r === -1 ? t : t.slice(0, r);
   const s = r === -1 ? "" : t.slice(r), i = n.indexOf("?");
   if (i !== -1) {
-    const a = n.slice(0, i), l = n.slice(i + 1).split("&").filter((c) => c !== "" && c !== Ce && !c.startsWith(`${Ce}=`));
+    const a = n.slice(0, i), l = n.slice(i + 1).split("&").filter((c) => c !== "" && c !== Le && !c.startsWith(`${Le}=`));
     n = l.length > 0 ? `${a}?${l.join("&")}` : a;
   }
   const o = n.includes("?") ? "&" : "?";
-  return `${n}${o}${Ce}=${encodeURIComponent(e)}${s}`;
+  return `${n}${o}${Le}=${encodeURIComponent(e)}${s}`;
 }
-async function cl(t, e, r = !1, n) {
-  const s = el();
+async function Sl(t, e, r = !1, n) {
+  const s = pl();
   let i = s;
   r && (i += "/recovery");
-  const o = sl();
-  await il(t, e, o, i, n);
-  const a = await rl(s);
+  const o = _l();
+  await wl(t, e, o, i, n);
+  const a = await ml(s);
   return [a, s === a ? "plain" : "s256", o];
 }
-const ul = /^2[0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9]|3[0-1])$/i;
-function dl(t) {
-  const e = t.headers.get(Fr);
-  if (!e || !e.match(ul))
+const El = /^2[0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9]|3[0-1])$/i;
+function xl(t) {
+  const e = t.headers.get(Vr);
+  if (!e || !e.match(El))
     return null;
   try {
     return /* @__PURE__ */ new Date(`${e}T00:00:00.0Z`);
@@ -10733,14 +10733,14 @@ function dl(t) {
     return null;
   }
 }
-function hl(t) {
+function Al(t) {
   if (!t)
     throw new Error("Missing exp claim");
   const e = Math.floor(Date.now() / 1e3);
   if (t <= e)
     throw new Error("JWT has expired");
 }
-function fl(t) {
+function Tl(t) {
   switch (t) {
     case "RS256":
       return {
@@ -10757,16 +10757,16 @@ function fl(t) {
       throw new Error("Invalid alg claim");
   }
 }
-const pl = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function ue(t) {
-  if (!pl.test(t))
+const Rl = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function fe(t) {
+  if (!Rl.test(t))
     throw new Error("@supabase/auth-js: Expected parameter to be UUID but is not");
 }
-function et(t) {
+function lt(t) {
   if (!t.recoveryCodes)
     throw new Error("@supabase/auth-js: the MFA recovery codes API is experimental and disabled by default. Enable it by passing `auth: { experimental: { recoveryCodes: true } }` to createClient (or to the GoTrueClient constructor).");
 }
-function pr() {
+function vr() {
   const t = {};
   return new Proxy(t, {
     get: (e, r) => {
@@ -10787,7 +10787,7 @@ function pr() {
     }
   });
 }
-function gl(t, e) {
+function Ol(t, e) {
   return new Proxy(t, {
     get: (r, n, s) => {
       if (n === "__isInsecureUserWarningProxy")
@@ -10801,10 +10801,10 @@ function gl(t, e) {
     }
   });
 }
-function Gn(t) {
+function ns(t) {
   return JSON.parse(JSON.stringify(t));
 }
-const Te = (t) => {
+const je = (t) => {
   if (typeof t == "object" && t !== null) {
     const e = t;
     if (typeof e.msg == "string")
@@ -10817,7 +10817,7 @@ const Te = (t) => {
       return e.error;
   }
   return JSON.stringify(t);
-}, Yn = [
+}, ss = [
   500,
   501,
   502,
@@ -10835,81 +10835,81 @@ const Te = (t) => {
   529,
   530
 ];
-async function Xn(t) {
+async function is(t) {
   var e;
-  if (!Xa(t))
-    throw new $t(Te(t), 0);
+  if (!dl(t))
+    throw new Mt(je(t), 0);
   let r;
   try {
     r = await t.json();
   } catch (i) {
-    throw Yn.includes(t.status) ? new $t(t.statusText || `HTTP ${t.status}`, t.status) : new re(Te(i), i);
+    throw ss.includes(t.status) ? new Mt(t.statusText || `HTTP ${t.status}`, t.status) : new ne(je(i), i);
   }
-  if (Yn.includes(t.status))
-    throw new $t(Te(r), t.status);
+  if (ss.includes(t.status))
+    throw new Mt(je(r), t.status);
   let n;
-  const s = dl(t);
-  if (s && s.getTime() >= di["2024-01-01"].timestamp && typeof r == "object" && r && typeof r.code == "string" ? n = r.code : typeof r == "object" && r && typeof r.error_code == "string" && (n = r.error_code), n) {
+  const s = xl(t);
+  if (s && s.getTime() >= bi["2024-01-01"].timestamp && typeof r == "object" && r && typeof r.code == "string" ? n = r.code : typeof r == "object" && r && typeof r.error_code == "string" && (n = r.error_code), n) {
     if (n === "weak_password")
-      throw new zn(Te(r), t.status, ((e = r.weak_password) === null || e === void 0 ? void 0 : e.reasons) || []);
+      throw new Qn(je(r), t.status, ((e = r.weak_password) === null || e === void 0 ? void 0 : e.reasons) || []);
     if (n === "session_not_found")
       throw new F();
   } else if (typeof r == "object" && r && typeof r.weak_password == "object" && r.weak_password && Array.isArray(r.weak_password.reasons) && r.weak_password.reasons.length && r.weak_password.reasons.reduce((i, o) => i && typeof o == "string", !0))
-    throw new zn(Te(r), t.status, r.weak_password.reasons);
-  throw new Fa(Te(r), t.status || 500, n);
+    throw new Qn(je(r), t.status, r.weak_password.reasons);
+  throw new rl(je(r), t.status || 500, n);
 }
-const ml = (t, e, r, n) => {
+const Cl = (t, e, r, n) => {
   const s = { method: t, headers: (e == null ? void 0 : e.headers) || {} };
   return t === "GET" ? s : (s.headers = Object.assign({ "Content-Type": "application/json;charset=UTF-8" }, e == null ? void 0 : e.headers), s.body = JSON.stringify(n), Object.assign(Object.assign({}, s), r));
 };
 async function k(t, e, r, n) {
   var s;
   const i = Object.assign({}, n == null ? void 0 : n.headers);
-  i[Fr] || (i[Fr] = di["2024-01-01"].name), n != null && n.jwt && (i.Authorization = `Bearer ${n.jwt}`);
+  i[Vr] || (i[Vr] = bi["2024-01-01"].name), n != null && n.jwt && (i.Authorization = `Bearer ${n.jwt}`);
   const o = (s = n == null ? void 0 : n.query) !== null && s !== void 0 ? s : {};
   n != null && n.redirectTo && (o.redirect_to = n.redirectTo);
-  const a = Object.keys(o).length ? "?" + new URLSearchParams(o).toString() : "", l = await yl(t, e, r + a, {
+  const a = Object.keys(o).length ? "?" + new URLSearchParams(o).toString() : "", l = await Il(t, e, r + a, {
     headers: i,
     noResolveJson: n == null ? void 0 : n.noResolveJson
   }, {}, n == null ? void 0 : n.body);
   return n != null && n.xform ? n == null ? void 0 : n.xform(l) : { data: Object.assign({}, l), error: null };
 }
-async function yl(t, e, r, n, s, i) {
-  const o = ml(e, n, s, i);
+async function Il(t, e, r, n, s, i) {
+  const o = Cl(e, n, s, i);
   let a;
   try {
     a = await t(r, Object.assign({}, o));
   } catch (l) {
-    throw new $t(Te(l), 0);
+    throw new Mt(je(l), 0);
   }
-  if (a.ok || await Xn(a), n != null && n.noResolveJson)
+  if (a.ok || await is(a), n != null && n.noResolveJson)
     return a;
   try {
     return await a.json();
   } catch (l) {
-    await Xn(l);
+    await is(l);
   }
 }
 function Q(t) {
   var e;
   let r = null;
-  wl(t) && (r = Object.assign({}, t), t.expires_at || (r.expires_at = fi(t.expires_in)));
+  Nl(t) && (r = Object.assign({}, t), t.expires_at || (r.expires_at = Si(t.expires_in)));
   const n = (e = t.user) !== null && e !== void 0 ? e : typeof (t == null ? void 0 : t.id) == "string" ? t : null;
   return { data: { session: r, user: n }, error: null };
 }
-function Qn(t) {
+function os(t) {
   const e = Q(t);
   return !e.error && t.weak_password && typeof t.weak_password == "object" && Array.isArray(t.weak_password.reasons) && t.weak_password.reasons.length && t.weak_password.message && typeof t.weak_password.message == "string" && t.weak_password.reasons.reduce((r, n) => r && typeof n == "string", !0) && (e.data.weak_password = t.weak_password), e;
 }
-function we(t) {
+function xe(t) {
   var e;
   return { data: { user: (e = t.user) !== null && e !== void 0 ? e : t }, error: null };
 }
-function _l(t) {
+function jl(t) {
   return { data: t, error: null };
 }
-function vl(t) {
-  const { action_link: e, email_otp: r, hashed_token: n, redirect_to: s, verification_type: i } = t, o = sr(t, ["action_link", "email_otp", "hashed_token", "redirect_to", "verification_type"]), a = {
+function Pl(t) {
+  const { action_link: e, email_otp: r, hashed_token: n, redirect_to: s, verification_type: i } = t, o = cr(t, ["action_link", "email_otp", "hashed_token", "redirect_to", "verification_type"]), a = {
     action_link: e,
     email_otp: r,
     hashed_token: n,
@@ -10924,14 +10924,14 @@ function vl(t) {
     error: null
   };
 }
-function Zn(t) {
+function as(t) {
   return t;
 }
-function wl(t) {
+function Nl(t) {
   return !!t.access_token && !!t.refresh_token && !!t.expires_in;
 }
-const gr = ["global", "local", "others"];
-class bl {
+const br = ["global", "local", "others"];
+class $l {
   /**
    * Creates an admin API client that can be used to manage users and OAuth clients.
    *
@@ -10954,7 +10954,7 @@ class bl {
    * ```
    */
   constructor({ url: e = "", headers: r = {}, fetch: n, experimental: s }) {
-    this.url = e, this.headers = r, this.fetch = gi(n), this.experimental = s ?? {}, this.mfa = {
+    this.url = e, this.headers = r, this.fetch = xi(n), this.experimental = s ?? {}, this.mfa = {
       listFactors: this._listFactors.bind(this),
       deleteFactor: this._deleteFactor.bind(this)
     }, this.oauth = {
@@ -10983,9 +10983,9 @@ class bl {
    * @category Auth
    * @subcategory Auth Admin
    */
-  async signOut(e, r = gr[0]) {
-    if (gr.indexOf(r) < 0)
-      throw new Error(`@supabase/auth-js: Parameter scope must be one of ${gr.join(", ")}`);
+  async signOut(e, r = br[0]) {
+    if (br.indexOf(r) < 0)
+      throw new Error(`@supabase/auth-js: Parameter scope must be one of ${br.join(", ")}`);
     try {
       return await k(this.fetch, "POST", `${this.url}/logout?scope=${r}`, {
         headers: this.headers,
@@ -11068,7 +11068,7 @@ class bl {
         body: { email: e, data: r.data },
         headers: this.headers,
         redirectTo: r.redirectTo,
-        xform: we
+        xform: xe
       });
     } catch (n) {
       if (b(n))
@@ -11192,11 +11192,11 @@ class bl {
    */
   async generateLink(e) {
     try {
-      const { options: r } = e, n = sr(e, ["options"]), s = Object.assign(Object.assign({}, n), r);
+      const { options: r } = e, n = cr(e, ["options"]), s = Object.assign(Object.assign({}, n), r);
       return "newEmail" in n && (s.new_email = n == null ? void 0 : n.newEmail, delete s.newEmail), await k(this.fetch, "POST", `${this.url}/admin/generate_link`, {
         body: s,
         headers: this.headers,
-        xform: vl,
+        xform: Pl,
         redirectTo: r == null ? void 0 : r.redirectTo
       });
     } catch (r) {
@@ -11297,7 +11297,7 @@ class bl {
       return await k(this.fetch, "POST", `${this.url}/admin/users`, {
         body: e,
         headers: this.headers,
-        xform: we
+        xform: xe
       });
     } catch (r) {
       if (b(r))
@@ -11340,7 +11340,7 @@ class bl {
           page: (n = (r = e == null ? void 0 : e.page) === null || r === void 0 ? void 0 : r.toString()) !== null && n !== void 0 ? n : "",
           per_page: (i = (s = e == null ? void 0 : e.perPage) === null || s === void 0 ? void 0 : s.toString()) !== null && i !== void 0 ? i : ""
         },
-        xform: Zn
+        xform: as
       });
       if (u.error)
         throw u.error;
@@ -11418,11 +11418,11 @@ class bl {
    * ```
    */
   async getUserById(e) {
-    ue(e);
+    fe(e);
     try {
       return await k(this.fetch, "GET", `${this.url}/admin/users/${e}`, {
         headers: this.headers,
-        xform: we
+        xform: xe
       });
     } catch (r) {
       if (b(r))
@@ -11575,12 +11575,12 @@ class bl {
    * ```
    */
   async updateUserById(e, r) {
-    ue(e);
+    fe(e);
     try {
       return await k(this.fetch, "PUT", `${this.url}/admin/users/${e}`, {
         body: r,
         headers: this.headers,
-        xform: we
+        xform: xe
       });
     } catch (n) {
       if (b(n))
@@ -11621,14 +11621,14 @@ class bl {
    * ```
    */
   async deleteUser(e, r = !1) {
-    ue(e);
+    fe(e);
     try {
       return await k(this.fetch, "DELETE", `${this.url}/admin/users/${e}`, {
         headers: this.headers,
         body: {
           should_soft_delete: r
         },
-        xform: we
+        xform: xe
       });
     } catch (n) {
       if (b(n))
@@ -11637,7 +11637,7 @@ class bl {
     }
   }
   async _listFactors(e) {
-    ue(e.userId);
+    fe(e.userId);
     try {
       const { data: r, error: n } = await k(this.fetch, "GET", `${this.url}/admin/users/${e.userId}/factors`, {
         headers: this.headers,
@@ -11651,7 +11651,7 @@ class bl {
     }
   }
   async _deleteFactor(e) {
-    ue(e.userId), ue(e.id);
+    fe(e.userId), fe(e.id);
     try {
       return { data: await k(this.fetch, "DELETE", `${this.url}/admin/users/${e.userId}/factors/${e.id}`, {
         headers: this.headers
@@ -11678,7 +11678,7 @@ class bl {
           page: (n = (r = e == null ? void 0 : e.page) === null || r === void 0 ? void 0 : r.toString()) !== null && n !== void 0 ? n : "",
           per_page: (i = (s = e == null ? void 0 : e.perPage) === null || s === void 0 ? void 0 : s.toString()) !== null && i !== void 0 ? i : ""
         },
-        xform: Zn
+        xform: as
       });
       if (u.error)
         throw u.error;
@@ -11894,7 +11894,7 @@ class bl {
    * This function should only be called on a server. Never expose your secret key in the browser.
    */
   async _adminListPasskeys(e) {
-    ue(e.userId);
+    fe(e.userId);
     try {
       return await k(this.fetch, "GET", `${this.url}/admin/users/${e.userId}/passkeys`, { headers: this.headers, xform: (r) => ({ data: r, error: null }) });
     } catch (r) {
@@ -11909,7 +11909,7 @@ class bl {
    * This function should only be called on a server. Never expose your secret key in the browser.
    */
   async _adminDeletePasskey(e) {
-    ue(e.userId), ue(e.passkeyId);
+    fe(e.userId), fe(e.passkeyId);
     try {
       return await k(this.fetch, "DELETE", `${this.url}/admin/users/${e.userId}/passkeys/${e.passkeyId}`, { headers: this.headers, noResolveJson: !0 }), { data: null, error: null };
     } catch (r) {
@@ -11919,7 +11919,7 @@ class bl {
     }
   }
 }
-function es(t = {}) {
+function ls(t = {}) {
   return {
     getItem: (e) => t[e] || null,
     setItem: (e, r) => {
@@ -11930,13 +11930,13 @@ function es(t = {}) {
     }
   };
 }
-globalThis && pi() && globalThis.localStorage && globalThis.localStorage.getItem("supabase.gotrue-js.locks.debug");
-class kl extends Error {
+globalThis && Ei() && globalThis.localStorage && globalThis.localStorage.getItem("supabase.gotrue-js.locks.debug");
+class Ll extends Error {
   constructor(e) {
     super(e), this.isAcquireTimeout = !0;
   }
 }
-function Sl() {
+function Dl() {
   if (typeof globalThis != "object")
     try {
       Object.defineProperty(Object.prototype, "__magic__", {
@@ -11949,19 +11949,19 @@ function Sl() {
       typeof self < "u" && (self.globalThis = self);
     }
 }
-function yi(t) {
+function Ti(t) {
   if (!/^0x[a-fA-F0-9]{40}$/.test(t))
     throw new Error(`@supabase/auth-js: Address "${t}" is invalid.`);
   return t.toLowerCase();
 }
-function El(t) {
+function Ul(t) {
   return parseInt(t, 16);
 }
-function Al(t) {
+function Bl(t) {
   const e = new TextEncoder().encode(t);
   return "0x" + Array.from(e, (n) => n.toString(16).padStart(2, "0")).join("");
 }
-function xl(t) {
+function ql(t) {
   var e;
   const { chainId: r, domain: n, expirationTime: s, issuedAt: i = /* @__PURE__ */ new Date(), nonce: o, notBefore: a, requestId: l, resources: c, scheme: u, uri: d, version: p } = t;
   {
@@ -11979,7 +11979,7 @@ function xl(t) {
 `))
       throw new Error(`@supabase/auth-js: Invalid SIWE message field "statement". Statement must not include '\\n'. Provided value: ${t.statement}`);
   }
-  const h = yi(t.address), f = u ? `${u}://${n}` : n, g = t.statement ? `${t.statement}
+  const h = Ti(t.address), f = u ? `${u}://${n}` : n, g = t.statement ? `${t.statement}
 ` : "", m = `${f} wants you to sign in with your Ethereum account:
 ${h}
 
@@ -11995,18 +11995,18 @@ Not Before: ${a.toISOString()}`), l && (y += `
 Request ID: ${l}`), c) {
     let _ = `
 Resources:`;
-    for (const v of c) {
-      if (!v || typeof v != "string")
-        throw new Error(`@supabase/auth-js: Invalid SIWE message field "resources". Every resource must be a valid string. Provided value: ${v}`);
+    for (const w of c) {
+      if (!w || typeof w != "string")
+        throw new Error(`@supabase/auth-js: Invalid SIWE message field "resources". Every resource must be a valid string. Provided value: ${w}`);
       _ += `
-- ${v}`;
+- ${w}`;
     }
     y += _;
   }
   return `${m}
 ${y}`;
 }
-class B extends Error {
+class q extends Error {
   constructor({ message: e, code: r, cause: n, name: s }) {
     var i;
     super(e, { cause: n }), this.__isWebAuthnError = !0, this.name = (i = s ?? (n instanceof Error ? n.name : void 0)) !== null && i !== void 0 ? i : "Unknown Error", this.code = r;
@@ -12019,7 +12019,7 @@ class B extends Error {
     };
   }
 }
-class Wt extends B {
+class Yt extends q {
   constructor(e, r) {
     super({
       code: "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",
@@ -12028,21 +12028,21 @@ class Wt extends B {
     }), this.name = "WebAuthnUnknownError", this.originalError = r;
   }
 }
-function Tl({ error: t, options: e }) {
+function Ml({ error: t, options: e }) {
   var r, n, s;
   const { publicKey: i } = e;
   if (!i)
     throw Error("options was missing required publicKey property");
   if (t.name === "AbortError") {
     if (e.signal instanceof AbortSignal)
-      return new B({
+      return new q({
         message: "Registration ceremony was sent an abort signal",
         code: "ERROR_CEREMONY_ABORTED",
         cause: t
       });
   } else if (t.name === "ConstraintError") {
     if (((r = i.authenticatorSelection) === null || r === void 0 ? void 0 : r.requireResidentKey) === !0)
-      return new B({
+      return new q({
         message: "Discoverable credentials were required but no available authenticator supported it",
         code: "ERROR_AUTHENTICATOR_MISSING_DISCOVERABLE_CREDENTIAL_SUPPORT",
         cause: t
@@ -12051,120 +12051,120 @@ function Tl({ error: t, options: e }) {
       // @ts-ignore: `mediation` doesn't yet exist on CredentialCreationOptions but it's possible as of Sept 2024
       e.mediation === "conditional" && ((n = i.authenticatorSelection) === null || n === void 0 ? void 0 : n.userVerification) === "required"
     )
-      return new B({
+      return new q({
         message: "User verification was required during automatic registration but it could not be performed",
         code: "ERROR_AUTO_REGISTER_USER_VERIFICATION_FAILURE",
         cause: t
       });
     if (((s = i.authenticatorSelection) === null || s === void 0 ? void 0 : s.userVerification) === "required")
-      return new B({
+      return new q({
         message: "User verification was required but no available authenticator supported it",
         code: "ERROR_AUTHENTICATOR_MISSING_USER_VERIFICATION_SUPPORT",
         cause: t
       });
   } else {
     if (t.name === "InvalidStateError")
-      return new B({
+      return new q({
         message: "The authenticator was previously registered",
         code: "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED",
         cause: t
       });
     if (t.name === "NotAllowedError")
-      return new B({
+      return new q({
         message: t.message,
         code: "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",
         cause: t
       });
     if (t.name === "NotSupportedError")
-      return i.pubKeyCredParams.filter((a) => a.type === "public-key").length === 0 ? new B({
+      return i.pubKeyCredParams.filter((a) => a.type === "public-key").length === 0 ? new q({
         message: 'No entry in pubKeyCredParams was of type "public-key"',
         code: "ERROR_MALFORMED_PUBKEYCREDPARAMS",
         cause: t
-      }) : new B({
+      }) : new q({
         message: "No available authenticator supported any of the specified pubKeyCredParams algorithms",
         code: "ERROR_AUTHENTICATOR_NO_SUPPORTED_PUBKEYCREDPARAMS_ALG",
         cause: t
       });
     if (t.name === "SecurityError") {
       const o = window.location.hostname;
-      if (_i(o)) {
+      if (Ri(o)) {
         if (i.rp.id !== o)
-          return new B({
+          return new q({
             message: `The RP ID "${i.rp.id}" is invalid for this domain`,
             code: "ERROR_INVALID_RP_ID",
             cause: t
           });
-      } else return new B({
+      } else return new q({
         message: `${window.location.hostname} is an invalid domain`,
         code: "ERROR_INVALID_DOMAIN",
         cause: t
       });
     } else if (t.name === "TypeError") {
       if (i.user.id.byteLength < 1 || i.user.id.byteLength > 64)
-        return new B({
+        return new q({
           message: "User ID was not between 1 and 64 characters",
           code: "ERROR_INVALID_USER_ID_LENGTH",
           cause: t
         });
     } else if (t.name === "UnknownError")
-      return new B({
+      return new q({
         message: "The authenticator was unable to process the specified options, or could not create a new credential",
         code: "ERROR_AUTHENTICATOR_GENERAL_ERROR",
         cause: t
       });
   }
-  return new B({
+  return new q({
     message: "a Non-Webauthn related error has occurred",
     code: "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",
     cause: t
   });
 }
-function Rl({ error: t, options: e }) {
+function Fl({ error: t, options: e }) {
   const { publicKey: r } = e;
   if (!r)
     throw Error("options was missing required publicKey property");
   if (t.name === "AbortError") {
     if (e.signal instanceof AbortSignal)
-      return new B({
+      return new q({
         message: "Authentication ceremony was sent an abort signal",
         code: "ERROR_CEREMONY_ABORTED",
         cause: t
       });
   } else {
     if (t.name === "NotAllowedError")
-      return new B({
+      return new q({
         message: t.message,
         code: "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",
         cause: t
       });
     if (t.name === "SecurityError") {
       const n = window.location.hostname;
-      if (_i(n)) {
+      if (Ri(n)) {
         if (r.rpId !== n)
-          return new B({
+          return new q({
             message: `The RP ID "${r.rpId}" is invalid for this domain`,
             code: "ERROR_INVALID_RP_ID",
             cause: t
           });
-      } else return new B({
+      } else return new q({
         message: `${window.location.hostname} is an invalid domain`,
         code: "ERROR_INVALID_DOMAIN",
         cause: t
       });
     } else if (t.name === "UnknownError")
-      return new B({
+      return new q({
         message: "The authenticator was unable to process the specified options, or could not create a new assertion signature",
         code: "ERROR_AUTHENTICATOR_GENERAL_ERROR",
         cause: t
       });
   }
-  return new B({
+  return new q({
     message: "a Non-Webauthn related error has occurred",
     code: "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",
     cause: t
   });
 }
-class Ol {
+class Hl {
   /**
    * Create an abort signal for a new WebAuthn operation.
    * Automatically cancels any existing operation.
@@ -12193,8 +12193,8 @@ class Ol {
     }
   }
 }
-const Hr = new Ol();
-function ts(t) {
+const Jr = new Hl();
+function cs(t) {
   if (!t)
     throw new Error("Credential creation options are required");
   if (typeof PublicKeyCredential < "u" && "parseCreationOptionsFromJSON" in PublicKeyCredential && typeof PublicKeyCredential.parseCreationOptionsFromJSON == "function")
@@ -12202,10 +12202,10 @@ function ts(t) {
       /** we assert the options here as typescript still doesn't know about future webauthn types */
       t
     );
-  const { challenge: e, user: r, excludeCredentials: n } = t, s = sr(
+  const { challenge: e, user: r, excludeCredentials: n } = t, s = cr(
     t,
     ["challenge", "user", "excludeCredentials"]
-  ), i = Je(e).buffer, o = Object.assign(Object.assign({}, r), { id: Je(r.id).buffer }), a = Object.assign(Object.assign({}, s), {
+  ), i = tt(e).buffer, o = Object.assign(Object.assign({}, r), { id: tt(r.id).buffer }), a = Object.assign(Object.assign({}, s), {
     challenge: i,
     user: o
   });
@@ -12214,7 +12214,7 @@ function ts(t) {
     for (let l = 0; l < n.length; l++) {
       const c = n[l];
       a.excludeCredentials[l] = Object.assign(Object.assign({}, c), {
-        id: Je(c.id).buffer,
+        id: tt(c.id).buffer,
         type: c.type || "public-key",
         // Cast transports to handle future transport types like "cable"
         transports: c.transports
@@ -12223,21 +12223,21 @@ function ts(t) {
   }
   return a;
 }
-function rs(t) {
+function us(t) {
   if (!t)
     throw new Error("Credential request options are required");
   if (typeof PublicKeyCredential < "u" && "parseRequestOptionsFromJSON" in PublicKeyCredential && typeof PublicKeyCredential.parseRequestOptionsFromJSON == "function")
     return PublicKeyCredential.parseRequestOptionsFromJSON(t);
-  const { challenge: e, allowCredentials: r } = t, n = sr(
+  const { challenge: e, allowCredentials: r } = t, n = cr(
     t,
     ["challenge", "allowCredentials"]
-  ), s = Je(e).buffer, i = Object.assign(Object.assign({}, n), { challenge: s });
+  ), s = tt(e).buffer, i = Object.assign(Object.assign({}, n), { challenge: s });
   if (r && r.length > 0) {
     i.allowCredentials = new Array(r.length);
     for (let o = 0; o < r.length; o++) {
       const a = r[o];
       i.allowCredentials[o] = Object.assign(Object.assign({}, a), {
-        id: Je(a.id).buffer,
+        id: tt(a.id).buffer,
         type: a.type || "public-key",
         // Cast transports to handle future transport types like "cable"
         transports: a.transports
@@ -12246,7 +12246,7 @@ function rs(t) {
   }
   return i;
 }
-function ns(t) {
+function ds(t) {
   var e;
   if ("toJSON" in t && typeof t.toJSON == "function")
     return t.toJSON();
@@ -12255,8 +12255,8 @@ function ns(t) {
     id: t.id,
     rawId: t.id,
     response: {
-      attestationObject: Ie(new Uint8Array(t.response.attestationObject)),
-      clientDataJSON: Ie(new Uint8Array(t.response.clientDataJSON))
+      attestationObject: De(new Uint8Array(t.response.attestationObject)),
+      clientDataJSON: De(new Uint8Array(t.response.clientDataJSON))
     },
     type: "public-key",
     clientExtensionResults: t.getClientExtensionResults(),
@@ -12264,7 +12264,7 @@ function ns(t) {
     authenticatorAttachment: (e = r.authenticatorAttachment) !== null && e !== void 0 ? e : void 0
   };
 }
-function ss(t) {
+function hs(t) {
   var e;
   if ("toJSON" in t && typeof t.toJSON == "function")
     return t.toJSON();
@@ -12274,10 +12274,10 @@ function ss(t) {
     rawId: t.id,
     // W3C spec expects rawId to match id for JSON format
     response: {
-      authenticatorData: Ie(new Uint8Array(s.authenticatorData)),
-      clientDataJSON: Ie(new Uint8Array(s.clientDataJSON)),
-      signature: Ie(new Uint8Array(s.signature)),
-      userHandle: s.userHandle ? Ie(new Uint8Array(s.userHandle)) : void 0
+      authenticatorData: De(new Uint8Array(s.authenticatorData)),
+      clientDataJSON: De(new Uint8Array(s.clientDataJSON)),
+      signature: De(new Uint8Array(s.signature)),
+      userHandle: s.userHandle ? De(new Uint8Array(s.userHandle)) : void 0
     },
     type: "public-key",
     clientExtensionResults: n,
@@ -12285,17 +12285,17 @@ function ss(t) {
     authenticatorAttachment: (e = r.authenticatorAttachment) !== null && e !== void 0 ? e : void 0
   };
 }
-function _i(t) {
+function Ri(t) {
   return (
     // Consider localhost valid as well since it's okay wrt Secure Contexts
     t === "localhost" || /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i.test(t)
   );
 }
-function Kt() {
+function Xt() {
   var t, e;
   return !!(H() && "PublicKeyCredential" in window && window.PublicKeyCredential && "credentials" in navigator && typeof ((t = navigator == null ? void 0 : navigator.credentials) === null || t === void 0 ? void 0 : t.create) == "function" && typeof ((e = navigator == null ? void 0 : navigator.credentials) === null || e === void 0 ? void 0 : e.get) == "function");
 }
-async function vi(t) {
+async function Oi(t) {
   try {
     const e = await navigator.credentials.create(
       /** we assert the type here until typescript types are updated */
@@ -12303,22 +12303,22 @@ async function vi(t) {
     );
     return e ? e instanceof PublicKeyCredential ? { data: e, error: null } : {
       data: null,
-      error: new Wt("Browser returned unexpected credential type", e)
+      error: new Yt("Browser returned unexpected credential type", e)
     } : {
       data: null,
-      error: new Wt("Empty credential response", e)
+      error: new Yt("Empty credential response", e)
     };
   } catch (e) {
     return {
       data: null,
-      error: Tl({
+      error: Ml({
         error: e,
         options: t
       })
     };
   }
 }
-async function wi(t) {
+async function Ci(t) {
   try {
     const e = await navigator.credentials.get(
       /** we assert the type here until typescript types are updated */
@@ -12326,22 +12326,22 @@ async function wi(t) {
     );
     return e ? e instanceof PublicKeyCredential ? { data: e, error: null } : {
       data: null,
-      error: new Wt("Browser returned unexpected credential type", e)
+      error: new Yt("Browser returned unexpected credential type", e)
     } : {
       data: null,
-      error: new Wt("Empty credential response", e)
+      error: new Yt("Empty credential response", e)
     };
   } catch (e) {
     return {
       data: null,
-      error: Rl({
+      error: Fl({
         error: e,
         options: t
       })
     };
   }
 }
-const Cl = {
+const zl = {
   hints: ["security-key"],
   authenticatorSelection: {
     authenticatorAttachment: "cross-platform",
@@ -12351,13 +12351,13 @@ const Cl = {
     residentKey: "discouraged"
   },
   attestation: "direct"
-}, Il = {
+}, Wl = {
   /** set to preferred because older yubikeys don't have PIN/Biometric */
   userVerification: "preferred",
   hints: ["security-key"],
   attestation: "direct"
 };
-function Vt(...t) {
+function Qt(...t) {
   const e = (s) => s !== null && typeof s == "object" && !Array.isArray(s), r = (s) => s instanceof ArrayBuffer || ArrayBuffer.isView(s), n = {};
   for (const s of t)
     if (s)
@@ -12370,19 +12370,19 @@ function Vt(...t) {
             n[i] = o;
           else if (e(o)) {
             const a = n[i];
-            e(a) ? n[i] = Vt(a, o) : n[i] = Vt(o);
+            e(a) ? n[i] = Qt(a, o) : n[i] = Qt(o);
           } else
             n[i] = o;
       }
   return n;
 }
-function jl(t, e) {
-  return Vt(Cl, t, e || {});
+function Kl(t, e) {
+  return Qt(zl, t, e || {});
 }
-function Pl(t, e) {
-  return Vt(Il, t, e || {});
+function Vl(t, e) {
+  return Qt(Wl, t, e || {});
 }
-class Nl {
+class Jl {
   constructor(e) {
     this.client = e, this.enroll = this._enroll.bind(this), this.challenge = this._challenge.bind(this), this.verify = this._verify.bind(this), this.authenticate = this._authenticate.bind(this), this.register = this._register.bind(this);
   }
@@ -12421,7 +12421,7 @@ class Nl {
       });
       if (!a)
         return { data: null, error: l };
-      const c = s ?? Hr.createNewAbortSignal();
+      const c = s ?? Jr.createNewAbortSignal();
       if (a.webauthn.type === "create") {
         const { user: u } = a.webauthn.credential_options.publicKey;
         if (!u.name) {
@@ -12437,7 +12437,7 @@ class Nl {
       }
       switch (a.webauthn.type) {
         case "create": {
-          const u = jl(a.webauthn.credential_options.publicKey, i == null ? void 0 : i.create), { data: d, error: p } = await vi({
+          const u = Kl(a.webauthn.credential_options.publicKey, i == null ? void 0 : i.create), { data: d, error: p } = await Oi({
             publicKey: u,
             signal: c
           });
@@ -12454,7 +12454,7 @@ class Nl {
           } : { data: null, error: p };
         }
         case "request": {
-          const u = Pl(a.webauthn.credential_options.publicKey, i == null ? void 0 : i.request), { data: d, error: p } = await wi(Object.assign(Object.assign({}, a.webauthn.credential_options), { publicKey: u, signal: c }));
+          const u = Vl(a.webauthn.credential_options.publicKey, i == null ? void 0 : i.request), { data: d, error: p } = await Ci(Object.assign(Object.assign({}, a.webauthn.credential_options), { publicKey: u, signal: c }));
           return d ? {
             data: {
               factorId: e,
@@ -12471,7 +12471,7 @@ class Nl {
     } catch (a) {
       return b(a) ? { data: null, error: a } : {
         data: null,
-        error: new re("Unexpected error in challenge", a)
+        error: new ne("Unexpected error in challenge", a)
       };
     }
   }
@@ -12514,13 +12514,13 @@ class Nl {
     if (!r)
       return {
         data: null,
-        error: new ht("rpId is required for WebAuthn authentication")
+        error: new wt("rpId is required for WebAuthn authentication")
       };
     try {
-      if (!Kt())
+      if (!Xt())
         return {
           data: null,
-          error: new re("Browser does not support WebAuthn", null)
+          error: new ne("Browser does not support WebAuthn", null)
         };
       const { data: o, error: a } = await this.challenge({
         factorId: e,
@@ -12543,7 +12543,7 @@ class Nl {
     } catch (o) {
       return b(o) ? { data: null, error: o } : {
         data: null,
-        error: new re("Unexpected error in authenticate", o)
+        error: new ne("Unexpected error in authenticate", o)
       };
     }
   }
@@ -12566,13 +12566,13 @@ class Nl {
     if (!r)
       return {
         data: null,
-        error: new ht("rpId is required for WebAuthn registration")
+        error: new wt("rpId is required for WebAuthn registration")
       };
     try {
-      if (!Kt())
+      if (!Xt())
         return {
           data: null,
-          error: new re("Browser does not support WebAuthn", null)
+          error: new ne("Browser does not support WebAuthn", null)
         };
       const { data: o, error: a } = await this._enroll({
         friendlyName: e
@@ -12603,19 +12603,19 @@ class Nl {
     } catch (o) {
       return b(o) ? { data: null, error: o } : {
         data: null,
-        error: new re("Unexpected error in register", o)
+        error: new ne("Unexpected error in register", o)
       };
     }
   }
 }
-Sl();
-const Ll = {
-  url: $a,
-  storageKey: Da,
+Dl();
+const Gl = {
+  url: Ya,
+  storageKey: Xa,
   autoRefreshToken: !0,
   persistSession: !0,
   detectSessionInUrl: !0,
-  headers: Ua,
+  headers: Qa,
   flowType: "implicit",
   debug: !1,
   hasCustomAuthorizationHeader: !1,
@@ -12624,25 +12624,25 @@ const Ll = {
   // 5 seconds. Only used when a custom `lock` is supplied. TODO(v3): remove.
   skipAutoInitialize: !1,
   experimental: {}
-}, qe = {};
-let is = !1;
-class pt {
+}, Ke = {};
+let fs = !1;
+class bt {
   /**
    * The JWKS used for verifying asymmetric JWTs
    */
   get jwks() {
     var e, r;
-    return (r = (e = qe[this.storageKey]) === null || e === void 0 ? void 0 : e.jwks) !== null && r !== void 0 ? r : { keys: [] };
+    return (r = (e = Ke[this.storageKey]) === null || e === void 0 ? void 0 : e.jwks) !== null && r !== void 0 ? r : { keys: [] };
   }
   set jwks(e) {
-    qe[this.storageKey] = Object.assign(Object.assign({}, qe[this.storageKey]), { jwks: e });
+    Ke[this.storageKey] = Object.assign(Object.assign({}, Ke[this.storageKey]), { jwks: e });
   }
   get jwks_cached_at() {
     var e, r;
-    return (r = (e = qe[this.storageKey]) === null || e === void 0 ? void 0 : e.cachedAt) !== null && r !== void 0 ? r : Number.MIN_SAFE_INTEGER;
+    return (r = (e = Ke[this.storageKey]) === null || e === void 0 ? void 0 : e.cachedAt) !== null && r !== void 0 ? r : Number.MIN_SAFE_INTEGER;
   }
   set jwks_cached_at(e) {
-    qe[this.storageKey] = Object.assign(Object.assign({}, qe[this.storageKey]), { cachedAt: e });
+    Ke[this.storageKey] = Object.assign(Object.assign({}, Ke[this.storageKey]), { cachedAt: e });
   }
   /**
    * Create a new client for use in the browser.
@@ -12669,17 +12669,17 @@ class pt {
   constructor(e) {
     var r, n, s;
     this.userStorage = null, this.memoryStorage = null, this.stateChangeEmitters = /* @__PURE__ */ new Map(), this.autoRefreshTicker = null, this.autoRefreshTickTimeout = null, this.visibilityChangedCallback = null, this.refreshingDeferred = null, this.lastRefreshFailure = null, this._sessionRemovalEpoch = 0, this.initializePromise = null, this._pendingInitNotifications = null, this.detectSessionInUrl = !0, this.hasCustomAuthorizationHeader = !1, this.suppressGetSessionWarning = !1, this.lock = null, this.lockAcquired = !1, this.pendingInLock = [], this.broadcastChannel = null, this.logger = console.log;
-    const i = Object.assign(Object.assign({}, Ll), e);
-    if (this.storageKey = i.storageKey, this.instanceID = (r = pt.nextInstanceID[this.storageKey]) !== null && r !== void 0 ? r : 0, pt.nextInstanceID[this.storageKey] = this.instanceID + 1, this.logDebugMessages = !!i.debug, typeof i.debug == "function" && (this.logger = i.debug), this.instanceID > 0 && H()) {
+    const i = Object.assign(Object.assign({}, Gl), e);
+    if (this.storageKey = i.storageKey, this.instanceID = (r = bt.nextInstanceID[this.storageKey]) !== null && r !== void 0 ? r : 0, bt.nextInstanceID[this.storageKey] = this.instanceID + 1, this.logDebugMessages = !!i.debug, typeof i.debug == "function" && (this.logger = i.debug), this.instanceID > 0 && H()) {
       const o = `${this._logPrefix()} Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.`;
       console.warn(o), this.logDebugMessages && console.trace(o);
     }
-    if (this.persistSession = i.persistSession, this.autoRefreshToken = i.autoRefreshToken, this.experimental = (n = i.experimental) !== null && n !== void 0 ? n : {}, this.admin = new bl({
+    if (this.persistSession = i.persistSession, this.autoRefreshToken = i.autoRefreshToken, this.experimental = (n = i.experimental) !== null && n !== void 0 ? n : {}, this.admin = new $l({
       url: i.url,
       headers: i.headers,
       fetch: i.fetch,
       experimental: this.experimental
-    }), this.url = i.url, this.headers = i.headers, this.fetch = gi(i.fetch), this.detectSessionInUrl = i.detectSessionInUrl, this.flowType = i.flowType, this.hasCustomAuthorizationHeader = i.hasCustomAuthorizationHeader, this.throwOnError = i.throwOnError, this.lockAcquireTimeout = i.lockAcquireTimeout, i.lock != null && (this.lock = i.lock, is || (is = !0, console.warn(`${this._logPrefix()} The "lock" option is deprecated and will be removed in v3. The client now coordinates session refreshes without a lock, so most apps can drop the option. See https://github.com/supabase/supabase-js/blob/master/packages/core/auth-js/migrations/lockless-coordination.md`))), this.jwks || (this.jwks = { keys: [] }, this.jwks_cached_at = Number.MIN_SAFE_INTEGER), this.mfa = {
+    }), this.url = i.url, this.headers = i.headers, this.fetch = xi(i.fetch), this.detectSessionInUrl = i.detectSessionInUrl, this.flowType = i.flowType, this.hasCustomAuthorizationHeader = i.hasCustomAuthorizationHeader, this.throwOnError = i.throwOnError, this.lockAcquireTimeout = i.lockAcquireTimeout, i.lock != null && (this.lock = i.lock, fs || (fs = !0, console.warn(`${this._logPrefix()} The "lock" option is deprecated and will be removed in v3. The client now coordinates session refreshes without a lock, so most apps can drop the option. See https://github.com/supabase/supabase-js/blob/master/packages/core/auth-js/migrations/lockless-coordination.md`))), this.jwks || (this.jwks = { keys: [] }, this.jwks_cached_at = Number.MIN_SAFE_INTEGER), this.mfa = {
       verify: this._verify.bind(this),
       enroll: this._enroll.bind(this),
       unenroll: this._unenroll.bind(this),
@@ -12687,7 +12687,7 @@ class pt {
       listFactors: this._listFactors.bind(this),
       challengeAndVerify: this._challengeAndVerify.bind(this),
       getAuthenticatorAssuranceLevel: this._getAuthenticatorAssuranceLevel.bind(this),
-      webauthn: new Nl(this),
+      webauthn: new Jl(this),
       recoveryCodes: {
         getStatus: this._getRecoveryCodesStatus.bind(this),
         generate: this._generateRecoveryCodes.bind(this),
@@ -12709,7 +12709,7 @@ class pt {
       list: this._listPasskeys.bind(this),
       update: this._updatePasskey.bind(this),
       delete: this._deletePasskey.bind(this)
-    }, this.persistSession ? (i.storage ? this.storage = i.storage : pi() ? this.storage = globalThis.localStorage : (this.memoryStorage = {}, this.storage = es(this.memoryStorage)), i.userStorage && (this.userStorage = i.userStorage)) : (this.memoryStorage = {}, this.storage = es(this.memoryStorage)), H() && globalThis.BroadcastChannel && this.persistSession && this.storageKey) {
+    }, this.persistSession ? (i.storage ? this.storage = i.storage : Ei() ? this.storage = globalThis.localStorage : (this.memoryStorage = {}, this.storage = ls(this.memoryStorage)), i.userStorage && (this.userStorage = i.userStorage)) : (this.memoryStorage = {}, this.storage = ls(this.memoryStorage)), H() && globalThis.BroadcastChannel && this.persistSession && this.storageKey) {
       try {
         this.broadcastChannel = new globalThis.BroadcastChannel(this.storageKey);
       } catch (o) {
@@ -12745,7 +12745,7 @@ class pt {
     return e;
   }
   _logPrefix() {
-    return `GoTrueClient@${this.storageKey}:${this.instanceID} (${ui}) ${(/* @__PURE__ */ new Date()).toISOString()}`;
+    return `GoTrueClient@${this.storageKey}:${this.instanceID} (${vi}) ${(/* @__PURE__ */ new Date()).toISOString()}`;
   }
   _debug(...e) {
     return this.logDebugMessages && this.logger(this._logPrefix(), ...e), this;
@@ -12789,10 +12789,10 @@ class pt {
     var e;
     try {
       let r = {}, n = "none";
-      if (H() && (r = Jn(window.location.href), this._isImplicitGrantCallback(r) ? n = "implicit" : await this._isPKCECallback(r) && (n = "pkce")), H() && this.detectSessionInUrl && n !== "none") {
+      if (H() && (r = rs(window.location.href), this._isImplicitGrantCallback(r) ? n = "implicit" : await this._isPKCECallback(r) && (n = "pkce")), H() && this.detectSessionInUrl && n !== "none") {
         const { data: s, error: i } = await this._getSessionFromURL(r, n);
         if (i) {
-          if (this._debug("#_initialize()", "error detecting session from URL", i), Ha(i)) {
+          if (this._debug("#_initialize()", "error detecting session from URL", i), nl(i)) {
             const l = (e = i.details) === null || e === void 0 ? void 0 : e.code;
             if (l === "identity_already_exists" || l === "identity_not_found" || l === "single_identity_not_deletable")
               return { error: i };
@@ -12807,7 +12807,7 @@ class pt {
       return await this._recoverAndRefresh(), { error: null };
     } catch (r) {
       return b(r) ? this._returnResult({ error: r }) : this._returnResult({
-        error: new re("Unexpected error during initialization", r)
+        error: new ne("Unexpected error during initialization", r)
       });
     } finally {
       await this._handleVisibilityChange(), this._debug("#_initialize()", "end");
@@ -13119,7 +13119,7 @@ class pt {
           xform: Q
         });
       } else
-        throw new Tt("You must provide either an email or phone number and a password");
+        throw new jt("You must provide either an email or phone number and a password");
       const { data: a, error: l } = o;
       if (l || !a)
         return await ee(this.storage, this.storageKey, i), this._returnResult({ data: { user: null, session: null }, error: l });
@@ -13275,7 +13275,7 @@ class pt {
             password: o,
             gotrue_meta_security: { captcha_token: a == null ? void 0 : a.captchaToken }
           },
-          xform: Qn
+          xform: os
         });
       } else if ("phone" in e) {
         const { phone: i, password: o, options: a } = e;
@@ -13286,15 +13286,15 @@ class pt {
             password: o,
             gotrue_meta_security: { captcha_token: a == null ? void 0 : a.captchaToken }
           },
-          xform: Qn
+          xform: os
         });
       } else
-        throw new Tt("You must provide either an email or phone number and a password");
+        throw new jt("You must provide either an email or phone number and a password");
       const { data: n, error: s } = r;
       if (s)
         return this._returnResult({ data: { user: null, session: null }, error: s });
       if (!n || !n.session || !n.user) {
-        const i = new Be();
+        const i = new We();
         return this._returnResult({ data: { user: null, session: null }, error: i });
       }
       return n.session && (await this._saveSession(n.session), await this._notifyAllSubscribers("SIGNED_IN", n.session)), this._returnResult({
@@ -13692,40 +13692,40 @@ class pt {
       h = e.message, f = e.signature;
     else {
       const { chain: g, wallet: m, statement: y, options: _ } = e;
-      let v;
+      let w;
       if (H())
         if (typeof m == "object")
-          v = m;
+          w = m;
         else {
           const M = window;
           if ("ethereum" in M && typeof M.ethereum == "object" && "request" in M.ethereum && typeof M.ethereum.request == "function")
-            v = M.ethereum;
+            w = M.ethereum;
           else
             throw new Error("@supabase/auth-js: No compatible Ethereum wallet interface on the window object (window.ethereum) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'ethereum', wallet: resolvedUserWallet }) instead.");
         }
       else {
         if (typeof m != "object" || !(_ != null && _.url))
           throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
-        v = m;
+        w = m;
       }
-      const E = new URL((r = _ == null ? void 0 : _.url) !== null && r !== void 0 ? r : window.location.href), R = await v.request({
+      const E = new URL((r = _ == null ? void 0 : _.url) !== null && r !== void 0 ? r : window.location.href), R = await w.request({
         method: "eth_requestAccounts"
       }).then((M) => M).catch(() => {
         throw new Error("@supabase/auth-js: Wallet method eth_requestAccounts is missing or invalid");
       });
       if (!R || R.length === 0)
         throw new Error("@supabase/auth-js: No accounts available. Please ensure the wallet is connected.");
-      const x = yi(R[0]);
+      const A = Ti(R[0]);
       let I = (n = _ == null ? void 0 : _.signInWithEthereum) === null || n === void 0 ? void 0 : n.chainId;
       if (!I) {
-        const M = await v.request({
+        const M = await w.request({
           method: "eth_chainId"
         });
-        I = El(M);
+        I = Ul(M);
       }
       const j = {
         domain: E.host,
-        address: x,
+        address: A,
         statement: y,
         uri: E.href,
         version: "1",
@@ -13737,9 +13737,9 @@ class pt {
         requestId: (c = _ == null ? void 0 : _.signInWithEthereum) === null || c === void 0 ? void 0 : c.requestId,
         resources: (u = _ == null ? void 0 : _.signInWithEthereum) === null || u === void 0 ? void 0 : u.resources
       };
-      h = xl(j), f = await v.request({
+      h = ql(j), f = await w.request({
         method: "personal_sign",
-        params: [Al(h), x]
+        params: [Bl(h), A]
       });
     }
     try {
@@ -13755,7 +13755,7 @@ class pt {
       if (m)
         throw m;
       if (!g || !g.session || !g.user) {
-        const y = new Be();
+        const y = new We();
         return this._returnResult({ data: { user: null, session: null }, error: y });
       }
       return g.session && (await this._saveSession(g.session), await this._notifyAllSubscribers("SIGNED_IN", g.session)), this._returnResult({ data: Object.assign({}, g), error: m });
@@ -13771,36 +13771,36 @@ class pt {
     if ("message" in e)
       f = e.message, g = e.signature;
     else {
-      const { chain: m, wallet: y, statement: _, options: v } = e;
+      const { chain: m, wallet: y, statement: _, options: w } = e;
       let E;
       if (H())
         if (typeof y == "object")
           E = y;
         else {
-          const x = window;
-          if ("solana" in x && typeof x.solana == "object" && ("signIn" in x.solana && typeof x.solana.signIn == "function" || "signMessage" in x.solana && typeof x.solana.signMessage == "function"))
-            E = x.solana;
+          const A = window;
+          if ("solana" in A && typeof A.solana == "object" && ("signIn" in A.solana && typeof A.solana.signIn == "function" || "signMessage" in A.solana && typeof A.solana.signMessage == "function"))
+            E = A.solana;
           else
             throw new Error("@supabase/auth-js: No compatible Solana wallet interface on the window object (window.solana) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'solana', wallet: resolvedUserWallet }) instead.");
         }
       else {
-        if (typeof y != "object" || !(v != null && v.url))
+        if (typeof y != "object" || !(w != null && w.url))
           throw new Error("@supabase/auth-js: Both wallet and url must be specified in non-browser environments.");
         E = y;
       }
-      const R = new URL((r = v == null ? void 0 : v.url) !== null && r !== void 0 ? r : window.location.href);
+      const R = new URL((r = w == null ? void 0 : w.url) !== null && r !== void 0 ? r : window.location.href);
       if ("signIn" in E && E.signIn) {
-        const x = await E.signIn(Object.assign(Object.assign(Object.assign({ issuedAt: (/* @__PURE__ */ new Date()).toISOString() }, v == null ? void 0 : v.signInWithSolana), {
+        const A = await E.signIn(Object.assign(Object.assign(Object.assign({ issuedAt: (/* @__PURE__ */ new Date()).toISOString() }, w == null ? void 0 : w.signInWithSolana), {
           // non-overridable properties
           version: "1",
           domain: R.host,
           uri: R.href
         }), _ ? { statement: _ } : null));
         let I;
-        if (Array.isArray(x) && x[0] && typeof x[0] == "object")
-          I = x[0];
-        else if (x && typeof x == "object" && "signedMessage" in x && "signature" in x)
-          I = x;
+        if (Array.isArray(A) && A[0] && typeof A[0] == "object")
+          I = A[0];
+        else if (A && typeof A == "object" && "signedMessage" in A && "signature" in A)
+          I = A;
         else
           throw new Error("@supabase/auth-js: Wallet method signIn() returned unrecognized value");
         if ("signedMessage" in I && "signature" in I && (typeof I.signedMessage == "string" || I.signedMessage instanceof Uint8Array) && I.signature instanceof Uint8Array)
@@ -13816,34 +13816,34 @@ class pt {
           ..._ ? ["", _, ""] : [""],
           "Version: 1",
           `URI: ${R.href}`,
-          `Issued At: ${(s = (n = v == null ? void 0 : v.signInWithSolana) === null || n === void 0 ? void 0 : n.issuedAt) !== null && s !== void 0 ? s : (/* @__PURE__ */ new Date()).toISOString()}`,
-          ...!((i = v == null ? void 0 : v.signInWithSolana) === null || i === void 0) && i.notBefore ? [`Not Before: ${v.signInWithSolana.notBefore}`] : [],
-          ...!((o = v == null ? void 0 : v.signInWithSolana) === null || o === void 0) && o.expirationTime ? [`Expiration Time: ${v.signInWithSolana.expirationTime}`] : [],
-          ...!((a = v == null ? void 0 : v.signInWithSolana) === null || a === void 0) && a.chainId ? [`Chain ID: ${v.signInWithSolana.chainId}`] : [],
-          ...!((l = v == null ? void 0 : v.signInWithSolana) === null || l === void 0) && l.nonce ? [`Nonce: ${v.signInWithSolana.nonce}`] : [],
-          ...!((c = v == null ? void 0 : v.signInWithSolana) === null || c === void 0) && c.requestId ? [`Request ID: ${v.signInWithSolana.requestId}`] : [],
-          ...!((d = (u = v == null ? void 0 : v.signInWithSolana) === null || u === void 0 ? void 0 : u.resources) === null || d === void 0) && d.length ? [
+          `Issued At: ${(s = (n = w == null ? void 0 : w.signInWithSolana) === null || n === void 0 ? void 0 : n.issuedAt) !== null && s !== void 0 ? s : (/* @__PURE__ */ new Date()).toISOString()}`,
+          ...!((i = w == null ? void 0 : w.signInWithSolana) === null || i === void 0) && i.notBefore ? [`Not Before: ${w.signInWithSolana.notBefore}`] : [],
+          ...!((o = w == null ? void 0 : w.signInWithSolana) === null || o === void 0) && o.expirationTime ? [`Expiration Time: ${w.signInWithSolana.expirationTime}`] : [],
+          ...!((a = w == null ? void 0 : w.signInWithSolana) === null || a === void 0) && a.chainId ? [`Chain ID: ${w.signInWithSolana.chainId}`] : [],
+          ...!((l = w == null ? void 0 : w.signInWithSolana) === null || l === void 0) && l.nonce ? [`Nonce: ${w.signInWithSolana.nonce}`] : [],
+          ...!((c = w == null ? void 0 : w.signInWithSolana) === null || c === void 0) && c.requestId ? [`Request ID: ${w.signInWithSolana.requestId}`] : [],
+          ...!((d = (u = w == null ? void 0 : w.signInWithSolana) === null || u === void 0 ? void 0 : u.resources) === null || d === void 0) && d.length ? [
             "Resources",
-            ...v.signInWithSolana.resources.map((I) => `- ${I}`)
+            ...w.signInWithSolana.resources.map((I) => `- ${I}`)
           ] : []
         ].join(`
 `);
-        const x = await E.signMessage(new TextEncoder().encode(f), "utf8");
-        if (!x || !(x instanceof Uint8Array))
+        const A = await E.signMessage(new TextEncoder().encode(f), "utf8");
+        if (!A || !(A instanceof Uint8Array))
           throw new Error("@supabase/auth-js: Wallet signMessage() API returned an recognized value");
-        g = x;
+        g = A;
       }
     }
     try {
       const { data: m, error: y } = await k(this.fetch, "POST", `${this.url}/token?grant_type=web3`, {
         headers: this.headers,
-        body: Object.assign({ chain: "solana", message: f, signature: Ie(g) }, !((p = e.options) === null || p === void 0) && p.captchaToken ? { gotrue_meta_security: { captcha_token: (h = e.options) === null || h === void 0 ? void 0 : h.captchaToken } } : null),
+        body: Object.assign({ chain: "solana", message: f, signature: De(g) }, !((p = e.options) === null || p === void 0) && p.captchaToken ? { gotrue_meta_security: { captcha_token: (h = e.options) === null || h === void 0 ? void 0 : h.captchaToken } } : null),
         xform: Q
       });
       if (y)
         throw y;
       if (!m || !m.session || !m.user) {
-        const _ = new Be();
+        const _ = new We();
         return this._returnResult({ data: { user: null, session: null }, error: _ });
       }
       return m.session && (await this._saveSession(m.session), await this._notifyAllSubscribers("SIGNED_IN", m.session)), this._returnResult({ data: Object.assign({}, m), error: y });
@@ -13854,12 +13854,12 @@ class pt {
     }
   }
   async _exchangeCodeForSession(e, r) {
-    const n = (r == null ? void 0 : r.flowId) != null, s = n ? Dt(r == null ? void 0 : r.flowId) : H() ? Dt(Jn(window.location.href)[Ce]) : null;
+    const n = (r == null ? void 0 : r.flowId) != null, s = n ? Ft(r == null ? void 0 : r.flowId) : H() ? Ft(rs(window.location.href)[Le]) : null;
     n && !s && this._debug("#_exchangeCodeForSession()", "provided flowId is not a valid flow id", r == null ? void 0 : r.flowId);
-    const { verifier: i, flowId: o } = n && !s ? { verifier: null, flowId: null } : await ol(this.storage, this.storageKey, s), [a, l] = (i ?? "").split("/");
+    const { verifier: i, flowId: o } = n && !s ? { verifier: null, flowId: null } : await vl(this.storage, this.storageKey, s), [a, l] = (i ?? "").split("/");
     try {
       if (!a && this.flowType === "pkce")
-        throw new za();
+        throw new sl();
       const { data: c, error: u } = await k(this.fetch, "POST", `${this.url}/token?grant_type=pkce`, {
         headers: this.headers,
         body: {
@@ -13871,7 +13871,7 @@ class pt {
       if (await ee(this.storage, this.storageKey, o), u)
         throw u;
       if (!c || !c.session || !c.user) {
-        const d = new Be();
+        const d = new We();
         return this._returnResult({
           data: { user: null, session: null, redirectType: null },
           error: d
@@ -13978,7 +13978,7 @@ class pt {
       if (c)
         return this._returnResult({ data: { user: null, session: null }, error: c });
       if (!l || !l.session || !l.user) {
-        const u = new Be();
+        const u = new We();
         return this._returnResult({ data: { user: null, session: null }, error: u });
       }
       return l.session && (await this._saveSession(l.session), await this._notifyAllSubscribers("SIGNED_IN", l.session)), this._returnResult({ data: l, error: c });
@@ -14103,7 +14103,7 @@ class pt {
           error: d
         });
       }
-      throw new Tt("You must provide either an email or phone number.");
+      throw new jt("You must provide either an email or phone number.");
     } catch (l) {
       if (await ee(this.storage, this.storageKey, a), b(l))
         return this._returnResult({ data: { user: null, session: null }, error: l });
@@ -14332,7 +14332,7 @@ class pt {
       const c = await k(this.fetch, "POST", `${this.url}/sso`, {
         body: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, "providerId" in e ? { provider_id: e.providerId } : null), "domain" in e ? { domain: e.domain } : null), { redirect_to: this._maybeAppendFlowIdToRedirect((r = e.options) === null || r === void 0 ? void 0 : r.redirectTo, o) }), !((n = e == null ? void 0 : e.options) === null || n === void 0) && n.captchaToken ? { gotrue_meta_security: { captcha_token: e.options.captchaToken } } : null), { skip_http_redirect: !0, code_challenge: a, code_challenge_method: l }),
         headers: this.headers,
-        xform: _l
+        xform: jl
       });
       return !((s = c.data) === null || s === void 0) && s.url && H() && !(!((i = e.options) === null || i === void 0) && i.skipBrowserRedirect) && window.location.assign(c.data.url), this._returnResult(c);
     } catch (a) {
@@ -14478,7 +14478,7 @@ class pt {
           error: l
         });
       }
-      throw new Tt("You must provide either an email or phone number and a type");
+      throw new jt("You must provide either an email or phone number and a type");
     } catch (n) {
       if (await ee(this.storage, this.storageKey, r), b(n))
         return this._returnResult({ data: { user: null, session: null }, error: n });
@@ -14641,7 +14641,7 @@ class pt {
       const r = await z(this.storage, this.storageKey);
       if (this._debug("#getSession()", "session from storage", r), r !== null && (this._isValidSession(r) ? e = r : (this._debug("#getSession()", "session from storage is not valid"), await this._removeSession())), !e)
         return { data: { session: null }, error: null };
-      const n = e.expires_at ? e.expires_at * 1e3 - Date.now() < fr : !1;
+      const n = e.expires_at ? e.expires_at * 1e3 - Date.now() < wr : !1;
       if (this._debug("#__loadSession()", `session has${n ? "" : " not"} expired`, "expires_at", e.expires_at), !n)
         return { data: { session: await this._hydrateSessionUser(e) }, error: null };
       const { data: s, error: i } = await this._callRefreshToken(e.refresh_token);
@@ -14666,11 +14666,11 @@ class pt {
   async _hydrateSessionUser(e) {
     if (this.userStorage) {
       const r = await z(this.userStorage, this.storageKey + "-user");
-      e.user = r != null && r.user ? r.user : pr();
+      e.user = r != null && r.user ? r.user : vr();
     }
     if (this.storage.isServer && e.user && !e.user.__isUserNotAvailableProxy) {
       const r = { value: this.suppressGetSessionWarning };
-      e.user = gl(e.user, r), r.value && (this.suppressGetSessionWarning = !0);
+      e.user = Ol(e.user, r), r.value && (this.suppressGetSessionWarning = !0);
     }
     return e;
   }
@@ -14762,7 +14762,7 @@ class pt {
       return e ? await k(this.fetch, "GET", `${this.url}/user`, {
         headers: this.headers,
         jwt: e,
-        xform: we
+        xform: xe
       }) : await this._useSession(async (r) => {
         var n, s, i;
         const { data: o, error: a } = r;
@@ -14771,12 +14771,12 @@ class pt {
         return !(!((n = o.session) === null || n === void 0) && n.access_token) && !this.hasCustomAuthorizationHeader ? { data: { user: null }, error: new F() } : await k(this.fetch, "GET", `${this.url}/user`, {
           headers: this.headers,
           jwt: (i = (s = o.session) === null || s === void 0 ? void 0 : s.access_token) !== null && i !== void 0 ? i : void 0,
-          xform: we
+          xform: xe
         });
       });
     } catch (r) {
       if (b(r))
-        return xt(r) && await this._removeSession(), this._returnResult({ data: { user: null }, error: r });
+        return It(r) && await this._removeSession(), this._returnResult({ data: { user: null }, error: r });
       throw r;
     }
   }
@@ -14914,7 +14914,7 @@ class pt {
           redirectTo: this._maybeAppendFlowIdToRedirect(r == null ? void 0 : r.emailRedirectTo, n),
           body: Object.assign(Object.assign({}, e), { code_challenge: l, code_challenge_method: c }),
           jwt: a.access_token,
-          xform: we
+          xform: xe
         });
         if (d)
           throw d;
@@ -15059,7 +15059,7 @@ class pt {
         throw new F();
       const r = Date.now() / 1e3;
       let n = r, s = !0, i = null;
-      const { payload: o } = Ct(e.access_token);
+      const { payload: o } = $t(e.access_token);
       if (o.exp && (n = o.exp, s = n <= r), s) {
         const { data: a, error: l } = await this._callRefreshToken(e.refresh_token);
         if (l)
@@ -15243,45 +15243,45 @@ class pt {
     var n;
     try {
       if (!H())
-        throw new Rt("No browser detected.");
+        throw new Pt("No browser detected.");
       if (e.error || e.error_description || e.error_code)
-        throw new Rt(e.error_description || "Error in URL with unspecified error_description", {
+        throw new Pt(e.error_description || "Error in URL with unspecified error_description", {
           error: e.error || "unspecified_error",
           code: e.error_code || "unspecified_code"
         });
       switch (r) {
         case "implicit":
           if (this.flowType === "pkce")
-            throw new Mn("Not a valid PKCE flow url.");
+            throw new Gn("Not a valid PKCE flow url.");
           break;
         case "pkce":
           if (this.flowType === "implicit")
-            throw new Rt("Not a valid implicit grant flow url.");
+            throw new Pt("Not a valid implicit grant flow url.");
           break;
         default:
       }
       if (r === "pkce") {
         if (this._debug("#_initialize()", "begin", "is PKCE flow", !0), !e.code)
-          throw new Mn("No code detected.");
-        const { data: v, error: E } = await this._exchangeCodeForSession(e.code, {
-          flowId: e[Ce]
+          throw new Gn("No code detected.");
+        const { data: w, error: E } = await this._exchangeCodeForSession(e.code, {
+          flowId: e[Le]
         });
         if (E)
           throw E;
         const R = new URL(window.location.href);
-        return R.searchParams.delete("code"), R.searchParams.delete(Ce), window.history.replaceState(window.history.state, "", R.toString()), {
-          data: { session: v.session, redirectType: (n = v.redirectType) !== null && n !== void 0 ? n : null },
+        return R.searchParams.delete("code"), R.searchParams.delete(Le), window.history.replaceState(window.history.state, "", R.toString()), {
+          data: { session: w.session, redirectType: (n = w.redirectType) !== null && n !== void 0 ? n : null },
           error: null
         };
       }
       const { provider_token: s, provider_refresh_token: i, access_token: o, refresh_token: a, expires_in: l, expires_at: c, token_type: u } = e;
       if (!o || !l || !a || !u)
-        throw new Rt("No session defined in URL");
+        throw new Pt("No session defined in URL");
       const d = Math.round(Date.now() / 1e3), p = parseInt(l);
       let h = d + p;
       c && (h = parseInt(c));
       const f = h - d;
-      f * 1e3 <= pe && console.warn(`@supabase/gotrue-js: Session as retrieved from URL expires in ${f}s, should have been closer to ${p}s`);
+      f * 1e3 <= ye && console.warn(`@supabase/gotrue-js: Session as retrieved from URL expires in ${f}s, should have been closer to ${p}s`);
       const g = h - p;
       d - g >= 120 ? console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued over 120s ago, URL could be stale", g, h, d) : d - g < 0 && console.warn("@supabase/gotrue-js: Session as retrieved from URL was issued in the future? Check the device clock for skew", g, h, d);
       const { data: m, error: y } = await this._getUser(o);
@@ -15320,8 +15320,8 @@ class pt {
   async _isPKCECallback(e) {
     if (!e.code)
       return !1;
-    const r = Dt(e[Ce]);
-    return r && await z(this.storage, Ge(this.storageKey, r)) ? !0 : !!await z(this.storage, `${this.storageKey}-code-verifier`);
+    const r = Ft(e[Le]);
+    return r && await z(this.storage, rt(this.storageKey, r)) ? !0 : !!await z(this.storage, `${this.storageKey}-code-verifier`);
   }
   /**
    * Inside a browser context, `signOut()` will remove the logged in user from the browser session and log them out - removing all items from localstorage and then trigger a `"SIGNED_OUT"` event.
@@ -15373,12 +15373,12 @@ class pt {
       const s = async () => {
         await this._removeSession();
       }, { data: i, error: o } = r;
-      if (o && !xt(o))
+      if (o && !It(o))
         return this._returnResult({ error: o });
       const a = (n = i.session) === null || n === void 0 ? void 0 : n.access_token;
       if (a) {
         const { error: l } = await this.admin.signOut(a, e);
-        if (l && !(qn(l) && (l.status === 404 || l.status === 401 || l.status === 403) || xt(l)))
+        if (l && !(Jn(l) && (l.status === 404 || l.status === 401 || l.status === 403) || It(l)))
           return e !== "others" && await s(), this._returnResult({ error: l });
       }
       return e !== "others" && await s(), this._returnResult({ error: null });
@@ -15562,7 +15562,7 @@ class pt {
    * ```
    */
   onAuthStateChange(e) {
-    const r = Ya(), n = {
+    const r = ul(), n = {
       id: r,
       callback: e,
       unsubscribe: () => {
@@ -15582,9 +15582,9 @@ class pt {
           throw o;
         await ((n = this.stateChangeEmitters.get(e)) === null || n === void 0 ? void 0 : n.callback("INITIAL_SESSION", i)), this._debug("INITIAL_SESSION", "callback id", e, "session", i);
       } catch (i) {
-        if (await ((s = this.stateChangeEmitters.get(e)) === null || s === void 0 ? void 0 : s.callback("INITIAL_SESSION", null)), this._debug("INITIAL_SESSION", "callback id", e, "error", i), Hn(i))
+        if (await ((s = this.stateChangeEmitters.get(e)) === null || s === void 0 ? void 0 : s.callback("INITIAL_SESSION", null)), this._debug("INITIAL_SESSION", "callback id", e, "error", i), Xn(i))
           return;
-        xt(i) || Ot(i) || qn(i) && (i.code === "refresh_token_not_found" || i.code === "refresh_token_already_used" || i.code === "session_expired") ? console.warn(i) : console.error(i);
+        It(i) || Nt(i) || Jn(i) && (i.code === "refresh_token_not_found" || i.code === "refresh_token_already_used" || i.code === "session_expired") ? console.warn(i) : console.error(i);
       }
     });
   }
@@ -15819,7 +15819,7 @@ class pt {
         }), { data: p, error: h } = d;
         return h ? this._returnResult({ data: { user: null, session: null }, error: h }) : !p || !p.session || !p.user ? this._returnResult({
           data: { user: null, session: null },
-          error: new Be()
+          error: new We()
         }) : (p.session && (await this._saveSession(p.session), await this._notifyAllSubscribers("USER_UPDATED", p.session)), this._returnResult({ data: p, error: h }));
       } catch (s) {
         if (await ee(this.storage, this.storageKey, null), b(s))
@@ -15880,14 +15880,14 @@ class pt {
     this._debug(r, "begin");
     try {
       const n = Date.now();
-      return await Za(async (s) => (s > 0 && await Qa(200 * Math.pow(2, s - 1)), this._debug(r, "refreshing attempt", s), await k(this.fetch, "POST", `${this.url}/token?grant_type=refresh_token`, {
+      return await fl(async (s) => (s > 0 && await hl(200 * Math.pow(2, s - 1)), this._debug(r, "refreshing attempt", s), await k(this.fetch, "POST", `${this.url}/token?grant_type=refresh_token`, {
         body: { refresh_token: e },
         headers: this.headers,
         xform: Q
       })), (s, i) => {
         const o = 200 * Math.pow(2, s);
-        return i && Ot(i) && // retryable only if the request can be sent before the backoff overflows the tick duration
-        Date.now() + o - n < pe;
+        return i && Nt(i) && // retryable only if the request can be sent before the backoff overflows the tick duration
+        Date.now() + o - n < ye;
       });
     } catch (n) {
       if (this._debug(r, "error", n), b(n))
@@ -15920,20 +15920,20 @@ class pt {
       const s = await z(this.storage, this.storageKey);
       if (s && this.userStorage) {
         let o = await z(this.userStorage, this.storageKey + "-user");
-        !this.storage.isServer && Object.is(this.storage, this.userStorage) && !o && (o = { user: s.user }, await ge(this.userStorage, this.storageKey + "-user", o)), s.user = (e = o == null ? void 0 : o.user) !== null && e !== void 0 ? e : pr();
+        !this.storage.isServer && Object.is(this.storage, this.userStorage) && !o && (o = { user: s.user }, await _e(this.userStorage, this.storageKey + "-user", o)), s.user = (e = o == null ? void 0 : o.user) !== null && e !== void 0 ? e : vr();
       } else if (s && !s.user && !s.user) {
         const o = await z(this.storage, this.storageKey + "-user");
-        o && (o != null && o.user) ? (s.user = o.user, await K(this.storage, this.storageKey + "-user"), await ge(this.storage, this.storageKey, s)) : s.user = pr();
+        o && (o != null && o.user) ? (s.user = o.user, await K(this.storage, this.storageKey + "-user"), await _e(this.storage, this.storageKey, s)) : s.user = vr();
       }
       if (this._debug(n, "session from storage", s), !this._isValidSession(s)) {
         this._debug(n, "session is not valid"), s !== null && await this._removeSession();
         return;
       }
-      const i = ((r = s.expires_at) !== null && r !== void 0 ? r : 1 / 0) * 1e3 - Date.now() < fr;
-      if (this._debug(n, `session has${i ? "" : " not"} expired with margin of ${fr}s`), i) {
+      const i = ((r = s.expires_at) !== null && r !== void 0 ? r : 1 / 0) * 1e3 - Date.now() < wr;
+      if (this._debug(n, `session has${i ? "" : " not"} expired with margin of ${wr}s`), i) {
         if (this.autoRefreshToken && s.refresh_token) {
           const { error: o } = await this._callRefreshToken(s.refresh_token);
-          o && (Hn(o) ? this._debug(n, "refresh discarded by commit guard", o) : this._debug(n, "refresh failed", o));
+          o && (Xn(o) ? this._debug(n, "refresh discarded by commit guard", o) : this._debug(n, "refresh failed", o));
         }
       } else if (s.user && s.user.__isUserNotAvailableProxy === !0)
         try {
@@ -15945,7 +15945,7 @@ class pt {
       else
         await this._notifyAllSubscribers("SIGNED_IN", s);
     } catch (s) {
-      this._debug(n, "error", s), Ot(s) ? console.warn(s) : console.error(s);
+      this._debug(n, "error", s), Nt(s) ? console.warn(s) : console.error(s);
       return;
     } finally {
       this._debug(n, "end");
@@ -15962,7 +15962,7 @@ class pt {
     const s = "#_callRefreshToken()";
     this._debug(s, "begin");
     try {
-      this.refreshingDeferred = new ar(), this.refreshingDeferred.promise.then(void 0, () => {
+      this.refreshingDeferred = new hr(), this.refreshingDeferred.promise.then(void 0, () => {
       });
       const i = await z(this.storage, this.storageKey), { data: o, error: a } = await this._refreshAccessToken(e);
       if (a)
@@ -15979,7 +15979,7 @@ class pt {
         });
         const p = {
           data: null,
-          error: new Fn()
+          error: new Yn()
         };
         return this.refreshingDeferred.resolve(p), p;
       }
@@ -15988,7 +15988,7 @@ class pt {
         this._debug(s, "commit guard (post-save): _removeSession ran during _saveSession, undoing write"), await K(this.storage, this.storageKey), this.userStorage && await K(this.userStorage, this.storageKey + "-user");
         const p = {
           data: null,
-          error: new Fn()
+          error: new Yn()
         };
         return this.refreshingDeferred.resolve(p), p;
       }
@@ -15998,14 +15998,14 @@ class pt {
     } catch (i) {
       if (this._debug(s, "error", i), b(i)) {
         const o = { data: null, error: i };
-        if (!Ot(i)) {
+        if (!Nt(i)) {
           const a = await z(this.storage, this.storageKey);
           !!(a != null && a.expires_at && a.expires_at * 1e3 > Date.now()) ? this._debug(s, "proactive refresh failed, access token still valid — preserving session") : await this._removeSession();
         }
         return this.lastRefreshFailure = {
           refreshToken: e,
           result: o,
-          expiresAt: Date.now() + La
+          expiresAt: Date.now() + Ga
         }, (r = this.refreshingDeferred) === null || r === void 0 || r.resolve(o), o;
       }
       throw (n = this.refreshingDeferred) === null || n === void 0 || n.reject(i), i;
@@ -16046,20 +16046,20 @@ class pt {
     this._debug("#_saveSession()", e), this.suppressGetSessionWarning = !0;
     const r = Object.assign({}, e), n = r.user && r.user.__isUserNotAvailableProxy === !0;
     if (this.userStorage) {
-      !n && r.user && await ge(this.userStorage, this.storageKey + "-user", {
+      !n && r.user && await _e(this.userStorage, this.storageKey + "-user", {
         user: r.user
       });
       const s = Object.assign({}, r);
       delete s.user;
-      const i = Gn(s);
-      await ge(this.storage, this.storageKey, i);
+      const i = ns(s);
+      await _e(this.storage, this.storageKey, i);
     } else {
-      const s = Gn(r);
-      await ge(this.storage, this.storageKey, s);
+      const s = ns(r);
+      await _e(this.storage, this.storageKey, s);
     }
   }
   async _removeSession() {
-    this._sessionRemovalEpoch += 1, this._debug("#_removeSession()"), this.lastRefreshFailure = null, this.suppressGetSessionWarning = !1, await K(this.storage, this.storageKey), await al(this.storage, this.storageKey), await K(this.storage, this.storageKey + "-user"), this.userStorage && await K(this.userStorage, this.storageKey + "-user"), await this._notifyAllSubscribers("SIGNED_OUT", null);
+    this._sessionRemovalEpoch += 1, this._debug("#_removeSession()"), this.lastRefreshFailure = null, this.suppressGetSessionWarning = !1, await K(this.storage, this.storageKey), await bl(this.storage, this.storageKey), await K(this.storage, this.storageKey + "-user"), this.userStorage && await K(this.userStorage, this.storageKey + "-user"), await this._notifyAllSubscribers("SIGNED_OUT", null);
   }
   /**
    * Removes any registered visibilitychange callback.
@@ -16083,7 +16083,7 @@ class pt {
    */
   async _startAutoRefresh() {
     await this._stopAutoRefresh(), this._debug("#_startAutoRefresh()");
-    const e = setInterval(() => this._autoRefreshTokenTick(), pe);
+    const e = setInterval(() => this._autoRefreshTokenTick(), ye);
     this.autoRefreshTicker = e, e && typeof e == "object" && typeof e.unref == "function" ? e.unref() : typeof Deno < "u" && typeof Deno.unrefTimer == "function" && Deno.unrefTimer(e);
     const r = setTimeout(async () => {
       await this.initializePromise, await this._autoRefreshTokenTick();
@@ -16231,8 +16231,8 @@ class pt {
                   this._debug("#_autoRefreshTokenTick()", "no session");
                   return;
                 }
-                const s = Math.floor((n.expires_at * 1e3 - e) / pe);
-                this._debug("#_autoRefreshTokenTick()", `access token expires in ${s} ticks, a tick lasts ${pe}ms, refresh threshold is ${st} ticks`), s <= st && await this._callRefreshToken(n.refresh_token);
+                const s = Math.floor((n.expires_at * 1e3 - e) / ye);
+                this._debug("#_autoRefreshTokenTick()", `access token expires in ${s} ticks, a tick lasts ${ye}ms, refresh threshold is ${dt} ticks`), s <= dt && await this._callRefreshToken(n.refresh_token);
               });
             } catch (r) {
               console.error("Auto refresh tick failed with error. This is likely a transient error.", r);
@@ -16242,7 +16242,7 @@ class pt {
           }
         });
       } catch (e) {
-        if (e instanceof kl)
+        if (e instanceof Ll)
           this._debug("auto refresh token tick lock not available");
         else
           throw e;
@@ -16262,8 +16262,8 @@ class pt {
             this._debug("#_autoRefreshTokenTick()", "no session");
             return;
           }
-          const s = Math.floor((n.expires_at * 1e3 - e) / pe);
-          this._debug("#_autoRefreshTokenTick()", `access token expires in ${s} ticks, a tick lasts ${pe}ms, refresh threshold is ${st} ticks`), s <= st && await this._callRefreshToken(n.refresh_token);
+          const s = Math.floor((n.expires_at * 1e3 - e) / ye);
+          this._debug("#_autoRefreshTokenTick()", `access token expires in ${s} ticks, a tick lasts ${ye}ms, refresh threshold is ${dt} ticks`), s <= dt && await this._callRefreshToken(n.refresh_token);
         });
       } catch (r) {
         console.error("Auto refresh tick failed with error. This is likely a transient error.", r);
@@ -16347,14 +16347,14 @@ class pt {
    * parameter can stop exact (non-wildcard) entries from matching.
    */
   _maybeAppendFlowIdToRedirect(e, r) {
-    return !e || !r || !this.experimental.appendPkceFlowIdToRedirects ? e ?? void 0 : ll(e, r);
+    return !e || !r || !this.experimental.appendPkceFlowIdToRedirects ? e ?? void 0 : kl(e, r);
   }
   /**
    * Generates and stores a PKCE challenge/verifier pair for a new flow,
    * logging any pending verifier the bounded slot ring evicts.
    */
   async _getCodeChallengeAndMethod(e = !1) {
-    return cl(this.storage, this.storageKey, e, (r) => this._debug("#_getCodeChallengeAndMethod()", "evicted oldest pending PKCE verifier slot", r));
+    return Sl(this.storage, this.storageKey, e, (r) => this._debug("#_getCodeChallengeAndMethod()", "evicted oldest pending PKCE verifier slot", r));
   }
   async _unenroll(e) {
     try {
@@ -16401,7 +16401,7 @@ class pt {
           if (o)
             return this._returnResult({ data: null, error: o });
           const a = Object.assign({ challenge_id: e.challengeId }, "webauthn" in e ? {
-            webauthn: Object.assign(Object.assign({}, e.webauthn), { credential_response: e.webauthn.type === "create" ? ns(e.webauthn.credential_response) : ss(e.webauthn.credential_response) })
+            webauthn: Object.assign(Object.assign({}, e.webauthn), { credential_response: e.webauthn.type === "create" ? ds(e.webauthn.credential_response) : hs(e.webauthn.credential_response) })
           } : { code: e.code }), { data: l, error: c } = await k(this.fetch, "POST", `${this.url}/factors/${e.factorId}/verify`, {
             body: a,
             headers: this.headers,
@@ -16438,12 +16438,12 @@ class pt {
           switch (l.webauthn.type) {
             case "create":
               return {
-                data: Object.assign(Object.assign({}, l), { webauthn: Object.assign(Object.assign({}, l.webauthn), { credential_options: Object.assign(Object.assign({}, l.webauthn.credential_options), { publicKey: ts(l.webauthn.credential_options.publicKey) }) }) }),
+                data: Object.assign(Object.assign({}, l), { webauthn: Object.assign(Object.assign({}, l.webauthn), { credential_options: Object.assign(Object.assign({}, l.webauthn.credential_options), { publicKey: cs(l.webauthn.credential_options.publicKey) }) }) }),
                 error: null
               };
             case "request":
               return {
-                data: Object.assign(Object.assign({}, l), { webauthn: Object.assign(Object.assign({}, l.webauthn), { credential_options: Object.assign(Object.assign({}, l.webauthn.credential_options), { publicKey: rs(l.webauthn.credential_options.publicKey) }) }) }),
+                data: Object.assign(Object.assign({}, l), { webauthn: Object.assign(Object.assign({}, l.webauthn), { credential_options: Object.assign(Object.assign({}, l.webauthn.credential_options), { publicKey: us(l.webauthn.credential_options.publicKey) }) }) }),
                 error: null
               };
           }
@@ -16498,7 +16498,7 @@ class pt {
     var r, n, s, i;
     if (e)
       try {
-        const { payload: h } = Ct(e);
+        const { payload: h } = $t(e);
         let f = null;
         h.aal && (f = h.aal);
         let g = f;
@@ -16506,8 +16506,8 @@ class pt {
         if (y)
           return this._returnResult({ data: null, error: y });
         ((n = (r = m == null ? void 0 : m.factors) === null || r === void 0 ? void 0 : r.filter((E) => E.status === "verified")) !== null && n !== void 0 ? n : []).length > 0 && (g = "aal2");
-        const v = h.amr || [];
-        return { data: { currentLevel: f, nextLevel: g, currentAuthenticationMethods: v }, error: null };
+        const w = h.amr || [];
+        return { data: { currentLevel: f, nextLevel: g, currentAuthenticationMethods: w }, error: null };
       } catch (h) {
         if (b(h))
           return this._returnResult({ data: null, error: h });
@@ -16521,7 +16521,7 @@ class pt {
         data: { currentLevel: null, nextLevel: null, currentAuthenticationMethods: [] },
         error: null
       };
-    const { payload: l } = Ct(o.access_token);
+    const { payload: l } = $t(o.access_token);
     let c = null;
     l.aal && (c = l.aal);
     let u = c;
@@ -16533,7 +16533,7 @@ class pt {
    * {@link AuthMFARecoveryCodesApi#getStatus}
    */
   async _getRecoveryCodesStatus() {
-    et(this.experimental);
+    lt(this.experimental);
     try {
       return await this._useSession(async (e) => {
         var r;
@@ -16556,7 +16556,7 @@ class pt {
    * {@link AuthMFARecoveryCodesApi#generate}
    */
   async _generateRecoveryCodes(e) {
-    et(this.experimental);
+    lt(this.experimental);
     try {
       return await this._useSession(async (r) => {
         var n;
@@ -16581,7 +16581,7 @@ class pt {
    * {@link AuthMFARecoveryCodesApi#verify}
    */
   async _verifyRecoveryCode(e) {
-    et(this.experimental);
+    lt(this.experimental);
     const r = async () => {
       try {
         return await this._useSession(async (n) => {
@@ -16596,7 +16596,7 @@ class pt {
           });
           if (l)
             return this._returnResult({ data: null, error: l });
-          const c = Object.assign({ expires_at: fi(a.expires_in) }, a);
+          const c = Object.assign({ expires_at: Si(a.expires_in) }, a);
           return await this._saveSession(c), await this._notifyAllSubscribers("MFA_CHALLENGE_VERIFIED", c), this._returnResult({ data: a, error: null });
         });
       } catch (n) {
@@ -16611,7 +16611,7 @@ class pt {
    * {@link AuthMFARecoveryCodesApi#regenerate}
    */
   async _regenerateRecoveryCodes() {
-    et(this.experimental);
+    lt(this.experimental);
     try {
       return await this._useSession(async (e) => {
         var r;
@@ -16634,7 +16634,7 @@ class pt {
    * {@link AuthMFARecoveryCodesApi#unenroll}
    */
   async _unenrollRecoveryCodes() {
-    et(this.experimental);
+    lt(this.experimental);
     try {
       return await this._useSession(async (e) => {
         var r;
@@ -16775,7 +16775,7 @@ class pt {
     if (n)
       return n;
     const s = Date.now();
-    if (n = this.jwks.keys.find((a) => a.kid === e), n && this.jwks_cached_at + Ma > s)
+    if (n = this.jwks.keys.find((a) => a.kid === e), n && this.jwks_cached_at + tl > s)
       return n;
     const { data: i, error: o } = await k(this.fetch, "GET", `${this.url}/.well-known/jwks.json`, {
       headers: this.headers
@@ -16858,12 +16858,12 @@ class pt {
           return this._returnResult({ data: null, error: f });
         n = h.session.access_token;
       }
-      const { header: s, payload: i, signature: o, raw: { header: a, payload: l } } = Ct(n);
+      const { header: s, payload: i, signature: o, raw: { header: a, payload: l } } = $t(n);
       if (!(r != null && r.allowExpired))
         try {
-          hl(i.exp);
+          Al(i.exp);
         } catch (h) {
-          throw new Ht(h instanceof Error ? h.message : "JWT validation failed");
+          throw new Jt(h instanceof Error ? h.message : "JWT validation failed");
         }
       const c = !s.alg || s.alg.startsWith("HS") || !s.kid || !("crypto" in globalThis && "subtle" in globalThis.crypto) ? null : await this.fetchJwk(s.kid, r != null && r.keys ? { keys: r.keys } : r == null ? void 0 : r.jwks);
       if (!c) {
@@ -16879,11 +16879,11 @@ class pt {
           error: null
         };
       }
-      const u = fl(s.alg), d = await crypto.subtle.importKey("jwk", c, u, !0, [
+      const u = Tl(s.alg), d = await crypto.subtle.importKey("jwk", c, u, !0, [
         "verify"
       ]);
-      if (!await crypto.subtle.verify(u, d, o, Ga(`${a}.${l}`)))
-        throw new Ht("Invalid JWT signature");
+      if (!await crypto.subtle.verify(u, d, o, cl(`${a}.${l}`)))
+        throw new Jt("Invalid JWT signature");
       return {
         data: {
           claims: i,
@@ -16935,17 +16935,17 @@ class pt {
   async signInWithPasskey(e) {
     var r, n, s, i;
     try {
-      if (!Kt())
+      if (!Xt())
         return this._returnResult({
           data: null,
-          error: new re("Browser does not support WebAuthn", null)
+          error: new ne("Browser does not support WebAuthn", null)
         });
       const { data: o, error: a } = await this._startPasskeyAuthentication({
         options: { captchaToken: (r = e == null ? void 0 : e.options) === null || r === void 0 ? void 0 : r.captchaToken }
       });
       if (a || !o)
         return this._returnResult({ data: null, error: a });
-      const l = rs(o.options), c = (s = (n = e == null ? void 0 : e.options) === null || n === void 0 ? void 0 : n.signal) !== null && s !== void 0 ? s : Hr.createNewAbortSignal(), { data: u, error: d } = await wi({
+      const l = us(o.options), c = (s = (n = e == null ? void 0 : e.options) === null || n === void 0 ? void 0 : n.signal) !== null && s !== void 0 ? s : Jr.createNewAbortSignal(), { data: u, error: d } = await Ci({
         publicKey: l,
         signal: c,
         mediation: (i = e == null ? void 0 : e.options) === null || i === void 0 ? void 0 : i.mediation
@@ -16953,9 +16953,9 @@ class pt {
       if (d || !u)
         return this._returnResult({
           data: null,
-          error: d ?? new re("WebAuthn ceremony failed", null)
+          error: d ?? new ne("WebAuthn ceremony failed", null)
         });
-      const p = ss(u);
+      const p = hs(u);
       return this._verifyPasskeyAuthentication({
         challengeId: o.challenge_id,
         credential: p
@@ -16979,24 +16979,24 @@ class pt {
   async registerPasskey(e) {
     var r, n;
     try {
-      if (!Kt())
+      if (!Xt())
         return this._returnResult({
           data: null,
-          error: new re("Browser does not support WebAuthn", null)
+          error: new ne("Browser does not support WebAuthn", null)
         });
       const { data: s, error: i } = await this._startPasskeyRegistration();
       if (i || !s)
         return this._returnResult({ data: null, error: i });
-      const o = ts(s.options), a = (n = (r = e == null ? void 0 : e.options) === null || r === void 0 ? void 0 : r.signal) !== null && n !== void 0 ? n : Hr.createNewAbortSignal(), { data: l, error: c } = await vi({
+      const o = cs(s.options), a = (n = (r = e == null ? void 0 : e.options) === null || r === void 0 ? void 0 : r.signal) !== null && n !== void 0 ? n : Jr.createNewAbortSignal(), { data: l, error: c } = await Oi({
         publicKey: o,
         signal: a
       });
       if (c || !l)
         return this._returnResult({
           data: null,
-          error: c ?? new re("WebAuthn ceremony failed", null)
+          error: c ?? new ne("WebAuthn ceremony failed", null)
         });
-      const u = ns(l);
+      const u = ds(l);
       return this._verifyPasskeyRegistration({
         challengeId: s.challenge_id,
         credential: u
@@ -17174,32 +17174,32 @@ class pt {
     }
   }
 }
-pt.nextInstanceID = {};
-const $l = pt, Dl = "2.118.0";
-let it = "", Jt;
+bt.nextInstanceID = {};
+const Yl = bt, Xl = "2.118.0";
+let ht = "", Zt;
 if (typeof Deno < "u") {
-  var mr;
-  it = "deno", Jt = (mr = Deno.version) === null || mr === void 0 ? void 0 : mr.deno;
-} else if (typeof document < "u") it = "web";
-else if (typeof navigator < "u" && navigator.product === "ReactNative") it = "react-native";
+  var kr;
+  ht = "deno", Zt = (kr = Deno.version) === null || kr === void 0 ? void 0 : kr.deno;
+} else if (typeof document < "u") ht = "web";
+else if (typeof navigator < "u" && navigator.product === "ReactNative") ht = "react-native";
 else {
-  var yr;
-  it = "node";
+  var Sr;
+  ht = "node";
   const t = globalThis.process;
-  Jt = t == null || (yr = t.version) === null || yr === void 0 ? void 0 : yr.replace(/^v/, "");
+  Zt = t == null || (Sr = t.version) === null || Sr === void 0 ? void 0 : Sr.replace(/^v/, "");
 }
-const bi = [`runtime=${it}`];
-Jt && bi.push(`runtime-version=${Jt}`);
-const Ul = { "X-Client-Info": `supabase-js/${Dl}; ${bi.join("; ")}` }, Bl = { headers: Ul }, ql = { schema: "public" }, Ml = {
+const Ii = [`runtime=${ht}`];
+Zt && Ii.push(`runtime-version=${Zt}`);
+const Ql = { "X-Client-Info": `supabase-js/${Xl}; ${Ii.join("; ")}` }, Zl = { headers: Ql }, ec = { schema: "public" }, tc = {
   autoRefreshToken: !0,
   persistSession: !0,
   detectSessionInUrl: !0,
   flowType: "implicit"
-}, Fl = {}, Hl = {
+}, rc = {}, nc = {
   enabled: !1,
   respectSamplingDecision: !0
 };
-function zl(t) {
+function sc(t) {
   if (!t || typeof t != "string") return null;
   const e = t.split("-");
   if (e.length !== 4) return null;
@@ -17214,7 +17214,7 @@ function zl(t) {
     isSampled: (parseInt(i, 16) & 1) === 1
   };
 }
-function Wl(t, e) {
+function ic(t, e) {
   if (!t || !e || e.length === 0) return !1;
   let r;
   if (t instanceof URL) r = t;
@@ -17225,7 +17225,7 @@ function Wl(t, e) {
   }
   for (const n of e) try {
     if (typeof n == "string") {
-      if (Kl(r.hostname, n)) return !0;
+      if (oc(r.hostname, n)) return !0;
     } else if (n instanceof RegExp) {
       if (n.test(r.hostname)) return !0;
     } else if (typeof n == "function" && n(r))
@@ -17235,7 +17235,7 @@ function Wl(t, e) {
   }
   return !1;
 }
-function Kl(t, e) {
+function oc(t, e) {
   if (e === t) return !0;
   if (e.startsWith("*.")) {
     const r = e.slice(2);
@@ -17244,7 +17244,7 @@ function Kl(t, e) {
   }
   return !1;
 }
-function Vl(t) {
+function ac(t) {
   const e = [];
   try {
     const r = new URL(t);
@@ -17253,37 +17253,37 @@ function Vl(t) {
   }
   return e.push("*.supabase.co", "*.supabase.in"), e.push("localhost", "127.0.0.1", "[::1]"), e;
 }
-function gt(t) {
+function kt(t) {
   "@babel/helpers - typeof";
-  return gt = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
+  return kt = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
     return typeof e;
   } : function(e) {
     return e && typeof Symbol == "function" && e.constructor === Symbol && e !== Symbol.prototype ? "symbol" : typeof e;
-  }, gt(t);
+  }, kt(t);
 }
-function Jl(t, e) {
-  if (gt(t) != "object" || !t) return t;
+function lc(t, e) {
+  if (kt(t) != "object" || !t) return t;
   var r = t[Symbol.toPrimitive];
   if (r !== void 0) {
     var n = r.call(t, e);
-    if (gt(n) != "object") return n;
+    if (kt(n) != "object") return n;
     throw new TypeError("@@toPrimitive must return a primitive value.");
   }
   return (e === "string" ? String : Number)(t);
 }
-function Gl(t) {
-  var e = Jl(t, "string");
-  return gt(e) == "symbol" ? e : e + "";
+function cc(t) {
+  var e = lc(t, "string");
+  return kt(e) == "symbol" ? e : e + "";
 }
-function Yl(t, e, r) {
-  return (e = Gl(e)) in t ? Object.defineProperty(t, e, {
+function uc(t, e, r) {
+  return (e = cc(e)) in t ? Object.defineProperty(t, e, {
     value: r,
     enumerable: !0,
     configurable: !0,
     writable: !0
   }) : t[e] = r, t;
 }
-function os(t, e) {
+function ps(t, e) {
   var r = Object.keys(t);
   if (Object.getOwnPropertySymbols) {
     var n = Object.getOwnPropertySymbols(t);
@@ -17296,21 +17296,21 @@ function os(t, e) {
 function D(t) {
   for (var e = 1; e < arguments.length; e++) {
     var r = arguments[e] != null ? arguments[e] : {};
-    e % 2 ? os(Object(r), !0).forEach(function(n) {
-      Yl(t, n, r[n]);
-    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(t, Object.getOwnPropertyDescriptors(r)) : os(Object(r)).forEach(function(n) {
+    e % 2 ? ps(Object(r), !0).forEach(function(n) {
+      uc(t, n, r[n]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(t, Object.getOwnPropertyDescriptors(r)) : ps(Object(r)).forEach(function(n) {
       Object.defineProperty(t, n, Object.getOwnPropertyDescriptor(r, n));
     });
   }
   return t;
 }
-const Xl = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), Ql = () => Headers, ki = (t) => t.startsWith("sb_publishable_") || t.startsWith("sb_secret_"), Zl = "sb_temp_", as = /* @__PURE__ */ new Set(), ec = (t) => {
+const dc = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), hc = () => Headers, ji = (t) => t.startsWith("sb_publishable_") || t.startsWith("sb_secret_"), fc = "sb_temp_", gs = /* @__PURE__ */ new Set(), pc = (t) => {
   var e, r;
-  if (!t.startsWith("sb_") || ki(t) || t.startsWith(Zl)) return;
+  if (!t.startsWith("sb_") || ji(t) || t.startsWith(fc)) return;
   const n = (e = (r = t.match(/^sb_[a-zA-Z0-9]+_/)) === null || r === void 0 ? void 0 : r[0]) !== null && e !== void 0 ? e : "unknown";
-  as.has(n) || (as.add(n), console.warn("@supabase/supabase-js: Unrecognized Supabase API key format. The client will proceed and send this key as-is; if you see authentication errors you may need to upgrade @supabase/supabase-js to a version that recognizes this key type."));
-}, ls = (t, e, r, n, s, i) => {
-  const o = Xl(n), a = Ql(), l = (s == null ? void 0 : s.enabled) === !0, c = (s == null ? void 0 : s.respectSamplingDecision) !== !1, u = l ? Vl(e) : null, d = !(i != null && i.omitApiKeyAsBearer && ki(t));
+  gs.has(n) || (gs.add(n), console.warn("@supabase/supabase-js: Unrecognized Supabase API key format. The client will proceed and send this key as-is; if you see authentication errors you may need to upgrade @supabase/supabase-js to a version that recognizes this key type."));
+}, ms = (t, e, r, n, s, i) => {
+  const o = dc(n), a = hc(), l = (s == null ? void 0 : s.enabled) === !0, c = (s == null ? void 0 : s.respectSamplingDecision) !== !1, u = l ? ac(e) : null, d = !(i != null && i.omitApiKeyAsBearer && ji(t));
   return async (p, h) => {
     const f = await r();
     let g = new a(h == null ? void 0 : h.headers);
@@ -17319,47 +17319,47 @@ const Xl = (t) => t ? (...e) => t(...e) : (...e) => fetch(...e), Ql = () => Head
       m && g.set("Authorization", `Bearer ${m}`);
     }
     if (u) {
-      const m = tc(p, u, c);
+      const m = gc(p, u, c);
       m && (m.traceparent && !g.has("traceparent") && g.set("traceparent", m.traceparent), m.tracestate && !g.has("tracestate") && g.set("tracestate", m.tracestate), m.baggage && !g.has("baggage") && g.set("baggage", m.baggage));
     }
     return o(p, D(D({}, h), {}, { headers: g }));
   };
 };
-let cs = !1, us = !1;
-function tc(t, e, r) {
-  const n = Qi();
+let ys = !1, _s = !1;
+function gc(t, e, r) {
+  const n = fo();
   if (!n)
-    return cs || (cs = !0, console.warn("@supabase/supabase-js: tracePropagation is enabled but the tracing runtime is not loaded, so trace headers will not be attached. Add `import '@supabase/supabase-js/tracing'` at your application entry point (requires the OpenTelemetry API package to be installed). The CDN/UMD build does not support trace propagation.")), null;
-  if (!Wl(typeof t == "string" || t instanceof URL ? t : t.url, e)) return null;
+    return ys || (ys = !0, console.warn("@supabase/supabase-js: tracePropagation is enabled but the tracing runtime is not loaded, so trace headers will not be attached. Add `import '@supabase/supabase-js/tracing'` at your application entry point (requires the OpenTelemetry API package to be installed). The CDN/UMD build does not support trace propagation.")), null;
+  if (!ic(typeof t == "string" || t instanceof URL ? t : t.url, e)) return null;
   const s = n();
   if (!s || !s.traceparent) {
     var i;
-    if (!(s == null || (i = s.carrierKeys) === null || i === void 0) && i.length && !us) {
-      us = !0;
+    if (!(s == null || (i = s.carrierKeys) === null || i === void 0) && i.length && !_s) {
+      _s = !0;
       const o = s.carrierKeys.includes("sentry-trace") ? " Sentry detected: set `propagateTraceparent: true` in Sentry.init() to emit it." : " Configure your tracing SDK to emit W3C trace context on outgoing requests.";
       console.warn(`@supabase/supabase-js: tracePropagation is enabled and a tracing SDK is active, but its propagator wrote [${s.carrierKeys.join(", ")}] and no W3C traceparent header, so trace headers will not be attached.` + o);
     }
     return null;
   }
   if (r) {
-    const o = zl(s.traceparent);
+    const o = sc(s.traceparent);
     if (o && !o.isSampled) return { traceparent: s.traceparent };
   }
   return s;
 }
-function ds(t) {
+function ws(t) {
   return typeof t == "boolean" ? { enabled: t } : t;
 }
-function rc(t) {
+function mc(t) {
   return t.endsWith("/") ? t : t + "/";
 }
-let hs = !1;
-function nc(t) {
-  hs || typeof t != "object" || t === null || !("schema" in t) || t.schema === void 0 || (hs = !0, console.warn(`@supabase/supabase-js: The "schema" option must be nested under "db", e.g. createClient(url, key, { db: { schema: 'myschema' } }). A top-level "schema" is ignored and queries go to the default schema.`));
+let vs = !1;
+function yc(t) {
+  vs || typeof t != "object" || t === null || !("schema" in t) || t.schema === void 0 || (vs = !0, console.warn(`@supabase/supabase-js: The "schema" option must be nested under "db", e.g. createClient(url, key, { db: { schema: 'myschema' } }). A top-level "schema" is ignored and queries go to the default schema.`));
 }
-function sc(t, e) {
+function _c(t, e) {
   var r, n, s, i, o, a;
-  const { db: l, auth: c, realtime: u, global: d } = t, { db: p, auth: h, realtime: f, global: g } = e, m = ds(t.tracePropagation), y = ds(e.tracePropagation), _ = {
+  const { db: l, auth: c, realtime: u, global: d } = t, { db: p, auth: h, realtime: f, global: g } = e, m = ws(t.tracePropagation), y = ws(e.tracePropagation), _ = {
     db: D(D({}, p), l),
     auth: D(D({}, h), c),
     realtime: D(D({}, f), u),
@@ -17373,21 +17373,21 @@ function sc(t, e) {
   };
   return t.accessToken ? _.accessToken = t.accessToken : delete _.accessToken, _;
 }
-function ic(t) {
+function wc(t) {
   const e = t == null ? void 0 : t.trim();
   if (!e) throw new Error("supabaseUrl is required.");
   if (!e.match(/^https?:\/\//i)) throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.");
   try {
-    return new URL(rc(e));
+    return new URL(mc(e));
   } catch {
     throw Error("Invalid supabaseUrl: Provided URL is malformed.");
   }
 }
-var oc = class extends $l {
+var vc = class extends Yl {
   constructor(t) {
     super(t);
   }
-}, ac = class {
+}, bc = class {
   /**
   * Create a new client for use in the browser.
   *
@@ -17605,16 +17605,16 @@ var oc = class extends $l {
   constructor(t, e, r) {
     var n, s;
     this.supabaseUrl = t, this.supabaseKey = e;
-    const i = ic(t);
+    const i = wc(t);
     if (!e) throw new Error("supabaseKey is required.");
-    ec(e), nc(r), this.realtimeUrl = new URL("realtime/v1", i), this.realtimeUrl.protocol = this.realtimeUrl.protocol.replace("http", "ws"), this.authUrl = new URL("auth/v1", i), this.storageUrl = new URL("storage/v1", i), this.functionsUrl = new URL("functions/v1", i);
+    pc(e), yc(r), this.realtimeUrl = new URL("realtime/v1", i), this.realtimeUrl.protocol = this.realtimeUrl.protocol.replace("http", "ws"), this.authUrl = new URL("auth/v1", i), this.storageUrl = new URL("storage/v1", i), this.functionsUrl = new URL("functions/v1", i);
     const o = `sb-${i.hostname.split(".")[0]}-auth-token`, a = {
-      db: ql,
-      realtime: Fl,
-      auth: D(D({}, Ml), {}, { storageKey: o }),
-      global: Bl,
-      tracePropagation: Hl
-    }, l = sc(r ?? {}, a);
+      db: ec,
+      realtime: rc,
+      auth: D(D({}, tc), {}, { storageKey: o }),
+      global: Zl,
+      tracePropagation: nc
+    }, l = _c(r ?? {}, a);
     if (this.settings = l, this.storageKey = (n = l.auth.storageKey) !== null && n !== void 0 ? n : "", this.headers = (s = l.global.headers) !== null && s !== void 0 ? s : {}, l.accessToken)
       this.accessToken = l.accessToken, this.auth = new Proxy({}, { get: (u, d) => {
         throw new Error(`@supabase/supabase-js: Supabase Client is configured with the accessToken option, accessing supabase.auth.${String(d)} is not possible`);
@@ -17623,24 +17623,24 @@ var oc = class extends $l {
       var c;
       this.auth = this._initSupabaseAuthClient((c = l.auth) !== null && c !== void 0 ? c : {}, this.headers, l.global.fetch);
     }
-    this.fetch = ls(e, t, this._getSessionToken.bind(this), l.global.fetch, l.tracePropagation), this.functionsFetch = ls(e, t, this._getSessionToken.bind(this), l.global.fetch, l.tracePropagation, { omitApiKeyAsBearer: !0 }), this.realtime = this._initRealtimeClient(D({
+    this.fetch = ms(e, t, this._getSessionToken.bind(this), l.global.fetch, l.tracePropagation), this.functionsFetch = ms(e, t, this._getSessionToken.bind(this), l.global.fetch, l.tracePropagation, { omitApiKeyAsBearer: !0 }), this.realtime = this._initRealtimeClient(D({
       headers: this.headers,
       accessToken: this._getAccessToken.bind(this),
       fetch: this.fetch
-    }, l.realtime)), this.accessToken && Promise.resolve(this.accessToken()).then((u) => this.realtime.setAuth(u)).catch((u) => console.warn("Failed to set initial Realtime auth token:", u)), this.rest = new fo(new URL("rest/v1", i).href, {
+    }, l.realtime)), this.accessToken && Promise.resolve(this.accessToken()).then((u) => this.realtime.setAuth(u)).catch((u) => console.warn("Failed to set initial Realtime auth token:", u)), this.rest = new To(new URL("rest/v1", i).href, {
       headers: this.headers,
       schema: l.db.schema,
       fetch: this.fetch,
       timeout: l.db.timeout,
       urlLengthLimit: l.db.urlLengthLimit,
       retry: l.db.retry
-    }), this.storage = new Na(this.storageUrl.href, this.headers, this.fetch, r == null ? void 0 : r.storage), l.accessToken || this._listenForAuthEvents();
+    }), this.storage = new Ja(this.storageUrl.href, this.headers, this.fetch, r == null ? void 0 : r.storage), l.accessToken || this._listenForAuthEvents();
   }
   /**
   * Supabase Functions allows you to deploy and invoke edge functions.
   */
   get functions() {
-    return new ro(this.functionsUrl.href, {
+    return new yo(this.functionsUrl.href, {
       headers: this.headers,
       customFetch: this.functionsFetch
     });
@@ -17789,7 +17789,7 @@ var oc = class extends $l {
       Authorization: `Bearer ${this.supabaseKey}`,
       apikey: `${this.supabaseKey}`
     };
-    return new oc({
+    return new vc({
       url: this.authUrl.href,
       headers: D(D({}, g), h),
       storageKey: i,
@@ -17810,7 +17810,7 @@ var oc = class extends $l {
     });
   }
   _initRealtimeClient(t) {
-    return new sa(this.realtimeUrl.href, D(D({}, t), {}, { params: D(D({}, { apikey: this.supabaseKey }), t == null ? void 0 : t.params) }));
+    return new _a(this.realtimeUrl.href, D(D({}, t), {}, { params: D(D({}, { apikey: this.supabaseKey }), t == null ? void 0 : t.params) }));
   }
   _listenForAuthEvents() {
     return this.auth.onAuthStateChange((t, e) => {
@@ -17821,8 +17821,8 @@ var oc = class extends $l {
     (t === "TOKEN_REFRESHED" || t === "SIGNED_IN" || t === "INITIAL_SESSION") && this.changedAccessToken !== r ? (this.changedAccessToken = r, this.realtime.setAuth(r)) : t === "SIGNED_OUT" && (this.realtime.setAuth(), e == "STORAGE" && this.auth.signOut(), this.changedAccessToken = void 0);
   }
 };
-const Si = (t, e, r) => new ac(t, e, r);
-function lc() {
+const Pi = (t, e, r) => new bc(t, e, r);
+function kc() {
   if (typeof window < "u" || globalThis.Deno !== void 0) return !1;
   const t = globalThis.process;
   if (!t) return !1;
@@ -17831,30 +17831,30 @@ function lc() {
   const r = e.match(/^v(\d+)\./);
   return r ? parseInt(r[1], 10) <= 20 : !1;
 }
-lc() && console.warn("⚠️  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
-function Ei() {
+kc() && console.warn("⚠️  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
+function Ni() {
   const t = globalThis.APP_CONFIG || (typeof window < "u" ? window.APP_CONFIG : void 0), e = t && t.P2_SUPABASE_URL, r = t && t.P2_SUPABASE_ANON_KEY;
   return e && r ? { url: e, anonKey: r } : null;
 }
-function fs(t) {
+function bs(t) {
   return /invalid login credentials/i.test(t) ? "Неверная почта или пароль" : /email not confirmed/i.test(t) ? "Почта не подтверждена" : /banned/i.test(t) ? "Доступ отключён администратором компании" : /failed to fetch|network|load failed/i.test(t) ? "Нет связи с сервером. Попробуйте позже" : "Не удалось войти. Попробуйте ещё раз";
 }
-function ps(t) {
+function ks(t) {
   return /same_password|should be different/i.test(t) ? "Новый пароль должен отличаться от прежнего" : /weak|at least|too short|characters/i.test(t) ? "Пароль слишком короткий или простой" : /failed to fetch|network|load failed/i.test(t) ? "Нет связи с сервером. Попробуйте позже" : "Не удалось сменить пароль. Попробуйте ещё раз";
 }
-function cc(t, e) {
+function Sc(t, e) {
   return t.length < 8 ? "Пароль — не короче 8 знаков" : t !== e ? "Пароли не совпадают" : null;
 }
-const Ai = "platform2-auth", uc = 8e3;
-function Gt(t) {
+const $i = "platform2-auth", Ec = 8e3;
+function er(t) {
   try {
-    const e = JSON.parse(t && t.getItem(Ai) || "null");
+    const e = JSON.parse(t && t.getItem($i) || "null");
     return !e || typeof e.expires_at != "number" ? null : { email: e.user && typeof e.user.email == "string" ? e.user.email : null, expiresAt: e.expires_at, issuedAt: typeof e.expires_in == "number" ? e.expires_at - e.expires_in : null };
   } catch {
     return null;
   }
 }
-async function dc(t) {
+async function xc(t) {
   const e = t.stored;
   if (!e) return { email: await t.getSession(), offline: !1, issuedAt: null };
   const r = e.issuedAt;
@@ -17863,22 +17863,22 @@ async function dc(t) {
   const n = Symbol("timeout");
   let s;
   const i = new Promise((a) => {
-    s = setTimeout(() => a(n), t.waitMs ?? uc);
+    s = setTimeout(() => a(n), t.waitMs ?? Ec);
   }), o = await Promise.race([t.getSession().catch(() => null), i]);
   return clearTimeout(s), typeof o == "string" ? { email: o, offline: !1, issuedAt: r } : t.stillStored() ? { email: e.email, offline: !0, issuedAt: r } : { email: null, offline: !1, issuedAt: null };
 }
-const zr = "__platform2SupabaseClient", Wr = globalThis;
-function hc(t) {
-  const e = Wr[zr] || (Wr[zr] = Si(t.url, t.anonKey, {
-    auth: { storageKey: Ai, persistSession: !0, autoRefreshToken: !0, detectSessionInUrl: !1 }
+const Gr = "__platform2SupabaseClient", Yr = globalThis;
+function Ac(t) {
+  const e = Yr[Gr] || (Yr[Gr] = Pi(t.url, t.anonKey, {
+    auth: { storageKey: $i, persistSession: !0, autoRefreshToken: !0, detectSessionInUrl: !1 }
   }));
   return {
     async signIn(r, n) {
       try {
         const { error: s } = await e.auth.signInWithPassword({ email: r.trim(), password: n });
-        return s ? { ok: !1, message: fs(s.message) } : { ok: !0 };
+        return s ? { ok: !1, message: bs(s.message) } : { ok: !0 };
       } catch (s) {
-        return { ok: !1, message: fs(s instanceof Error ? s.message : "") };
+        return { ok: !1, message: bs(s instanceof Error ? s.message : "") };
       }
     },
     async signOut() {
@@ -17887,9 +17887,9 @@ function hc(t) {
     async changePassword(r) {
       try {
         const { error: n } = await e.auth.updateUser({ password: r });
-        return n ? { ok: !1, message: ps(n.message) } : { ok: !0 };
+        return n ? { ok: !1, message: ks(n.message) } : { ok: !0 };
       } catch (n) {
-        return { ok: !1, message: ps(n instanceof Error ? n.message : "") };
+        return { ok: !1, message: ks(n instanceof Error ? n.message : "") };
       }
     },
     async getEmail() {
@@ -17903,15 +17903,15 @@ function hc(t) {
       } catch {
         r = null;
       }
-      return dc({
-        stored: Gt(r),
+      return xc({
+        stored: er(r),
         online: typeof navigator > "u" || navigator.onLine !== !1,
         nowSec: Math.floor(Date.now() / 1e3),
         getSession: async () => {
           const { data: n } = await e.auth.getSession();
           return n.session && n.session.user.email || null;
         },
-        stillStored: () => Gt(r) !== null
+        stillStored: () => er(r) !== null
       });
     },
     async getAccess() {
@@ -17930,29 +17930,29 @@ function hc(t) {
     }
   };
 }
-function bt() {
-  return Wr[zr] || null;
+function Tt() {
+  return Yr[Gr] || null;
 }
-const ke = "platform2_quality_company", It = "platform2_quality_state_", gs = "platform2_quality_project_", xi = "platform2_quality_access_", Ut = "platform2_quality_names_";
-function fc(t, e) {
+const Te = "platform2_quality_company", Lt = "platform2_quality_state_", Ss = "platform2_quality_project_", Li = "platform2_quality_access_", Ht = "platform2_quality_names_";
+function Tc(t, e) {
   try {
-    const r = JSON.parse(t.getItem(Ut + e) || "[]");
+    const r = JSON.parse(t.getItem(Ht + e) || "[]");
     return Array.isArray(r) ? r.map(String).filter(Boolean).slice(-10) : [];
   } catch {
     return [];
   }
 }
-function ms(t, e, r) {
-  const n = fc(t, e), s = (r || "").trim(), i = (t.getItem(Ut + e + ":now") || "").trim();
+function Es(t, e, r) {
+  const n = Tc(t, e), s = (r || "").trim(), i = (t.getItem(Ht + e + ":now") || "").trim();
   i && i !== s && !n.includes(i) && n.push(i);
   const o = n.filter((a) => a !== s).slice(-10);
   try {
-    t.setItem(Ut + e, JSON.stringify(o)), s && t.setItem(Ut + e + ":now", s);
+    t.setItem(Ht + e, JSON.stringify(o)), s && t.setItem(Ht + e + ":now", s);
   } catch {
   }
   return o;
 }
-const Kr = [
+const Xr = [
   "rbi_sync_config",
   "rbi_cloud_dirty",
   "rbi_force_full_pull",
@@ -17967,13 +17967,13 @@ const Kr = [
   "rbi_last_bg_cache_at",
   "rbi_settings_backup"
 ];
-function pc(t) {
+function Rc(t) {
   if (t.mode !== "email" || !t.companyId) return null;
   const e = t.companies.find((r) => r.id === t.companyId);
   return e && (e.modules.includes("quality") || e.modules.includes("construction")) ? e.id : null;
 }
-const at = "platform2_quality_user", Yt = "platform2_quality_drop_db", Xt = "platform2_quality_legacy_owner";
-function Le(t) {
+const pt = "platform2_quality_user", tr = "platform2_quality_drop_db", rr = "platform2_quality_legacy_owner";
+function Re(t) {
   const e = t.trim().toLowerCase(), r = (n) => {
     let s = n >>> 0;
     for (let i = 0; i < e.length; i++)
@@ -17982,36 +17982,36 @@ function Le(t) {
   };
   return r(2166136261) + r(791551244);
 }
-function gc(t, e, r = "") {
-  const n = t.getItem(ke) || "", s = n && t.getItem(at) || "", i = e || "", o = i ? r : "";
+function Oc(t, e, r = "") {
+  const n = t.getItem(Te) || "", s = n && t.getItem(pt) || "", i = e || "", o = i ? r : "";
   if (n === i && s === o) return !1;
   const a = !!n && !s && n === i && !!o;
   if (a) {
-    const d = t.getItem(Xt);
+    const d = t.getItem(rr);
     if (t.getItem("rbi_cloud_dirty") === "1" && (!d || d === o))
-      return t.setItem(Xt, o), !1;
-    (t.getItem("rbi_cloud_dirty") !== "1" || d === null) && t.setItem(Yt, n);
+      return t.setItem(rr, o), !1;
+    (t.getItem("rbi_cloud_dirty") !== "1" || d === null) && t.setItem(tr, n);
   }
   const l = (d, p) => p ? d + ":" + p : d, c = {};
-  for (const d of Kr) {
+  for (const d of Xr) {
     const p = t.getItem(d);
     p !== null && (c[d] = p), t.removeItem(d);
   }
-  a && t.getItem(Yt) === n ? t.removeItem(It + n) : t.setItem(It + l(n, s), JSON.stringify(c));
+  a && t.getItem(tr) === n ? t.removeItem(Lt + n) : t.setItem(Lt + l(n, s), JSON.stringify(c));
   let u = {};
   try {
-    u = JSON.parse(t.getItem(It + l(i, o)) || "{}");
+    u = JSON.parse(t.getItem(Lt + l(i, o)) || "{}");
   } catch {
     u = {};
   }
-  for (const d of Kr) typeof u[d] == "string" && t.setItem(d, u[d]);
-  return t.removeItem(It + l(i, o)), i ? t.setItem(ke, i) : t.removeItem(ke), o ? t.setItem(at, o) : t.removeItem(at), !0;
+  for (const d of Xr) typeof u[d] == "string" && t.setItem(d, u[d]);
+  return t.removeItem(Lt + l(i, o)), i ? t.setItem(Te, i) : t.removeItem(Te), o ? t.setItem(pt, o) : t.removeItem(pt), !0;
 }
-function mc(t) {
+function Cc(t) {
   const e = (r) => t.includes(r);
   return e("quality.manage") || e("construction.manage") ? "manager" : e("quality.scope.contractor") ? "contractor" : e("quality.edit") ? "engineer" : e("quality.view") || e("construction.view") || e("construction.edit") ? "director" : "guest";
 }
-function _r(t) {
+function Er(t) {
   const e = t && typeof t == "object" ? t : {}, r = e.contractor && typeof e.contractor == "object" ? e.contractor : {};
   return {
     actions: Array.isArray(e.actions) ? e.actions.map(String) : [],
@@ -18025,12 +18025,12 @@ function _r(t) {
     objects: Array.isArray(e.objects) ? e.objects.map((n) => n && typeof n == "object" ? String(n.key ?? "") : "").filter(Boolean) : null,
     // P2-0035 (039b): служебный объект-контейнер компании (как «Объекты RBI») — Качество работает в нём
     container: typeof e.container == "string" && e.container ? e.container : null,
-    construction: Ti(e.construction),
-    quality: yc(e.quality)
+    construction: Di(e.construction),
+    quality: Ic(e.quality)
   };
 }
-function yc(t) {
-  const e = Ti(t);
+function Ic(t) {
+  const e = Di(t);
   if (!e) return null;
   const r = t, n = {};
   if (r.unplaced && typeof r.unplaced == "object")
@@ -18048,7 +18048,7 @@ function yc(t) {
     }).filter((i) => i.project) : []
   };
 }
-function Ti(t) {
+function Di(t) {
   if (!t || typeof t != "object") return null;
   const e = t;
   if (!Array.isArray(e.grants)) return null;
@@ -18071,24 +18071,24 @@ function Ti(t) {
     })
   };
 }
-function ys(t, e) {
+function xs(t, e) {
   for (const [r, n] of Object.entries(e))
     Object.defineProperty(t, r, { configurable: !0, enumerable: !0, get: () => n, set: () => {
     } });
 }
-const _c = 15e3, vc = (t, e) => {
+const jc = 15e3, Pc = (t, e) => {
   var n;
   const r = (n = globalThis.RbiSyncNet) == null ? void 0 : n.fetch;
   return r ? r(t, e) : fetch(t, e);
 };
-function wc(t, e, r, n) {
+function Nc(t, e, r, n) {
   const s = t(e.url, e.anonKey, {
     // P2-0059 доработка (З2): пропуск — не дольше 15 с (обновление входа на слабой сети), иначе запрос — «нет ответа», а не «без входа»
     accessToken: async () => {
       var l;
       let o;
       const a = new Promise((c, u) => {
-        o = setTimeout(() => u(Object.assign(new Error("Нет ответа сервера (вход) за 15 с"), { code: "RBI_REQUEST_TIMEOUT" })), _c);
+        o = setTimeout(() => u(Object.assign(new Error("Нет ответа сервера (вход) за 15 с"), { code: "RBI_REQUEST_TIMEOUT" })), jc);
       });
       try {
         return ((l = (await Promise.race([n.auth.getSession(), a])).data.session) == null ? void 0 : l.access_token) ?? null;
@@ -18097,20 +18097,20 @@ function wc(t, e, r, n) {
       }
     },
     db: { schema: "quality" },
-    global: { headers: { "x-company-id": r }, fetch: vc }
-  }), i = Ac(s.storage, r);
+    global: { headers: { "x-company-id": r }, fetch: Pc }
+  }), i = Bc(s.storage, r);
   return new Proxy(s, {
     get(o, a, l) {
-      return a === "auth" ? n.auth : a === "storage" ? i : a === "from" ? (c) => kc(o.from(c)) : Reflect.get(o, a, l);
+      return a === "auth" ? n.auth : a === "storage" ? i : a === "from" ? (c) => Lc(o.from(c)) : Reflect.get(o, a, l);
     }
   });
 }
-function bc(t) {
+function $c(t) {
   if (!t) return t;
   const e = t.split(",").map((r) => r.trim()).filter(Boolean);
   return (e.includes("core_company_id") ? e : ["core_company_id", ...e]).join(",");
 }
-const _s = [
+const As = [
   "core_id",
   "core_inspection_id",
   "core_report_id",
@@ -18121,31 +18121,31 @@ const _s = [
   "core_location_node_id",
   "core_contractor_id"
 ];
-function Vr(t) {
-  if (Array.isArray(t)) return t.map(Vr);
+function Qr(t) {
+  if (Array.isArray(t)) return t.map(Qr);
   if (!t || typeof t != "object") return t;
   const e = t;
-  if (!_s.some((n) => n in e)) return t;
+  if (!As.some((n) => n in e)) return t;
   const r = { ...e };
-  for (const n of _s) delete r[n];
+  for (const n of As) delete r[n];
   return r;
 }
-function kc(t) {
+function Lc(t) {
   return new Proxy(t, {
     get(e, r, n) {
       const s = Reflect.get(e, r, n);
-      return typeof s != "function" ? s : r === "upsert" ? (i, o) => s.call(e, Vr(i), o != null && o.onConflict ? { ...o, onConflict: bc(o.onConflict) } : o) : r === "insert" || r === "update" ? (i, ...o) => s.call(e, Vr(i), ...o) : s;
+      return typeof s != "function" ? s : r === "upsert" ? (i, o) => s.call(e, Qr(i), o != null && o.onConflict ? { ...o, onConflict: $c(o.onConflict) } : o) : r === "insert" || r === "update" ? (i, ...o) => s.call(e, Qr(i), ...o) : s;
     }
   });
 }
-function Sc(t) {
+function Dc(t) {
   return t.startsWith("quality-") ? t : "quality-" + t;
 }
-function vr(t, e) {
+function xr(t, e) {
   const r = String(e || "").replace(/^\/+/, "");
   return r === t || r.startsWith(t + "/") ? r : t + "/" + r;
 }
-const Ec = {
+const Uc = {
   upload: "first",
   update: "first",
   download: "first",
@@ -18161,28 +18161,28 @@ const Ec = {
   remove: "list",
   createSignedUrls: "list"
 };
-function Ac(t, e) {
+function Bc(t, e) {
   return {
     from(r) {
-      const n = t.from(Sc(r));
+      const n = t.from(Dc(r));
       return new Proxy(n, {
         get(s, i, o) {
-          const a = Reflect.get(s, i, o), l = typeof i == "string" ? Ec[i] : void 0;
+          const a = Reflect.get(s, i, o), l = typeof i == "string" ? Uc[i] : void 0;
           return typeof a != "function" || !l ? typeof a == "function" ? a.bind(s) : a : (...c) => {
             const u = c.slice();
-            return l === "list" ? u[0] = Array.isArray(u[0]) ? u[0].map((d) => vr(e, d)) : u[0] : (u[0] = vr(e, u[0] ?? ""), l === "two" && (u[1] = vr(e, u[1]))), a.apply(s, u);
+            return l === "list" ? u[0] = Array.isArray(u[0]) ? u[0].map((d) => xr(e, d)) : u[0] : (u[0] = xr(e, u[0] ?? ""), l === "two" && (u[1] = xr(e, u[1]))), a.apply(s, u);
           };
         }
       });
     }
   };
 }
-const xc = "rbi:quality-access";
-let vs = !1;
-function Tc(t) {
+const qc = "rbi:quality-access";
+let Ts = !1;
+function Mc(t) {
   const e = t.serviceWorker, r = t.platformClient;
-  if (!e || !r || vs) return;
-  vs = !0;
+  if (!e || !r || Ts) return;
+  Ts = !0;
   const n = async () => {
     var i;
     const s = ((i = (await r.auth.getSession()).data.session) == null ? void 0 : i.access_token) ?? null;
@@ -18195,39 +18195,39 @@ function Tc(t) {
     n();
   }), n();
 }
-const wr = /* @__PURE__ */ new WeakMap();
-async function Rc(t, e) {
+const Ar = /* @__PURE__ */ new WeakMap();
+async function Fc(t, e) {
   var T;
-  if (t.mode === "none" && !e.store.getItem(ke)) return null;
-  const r = pc(t), n = r && t.email ? Le(t.email) : "", s = !!t.offline || !!t.checking;
-  if (s && (r || "") + ":" + n != (e.store.getItem(ke) || "") + ":" + (e.store.getItem(at) || ""))
+  if (t.mode === "none" && !e.store.getItem(Te)) return null;
+  const r = Rc(t), n = r && t.email ? Re(t.email) : "", s = !!t.offline || !!t.checking;
+  if (s && (r || "") + ":" + n != (e.store.getItem(Te) || "") + ":" + (e.store.getItem(pt) || ""))
     return (e.win.RBI || {}).qualitySync || null;
-  if (gc(e.store, r, n))
+  if (Oc(e.store, r, n))
     return e.reload(), null;
-  const i = e.store.getItem(Yt);
+  const i = e.store.getItem(tr);
   if (i && e.dropDatabase) {
-    const w = ((T = e.win.APP_CONFIG) == null ? void 0 : T.LOCAL_DB_NAME) || "PLATFORM2_DB";
-    e.dropDatabase(w + "_" + i), e.store.removeItem(Yt), e.store.getItem(Xt) !== null && e.store.getItem(ke) === i && e.store.removeItem(Xt);
+    const v = ((T = e.win.APP_CONFIG) == null ? void 0 : T.LOCAL_DB_NAME) || "PLATFORM2_DB";
+    e.dropDatabase(v + "_" + i), e.store.removeItem(tr), e.store.getItem(rr) !== null && e.store.getItem(Te) === i && e.store.removeItem(rr);
   }
   const o = e.win.RBI = e.win.RBI || {};
   if (!r || !e.platformClient || !e.cfg || !t.email)
     return o.qualitySync = null, null;
   const a = o.qualitySync;
   if (a && a.companyId === r) {
-    const w = s ? void 0 : wr.get(a);
-    w && (wr.delete(a), w());
+    const v = s ? void 0 : Ar.get(a);
+    v && (Ar.delete(a), v());
     const S = (t.fullName || "").trim() || t.email;
     if (a.engineerName !== S) {
-      a.names = ms(e.store, r + ":" + n, S), a.engineerName = S;
+      a.names = Es(e.store, r + ":" + n, S), a.engineerName = S;
       const O = e.win.syncConfig;
-      O && (O.engineerName = S, O.previousNames = a.names, e.store.setItem("rbi_sync_config", JSON.stringify(O))), e.win.appSettings && ys(e.win.appSettings, { engineerName: S });
+      O && (O.engineerName = S, O.previousNames = a.names, e.store.setItem("rbi_sync_config", JSON.stringify(O))), e.win.appSettings && xs(e.win.appSettings, { engineerName: S });
     }
     return a;
   }
-  Tc(e);
-  const l = wc(e.createClient, e.cfg, r, e.platformClient);
+  Mc(e);
+  const l = Nc(e.createClient, e.cfg, r, e.platformClient);
   e.win.supabaseClient = l;
-  const c = xi + r + ":" + n;
+  const c = Li + r + ":" + n;
   let u = { access: {}, projects: null };
   try {
     u = { ...u, ...JSON.parse(e.store.getItem(c) || "{}") };
@@ -18240,36 +18240,36 @@ async function Rc(t, e) {
     }
   };
   let p = null;
-  const h = async (w) => {
-    const S = w || "*", O = Promise.resolve(l.rpc("my_access", { p_project: w })).catch((U) => ({ data: null, error: U || "network" })).then((U) => (U.error || (u.access[S] = U.data, d()), U));
+  const h = async (v) => {
+    const S = v || "*", O = Promise.resolve(l.rpc("my_access", { p_project: v })).catch((B) => ({ data: null, error: B || "network" })).then((B) => (B.error || (u.access[S] = B.data, d()), B));
     if (s && S in u.access) {
-      const U = JSON.stringify(u.access[S]);
+      const B = JSON.stringify(u.access[S]);
       return O.then((V) => {
-        !V.error && JSON.stringify(V.data) !== U && p && p.projectId === w && M(_r(V.data));
-      }), _r(u.access[S]);
+        !V.error && JSON.stringify(V.data) !== B && p && p.projectId === v && M(Er(V.data));
+      }), Er(u.access[S]);
     }
-    const { data: L, error: C } = await O;
-    return _r(C ? S in u.access ? u.access[S] : null : L);
-  }, f = await h(null), g = f.projects, m = t.companies.find((w) => w.id === r), y = () => e.listProjects(r).then((w) => (u.projects = w, d(), w), () => u.projects || []), _ = !f.container && !!t.checking && !!u.projects, v = f.container ? null : t.offline || _ ? u.projects || [] : await y(), E = f.container ? [{ id: f.container, name: m ? m.name : "" }] : (v || []).filter((w) => g === null || g.includes(w.id)), R = e.store.getItem(gs + r), x = f.container ? f.container : E.some((w) => w.id === R) ? R : E.length === 1 ? E[0].id : null, I = t.email, j = (t.fullName || "").trim() || I, M = (w) => {
-    P.actions = w.actions, P.objects = w.objects, P.contractorKeys = w.contractorKeys, P.construction = w.construction, P.quality = w.quality, P.role = mc(w.actions);
-    const S = w.objects || [];
-    e.win.appSettings && ys(e.win.appSettings, {
+    const { data: $, error: C } = await O;
+    return Er(C ? S in u.access ? u.access[S] : null : $);
+  }, f = await h(null), g = f.projects, m = t.companies.find((v) => v.id === r), y = () => e.listProjects(r).then((v) => (u.projects = v, d(), v), () => u.projects || []), _ = !f.container && !!t.checking && !!u.projects, w = f.container ? null : t.offline || _ ? u.projects || [] : await y(), E = f.container ? [{ id: f.container, name: m ? m.name : "" }] : (w || []).filter((v) => g === null || g.includes(v.id)), R = e.store.getItem(Ss + r), A = f.container ? f.container : E.some((v) => v.id === R) ? R : E.length === 1 ? E[0].id : null, I = t.email, j = (t.fullName || "").trim() || I, M = (v) => {
+    P.actions = v.actions, P.objects = v.objects, P.contractorKeys = v.contractorKeys, P.construction = v.construction, P.quality = v.quality, P.role = Cc(v.actions);
+    const S = v.objects || [];
+    e.win.appSettings && xs(e.win.appSettings, {
       userRole: P.role,
       cloudStatus: "approved",
       engineerName: j,
-      contractorName: w.contractor,
-      assignedContractor: w.contractor,
-      assignedCounterpartyId: w.contractorId,
+      contractorName: v.contractor,
+      assignedContractor: v.contractor,
+      assignedCounterpartyId: v.contractorId,
       assignedProjects: S,
       assigned_projects: S
     });
     const O = e.win.syncConfig;
     O && (P.role === "manager" || P.role === "director") && O.syncMode !== "full" && (O.syncMode = "full", e.store.setItem("rbi_sync_config", JSON.stringify(O)));
-    const L = e.win.dispatchEvent;
-    typeof L == "function" && L.call(e.win, new Event(xc));
-  }, me = (w) => {
+    const $ = e.win.dispatchEvent;
+    typeof $ == "function" && $.call(e.win, new Event(qc));
+  }, ve = (v) => {
     const S = e.win.syncConfig = e.win.syncConfig || {};
-    S.enabled = !!w, S.engineerName = j, S.authUserId = t.userId || null, S.previousNames = P.names || [], S.projectCode = w || "", S.pinHash = null, S.syncMode || (S.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(S));
+    S.enabled = !!v, S.engineerName = j, S.authUserId = t.userId || null, S.previousNames = P.names || [], S.projectCode = v || "", S.pinHash = null, S.syncMode || (S.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(S));
   }, P = {
     active: !0,
     companyId: r,
@@ -18277,22 +18277,22 @@ async function Rc(t, e) {
     email: I,
     engineerName: j,
     userId: t.userId || "",
-    names: ms(e.store, r + ":" + n, j),
+    names: Es(e.store, r + ":" + n, j),
     objects: null,
     projects: E,
-    projectId: x,
+    projectId: A,
     role: "guest",
     actions: [],
-    async selectProject(w) {
-      !E.some((S) => S.id === w) || w === P.projectId || (e.store.setItem(gs + r, w), P.projectId = w, M(await h(w)), e.win.applySyncConnect ? await e.win.applySyncConnect(j, w, null) : me(w), e.win.initSync && await e.win.initSync());
+    async selectProject(v) {
+      !E.some((S) => S.id === v) || v === P.projectId || (e.store.setItem(Ss + r, v), P.projectId = v, M(await h(v)), e.win.applySyncConnect ? await e.win.applySyncConnect(j, v, null) : ve(v), e.win.initSync && await e.win.initSync());
     }
   };
-  return o.qualitySync = P, p = P, _ && wr.set(P, () => y().then((w) => {
-    P.projects = w.filter((S) => g === null || g.includes(S.id));
-  })), me(x), M(await h(x)), e.win.initSync && await e.win.initSync(), e.win.renderSyncUI && e.win.renderSyncUI(), P;
+  return o.qualitySync = P, p = P, _ && Ar.set(P, () => y().then((v) => {
+    P.projects = v.filter((S) => g === null || g.includes(S.id));
+  })), ve(A), M(await h(A)), e.win.initSync && await e.win.initSync(), e.win.renderSyncUI && e.win.renderSyncUI(), P;
 }
-const Jr = (t) => ({ id: t.id, module: t.module, project: t.project, bytes: t.bytes || 0 }), Oc = (t, e, r) => t + "|" + e + "|" + r;
-function Cc() {
+const Zr = (t) => ({ id: t.id, module: t.module, project: t.project, bytes: t.bytes || 0 }), Hc = (t, e, r) => t + "|" + e + "|" + r;
+function zc() {
   const t = /* @__PURE__ */ new Map();
   return {
     size: () => t.size,
@@ -18309,12 +18309,12 @@ function Cc() {
       return [...t.values()].filter((n) => n.slot === e && (!r || n.module === r));
     },
     async meta(e, r) {
-      return [...t.values()].filter((n) => n.slot === e && (!r || n.module === r)).map(Jr);
+      return [...t.values()].filter((n) => n.slot === e && (!r || n.module === r)).map(Zr);
     }
   };
 }
-const Ic = "platform2_offline_copy", jc = 30 * 6e4, br = "reads";
-function Pc(t) {
+const Wc = "platform2_offline_copy", Kc = 30 * 6e4, Tr = "reads";
+function Vc(t) {
   let e = null;
   const r = /* @__PURE__ */ new Map(), n = /* @__PURE__ */ new Map(), s = (c, u, d) => {
     const p = r.get(c);
@@ -18322,16 +18322,16 @@ function Pc(t) {
       d ? h.set(u, d) : h.delete(u);
     });
   }, i = (c) => c.slice(0, c.indexOf("|")), o = () => e || (e = new Promise((c, u) => {
-    const d = t.open(Ic, 1);
+    const d = t.open(Wc, 1);
     d.onupgradeneeded = () => {
-      d.result.createObjectStore(br, { keyPath: "id" }).createIndex("slot", "slot", { unique: !1 });
+      d.result.createObjectStore(Tr, { keyPath: "id" }).createIndex("slot", "slot", { unique: !1 });
     }, d.onsuccess = () => c(d.result), d.onerror = () => {
       e = null, u(d.error);
     };
   })), a = async (c, u) => {
     const d = await o();
     return new Promise((p, h) => {
-      const f = u(d.transaction(br, c).objectStore(br));
+      const f = u(d.transaction(Tr, c).objectStore(Tr));
       f.onsuccess = () => p(f.result), f.onerror = () => h(f.error);
     });
   }, l = async (c, u) => {
@@ -18352,7 +18352,7 @@ function Pc(t) {
     },
     async put(c) {
       try {
-        await a("readwrite", (u) => u.put(c)), s(c.slot, c.id, Jr(c));
+        await a("readwrite", (u) => u.put(c)), s(c.slot, c.id, Zr(c));
       } catch {
       }
     },
@@ -18367,24 +18367,24 @@ function Pc(t) {
       let d = r.get(c);
       if (d) {
         const [h, f] = await Promise.all([d, a("readonly", (g) => g.index("slot").count(c)).catch(() => -1)]);
-        (f >= 0 && f !== h.size || Date.now() - (n.get(c) || 0) > jc) && (d = void 0);
+        (f >= 0 && f !== h.size || Date.now() - (n.get(c) || 0) > Kc) && (d = void 0);
       }
-      d || (d = l(c).then((h) => new Map(h.map((f) => [f.id, Jr(f)]))), r.set(c, d), n.set(c, Date.now()));
+      d || (d = l(c).then((h) => new Map(h.map((f) => [f.id, Zr(f)]))), r.set(c, d), n.set(c, Date.now()));
       const p = [...(await d).values()];
       return u ? p.filter((h) => h.module === u) : p;
     }
   };
 }
-const ws = "Нужен интернет для этого экрана", bs = "Нет связи с сервером. Попробуйте позже", Nc = "Нужен интернет", Lc = 14, $c = 8e3, Dc = 6e4, Uc = 24 * 3600 * 1e3;
-function Ri(t) {
+const Rs = "Нужен интернет для этого экрана", Os = "Нет связи с сервером. Попробуйте позже", Jc = "Нужен интернет", Gc = 14, Yc = 8e3, Xc = 6e4, Qc = 24 * 3600 * 1e3;
+function Ui(t) {
   const e = t && t.offline;
   return !e || typeof e != "object" ? null : { view: e.view === !0, input: Array.isArray(e.input) ? e.input.map(String) : [], files: e.files === !0 };
 }
-function Bc(t, e, r) {
+function Zc(t, e, r) {
   return r && !(t && (t.input.includes("*") || t.input.includes(e)));
 }
-const ks = (t, e) => e - Date.parse(t) > Lc * Uc, kr = Symbol("timeout"), qc = /нет права|нет доступа/i;
-function Mc(t) {
+const Cs = (t, e) => e - Date.parse(t) > Gc * Qc, Rr = Symbol("timeout"), eu = /нет права|нет доступа/i;
+function tu(t) {
   const e = () => t.now ? t.now() : Date.now();
   let r = 0;
   const n = /* @__PURE__ */ new Map(), s = /* @__PURE__ */ new Map(), i = (u, d, p) => {
@@ -18408,7 +18408,7 @@ function Mc(t) {
   };
   async function c(u, d, p, h = !1) {
     const f = await t.store.get(p);
-    return f ? (h || (l(u, d, f.at), i(u, d, !1)), { ok: !0, value: f.data, meta: { from: "copy", at: f.at, stale: ks(f.at, e()) } }) : (h || i(u, d, !0), { ok: !1, message: ws, offline: !0 });
+    return f ? (h || (l(u, d, f.at), i(u, d, !1)), { ok: !0, value: f.data, meta: { from: "copy", at: f.at, stale: Cs(f.at, e()) } }) : (h || i(u, d, !0), { ok: !1, message: Rs, offline: !0 });
   }
   return {
     async read(u, d, p, h = {}) {
@@ -18417,31 +18417,31 @@ function Mc(t) {
         const R = await p();
         return R.ok ? { ok: !0, value: R.value, meta: null } : R;
       }
-      const g = Oc(f, u, d);
+      const g = Hc(f, u, d);
       if (h.allowed === !1) {
-        if (await t.store.delete(g), t.offline()) return { ok: !1, message: ws, offline: !0 };
+        if (await t.store.delete(g), t.offline()) return { ok: !1, message: Rs, offline: !0 };
         const R = await p();
         return R.ok ? { ok: !0, value: R.value, meta: null } : R;
       }
       if (t.offline() || e() < r) return c(u, d, g, h.quiet);
       let m;
       const y = await Promise.race([
-        p().catch(() => ({ ok: !1, message: bs })),
+        p().catch(() => ({ ok: !1, message: Os })),
         new Promise((R) => {
-          m = setTimeout(() => R(kr), t.waitMs ?? $c);
+          m = setTimeout(() => R(Rr), t.waitMs ?? Yc);
         })
       ]);
-      if (clearTimeout(m), y === kr && (r = e() + Dc), y === kr || !y.ok && y.message === bs) return c(u, d, g, h.quiet);
+      if (clearTimeout(m), y === Rr && (r = e() + Xc), y === Rr || !y.ok && y.message === Os) return c(u, d, g, h.quiet);
       if (r = 0, !y.ok)
-        return qc.test(y.message) && (await t.store.delete(g), l(u, d, null)), y;
+        return eu.test(y.message) && (await t.store.delete(g), l(u, d, null)), y;
       const _ = new Date(e()).toISOString();
-      let v = 0;
+      let w = 0;
       try {
-        v = JSON.stringify(y.value ?? null).length;
+        w = JSON.stringify(y.value ?? null).length;
       } catch {
       }
       const E = Array.isArray(y.value) && y.value.length === 0;
-      return v && !(E && h.keepEmpty === !1) && await t.store.put({ id: g, slot: f, module: u, key: d, project: h.project ?? null, at: _, bytes: v, data: y.value }), l(u, d, null), i(u, d, !1), { ok: !0, value: y.value, meta: { from: "server", at: _, stale: !1 } };
+      return w && !(E && h.keepEmpty === !1) && await t.store.put({ id: g, slot: f, module: u, key: d, project: h.project ?? null, at: _, bytes: w, data: y.value }), l(u, d, null), i(u, d, !1), { ok: !0, value: y.value, meta: { from: "server", at: _, stale: !1 } };
     },
     async pruneProjects(u, d) {
       const p = t.slot();
@@ -18455,7 +18455,7 @@ function Mc(t) {
       const d = n.get(u), p = ((f = s.get(u)) == null ? void 0 : f.size) || 0;
       if ((!d || !d.size) && !p) return null;
       const h = d && d.size ? [...d.values()].sort()[0] : null;
-      return { at: h, stale: h !== null && ks(h, e()), missed: p };
+      return { at: h, stale: h !== null && Cs(h, e()), missed: p };
     },
     resetMissed(u) {
       var d;
@@ -18486,35 +18486,35 @@ function Mc(t) {
     }
   };
 }
-const dn = ["mine30", "all30", "all", "none"], Oi = {
+const _n = ["mine30", "all30", "all", "none"], Bi = {
   mine30: "Мои объекты за 30 дней",
   all30: "Все за 30 дней",
   all: "Все",
   none: "Не скачивать заранее"
-}, Ci = /* @__PURE__ */ new Set(["engineer", "contractor"]), Fc = 30, Hc = 24 * 3600 * 1e3;
-function Gr(t) {
-  return Ci.has(t) ? "mine30" : "none";
+}, qi = /* @__PURE__ */ new Set(["engineer", "contractor"]), ru = 30, nu = 24 * 3600 * 1e3;
+function en(t) {
+  return qi.has(t) ? "mine30" : "none";
 }
-function Yr(t) {
-  return Ci.has(t) ? "all" : "none";
+function tn(t) {
+  return qi.has(t) ? "all" : "none";
 }
-function zc(t, e) {
-  return dn.includes(t) ? t : Gr(e);
+function su(t, e) {
+  return _n.includes(t) ? t : en(e);
 }
-const Sr = (t) => {
+const Or = (t) => {
   const e = Date.parse(String(t.date || ""));
   return Number.isFinite(e) ? e : 0;
-}, Wc = (t) => String(t.project_canonical_key || t.project || t.object || t.projectCode || "");
-function Kc(t, e, r, n = Fc) {
-  const s = /* @__PURE__ */ new Map(), i = r - n * Hc, o = t.filter((l) => l && e(l));
-  for (const l of o) Sr(l) >= i && s.set(l.id, "all");
+}, iu = (t) => String(t.project_canonical_key || t.project || t.object || t.projectCode || "");
+function ou(t, e, r, n = ru) {
+  const s = /* @__PURE__ */ new Map(), i = r - n * nu, o = t.filter((l) => l && e(l));
+  for (const l of o) Or(l) >= i && s.set(l.id, "all");
   const a = /* @__PURE__ */ new Map();
   for (const l of o) {
-    const c = Wc(l) + "|" + String(l.template || "");
+    const c = iu(l) + "|" + String(l.template || "");
     a.has(c) || a.set(c, []), a.get(c).push(l);
   }
   for (const l of a.values()) {
-    l.sort((u, d) => Sr(u) - Sr(d));
+    l.sort((u, d) => Or(u) - Or(d));
     const c = /* @__PURE__ */ new Map();
     for (const u of l) for (const [d, p] of Object.entries(u.state || {})) c.set(d, { st: p, r: u });
     for (const [u, { st: d, r: p }] of c) {
@@ -18525,150 +18525,150 @@ function Kc(t, e, r, n = Fc) {
   }
   return s;
 }
-const hn = () => typeof window > "u" ? void 0 : window.RBI;
-function le() {
+const wn = () => typeof window > "u" ? void 0 : window.RBI;
+function de() {
   var e, r, n;
-  const t = (n = (r = (e = hn()) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r);
-  return t && t.mode === "email" && t.email && t.companyId ? t.companyId + ":" + Le(t.email) : null;
+  const t = (n = (r = (e = wn()) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r);
+  return t && t.mode === "email" && t.email && t.companyId ? t.companyId + ":" + Re(t.email) : null;
 }
-function fn() {
+function vn() {
   var e, r, n;
-  const t = (n = (r = (e = hn()) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r);
+  const t = (n = (r = (e = wn()) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r);
   return !!t && t.mode === "email" && (!!t.offline || typeof navigator < "u" && navigator.onLine === !1);
 }
-const jt = "__platform2OfflineReader";
-function Vc(t) {
+const Dt = "__platform2OfflineReader";
+function au(t) {
   if (typeof window > "u") return;
   const e = window;
   (e.RBI = e.RBI || {}).offlineCopy = t;
 }
-function lr() {
+function fr() {
   const t = globalThis;
-  if (!t[jt]) {
-    const e = typeof indexedDB < "u" ? Pc(indexedDB) : Cc();
-    t[jt] = Mc({ store: e, slot: le, offline: fn }), Vc(t[jt]);
+  if (!t[Dt]) {
+    const e = typeof indexedDB < "u" ? Vc(indexedDB) : zc();
+    t[Dt] = tu({ store: e, slot: de, offline: vn }), au(t[Dt]);
   }
-  return t[jt];
+  return t[Dt];
 }
-function Jc(t, e, r, n) {
-  return lr().read(t, e, r, n);
+function lu(t, e, r, n) {
+  return fr().read(t, e, r, n);
 }
-function Gc(t) {
+function cu(t) {
   var r;
-  const e = (r = hn()) == null ? void 0 : r.moduleLoader;
-  return Ri(e && typeof e.getById == "function" ? e.getById(t) : null);
+  const e = (r = wn()) == null ? void 0 : r.moduleLoader;
+  return Ui(e && typeof e.getById == "function" ? e.getById(t) : null);
 }
-const Yc = /* @__PURE__ */ new Set(["pf_my_permissions", "pf_my_area", "pf_my_admin_companies", "pf_permission_catalog", "pf_my_context"]), Xr = /* @__PURE__ */ new Map(), Xc = /* @__PURE__ */ new Map(), Qr = /* @__PURE__ */ new Set(), Qc = ["p_import", "p_position", "p_location", "p_act", "p_revision", "p_estimate", "p_object", "p_parent"], Zc = ["id", "import_id", "position_id", "location_id", "act_id", "estimate_id", "revision_id"];
-function eu(t) {
+const uu = /* @__PURE__ */ new Set(["pf_my_permissions", "pf_my_area", "pf_my_admin_companies", "pf_permission_catalog", "pf_my_context"]), rn = /* @__PURE__ */ new Map(), du = /* @__PURE__ */ new Map(), nn = /* @__PURE__ */ new Set(), hu = ["p_import", "p_position", "p_location", "p_act", "p_revision", "p_estimate", "p_object", "p_parent"], fu = ["id", "import_id", "position_id", "location_id", "act_id", "estimate_id", "revision_id"];
+function pu(t) {
   const e = t || {};
   if (typeof e.p_project == "string") return e.p_project;
-  for (const r of Qc) {
+  for (const r of hu) {
     const n = e[r];
-    if (typeof n == "string" && Xr.has(n)) return Xr.get(n);
+    if (typeof n == "string" && rn.has(n)) return rn.get(n);
   }
   return null;
 }
-function tu(t, e) {
+function gu(t, e) {
   for (const r of Array.isArray(e) ? e : [e]) {
     if (!r || typeof r != "object") continue;
     const n = r;
-    if (typeof n.id == "string" && typeof n.path == "string" && typeof n.node_type == "string" && (Xc.set(n.id, n.path), Number(n.child_count) === 0 ? Qr.add(n.id) : Qr.delete(n.id)), t) for (const s of Zc) {
+    if (typeof n.id == "string" && typeof n.path == "string" && typeof n.node_type == "string" && (du.set(n.id, n.path), Number(n.child_count) === 0 ? nn.add(n.id) : nn.delete(n.id)), t) for (const s of fu) {
       const i = n[s];
-      typeof i == "string" && Xr.set(i, t);
+      typeof i == "string" && rn.set(i, t);
     }
   }
 }
-const ru = (t) => JSON.stringify(t, (e, r) => r && typeof r == "object" && !Array.isArray(r) ? Object.fromEntries(Object.keys(r).sort().map((n) => [n, r[n]])) : r);
-async function Ss(t, e, r, n, s, i, o) {
-  if (!e.has(r)) return fn() ? { ok: !1, message: Nc } : s();
-  const a = eu(n), l = Yc.has(r) || !!(i && i.has(r)), c = r + ":" + ru(n || {}), u = await Jc(t, c, s, { project: a, quiet: l });
+const mu = (t) => JSON.stringify(t, (e, r) => r && typeof r == "object" && !Array.isArray(r) ? Object.fromEntries(Object.keys(r).sort().map((n) => [n, r[n]])) : r);
+async function Is(t, e, r, n, s, i, o) {
+  if (!e.has(r)) return vn() ? { ok: !1, message: Jc } : s();
+  const a = pu(n), l = uu.has(r) || !!(i && i.has(r)), c = r + ":" + mu(n || {}), u = await lu(t, c, s, { project: a, quiet: l });
   if (u.ok)
-    return tu(a, u.value), u;
+    return gu(a, u.value), u;
   if (u.offline && o) {
     const d = await o();
     if (d && d.ok)
-      return lr().resolveMiss(t, c), d;
+      return fr().resolveMiss(t, c), d;
   }
   return u;
 }
-function nu(t) {
-  return Qr.has(t);
+function yu(t) {
+  return nn.has(t);
 }
-const Zr = "platform2_offline_keep:", su = "platform2_offline_prefetch:", Ii = () => {
+const sn = "platform2_offline_keep:", _u = "platform2_offline_prefetch:", Mi = () => {
   try {
     return typeof localStorage > "u" ? null : localStorage;
   } catch {
     return null;
   }
-}, Xe = (t, e) => {
+}, st = (t, e) => {
   var r;
   try {
-    return JSON.parse(((r = Ii()) == null ? void 0 : r.getItem(t)) || "null") ?? e;
+    return JSON.parse(((r = Mi()) == null ? void 0 : r.getItem(t)) || "null") ?? e;
   } catch {
     return e;
   }
-}, ji = (t, e) => {
+}, Fi = (t, e) => {
   var r;
   try {
-    (r = Ii()) == null || r.setItem(t, JSON.stringify(e));
+    (r = Mi()) == null || r.setItem(t, JSON.stringify(e));
   } catch {
   }
 };
-function pn(t) {
+function bn(t) {
   var n;
-  const e = le();
+  const e = de();
   if (!e) return !1;
-  const r = Xe(Zr + e, {})[t];
-  return typeof r == "boolean" ? r : !!((n = Gc(t)) != null && n.view);
+  const r = st(sn + e, {})[t];
+  return typeof r == "boolean" ? r : !!((n = cu(t)) != null && n.view);
 }
-function Es(t, e) {
-  const r = le();
-  r && ji(Zr + r, { ...Xe(Zr + r, {}), [t]: e });
+function js(t, e) {
+  const r = de();
+  r && Fi(sn + r, { ...st(sn + r, {}), [t]: e });
 }
-function iu(t) {
-  const e = le();
-  return e && Xe(su + e, {})[t] || null;
+function wu(t) {
+  const e = de();
+  return e && st(_u + e, {})[t] || null;
 }
-const Qt = "platform2_offline_files:";
-function en(t = "quality") {
-  const e = le(), r = e ? Xe(Qt + e, {})[t] : void 0;
-  return dn.includes(r) ? r : null;
+const nr = "platform2_offline_files:";
+function on(t = "quality") {
+  const e = de(), r = e ? st(nr + e, {})[t] : void 0;
+  return _n.includes(r) ? r : null;
 }
-function ou(t, e) {
-  const r = le();
+function vu(t, e) {
+  const r = de();
   if (!r) return;
-  const n = Xe(Qt + r, {});
-  e ? n[t] = e : delete n[t], ji(Qt + r, n);
+  const n = st(nr + r, {});
+  e ? n[t] = e : delete n[t], Fi(nr + r, n);
 }
-function gn() {
+function kn() {
   const t = typeof window > "u" ? void 0 : window.RBI;
   return t && t.qualitySync && t.qualitySync.role || "guest";
 }
-function tn() {
-  return pn("quality") ? zc(en("quality"), gn()) : "none";
+function an() {
+  return bn("quality") ? su(on("quality"), kn()) : "none";
 }
-function Pi() {
-  if (!pn("knowledge")) return "none";
-  const t = le(), e = t ? Xe(Qt + t, {}).knowledge : void 0;
-  return e === "all" || e === "none" ? e : Yr(gn());
+function Hi() {
+  if (!bn("knowledge")) return "none";
+  const t = de(), e = t ? st(nr + t, {}).knowledge : void 0;
+  return e === "all" || e === "none" ? e : tn(kn());
 }
-function au(t) {
+function bu(t) {
   var n, s;
   const e = typeof window > "u" || (s = (n = window.RBI) == null ? void 0 : n.services) == null ? void 0 : s.permissions, r = e && typeof e.getAssignedProjects == "function" ? e.getAssignedProjects() || [] : [];
   return !r.length || !!(e && typeof e.isRecordInAssignedProjects == "function" && e.isRecordInAssignedProjects(t, r));
 }
-function lu() {
+function ku() {
   if (typeof window > "u") return;
   const t = window;
-  (t.RBI = t.RBI || {}).offlineFiles = { scope: tn, docs: Pi, select: (e) => Kc(e, au, Date.now()) };
+  (t.RBI = t.RBI || {}).offlineFiles = { scope: an, docs: Hi, select: (e) => ou(e, bu, Date.now()) };
 }
-lu();
-function As(t) {
+ku();
+function Ps(t) {
   const e = t && t.message || "";
   return /[А-Яа-яЁё]/.test(e) ? e : /cannot assign a role to yourself/i.test(e) ? "Нельзя назначить роль самому себе" : /failed to fetch|network|load failed/i.test(e) ? "Нет связи с сервером. Попробуйте позже" : t && t.code === "42501" || /forbidden|permission denied/i.test(e) ? "Нет права на это действие" : "Не удалось выполнить. Попробуйте ещё раз";
 }
-const xs = /* @__PURE__ */ new Set(["pf_my_company_access", "pf_company_projects", "pf_list_locations", "pf_list_units", "pf_project_catalog", "pf_company_divisions", "pf_project_dicts", "pf_project_places", "pf_location_path"]), Ts = /* @__PURE__ */ new Set(["pf_my_company_access"]);
-function cu(t) {
+const Ns = /* @__PURE__ */ new Set(["pf_my_company_access", "pf_company_projects", "pf_list_locations", "pf_list_units", "pf_project_catalog", "pf_company_divisions", "pf_project_dicts", "pf_project_places", "pf_location_path"]), $s = /* @__PURE__ */ new Set(["pf_my_company_access"]);
+function Su(t) {
   const e = t.created || {}, r = (s) => typeof s == "number" ? s : Number(s) || 0, n = (s) => Array.isArray(s) ? s : [];
   return {
     ok: t.ok === !0,
@@ -18681,20 +18681,20 @@ function cu(t) {
     roots: n(t.roots)
   };
 }
-function uu() {
-  const t = bt();
+function Eu() {
+  const t = Tt();
   if (!t) return null;
   async function e(s, i) {
     const o = await r(s, i || {});
     return o.ok && Array.isArray(o.value) ? o.value : [];
   }
-  const r = (s, i) => Ss("company", xs, s, i, () => n(s, i), Ts);
+  const r = (s, i) => Is("company", Ns, s, i, () => n(s, i), $s);
   async function n(s, i) {
     try {
       const { data: o, error: a } = await t.rpc(s, i);
-      return a ? { ok: !1, message: As(a) } : { ok: !0, value: o ?? null };
+      return a ? { ok: !1, message: Ps(a) } : { ok: !0, value: o ?? null };
     } catch (o) {
-      return { ok: !1, message: As({ message: o instanceof Error ? o.message : "" }) };
+      return { ok: !1, message: Ps({ message: o instanceof Error ? o.message : "" }) };
     }
   }
   return {
@@ -18704,14 +18704,14 @@ function uu() {
     updateProject: (s, i, o, a) => r("pf_update_project", { p_project: s, p_name: i, p_code: o || null, p_archived: a }),
     // P2-0060: без сети у места без вложенных (по дереву в копии) вложенных нет — пусто, без «Нужен интернет»
     listLocations: async (s, i) => {
-      const o = await Ss(
+      const o = await Is(
         "company",
-        xs,
+        Ns,
         "pf_list_locations",
         { p_project: s, p_parent: i },
         () => n("pf_list_locations", { p_project: s, p_parent: i }),
-        Ts,
-        i ? async () => nu(i) ? { ok: !0, value: [] } : null : void 0
+        $s,
+        i ? async () => yu(i) ? { ok: !0, value: [] } : null : void 0
       );
       return o.ok && Array.isArray(o.value) ? o.value : [];
     },
@@ -18778,7 +18778,7 @@ function uu() {
     nextBuildNo: (s) => r("pf_next_build_no", { p_location: s }),
     importPlaces: async (s, i, o, a) => {
       const l = await r("pf_import_places", { p_project: s, p_batch: i, p_rows: o, p_dry_run: a });
-      return l.ok ? { ok: !0, value: cu(l.value || {}) } : l;
+      return l.ok ? { ok: !0, value: Su(l.value || {}) } : l;
     },
     importUndo: (s) => r("pf_import_undo", { p_batch: s }),
     savePlaceInfo: (s, i, o) => r("pf_save_place_info", { p_location: s, p_area: i, p_rooms: o }),
@@ -18786,44 +18786,44 @@ function uu() {
     deleteUnit: (s) => r("pf_delete_unit", { p_unit: s })
   };
 }
-const Pt = "platform2_entry", Er = "platform2_company", rn = "platform2_device_access_", du = 14, hu = 24 * 3600 * 1e3, fu = 5e3, pu = 45e3;
-function Bt(t, e) {
+const Ut = "platform2_entry", Cr = "platform2_company", ln = "platform2_device_access_", xu = 14, Au = 24 * 3600 * 1e3, Tu = 5e3, Ru = 45e3;
+function zt(t, e) {
   try {
-    const r = JSON.parse(mt(t, rn + Le(e)) || "null");
+    const r = JSON.parse(St(t, ln + Re(e)) || "null");
     return r && typeof r.at == "string" ? r : null;
   } catch {
     return null;
   }
 }
-function Ni(t, e) {
+function zi(t, e) {
   const r = t ? Date.parse(t.at) : NaN, n = e ? e * 1e3 : NaN, s = Math.max(Number.isNaN(r) ? -1 / 0 : r, Number.isNaN(n) ? -1 / 0 : n);
   return Number.isFinite(s) ? s : null;
 }
-function Rs(t) {
+function Ls(t) {
   return !!t.error && (!t.status || t.status >= 500);
 }
-function Li(t, e) {
-  return t === null || e - t > du * hu;
+function Wi(t, e) {
+  return t === null || e - t > xu * Au;
 }
-function gu(t, e, r) {
-  return !!t && !Li(Ni(t, e), r);
+function Ou(t, e, r) {
+  return !!t && !Wi(zi(t, e), r);
 }
-const Ae = { mode: "none", email: null, isPlatformAdmin: !1, companies: [], companyId: null };
-function mt(t, e) {
+const Ie = { mode: "none", email: null, isPlatformAdmin: !1, companies: [], companyId: null };
+function St(t, e) {
   try {
     return t ? t.getItem(e) : null;
   } catch {
     return null;
   }
 }
-function xe(t, e, r) {
+function ke(t, e, r) {
   try {
     if (!t) return;
     r === null ? t.removeItem(e) : t.setItem(e, r);
   } catch {
   }
 }
-function Ar(t) {
+function Ir(t) {
   const e = t && typeof t == "object" ? t : {}, r = Array.isArray(e.companies) ? e.companies : [];
   return {
     isPlatformAdmin: e.is_platform_admin === !0,
@@ -18837,7 +18837,7 @@ function Ar(t) {
     }))
   };
 }
-function xr(t) {
+function jr(t) {
   const e = t && typeof t == "object" ? t : {};
   return {
     fullName: typeof e.full_name == "string" && e.full_name ? e.full_name : null,
@@ -18845,7 +18845,7 @@ function xr(t) {
     userId: typeof e.user_id == "string" ? e.user_id : null
   };
 }
-function mu(t) {
+function Cu(t) {
   const e = t.companies.find((n) => n.id === t.companyId) || null, r = {
     company: t.mode === "email" && t.companies.some((n) => n.can_manage_company),
     platformAdmin: t.mode === "email" && t.isPlatformAdmin
@@ -18853,8 +18853,8 @@ function mu(t) {
   if (t.mode === "email" && e) for (const n of e.modules) r[n] = !0;
   return r;
 }
-const yu = "rbi_last_module_hash";
-function _u(t, e) {
+const Iu = "rbi_last_module_hash";
+function ju(t, e) {
   const r = (n) => JSON.stringify([
     n.mode,
     n.email,
@@ -18868,38 +18868,38 @@ function _u(t, e) {
   ]);
   return r(t) !== r(e);
 }
-function vu(t, e) {
-  return !t || _u(t, e) || !!t.offline && !e.offline;
+function Pu(t, e) {
+  return !t || ju(t, e) || !!t.offline && !e.offline;
 }
-function nn(t) {
+function cn(t) {
   const e = String(t || "");
   return /^#\/planfact(\/|$)/.test(e) ? "planfact" : /^#\/quality\/settings(\/|$)/.test(e) ? null : /^#\/quality(\/|$)/.test(e) ? "quality" : /^#\/construction(-v2)?(\/|$)/.test(e) ? "construction" : null;
 }
-function wu(t, e, r) {
-  const n = nn(r);
+function Nu(t, e, r) {
+  const n = cn(r);
   return !!t && !!n && t[n] === !0 && e[n] !== !0;
 }
-const Tr = "#/welcome", bu = "platform2_welcome_seen_", tt = { quality: "#/quality/audit", construction: "#/construction/defects", planfact: "#/planfact" }, ku = ["quality", "construction", "planfact"];
-function Su(t) {
+const ce = "#/welcome", Ki = "platform2_welcome_seen_", Ye = { quality: "#/quality/audit", construction: "#/construction/defects", planfact: "#/planfact" }, $u = ["quality", "construction", "planfact"];
+function Lu(t) {
   const e = String(t.lastHash || "");
   if (t.mode === "none") return null;
-  if (t.mode !== "email") return (nn(e) ? e : "") || tt.quality;
-  if (!t.welcomeSeen) return Tr;
-  const r = t.access, n = nn(e);
+  if (t.mode !== "email") return (cn(e) ? e : "") || Ye.quality;
+  if (!t.welcomeSeen) return ce;
+  const r = t.access, n = cn(e);
   if (n && r[n] === !0) return e;
-  const s = ku.filter((o) => r[o] === !0);
+  const s = $u.filter((o) => r[o] === !0);
   if (!s.length) return "#/settings";
-  if (s.length === 1) return tt[s[0]];
-  if (r.company || r.platformAdmin) return Tr;
+  if (s.length === 1) return Ye[s[0]];
+  if (r.company || r.platformAdmin) return ce;
   const i = t.actions || {};
-  return r.quality && (i.quality || []).includes("quality.inspections.create") ? tt.quality : r.construction && (i.construction || []).some((o) => !/\.view$/.test(o)) ? tt.construction : r.planfact ? tt.planfact : Tr;
+  return r.quality && (i.quality || []).includes("quality.inspections.create") ? Ye.quality : r.construction && (i.construction || []).some((o) => !/\.view$/.test(o)) ? Ye.construction : r.planfact ? Ye.planfact : ce;
 }
-function Eu(t, e, r) {
+function Du(t, e, r) {
   var s;
   const n = { quality: /* @__PURE__ */ new Set(), construction: /* @__PURE__ */ new Set() };
   if (e && r)
     try {
-      const i = JSON.parse(mt(t, xi + e + ":" + Le(r)) || "{}");
+      const i = JSON.parse(St(t, Li + e + ":" + Re(r)) || "{}");
       for (const o of Object.values(i.access || {}))
         for (const a of ["quality", "construction"]) {
           const l = (s = o == null ? void 0 : o[a]) == null ? void 0 : s.grants;
@@ -18909,22 +18909,25 @@ function Eu(t, e, r) {
     }
   return { quality: [...n.quality], construction: [...n.construction] };
 }
-function Au(t, e) {
-  return !!e && mt(t, bu + Le(e)) === "1";
+function Vi(t, e) {
+  return !!e && St(t, Ki + Re(e)) === "1";
 }
-function xu(t) {
-  let e = { ...Ae };
+function un(t, e) {
+  e && ke(t, Ki + Re(e), "1");
+}
+function Uu(t) {
+  let e = { ...Ie };
   const r = /* @__PURE__ */ new Set(), n = () => {
     for (const f of r) f(e);
   }, s = () => t.now ? t.now() : Date.now();
   function i(f, g, m) {
-    var v;
-    const y = mt(t.storage, Er), _ = g.companies.some((E) => E.id === y) ? y : ((v = g.companies.find((E) => E.modules.length > 0) || g.companies[0] || null) == null ? void 0 : v.id) || null;
+    var w;
+    const y = St(t.storage, Cr), _ = g.companies.some((E) => E.id === y) ? y : ((w = g.companies.find((E) => E.modules.length > 0) || g.companies[0] || null) == null ? void 0 : w.id) || null;
     return { mode: "email", email: f, isPlatformAdmin: g.isPlatformAdmin, companies: g.companies, companyId: _, ...m };
   }
   function o(f, g) {
-    const m = Bt(t.storage, f), y = Ni(m, g);
-    return { ...m ? i(f, Ar(m.platform), xr(m.profile)) : i(f, { isPlatformAdmin: !1, companies: [] }, { fullName: null, mustChangePassword: !1, userId: null }), offline: !0, confirmedAt: y === null ? null : new Date(y).toISOString() };
+    const m = zt(t.storage, f), y = zi(m, g);
+    return { ...m ? i(f, Ir(m.platform), jr(m.profile)) : i(f, { isPlatformAdmin: !1, companies: [] }, { fullName: null, mustChangePassword: !1, userId: null }), offline: !0, confirmedAt: y === null ? null : new Date(y).toISOString() };
   }
   let a = null, l = 0;
   function c() {
@@ -18936,32 +18939,32 @@ function xu(t) {
     if (a && (a.email !== f || a.epoch !== y) && c(), !a) {
       const j = typeof AbortController == "function" ? new AbortController() : null;
       let M;
-      const me = { data: null, error: "timeout", status: 0 }, P = new Promise((S) => {
+      const ve = { data: null, error: "timeout", status: 0 }, P = new Promise((S) => {
         M = setTimeout(() => {
-          j == null || j.abort(), S([me, me]);
-        }, t.askLimitMs ?? pu);
-      }), T = Promise.all([m("pf_my_platform", void 0, j == null ? void 0 : j.signal), m("pf_my_profile", void 0, j == null ? void 0 : j.signal)].map((S) => S.catch((O) => ({ data: null, error: O || "network", status: 0 })))), w = { email: f, epoch: y, p: Promise.race([T, P]), stop: () => {
+          j == null || j.abort(), S([ve, ve]);
+        }, t.askLimitMs ?? Ru);
+      }), T = Promise.all([m("pf_my_platform", void 0, j == null ? void 0 : j.signal), m("pf_my_profile", void 0, j == null ? void 0 : j.signal)].map((S) => S.catch((O) => ({ data: null, error: O || "network", status: 0 })))), v = { email: f, epoch: y, p: Promise.race([T, P]), stop: () => {
         clearTimeout(M), j == null || j.abort();
       } };
-      w.p.finally(() => {
-        clearTimeout(M), a === w && (a = null);
-      }), a = w;
+      v.p.finally(() => {
+        clearTimeout(M), a === v && (a = null);
+      }), a = v;
     }
     const _ = a.p;
-    let v;
-    const E = { data: null, error: "timeout", status: 0 }, [R, x] = Bt(t.storage, f) ? await Promise.race([_, new Promise((j) => {
-      v = setTimeout(() => j([E, E]), t.serverWaitMs ?? fu);
+    let w;
+    const E = { data: null, error: "timeout", status: 0 }, [R, A] = zt(t.storage, f) ? await Promise.race([_, new Promise((j) => {
+      w = setTimeout(() => j([E, E]), t.serverWaitMs ?? Tu);
     })]) : await _;
-    if (clearTimeout(v), y !== l) return null;
-    if (Rs(R) || Rs(x)) return o(f, g);
-    if (R.error || x.error)
+    if (clearTimeout(w), y !== l) return null;
+    if (Ls(R) || Ls(A)) return o(f, g);
+    if (R.error || A.error)
       return i(
         f,
-        R.error ? { isPlatformAdmin: !1, companies: [] } : Ar(R.data),
-        x.error ? { fullName: null, mustChangePassword: !1, userId: null } : xr(x.data)
+        R.error ? { isPlatformAdmin: !1, companies: [] } : Ir(R.data),
+        A.error ? { fullName: null, mustChangePassword: !1, userId: null } : jr(A.data)
       );
     const I = new Date(s()).toISOString();
-    return xe(t.storage, rn + Le(f), JSON.stringify({ at: I, platform: R.data, profile: x.data })), { ...i(f, Ar(R.data), xr(x.data)), confirmedAt: I };
+    return ke(t.storage, ln + Re(f), JSON.stringify({ at: I, platform: R.data, profile: A.data })), { ...i(f, Ir(R.data), jr(A.data)), confirmedAt: I };
   }
   async function d() {
     return t.auth ? t.auth.getSessionState ? t.auth.getSessionState() : { email: await t.auth.getEmail(), offline: !1, issuedAt: null } : { email: null, offline: !1, issuedAt: null };
@@ -18970,16 +18973,16 @@ function xu(t) {
   async function h() {
     if (!p) {
       p = !0;
-      const m = t.storedSession ? t.storedSession() : null, y = m && m.email ? Bt(t.storage, m.email) : null;
-      m && m.email && gu(y, m.issuedAt, s()) && (e = { ...o(m.email, m.issuedAt), offline: !1, checking: !0 }, n());
+      const m = t.storedSession ? t.storedSession() : null, y = m && m.email ? zt(t.storage, m.email) : null;
+      m && m.email && Ou(y, m.issuedAt, s()) && (e = { ...o(m.email, m.issuedAt), offline: !1, checking: !0 }, n());
     }
     const f = l, g = await d();
     if (f !== l) return e;
     if (g.email) {
       const m = g.offline ? o(g.email, g.issuedAt) : await u(g.email, g.issuedAt);
       if (!m || f !== l) return e;
-      e = m, g.offline && Li(e.confirmedAt ? Date.parse(e.confirmedAt) : null, s()) && (e = { ...Ae, offline: !0, loginReason: "stale" }), xe(t.storage, Pt, null);
-    } else t.pinActive() ? e = { ...Ae, mode: "pin" } : mt(t.storage, Pt) === "demo" ? e = { ...Ae, mode: "demo" } : e = { ...Ae };
+      e = m, g.offline && Wi(e.confirmedAt ? Date.parse(e.confirmedAt) : null, s()) && (e = { ...Ie, offline: !0, loginReason: "stale" }), ke(t.storage, Ut, null);
+    } else t.pinActive() ? e = { ...Ie, mode: "pin" } : St(t.storage, Ut) === "demo" ? e = { ...Ie, mode: "demo" } : e = { ...Ie };
     return n(), e;
   }
   return {
@@ -18992,7 +18995,7 @@ function xu(t) {
       return m.ok && (l++, c(), await h()), m;
     },
     async signOut() {
-      l++, c(), e.email && xe(t.storage, rn + Le(e.email), null), t.auth && await t.auth.signOut(), xe(t.storage, Pt, null), xe(t.storage, Er, null), e = { ...Ae }, n();
+      l++, c(), e.email && ke(t.storage, ln + Re(e.email), null), t.auth && await t.auth.signOut(), ke(t.storage, Ut, null), ke(t.storage, Cr, null), e = { ...Ie }, n();
     },
     async changePassword(f) {
       if (!t.auth || !t.auth.changePassword || !t.rpc) return { ok: !1, message: "Сервер не настроен" };
@@ -19011,13 +19014,13 @@ function xu(t) {
       return await h(), { ok: !0 };
     },
     chooseDemo() {
-      xe(t.storage, Pt, "demo"), e = { ...Ae, mode: "demo" }, n();
+      ke(t.storage, Ut, "demo"), e = { ...Ie, mode: "demo" }, n();
     },
     setCompany(f) {
-      e.mode !== "email" || !e.companies.some((g) => g.id === f) || e.companyId === f || (xe(t.storage, Er, f), e = { ...e, companyId: f }, n());
+      e.mode !== "email" || !e.companies.some((g) => g.id === f) || e.companyId === f || (ke(t.storage, Cr, f), e = { ...e, companyId: f }, n());
     },
     getState: () => e,
-    access: () => mu(e),
+    access: () => Cu(e),
     subscribe(f) {
       return r.add(f), () => {
         r.delete(f);
@@ -19025,251 +19028,66 @@ function xu(t) {
     }
   };
 }
-const Tu = `
-.p2-login{width:100%;max-width:380px;background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:24px;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:14px;max-height:calc(100dvh - 32px);overflow-y:auto}
-.p2-login h2{margin:0;text-align:center;font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
-.p2-login-sub{margin:-8px 0 0;text-align:center;font-size:12px;color:var(--text-muted)}
-.p2-login form{display:flex;flex-direction:column;gap:12px}
-.p2-login [hidden]{display:none!important}
-.p2-login label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
-.p2-login input{font-size:16px;min-height:44px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
-.p2-login-btn{min-height:46px;font-size:13px;font-weight:800;text-transform:uppercase;border-radius:12px;border:0;background:var(--accent,var(--primary));color:#fff;cursor:pointer}
-.p2-login-btn:disabled{opacity:.6;cursor:default}
-.p2-login-notice{margin:0;font-size:13px;line-height:1.4;padding:10px 12px;border-radius:12px;border:1px solid var(--card-border);color:var(--text-main);overflow-wrap:anywhere}
-.p2-login-error{font-size:13px;color:var(--color-red,#dc2626)}
-.p2-login-demo{align-self:center;min-height:40px;font-size:12px;border:0;background:transparent;color:var(--text-muted);text-decoration:underline;cursor:pointer}
-`;
-function ne(t, e, r = {}, n) {
-  const s = t.createElement(e);
-  for (const [i, o] of Object.entries(r)) s.setAttribute(i, o);
-  return n !== void 0 && (s.textContent = n), s;
-}
-function Os(t, e, r) {
-  const n = ne(t, "label", {}, e);
-  return n.appendChild(ne(t, "input", r)), n;
-}
-function Ru(t, e) {
-  const r = t.ownerDocument;
-  t.replaceChildren();
-  const n = ne(r, "div", { class: "p2-login", "data-testid": "p2-login", role: "dialog", "aria-label": "Вход" });
-  n.append(ne(r, "h2", {}, "Вход"), ne(r, "p", { class: "p2-login-sub" }, "RBI Platform")), e.notice && n.append(ne(r, "p", { class: "p2-login-notice", role: "status", "data-testid": "p2-login-notice" }, e.notice));
-  const s = ne(r, "form", { "data-testid": "p2-login-email", novalidate: "" });
-  s.append(
-    Os(r, "Почта", { type: "email", name: "email", autocomplete: "username", inputmode: "email" }),
-    Os(r, "Пароль", { type: "password", name: "password", autocomplete: "current-password" })
-  );
-  const i = ne(r, "div", { class: "p2-login-error", role: "alert", hidden: "" }), o = ne(r, "button", { type: "submit", class: "p2-login-btn" }, "Войти");
-  s.append(i, o), s.addEventListener("submit", (l) => {
-    if (l.preventDefault(), o.disabled) return;
-    const c = s.elements.namedItem("email").value, u = s.elements.namedItem("password").value;
-    if (!c.trim() || !u) {
-      i.textContent = "Введите почту и пароль", i.hidden = !1;
-      return;
-    }
-    o.disabled = !0, o.textContent = "Входим…", i.hidden = !0, e.signIn(c, u).then((d) => {
-      if (o.disabled = !1, o.textContent = "Войти", !d.ok) {
-        i.textContent = d.message, i.hidden = !1;
-        return;
-      }
-      s.reset();
-    });
-  });
-  const a = ne(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-login-demo" }, "Посмотреть без входа (демо)");
-  return a.addEventListener("click", () => e.onDemo()), n.append(s, a), t.appendChild(n), () => t.replaceChildren();
-}
-const Ou = `
-.p2-profile{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
-.p2-profile [hidden]{display:none!important}
-.p2-profile-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)}
-.p2-profile-name{font-size:15px;font-weight:800;color:var(--text-main);overflow-wrap:anywhere}
-.p2-profile-mail{font-size:13px;color:var(--text-muted);overflow-wrap:anywhere}
-.p2-profile form{display:flex;flex-direction:column;gap:10px;max-width:420px}
-.p2-profile label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
-.p2-profile input{font-size:16px;min-height:44px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);text-transform:none;font-weight:400}
-.p2-profile-row{display:flex;flex-wrap:wrap;gap:8px}
-.p2-profile-btn{min-height:40px;padding:0 16px;border-radius:12px;border:1px solid var(--card-border);background:transparent;color:var(--text-main);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
-.p2-profile-btn--main{background:var(--accent,var(--primary));border-color:transparent;color:#fff}
-.p2-profile-btn:disabled{opacity:.6;cursor:default}
-.p2-profile-error{font-size:13px;color:var(--color-red,#dc2626)}
-.p2-profile-ok{font-size:13px;color:var(--color-green,#16a34a)}
-`;
-function $(t, e, r = {}, n) {
-  const s = t.createElement(e);
-  for (const [i, o] of Object.entries(r)) s.setAttribute(i, o);
-  return n !== void 0 && (s.textContent = n), s;
-}
-function Cs(t, e, r, n) {
-  const s = $(t, "label", {}, e);
-  return s.appendChild($(t, "input", { type: "password", name: r, autocomplete: n, minlength: "8" })), s;
-}
-function $i(t, e) {
-  const r = $(t, "form", { "data-testid": e.testid, novalidate: "" });
-  r.append(Cs(t, "Новый пароль (не короче 8 знаков)", "password", "new-password"), Cs(t, "Ещё раз", "repeat", "new-password"));
-  const n = $(t, "div", { class: e.errClass, role: "alert", hidden: "" }), s = $(t, "button", { type: "submit", class: e.btnClass }, e.submitText);
-  return r.append(n, s), r.addEventListener("submit", (i) => {
-    if (i.preventDefault(), s.disabled) return;
-    const o = r.elements.namedItem("password").value, a = r.elements.namedItem("repeat").value, l = cc(o, a);
-    if (l) {
-      n.textContent = l, n.hidden = !1;
-      return;
-    }
-    s.disabled = !0, n.hidden = !0, e.change(o).then((c) => {
-      if (s.disabled = !1, !c.ok) {
-        n.textContent = c.message, n.hidden = !1;
-        return;
-      }
-      r.reset(), e.onDone();
-    });
-  }), r;
-}
-function Cu(t, e) {
-  const r = t.ownerDocument;
-  t.replaceChildren();
-  const n = $(r, "div", { class: "p2-login", "data-testid": "p2-new-password", role: "dialog", "aria-label": "Придумайте пароль" });
-  n.append(
-    $(r, "h2", {}, "Придумайте пароль"),
-    $(r, "p", { class: "p2-login-sub" }, `${e.email} — вы вошли временным паролем. Придумайте свой: дальше входите им.`)
-  );
-  const s = $i(r, {
-    change: e.change,
-    submitText: "Сохранить пароль",
-    btnClass: "p2-login-btn",
-    errClass: "p2-login-error",
-    onDone: () => {
-    },
-    testid: "p2-new-password-form"
-  }), i = $(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-new-password-signout" }, "Выйти");
-  return i.addEventListener("click", () => e.signOut()), n.append(s, i), t.appendChild(n), () => t.replaceChildren();
-}
-function Iu(t, e) {
-  const r = t.ownerDocument;
-  t.replaceChildren();
-  const n = $(r, "div", { class: "p2-profile", "data-testid": "p2-profile" });
-  n.append(
-    $(r, "div", { class: "p2-profile-title" }, "Мой профиль"),
-    $(r, "div", { class: "p2-profile-name", "data-testid": "p2-profile-name" }, e.fullName || "ФИО не указано"),
-    $(r, "div", { class: "p2-profile-mail" }, `Почта для входа: ${e.email} (меняет администратор компании)`)
-  );
-  const s = $(r, "div", { class: "p2-profile-ok", role: "status", hidden: "" }, "Пароль сменён"), i = $(r, "button", { type: "button", class: "p2-profile-btn", "data-testid": "p2-profile-password" }, "Сменить пароль"), o = $i(r, {
-    change: e.change,
-    submitText: "Сохранить пароль",
-    btnClass: "p2-profile-btn p2-profile-btn--main",
-    errClass: "p2-profile-error",
-    testid: "p2-profile-password-form",
-    onDone: () => {
-      o.hidden = !0, i.hidden = !1, s.hidden = !1;
-    }
-  });
-  o.hidden = !0;
-  const a = $(r, "button", { type: "button", class: "p2-profile-btn" }, "Отмена");
-  a.addEventListener("click", () => {
-    o.reset(), o.hidden = !0, i.hidden = !1;
-  }), o.appendChild(a), i.addEventListener("click", () => {
-    o.hidden = !1, i.hidden = !0, s.hidden = !0;
-  });
-  const l = $(r, "div", { class: "p2-profile-row" });
-  if (l.append(i), n.append(l, o, s), e.saveName) {
-    const c = e.saveName, u = $(r, "button", { type: "button", class: "p2-profile-btn", "data-testid": "p2-profile-name-edit" }, "Изменить ФИО"), d = $(r, "form", { "data-testid": "p2-profile-name-form", novalidate: "" }), p = $(r, "label", {}, "ФИО");
-    p.appendChild($(r, "input", { name: "full_name", maxlength: "120", autocomplete: "name", value: e.fullName || "" }));
-    const h = $(r, "div", { class: "p2-profile-error", role: "alert", hidden: "" }), f = $(r, "button", { type: "submit", class: "p2-profile-btn p2-profile-btn--main" }, "Сохранить ФИО"), g = $(r, "button", { type: "button", class: "p2-profile-btn" }, "Отмена");
-    d.append(p, h, f, g), d.hidden = !0, u.addEventListener("click", () => {
-      d.hidden = !1, u.hidden = !0, s.hidden = !0;
-    }), g.addEventListener("click", () => {
-      d.hidden = !0, u.hidden = !1, h.hidden = !0;
-    }), d.addEventListener("submit", (m) => {
-      if (m.preventDefault(), f.disabled) return;
-      const y = d.elements.namedItem("full_name").value.trim();
-      if (y.length < 2) {
-        h.textContent = "Укажите ФИО", h.hidden = !1;
-        return;
-      }
-      f.disabled = !0, h.hidden = !0, c(y).then((_) => {
-        if (f.disabled = !1, !_.ok) {
-          h.textContent = _.message, h.hidden = !1;
-          return;
-        }
-        d.hidden = !0, u.hidden = !1;
-      });
-    }), l.prepend(u), n.insertBefore(d, o);
+const Bu = "#/settings/company", qu = "#/settings/my/help", se = "p2-welcome-on", Mu = ["quality", "construction", "planfact", "company"];
+function Fu(t, e) {
+  const r = [];
+  for (const n of Mu) {
+    if (t[n] !== !0) continue;
+    const s = e.find((i) => i.id === n);
+    !s || typeof s.title != "string" || typeof s.summary != "string" || !s.summary || r.push({ id: n, title: s.title, summary: s.summary, path: n === "company" ? Bu : Ye[n] });
   }
-  return t.appendChild(n), () => t.replaceChildren();
+  return r;
 }
-const Di = ["desk-user-name", "desk-user-avatar", "header-user-block"];
-let je = null;
-function ju(t, e) {
-  var n, s;
-  if (typeof document > "u") return;
-  const r = (s = (n = window.RBI) == null ? void 0 : n.services) == null ? void 0 : s.shell;
-  if (!(!r || typeof r.renderUserBlock != "function")) {
-    if (!je) {
-      je = {};
-      for (const i of Di) {
-        const o = document.getElementById(i);
-        o && (je[i] = o.textContent || "");
-      }
-    }
-    r.renderUserBlock({ name: t, role: e || "нет роли" });
-  }
+const Hu = {
+  quality: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>',
+  construction: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>',
+  planfact: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>',
+  company: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-5h6v5"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>'
+}, pr = (t, e) => `<svg viewBox="0 0 24 24" width="${e}" height="${e}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t}</svg>`, zu = pr('<path d="M9 6l6 6-6 6"/>', 20), Wu = pr('<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>', 18), Ku = pr('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 18), Vu = `
+body.${se} #main-bottom-nav,body.${se} #header-dashboard,body.${se} #header-data-block,
+body.${se} #header-checklist-container,body.${se} #construction-warning-banner{display:none!important}
+body.${se} .app-sidebar-item.active:not(:hover){color:var(--text-muted);background:transparent}
+@media (min-width:1280px){body.${se}{--desk-nav2:0px;--desk-chrome:var(--desk-rail)}body.${se} #app-nav2{visibility:hidden;overflow:hidden}}
+.p2w{box-sizing:border-box;width:100%;max-width:880px;margin:0 auto;padding:20px 16px 40px;color:var(--text-main)}
+.p2w *{box-sizing:border-box}
+.p2w-eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-text);display:flex;align-items:center;gap:10px;min-width:0}
+.p2w-eyebrow::before{content:'';flex:none;width:28px;height:2px;border-radius:2px;background:var(--accent);transform-origin:left}
+.p2w-h{font-size:26px;line-height:1.15;font-weight:700;margin:12px 0 8px;letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
+.p2w-p{font-size:15px;line-height:1.5;color:var(--text-muted);margin:0 0 20px;max-width:60ch}
+.p2w-grid{display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}
+.p2w-tile{display:flex;align-items:center;gap:14px;text-align:left;width:100%;min-height:76px;padding:14px;border-radius:16px;border:1px solid var(--card-border);
+  background:var(--card-bg);box-shadow:var(--shadow-1);color:inherit;cursor:pointer;font:inherit;transition:border-color .15s,transform .15s,box-shadow .15s}
+.p2w-tile:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow-2)}
+.p2w-tile:focus-visible,.p2w-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.p2w-ico{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--sel-bg);color:var(--accent-text)}
+.p2w-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.p2w-t{font-size:16px;font-weight:700}
+.p2w-d{font-size:14px;line-height:1.4;color:var(--text-muted)}
+.p2w-go{flex:none;color:var(--text-muted);display:flex}
+.p2w-foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--card-border);display:flex;flex-wrap:wrap;gap:0 24px}
+.p2w-link{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:15px;font-weight:600;color:var(--accent-text);text-decoration:none;background:none;border:0;padding:0;cursor:pointer;font-family:inherit}
+@media (min-width:768px){.p2w{padding:64px 32px}.p2w-h{font-size:34px}.p2w-p{font-size:16px;margin-bottom:32px}
+  .p2w-grid{gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}.p2w-grid.p2w-one{grid-template-columns:minmax(0,420px)}
+  .p2w-tile{min-height:96px;padding:20px}.p2w-ico{width:52px;height:52px}.p2w-ico svg{width:26px;height:26px}.p2w-t{font-size:17px}
+  .p2w-foot{margin-top:32px;padding-top:20px;gap:10px 24px}}
+.p2w-anim .p2w-eyebrow,.p2w-anim .p2w-h,.p2w-anim .p2w-p,.p2w-anim .p2w-tile,.p2w-anim .p2w-foot{opacity:0;animation:p2w-in .5s cubic-bezier(.2,.7,.2,1) forwards}
+.p2w-anim .p2w-eyebrow::before{transform:scaleX(0);animation:p2w-line .5s .1s ease-out forwards}
+.p2w-anim .p2w-h{animation-delay:.08s}.p2w-anim .p2w-p{animation-delay:.18s}.p2w-anim .p2w-foot{animation-delay:.75s}
+@keyframes p2w-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes p2w-line{to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){.p2w-anim *,.p2w-anim .p2w-eyebrow::before{animation:none!important;opacity:1!important;transform:none!important}}`, Ve = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[e]);
+function Ju(t, e) {
+  const r = [e.company, e.role].filter(Boolean).join(" · "), n = e.tiles.map((s, i) => `<button type="button" class="p2w-tile" data-testid="p2-welcome-tile" data-module="${Ve(s.id)}" data-path="${Ve(s.path)}"` + (e.animate ? ` style="animation-delay:${(0.28 + i * 0.09).toFixed(2)}s"` : "") + `><span class="p2w-ico">${pr(Hu[s.id] || "", 22)}</span><span class="p2w-txt"><span class="p2w-t">${Ve(s.title)}</span><span class="p2w-d">${Ve(s.summary)}</span></span><span class="p2w-go">${zu}</span></button>`).join("");
+  t.innerHTML = `<section class="p2w${e.animate ? " p2w-anim" : ""}" data-testid="p2-welcome" data-animate="${e.animate ? "1" : "0"}">` + (r ? `<div class="p2w-eyebrow">${Ve(r)}</div>` : "") + `<h1 class="p2w-h">Добро пожаловать, ${Ve(e.name)}</h1><p class="p2w-p">Здесь ваши разделы. Откройте нужный — в следующий раз приложение сразу откроет тот, где вы были.</p><div class="p2w-grid${e.tiles.length === 1 ? " p2w-one" : ""}">${n}</div><div class="p2w-foot"><button type="button" class="p2w-link" data-testid="p2-welcome-help" data-path="${qu}">${Wu}Как тут всё устроено — обучение</button><button type="button" class="p2w-link" data-testid="p2-welcome-settings" data-path="#/settings">${Ku}Настройки</button></div></section>`, t.querySelectorAll("[data-path]").forEach((s) => s.addEventListener("click", (i) => {
+    i.preventDefault(), i.stopPropagation(), e.open(s.dataset.path || "");
+  }));
 }
-function Pu() {
-  if (!(!je || typeof document > "u")) {
-    for (const t of Di) {
-      const e = document.getElementById(t);
-      e && t in je && (e.textContent = je[t]);
-    }
-    je = null;
-  }
-}
-const Nu = "rbi:platform-net", Is = "platform2_legacy_cleanup_v1", Lu = "RBI_QUALITY_DB", $u = "platform2_quality_state_";
-async function Du(t) {
-  const e = t.store;
-  if (!e) return "retry";
-  try {
-    if (e.getItem(Is)) return "skipped";
-  } catch {
-    return "retry";
-  }
-  try {
-    if (!e.getItem(ke)) {
-      for (const r of Kr) e.removeItem(r);
-      e.removeItem($u);
-    }
-  } catch {
-    return "retry";
-  }
-  try {
-    t.deleteDatabase && await t.deleteDatabase(Lu);
-  } catch {
-    return "retry";
-  }
-  try {
-    e.setItem(Is, t.now ? t.now() : (/* @__PURE__ */ new Date()).toISOString());
-  } catch {
-    return "retry";
-  }
-  return "done";
-}
-function Uu(t, e, r = 5e3) {
-  return new Promise((n, s) => {
-    let i;
-    try {
-      i = t.deleteDatabase(e);
-    } catch (a) {
-      s(a);
-      return;
-    }
-    const o = setTimeout(() => s(new Error("blocked")), r);
-    i.onsuccess = () => {
-      clearTimeout(o), n();
-    }, i.onerror = () => {
-      clearTimeout(o), s(i.error || new Error("error"));
-    };
-  });
-}
-const Bu = {
+const Gu = {
   id: "quality",
   role: "module",
   title: "Качество",
+  // P2-0074: строка «что тут делают» на плитке приветствия (src/platform/auth/welcome-screen.ts)
+  summary: "Осмотры на объекте по чек-листам, замечания инженеру, аналитика",
   icon: "check-circle",
   version: "1.0.0",
   status: "active",
@@ -19476,7 +19294,7 @@ const Bu = {
     "/meetings"
   ],
   defaultRoute: "/audit"
-}, qu = {
+}, Yu = {
   id: "sk",
   role: "feature-of",
   parentModule: "quality",
@@ -19508,7 +19326,7 @@ const Bu = {
   ],
   routes: ["/sk", "/sk/:subTab"],
   defaultRoute: "/sk"
-}, Mu = {
+}, Xu = {
   id: "settings",
   role: "service",
   title: "Настройки",
@@ -19520,7 +19338,7 @@ const Bu = {
   company: { enabledByDefault: !0 },
   routes: ["/settings"],
   defaultRoute: "/settings"
-}, Fu = {
+}, Qu = {
   id: "knowledge",
   role: "module",
   title: "База знаний",
@@ -19539,10 +19357,12 @@ const Bu = {
   ],
   routes: ["/knowledge", "/knowledge/twi", "/knowledge/docs", "/knowledge/nodes", "/knowledge/etalons"],
   defaultRoute: "/knowledge"
-}, Hu = {
+}, Zu = {
   id: "construction",
   role: "module",
   title: "Стройконтроль",
+  // P2-0074: строка «что тут делают» на плитке приветствия (src/platform/auth/welcome-screen.ts)
+  summary: "Замечания подрядчикам на плане, приёмка работ, передача квартир",
   icon: "hard-hat",
   version: "1.0.0",
   status: "active",
@@ -19553,7 +19373,7 @@ const Bu = {
   offline: { view: !0, input: ["*"], files: !0 },
   routes: ["/construction", "/construction/:subTab"],
   defaultRoute: "/construction"
-}, zu = {
+}, ed = {
   id: "construction-v2",
   role: "module",
   title: "Стройконтроль (новый)",
@@ -19618,7 +19438,7 @@ const Bu = {
   ],
   routes: ["/construction-v2", "/construction-v2/:subTab"],
   defaultRoute: "/construction-v2"
-}, Wu = {
+}, td = {
   id: "game",
   role: "feature-of",
   parentModule: "quality",
@@ -19631,7 +19451,7 @@ const Bu = {
   company: { enabledByDefault: !0 },
   routes: ["/game", "/game/:subTab", "/fmea", "/fmea/:id"],
   defaultRoute: "/game"
-}, Ku = {
+}, rd = {
   id: "ai",
   role: "service",
   title: "ИИ-помощник",
@@ -19643,10 +19463,12 @@ const Bu = {
   company: { enabledByDefault: !0 },
   routes: [],
   defaultRoute: null
-}, Vu = {
+}, nd = {
   id: "planfact",
   role: "module",
   title: "План/Факт",
+  // P2-0074: строка «что тут делают» на плитке приветствия (src/platform/auth/welcome-screen.ts)
+  summary: "ВОР, смета и выполнение работ по дням",
   icon: "table",
   version: "0.1.0",
   status: "active",
@@ -19732,10 +19554,12 @@ const Bu = {
   ],
   routes: ["/planfact"],
   defaultRoute: "/planfact"
-}, Ju = {
+}, sd = {
   id: "company",
   role: "module",
   title: "Компания",
+  // P2-0074: строка «что тут делают» на плитке приветствия (src/platform/auth/welcome-screen.ts)
+  summary: "Сотрудники и роли, объекты и места, справочники",
   icon: "users",
   version: "0.1.0",
   status: "active",
@@ -19746,44 +19570,285 @@ const Bu = {
   offline: { view: !0, input: [], files: !1 },
   routes: ["/company"],
   defaultRoute: "/company"
-}, Ui = [
-  Bu,
-  qu,
-  Mu,
-  Fu,
-  Hu,
-  zu,
-  Wu,
-  Ku,
-  Vu,
-  Ju
-], mn = "p2_moved_to", Gu = "p2_moved_at", js = "platform2_quality_state_";
-function Yu(t) {
+}, Sn = [
+  Gu,
+  Yu,
+  Xu,
+  Qu,
+  Zu,
+  ed,
+  td,
+  rd,
+  nd,
+  sd
+], id = `
+.p2-login{width:100%;max-width:380px;background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:24px;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:14px;max-height:calc(100dvh - 32px);overflow-y:auto}
+.p2-login h2{margin:0;text-align:center;font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
+.p2-login-sub{margin:-8px 0 0;text-align:center;font-size:12px;color:var(--text-muted)}
+.p2-login form{display:flex;flex-direction:column;gap:12px}
+.p2-login [hidden]{display:none!important}
+.p2-login label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.p2-login input{font-size:16px;min-height:44px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
+.p2-login-btn{min-height:46px;font-size:13px;font-weight:800;text-transform:uppercase;border-radius:12px;border:0;background:var(--accent,var(--primary));color:#fff;cursor:pointer}
+.p2-login-btn:disabled{opacity:.6;cursor:default}
+.p2-login-notice{margin:0;font-size:13px;line-height:1.4;padding:10px 12px;border-radius:12px;border:1px solid var(--card-border);color:var(--text-main);overflow-wrap:anywhere}
+.p2-login-error{font-size:13px;color:var(--color-red,#dc2626)}
+.p2-login-demo{align-self:center;min-height:40px;font-size:12px;border:0;background:transparent;color:var(--text-muted);text-decoration:underline;cursor:pointer}
+`;
+function ie(t, e, r = {}, n) {
+  const s = t.createElement(e);
+  for (const [i, o] of Object.entries(r)) s.setAttribute(i, o);
+  return n !== void 0 && (s.textContent = n), s;
+}
+function Ds(t, e, r) {
+  const n = ie(t, "label", {}, e);
+  return n.appendChild(ie(t, "input", r)), n;
+}
+function od(t, e) {
+  const r = t.ownerDocument;
+  t.replaceChildren();
+  const n = ie(r, "div", { class: "p2-login", "data-testid": "p2-login", role: "dialog", "aria-label": "Вход" });
+  n.append(ie(r, "h2", {}, "Вход"), ie(r, "p", { class: "p2-login-sub" }, "RBI Platform")), e.notice && n.append(ie(r, "p", { class: "p2-login-notice", role: "status", "data-testid": "p2-login-notice" }, e.notice));
+  const s = ie(r, "form", { "data-testid": "p2-login-email", novalidate: "" });
+  s.append(
+    Ds(r, "Почта", { type: "email", name: "email", autocomplete: "username", inputmode: "email" }),
+    Ds(r, "Пароль", { type: "password", name: "password", autocomplete: "current-password" })
+  );
+  const i = ie(r, "div", { class: "p2-login-error", role: "alert", hidden: "" }), o = ie(r, "button", { type: "submit", class: "p2-login-btn" }, "Войти");
+  s.append(i, o), s.addEventListener("submit", (l) => {
+    if (l.preventDefault(), o.disabled) return;
+    const c = s.elements.namedItem("email").value, u = s.elements.namedItem("password").value;
+    if (!c.trim() || !u) {
+      i.textContent = "Введите почту и пароль", i.hidden = !1;
+      return;
+    }
+    o.disabled = !0, o.textContent = "Входим…", i.hidden = !0, e.signIn(c, u).then((d) => {
+      if (o.disabled = !1, o.textContent = "Войти", !d.ok) {
+        i.textContent = d.message, i.hidden = !1;
+        return;
+      }
+      s.reset();
+    });
+  });
+  const a = ie(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-login-demo" }, "Посмотреть без входа (демо)");
+  return a.addEventListener("click", () => e.onDemo()), n.append(s, a), t.appendChild(n), () => t.replaceChildren();
+}
+const ad = `
+.p2-profile{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.p2-profile [hidden]{display:none!important}
+.p2-profile-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)}
+.p2-profile-name{font-size:15px;font-weight:800;color:var(--text-main);overflow-wrap:anywhere}
+.p2-profile-mail{font-size:13px;color:var(--text-muted);overflow-wrap:anywhere}
+.p2-profile form{display:flex;flex-direction:column;gap:10px;max-width:420px}
+.p2-profile label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+.p2-profile input{font-size:16px;min-height:44px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);text-transform:none;font-weight:400}
+.p2-profile-row{display:flex;flex-wrap:wrap;gap:8px}
+.p2-profile-btn{min-height:40px;padding:0 16px;border-radius:12px;border:1px solid var(--card-border);background:transparent;color:var(--text-main);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
+.p2-profile-btn--main{background:var(--accent,var(--primary));border-color:transparent;color:#fff}
+.p2-profile-btn:disabled{opacity:.6;cursor:default}
+.p2-profile-error{font-size:13px;color:var(--color-red,#dc2626)}
+.p2-profile-ok{font-size:13px;color:var(--color-green,#16a34a)}
+`;
+function L(t, e, r = {}, n) {
+  const s = t.createElement(e);
+  for (const [i, o] of Object.entries(r)) s.setAttribute(i, o);
+  return n !== void 0 && (s.textContent = n), s;
+}
+function Us(t, e, r, n) {
+  const s = L(t, "label", {}, e);
+  return s.appendChild(L(t, "input", { type: "password", name: r, autocomplete: n, minlength: "8" })), s;
+}
+function Ji(t, e) {
+  const r = L(t, "form", { "data-testid": e.testid, novalidate: "" });
+  r.append(Us(t, "Новый пароль (не короче 8 знаков)", "password", "new-password"), Us(t, "Ещё раз", "repeat", "new-password"));
+  const n = L(t, "div", { class: e.errClass, role: "alert", hidden: "" }), s = L(t, "button", { type: "submit", class: e.btnClass }, e.submitText);
+  return r.append(n, s), r.addEventListener("submit", (i) => {
+    if (i.preventDefault(), s.disabled) return;
+    const o = r.elements.namedItem("password").value, a = r.elements.namedItem("repeat").value, l = Sc(o, a);
+    if (l) {
+      n.textContent = l, n.hidden = !1;
+      return;
+    }
+    s.disabled = !0, n.hidden = !0, e.change(o).then((c) => {
+      if (s.disabled = !1, !c.ok) {
+        n.textContent = c.message, n.hidden = !1;
+        return;
+      }
+      r.reset(), e.onDone();
+    });
+  }), r;
+}
+function ld(t, e) {
+  const r = t.ownerDocument;
+  t.replaceChildren();
+  const n = L(r, "div", { class: "p2-login", "data-testid": "p2-new-password", role: "dialog", "aria-label": "Придумайте пароль" });
+  n.append(
+    L(r, "h2", {}, "Придумайте пароль"),
+    L(r, "p", { class: "p2-login-sub" }, `${e.email} — вы вошли временным паролем. Придумайте свой: дальше входите им.`)
+  );
+  const s = Ji(r, {
+    change: e.change,
+    submitText: "Сохранить пароль",
+    btnClass: "p2-login-btn",
+    errClass: "p2-login-error",
+    onDone: () => {
+    },
+    testid: "p2-new-password-form"
+  }), i = L(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-new-password-signout" }, "Выйти");
+  return i.addEventListener("click", () => e.signOut()), n.append(s, i), t.appendChild(n), () => t.replaceChildren();
+}
+function cd(t, e) {
+  const r = t.ownerDocument;
+  t.replaceChildren();
+  const n = L(r, "div", { class: "p2-profile", "data-testid": "p2-profile" });
+  n.append(
+    L(r, "div", { class: "p2-profile-title" }, "Мой профиль"),
+    L(r, "div", { class: "p2-profile-name", "data-testid": "p2-profile-name" }, e.fullName || "ФИО не указано"),
+    L(r, "div", { class: "p2-profile-mail" }, `Почта для входа: ${e.email} (меняет администратор компании)`)
+  );
+  const s = L(r, "div", { class: "p2-profile-ok", role: "status", hidden: "" }, "Пароль сменён"), i = L(r, "button", { type: "button", class: "p2-profile-btn", "data-testid": "p2-profile-password" }, "Сменить пароль"), o = Ji(r, {
+    change: e.change,
+    submitText: "Сохранить пароль",
+    btnClass: "p2-profile-btn p2-profile-btn--main",
+    errClass: "p2-profile-error",
+    testid: "p2-profile-password-form",
+    onDone: () => {
+      o.hidden = !0, i.hidden = !1, s.hidden = !1;
+    }
+  });
+  o.hidden = !0;
+  const a = L(r, "button", { type: "button", class: "p2-profile-btn" }, "Отмена");
+  a.addEventListener("click", () => {
+    o.reset(), o.hidden = !0, i.hidden = !1;
+  }), o.appendChild(a), i.addEventListener("click", () => {
+    o.hidden = !1, i.hidden = !0, s.hidden = !0;
+  });
+  const l = L(r, "div", { class: "p2-profile-row" });
+  if (l.append(i), n.append(l, o, s), e.saveName) {
+    const c = e.saveName, u = L(r, "button", { type: "button", class: "p2-profile-btn", "data-testid": "p2-profile-name-edit" }, "Изменить ФИО"), d = L(r, "form", { "data-testid": "p2-profile-name-form", novalidate: "" }), p = L(r, "label", {}, "ФИО");
+    p.appendChild(L(r, "input", { name: "full_name", maxlength: "120", autocomplete: "name", value: e.fullName || "" }));
+    const h = L(r, "div", { class: "p2-profile-error", role: "alert", hidden: "" }), f = L(r, "button", { type: "submit", class: "p2-profile-btn p2-profile-btn--main" }, "Сохранить ФИО"), g = L(r, "button", { type: "button", class: "p2-profile-btn" }, "Отмена");
+    d.append(p, h, f, g), d.hidden = !0, u.addEventListener("click", () => {
+      d.hidden = !1, u.hidden = !0, s.hidden = !0;
+    }), g.addEventListener("click", () => {
+      d.hidden = !0, u.hidden = !1, h.hidden = !0;
+    }), d.addEventListener("submit", (m) => {
+      if (m.preventDefault(), f.disabled) return;
+      const y = d.elements.namedItem("full_name").value.trim();
+      if (y.length < 2) {
+        h.textContent = "Укажите ФИО", h.hidden = !1;
+        return;
+      }
+      f.disabled = !0, h.hidden = !0, c(y).then((_) => {
+        if (f.disabled = !1, !_.ok) {
+          h.textContent = _.message, h.hidden = !1;
+          return;
+        }
+        d.hidden = !0, u.hidden = !1;
+      });
+    }), l.prepend(u), n.insertBefore(d, o);
+  }
+  return t.appendChild(n), () => t.replaceChildren();
+}
+const Gi = ["desk-user-name", "desk-user-avatar", "header-user-block"];
+let Ue = null;
+function ud(t, e) {
+  var n, s;
+  if (typeof document > "u") return;
+  const r = (s = (n = window.RBI) == null ? void 0 : n.services) == null ? void 0 : s.shell;
+  if (!(!r || typeof r.renderUserBlock != "function")) {
+    if (!Ue) {
+      Ue = {};
+      for (const i of Gi) {
+        const o = document.getElementById(i);
+        o && (Ue[i] = o.textContent || "");
+      }
+    }
+    r.renderUserBlock({ name: t, role: e || "нет роли" });
+  }
+}
+function dd() {
+  if (!(!Ue || typeof document > "u")) {
+    for (const t of Gi) {
+      const e = document.getElementById(t);
+      e && t in Ue && (e.textContent = Ue[t]);
+    }
+    Ue = null;
+  }
+}
+const hd = "rbi:platform-net", Bs = "platform2_legacy_cleanup_v1", fd = "RBI_QUALITY_DB", pd = "platform2_quality_state_";
+async function gd(t) {
+  const e = t.store;
+  if (!e) return "retry";
+  try {
+    if (e.getItem(Bs)) return "skipped";
+  } catch {
+    return "retry";
+  }
+  try {
+    if (!e.getItem(Te)) {
+      for (const r of Xr) e.removeItem(r);
+      e.removeItem(pd);
+    }
+  } catch {
+    return "retry";
+  }
+  try {
+    t.deleteDatabase && await t.deleteDatabase(fd);
+  } catch {
+    return "retry";
+  }
+  try {
+    e.setItem(Bs, t.now ? t.now() : (/* @__PURE__ */ new Date()).toISOString());
+  } catch {
+    return "retry";
+  }
+  return "done";
+}
+function md(t, e, r = 5e3) {
+  return new Promise((n, s) => {
+    let i;
+    try {
+      i = t.deleteDatabase(e);
+    } catch (a) {
+      s(a);
+      return;
+    }
+    const o = setTimeout(() => s(new Error("blocked")), r);
+    i.onsuccess = () => {
+      clearTimeout(o), n();
+    }, i.onerror = () => {
+      clearTimeout(o), s(i.error || new Error("error"));
+    };
+  });
+}
+const En = "p2_moved_to", yd = "p2_moved_at", qs = "platform2_quality_state_";
+function _d(t) {
   const e = {};
   for (const r of t) for (const n of r.sync || []) n && n.store && !n.rpc && !(n.store in e) && (e[n.store] = n.title);
   return e;
 }
-const $e = {
-  ...Yu(Ui),
+const Fe = {
+  ..._d(Sn),
   // старый Стройконтроль (v1): описания `sync` нет — на сервере фирма по названию (row_visible 020), ТД; записи не теряются
   construction_defects: "Замечание",
   construction_acceptance: "Приёмка",
   construction_units: "Помещение"
-}, Xu = ["app_photos", "checklist_snapshots"];
-function Qu(t) {
+}, wd = ["app_photos", "checklist_snapshots"];
+function vd(t) {
   return /^demo[_-]/i.test(String(t.id ?? "")) || t.isDemo === !0 || t.is_demo === !0 || t.demo === !0;
 }
-function Zu(t) {
+function bd(t) {
   return t.type === "auto" || t.source === "ai" || t.source === "system" || t.contractor === "Системная";
 }
-function sn(t, e, r) {
-  return t in $e ? e.filter((n) => n && n.id != null && !n[mn] && !String(n.id).startsWith("sys_") && !Qu(n) && !Zu(n) && r(n)) : [];
+function dn(t, e, r) {
+  return t in Fe ? e.filter((n) => n && n.id != null && !n[En] && !String(n.id).startsWith("sys_") && !vd(n) && !bd(n) && r(n)) : [];
 }
-const Pe = (t) => typeof t == "string" ? t.trim() : typeof t == "number" ? String(t) : "";
-function yn(t, e) {
+const Be = (t) => typeof t == "string" ? t.trim() : typeof t == "number" ? String(t) : "";
+function xn(t, e) {
   const r = e.data && typeof e.data == "object" ? e.data : {}, n = (...s) => {
     for (const i of s) {
-      const o = Pe(e[i]) || Pe(r[i]);
+      const o = Be(e[i]) || Be(r[i]);
       if (o) return o;
     }
     return "";
@@ -19791,32 +19856,32 @@ function yn(t, e) {
   return {
     store: t,
     id: String(e.id),
-    type: $e[t] || t,
+    type: Fe[t] || t,
     date: n("date", "createdAt", "created_at", "updatedAt", "updated_at"),
     object: n("object", "objectName", "projectName", "project_display_name", "project", "title", "name")
   };
 }
-function ed(t, e, r) {
-  if (t[mn]) return !1;
-  const n = String(t.id ?? ""), s = Pe(t.entityId) || Pe(t.entity_id);
+function kd(t, e, r) {
+  if (t[En]) return !1;
+  const n = String(t.id ?? ""), s = Be(t.entityId) || Be(t.entity_id);
   return !!s && e.has(s) || n.length > 3 && r.includes(n);
 }
-const td = "Инженер", rd = ["inspectorName", "engineerName", "engineer_name", "owner", "created_by"];
-function nd(t, e, r = "") {
-  const n = { ...t }, s = Pe(n.project_code);
+const Sd = "Инженер", Ed = ["inspectorName", "engineerName", "engineer_name", "owner", "created_by"];
+function xd(t, e, r = "") {
+  const n = { ...t }, s = Be(n.project_code);
   if ((!s || s === "LOCAL") && (n.project_code = e), r)
-    for (const i of rd) i in n && (!Pe(n[i]) || Pe(n[i]) === td) && (n[i] = r);
+    for (const i of Ed) i in n && (!Be(n[i]) || Be(n[i]) === Sd) && (n[i] = r);
   return n;
 }
-function sd(t, e, r) {
-  return { ...t, [mn]: e, [Gu]: r };
+function Ad(t, e, r) {
+  return { ...t, [En]: e, [yd]: r };
 }
-function Zt(t) {
+function sr(t) {
   return new Promise((e, r) => {
     t.onsuccess = () => e(t.result), t.onerror = () => r(t.error);
   });
 }
-function yt(t, e) {
+function Et(t, e) {
   return new Promise((r) => {
     let n = !1;
     const s = t.open(e);
@@ -19828,24 +19893,24 @@ function yt(t, e) {
     }, s.onerror = () => r(null), s.onblocked = () => r(null);
   });
 }
-async function id(t, e, r) {
-  const n = { orphans: [], rows: /* @__PURE__ */ new Map(), attachments: /* @__PURE__ */ new Map() }, s = await yt(t, e);
+async function Td(t, e, r) {
+  const n = { orphans: [], rows: /* @__PURE__ */ new Map(), attachments: /* @__PURE__ */ new Map() }, s = await Et(t, e);
   if (!s) return n;
   try {
     const i = Array.from(s.objectStoreNames);
     for (const o of i) {
-      if (!(o in $e)) continue;
-      const a = sn(o, await Zt(s.transaction(o, "readonly").objectStore(o).getAll()), r);
+      if (!(o in Fe)) continue;
+      const a = dn(o, await sr(s.transaction(o, "readonly").objectStore(o).getAll()), r);
       if (a.length) {
         n.rows.set(o, a);
-        for (const l of a) n.orphans.push(yn(o, l));
+        for (const l of a) n.orphans.push(xn(o, l));
       }
     }
     if (n.orphans.length) {
       const o = new Set(n.orphans.map((l) => l.id)), a = JSON.stringify([...n.rows.values()]);
-      for (const l of Xu) {
+      for (const l of wd) {
         if (!i.includes(l)) continue;
-        const u = (await Zt(s.transaction(l, "readonly").objectStore(l).getAll())).filter((d) => ed(d, o, a));
+        const u = (await sr(s.transaction(l, "readonly").objectStore(l).getAll())).filter((d) => kd(d, o, a));
         u.length && n.attachments.set(l, u);
       }
     }
@@ -19854,22 +19919,22 @@ async function id(t, e, r) {
   }
   return n.orphans.sort((i, o) => i.date < o.date ? -1 : i.date > o.date ? 1 : 0), n;
 }
-function on(t) {
+function hn(t) {
   return String(t.syncStatus ?? t.sync_status ?? "") === "blocked";
 }
-async function od(t, e) {
-  const r = await yt(t, e);
+async function Rd(t, e) {
+  const r = await Et(t, e);
   if (!r) return 0;
   let n = 0;
   try {
     for (const s of Array.from(r.objectStoreNames))
-      s in $e && await new Promise((i, o) => {
+      s in Fe && await new Promise((i, o) => {
         const a = r.transaction(s, "readwrite"), l = a.objectStore(s).openCursor();
         l.onsuccess = () => {
           const c = l.result;
           if (!c) return;
           const u = c.value;
-          on(u) && (n++, c.update({ ...u, syncAccessStamp: "", syncServerRejected: !1 })), c.continue();
+          hn(u) && (n++, c.update({ ...u, syncAccessStamp: "", syncServerRejected: !1 })), c.continue();
         }, a.oncomplete = () => i(), a.onerror = () => o(a.error);
       });
   } finally {
@@ -19877,16 +19942,16 @@ async function od(t, e) {
   }
   return n;
 }
-const Ps = 200;
-async function ad(t, e, r, n = 200) {
-  const s = { unsent: 0, rows: [] }, i = await yt(t, e);
+const Ms = 200;
+async function Od(t, e, r, n = 200) {
+  const s = { unsent: 0, rows: [] }, i = await Et(t, e);
   if (!i) return s;
-  const o = (l) => r(l) || on(l), a = (l, c) => {
-    sn(l, [c], r).length && s.unsent++, s.rows.length < n && sn(l, [c], o).length && s.rows.push({ store: l, rec: c, rejected: !r(c) && on(c) });
+  const o = (l) => r(l) || hn(l), a = (l, c) => {
+    dn(l, [c], r).length && s.unsent++, s.rows.length < n && dn(l, [c], o).length && s.rows.push({ store: l, rec: c, rejected: !r(c) && hn(c) });
   };
   try {
     for (const l of Array.from(i.objectStoreNames)) {
-      if (!(l in $e)) continue;
+      if (!(l in Fe)) continue;
       const c = i.transaction(l, "readonly").objectStore(l).keyPath;
       if (typeof c != "string" || typeof IDBKeyRange > "u") {
         await new Promise((d, p) => {
@@ -19901,9 +19966,9 @@ async function ad(t, e, r, n = 200) {
       }
       let u = null;
       for (; ; ) {
-        const d = u === null ? null : IDBKeyRange.lowerBound(u, !0), p = await Zt(i.transaction(l, "readonly").objectStore(l).getAll(d, Ps));
+        const d = u === null ? null : IDBKeyRange.lowerBound(u, !0), p = await sr(i.transaction(l, "readonly").objectStore(l).getAll(d, Ms));
         for (const h of p) a(l, h);
-        if (p.length < Ps) break;
+        if (p.length < Ms) break;
         u = p[p.length - 1][c];
       }
     }
@@ -19912,8 +19977,8 @@ async function ad(t, e, r, n = 200) {
   }
   return s;
 }
-async function ld(t, e, r, n, s) {
-  const i = s.now || (/* @__PURE__ */ new Date()).toISOString(), o = await yt(t, r), a = await yt(t, e);
+async function Cd(t, e, r, n, s) {
+  const i = s.now || (/* @__PURE__ */ new Date()).toISOString(), o = await Et(t, r), a = await Et(t, e);
   if (!o || !a)
     throw o == null || o.close(), a == null || a.close(), new Error("База устройства недоступна");
   let l = 0;
@@ -19926,14 +19991,14 @@ async function ld(t, e, r, n, s) {
       if (!o.objectStoreNames.contains(u)) continue;
       const h = o.transaction(u, "readwrite"), f = h.objectStore(u), g = f.keyPath, m = [];
       for (const _ of d)
-        await Zt(f.getKey(_[g])) === void 0 && f.put(u in $e ? nd(_, s.projectCode, s.author) : _), m.push(_), p && l++;
-      await new Promise((_, v) => {
-        h.oncomplete = () => _(), h.onerror = () => v(h.error), h.onabort = () => v(h.error);
+        await sr(f.getKey(_[g])) === void 0 && f.put(u in Fe ? xd(_, s.projectCode, s.author) : _), m.push(_), p && l++;
+      await new Promise((_, w) => {
+        h.oncomplete = () => _(), h.onerror = () => w(h.error), h.onabort = () => w(h.error);
       });
       const y = a.transaction(u, "readwrite");
-      for (const _ of m) y.objectStore(u).put(sd(_, s.slot, i));
-      await new Promise((_, v) => {
-        y.oncomplete = () => _(), y.onerror = () => v(y.error), y.onabort = () => v(y.error);
+      for (const _ of m) y.objectStore(u).put(Ad(_, s.slot, i));
+      await new Promise((_, w) => {
+        y.oncomplete = () => _(), y.onerror = () => w(y.error), y.onabort = () => w(y.error);
       });
     }
   } finally {
@@ -19941,7 +20006,7 @@ async function ld(t, e, r, n, s) {
   }
   return l;
 }
-const cd = `
+const Id = `
 .p2-rescue-wrap{position:fixed;inset:0;z-index:1300}
 .p2-rescue-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
 .p2-rescue{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;
@@ -19963,33 +20028,33 @@ const cd = `
 .p2-rescue__foot button[data-primary]{border:0;background:var(--accent,var(--primary));color:#fff}
 .p2-rescue__foot button:disabled{opacity:.6;cursor:default}
 @media (min-width:768px){.p2-rescue{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:540px;border-radius:20px}
-  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`, Rr = 50, ud = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
-function dd(t) {
+  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`, Pr = 50, jd = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
+function Pd(t) {
   const e = new Date(t);
   if (!t || Number.isNaN(e.getTime())) return [t || "без даты", ""];
   const r = (n) => String(n).padStart(2, "0");
   return [r(e.getDate()) + "." + r(e.getMonth() + 1) + "." + e.getFullYear(), r(e.getHours()) + ":" + r(e.getMinutes())];
 }
-function hd(t, e) {
+function Nd(t, e) {
   const r = (m, y = {}, _) => {
-    const v = t.createElement(m);
-    for (const [E, R] of Object.entries(y)) v.setAttribute(E, R);
-    return _ !== void 0 && (v.textContent = _), v;
+    const w = t.createElement(m);
+    for (const [E, R] of Object.entries(y)) w.setAttribute(E, R);
+    return _ !== void 0 && (w.textContent = _), w;
   }, n = r("div", { class: "p2-rescue-wrap", "data-testid": "p2-rescue" }), s = r("div", { class: "p2-rescue-backdrop", "aria-hidden": "true" }), i = r("div", { class: "p2-rescue", role: "dialog", "aria-modal": "true", "aria-label": "Записи, сделанные без связи" }), o = e.orphans.length, a = r("div", { class: "p2-rescue__ico" });
-  a.innerHTML = ud;
+  a.innerHTML = jd;
   const l = r("div");
   l.append(
-    r("b", {}, "Найдено " + o + " " + fd(o, "запись", "записи", "записей") + ", " + (o % 10 === 1 && o % 100 !== 11 ? "сделанная" : "сделанные") + " без связи"),
+    r("b", {}, "Найдено " + o + " " + $d(o, "запись", "записи", "записей") + ", " + (o % 10 === 1 && o % 100 !== 11 ? "сделанная" : "сделанные") + " без связи"),
     r("span", {}, (o === 1 ? "Она осталась" : "Они остались") + " на этом телефоне и не отправлены. Перенести в «" + e.companyName + "» и отправить?")
   );
   const c = r("div", { class: "p2-rescue__head" });
   c.append(a, l);
   const u = r("ul", { "data-testid": "p2-rescue-list" });
-  for (const m of e.orphans.slice(0, Rr)) {
-    const [y, _] = dd(m.date), v = r("li"), E = r("i", {}, y);
-    _ && (E.append(r("br")), E.append(t.createTextNode(_))), v.append(E, r("strong", {}, m.type), r("em", {}, m.object || "без объекта")), u.append(v);
+  for (const m of e.orphans.slice(0, Pr)) {
+    const [y, _] = Pd(m.date), w = r("li"), E = r("i", {}, y);
+    _ && (E.append(r("br")), E.append(t.createTextNode(_))), w.append(E, r("strong", {}, m.type), r("em", {}, m.object || "без объекта")), u.append(w);
   }
-  o > Rr && u.append(r("li", {}, "и ещё " + (o - Rr)));
+  o > Pr && u.append(r("li", {}, "и ещё " + (o - Pr)));
   const d = r("p", { "data-testid": "p2-rescue-msg", role: "status" }, "Фото переносятся вместе с записями. Демо-данные и задачи, созданные системой, не переносятся."), p = r("button", { type: "button", "data-testid": "p2-rescue-later" }, "Позже"), h = r("button", { type: "button", "data-primary": "", "data-testid": "p2-rescue-move" }, "Перенести и отправить"), f = r("div", { class: "p2-rescue__foot" });
   f.append(p, h), i.append(r("div", { class: "p2-rescue__grip", "aria-hidden": "true" }), c, u, d, f), n.append(s, i);
   const g = () => {
@@ -20005,11 +20070,11 @@ function hd(t, e) {
     });
   }), n;
 }
-function fd(t, e, r, n) {
+function $d(t, e, r, n) {
   const s = t % 10, i = t % 100;
   return s === 1 && i !== 11 ? e : s >= 2 && s <= 4 && (i < 12 || i > 14) ? r : n;
 }
-const Ns = "p2-sync-status-css", pd = `
+const Fs = "p2-sync-status-css", Ld = `
 .p2s{background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:16px;overflow:hidden}
 .p2s__head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px}
 .p2s__head>div:nth-child(2){flex:1 1 200px;min-width:0}
@@ -20049,31 +20114,31 @@ const Ns = "p2-sync-status-css", pd = `
 .p2j__more{padding:10px 16px;font-size:12.5px;color:var(--text-muted);border-top:1px solid var(--card-border)}
 .p2s button:focus-visible,.p2j summary:focus-visible{outline:2px solid var(--warning,#b8844a);outline-offset:2px}
 @media (min-width:768px){.p2s__btn{flex:none;margin-left:auto}}
-@media (min-width:1024px){.p2s__row{grid-template-columns:minmax(0,1fr) 150px minmax(0,1.1fr);align-items:center}}`, gd = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Or = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>', md = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>', X = (t) => String(t ?? "").replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), er = (t) => String(t).padStart(2, "0");
-function Ne(t) {
+@media (min-width:1024px){.p2s__row{grid-template-columns:minmax(0,1fr) 150px minmax(0,1.1fr);align-items:center}}`, Dd = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Nr = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>', Ud = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>', X = (t) => String(t ?? "").replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), ir = (t) => String(t).padStart(2, "0");
+function qe(t) {
   const e = new Date(t);
-  return er(e.getHours()) + ":" + er(e.getMinutes());
+  return ir(e.getHours()) + ":" + ir(e.getMinutes());
 }
-function Bi(t, e) {
+function Yi(t, e) {
   const r = Date.parse(t || "");
   if (!Number.isFinite(r)) return "";
   const n = new Date(r), s = new Date(e), i = (a) => new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime(), o = Math.round((i(s) - i(n)) / 864e5);
-  return o === 0 ? "сегодня " + Ne(r) : o === 1 ? "вчера " + Ne(r) : er(n.getDate()) + "." + er(n.getMonth() + 1) + " " + Ne(r);
+  return o === 0 ? "сегодня " + qe(r) : o === 1 ? "вчера " + qe(r) : ir(n.getDate()) + "." + ir(n.getMonth() + 1) + " " + qe(r);
 }
-const yd = [
+const Bd = [
   [/RLS|прав доступа|permission/i, "нет прав"],
   [/не назначен/i, "объект не назначен"],
   [/другим инженером/i, "запись другого инженера"],
   [/Роль не подтверждена/i, "роль не подтверждена"],
   [/роль не может/i, "у роли нет права отправки"]
 ];
-function _d(t, e, r) {
+function qd(t, e, r) {
   const n = String(t.syncStatus ?? t.sync_status ?? ""), s = String(t.syncBlockReason ?? t.sync_block_reason ?? "");
   if (e) {
     const i = String(t.syncBlockHint ?? "");
     if (/^(Не отправлено|Сервер отклонил):/.test(s))
       return { chip: "bad", why: s, hint: i || "запись осталась на телефоне; нажмите «Отправить снова», когда дадут права" };
-    const o = yd.find(([a]) => a.test(s));
+    const o = Bd.find(([a]) => a.test(s));
     return {
       chip: "bad",
       why: "Сервер отклонил: " + (o ? o[1] : s ? s.charAt(0).toLowerCase() + s.slice(1) : "нет прав"),
@@ -20084,82 +20149,82 @@ function _d(t, e, r) {
     const i = s.replace(/^Не отправлено:\s*/i, "").replace(/^Нужно внимание:\s*/i, "");
     return { chip: "photo", why: i ? i.charAt(0).toUpperCase() + i.slice(1) : "Нет фото на телефоне", hint: "фото нет на телефоне", act: "drop_photos" };
   }
-  return r.offline ? { chip: "net", why: "Нет связи", hint: "отправим сами, как появится" } : r.retryAfter > r.now ? r.retryKind === "server" ? { chip: "wait", why: "Сервер не ответил", hint: "повтор в " + Ne(r.retryAfter) } : { chip: "wait", why: "Нет ответа сервера", hint: "проверяем связь каждую минуту — отправим сразу" } : { chip: "queue", why: "Ждёт отправки", hint: "уйдёт в ближайшую минуту" };
+  return r.offline ? { chip: "net", why: "Нет связи", hint: "отправим сами, как появится" } : r.retryAfter > r.now ? r.retryKind === "server" ? { chip: "wait", why: "Сервер не ответил", hint: "повтор в " + qe(r.retryAfter) } : { chip: "wait", why: "Нет ответа сервера", hint: "проверяем связь каждую минуту — отправим сразу" } : { chip: "queue", why: "Ждёт отправки", hint: "уйдёт в ближайшую минуту" };
 }
-function vd(t, e) {
+function Md(t, e) {
   if (typeof e.p2Title == "string" && e.p2Title) return e.p2Title;
-  const r = yn(t, e), n = typeof e.templateTitle == "string" ? e.templateTitle : typeof e.template == "string" ? e.template : "", s = [e.section, e.floor].map((i) => typeof i == "string" ? i.trim() : "").filter(Boolean).join(", ");
-  return [$e[t] || r.type, n, r.object, s].filter((i, o, a) => i && a.indexOf(i) === o).join(" · ");
+  const r = xn(t, e), n = typeof e.templateTitle == "string" ? e.templateTitle : typeof e.template == "string" ? e.template : "", s = [e.section, e.floor].map((i) => typeof i == "string" ? i.trim() : "").filter(Boolean).join(", ");
+  return [Fe[t] || r.type, n, r.object, s].filter((i, o, a) => i && a.indexOf(i) === o).join(" · ");
 }
-function wd(t, e) {
+function Fd(t, e) {
   return t.map(({ store: r, rec: n, rejected: s }) => ({
     store: r,
     id: String(n.id),
     rejected: s,
-    title: vd(r, n),
-    when: Bi(yn(r, n).date, e.now),
-    reason: _d(n, s, e)
+    title: Md(r, n),
+    when: Yi(xn(r, n).date, e.now),
+    reason: qd(n, s, e)
   })).sort((r, n) => Number(r.rejected) - Number(n.rejected));
 }
-const bd = { online: "есть", offline: "нет ответа", server: "сервер не отвечает" };
-function kd(t, e) {
-  const r = t.items.filter((f) => !f.rejected), n = t.items.filter((f) => f.rejected), s = t.lastOkAt ? Bi(t.lastOkAt, t.now) : "";
+const Hd = { online: "есть", offline: "нет ответа", server: "сервер не отвечает" };
+function zd(t, e) {
+  const r = t.items.filter((f) => !f.rejected), n = t.items.filter((f) => f.rejected), s = t.lastOkAt ? Yi(t.lastOkAt, t.now) : "";
   let i;
   if (t.counting === "first")
-    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--wait">' + Or + '</div><div><b class="p2s__title">Отправка</b><span class="p2s__sub" data-testid="p2-sync-counting">Считаем, что не отправлено…</span></div></div>';
+    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--wait">' + Nr + '</div><div><b class="p2s__title">Отправка</b><span class="p2s__sub" data-testid="p2-sync-counting">Считаем, что не отправлено…</span></div></div>';
   else if (!r.length && n.length)
-    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + Or + '</div><div><b class="p2s__title">Не ушло: ' + n.length + '</b><span class="p2s__sub">Само не уйдёт — у каждой записи ниже причина и что делать</span></div></div>';
+    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + Nr + '</div><div><b class="p2s__title">Не ушло: ' + n.length + '</b><span class="p2s__sub">Само не уйдёт — у каждой записи ниже причина и что делать</span></div></div>';
   else if (!r.length)
-    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--ok">' + md + '</div><div><b class="p2s__title">Всё отправлено</b><span class="p2s__sub">' + (s ? "Последняя успешная отправка: " + X(s) : "На этом телефоне нет неотправленных записей") + "</span></div></div>";
+    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--ok">' + Ud + '</div><div><b class="p2s__title">Всё отправлено</b><span class="p2s__sub">' + (s ? "Последняя успешная отправка: " + X(s) : "На этом телефоне нет неотправленных записей") + "</span></div></div>";
   else {
-    const f = !t.offline && t.retryAfter > t.now && t.retryKind === "server", g = t.offline ? "Всё сохранено на телефоне и уйдёт само, когда появится связь." : f ? "Связь есть, сервер не ответил — отправим сами в " + Ne(t.retryAfter) + "." : "Всё сохранено на телефоне и уйдёт само.";
-    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + (t.offline ? gd : Or) + '</div><div><b class="p2s__title">' + (t.offline ? "Нет связи · " : "") + "не отправлено: " + r.length + '</b><span class="p2s__sub">' + X(g) + '</span></div><button class="p2s__btn" type="button" data-act="sync" data-testid="p2-sync-now">Отправить сейчас</button></div>';
+    const f = !t.offline && t.retryAfter > t.now && t.retryKind === "server", g = t.offline ? "Всё сохранено на телефоне и уйдёт само, когда появится связь." : f ? "Связь есть, сервер не ответил — отправим сами в " + qe(t.retryAfter) + "." : "Всё сохранено на телефоне и уйдёт само.";
+    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + (t.offline ? Dd : Nr) + '</div><div><b class="p2s__title">' + (t.offline ? "Нет связи · " : "") + "не отправлено: " + r.length + '</b><span class="p2s__sub">' + X(g) + '</span></div><button class="p2s__btn" type="button" data-act="sync" data-testid="p2-sync-now">Отправить сейчас</button></div>';
   }
   const o = (f) => '<li class="p2s__row" data-testid="p2-sync-item" data-id="' + X(f.id) + '" data-chip="' + f.reason.chip + '"><div class="p2s__name">' + X(f.title) + '</div><div class="p2s__when">' + (f.when ? "записано " + X(f.when) : "") + '</div><div class="p2s__why"><span class="p2s__chip p2s__chip--' + f.reason.chip + '">' + X(f.reason.why) + '</span><span class="p2s__hint">' + X(f.reason.hint) + "</span>" + (f.reason.act === "drop_photos" && f.store === "app_history" ? '<button class="p2s__act" type="button" data-act="drop" data-id="' + X(f.id) + '">Отправить без этого фото</button>' : "") + "</div></li>", a = r.length ? '<ul class="p2s__list">' + r.map(o).join("") + "</ul>" : "", l = n.length ? '<div class="p2s__group p2s__group--act">Не ушло, нужно действие: ' + n.length + '<button class="p2s__act" type="button" data-act="retry" data-testid="p2-sync-retry">Отправить снова</button></div><ul class="p2s__list">' + n.map(o).join("") + "</ul>" : "", c = [];
-  (r.length || n.length) && c.push("Последняя успешная отправка: " + (s ? X(s) : "ещё не было")), t.counting === "refresh" && t.countedAt && c.push('<span data-testid="p2-sync-counting">Обновляем · список на ' + Ne(t.countedAt) + "</span>"), t.probe && t.probeAt && c.push("Проверка связи: " + X(bd[t.probe] || t.probe) + ", " + Ne(t.probeAt));
-  const u = c.length ? '<div class="p2s__foot">' + c.map((f) => f.startsWith("<span") ? f : "<span>" + f + "</span>").join("") + "</div>" : "", d = '<section class="p2s" role="status" data-testid="p2-net-device">' + i + a + l + u + "</section>", p = t.journal.length ? '<ul class="p2j__ev" data-testid="p2-sync-journal-list">' + t.journal.map((f) => '<li><span class="p2j__t">' + X(f.t) + '</span><span class="p2j__k' + (f.tone ? " p2j__k--" + f.tone : "") + '">' + X(f.text) + "</span></li>").join("") + '</ul><div class="p2j__more">Показаны последние ' + t.journal.length + " · хранится до 500 событий на этом телефоне</div>" : '<div class="p2j__more">Событий пока нет</div>', h = '<details class="p2s p2j" data-testid="p2-sync-journal"' + (e ? " open" : "") + '><summary class="p2j__sum">Журнал синхронизации <small>· ' + t.journalTotal + " " + Sd(t.journalTotal, "событие", "события", "событий") + '</small><span class="p2j__chev" aria-hidden="true">▼</span></summary><div class="p2j__tools"><button class="p2j__copy" type="button" data-act="copy" data-testid="p2-sync-copy">Скопировать отчёт для разработчика</button><span class="p2s__hint">В отчёте нет содержимого записей и имён — только время, счётчики и ошибки.</span></div>' + p + "</details>";
+  (r.length || n.length) && c.push("Последняя успешная отправка: " + (s ? X(s) : "ещё не было")), t.counting === "refresh" && t.countedAt && c.push('<span data-testid="p2-sync-counting">Обновляем · список на ' + qe(t.countedAt) + "</span>"), t.probe && t.probeAt && c.push("Проверка связи: " + X(Hd[t.probe] || t.probe) + ", " + qe(t.probeAt));
+  const u = c.length ? '<div class="p2s__foot">' + c.map((f) => f.startsWith("<span") ? f : "<span>" + f + "</span>").join("") + "</div>" : "", d = '<section class="p2s" role="status" data-testid="p2-net-device">' + i + a + l + u + "</section>", p = t.journal.length ? '<ul class="p2j__ev" data-testid="p2-sync-journal-list">' + t.journal.map((f) => '<li><span class="p2j__t">' + X(f.t) + '</span><span class="p2j__k' + (f.tone ? " p2j__k--" + f.tone : "") + '">' + X(f.text) + "</span></li>").join("") + '</ul><div class="p2j__more">Показаны последние ' + t.journal.length + " · хранится до 500 событий на этом телефоне</div>" : '<div class="p2j__more">Событий пока нет</div>', h = '<details class="p2s p2j" data-testid="p2-sync-journal"' + (e ? " open" : "") + '><summary class="p2j__sum">Журнал синхронизации <small>· ' + t.journalTotal + " " + Wd(t.journalTotal, "событие", "события", "событий") + '</small><span class="p2j__chev" aria-hidden="true">▼</span></summary><div class="p2j__tools"><button class="p2j__copy" type="button" data-act="copy" data-testid="p2-sync-copy">Скопировать отчёт для разработчика</button><span class="p2s__hint">В отчёте нет содержимого записей и имён — только время, счётчики и ошибки.</span></div>' + p + "</details>";
   return '<div class="space-y-3">' + d + h + "</div>";
 }
-function Sd(t, e, r, n) {
+function Wd(t, e, r, n) {
   const s = Math.abs(t) % 100, i = s % 10;
   return s > 10 && s < 20 ? n : i > 1 && i < 5 ? r : i === 1 ? e : n;
 }
-const Ed = [
+const Kd = [
   { id: "quality", name: "Качество и Стройконтроль", what: "Осмотры, замечания, планы СК — одна база на телефоне", offline: null, files: "quality", code: ["quality", "construction", "construction-v2"] },
   { id: "planfact", name: "План/Факт", what: "Сводка, ВОР, Факт, шахматка, журнал, КС-2 и сметы — по моим проектам", offline: null, files: null, code: ["planfact"] },
   { id: "company", name: "Компания", what: "Проекты и объекты, места, сотрудники и роли, контрагенты", offline: null, files: null, code: ["company"] },
   { id: "knowledge", name: "База знаний", what: "Документы, TWI, тех. узлы, эталоны", offline: null, files: "knowledge", code: [] },
   { id: "ai", name: "ИИ-помощник", what: "Вопросы к базе знаний", offline: null, files: null, code: [] }
-], Ad = ["twi_photo", "twi_pdf", "node_file", "custom_doc_pdf", "assistant_kb_file", "etalon_file"];
-function xd(t, e) {
-  return Ed.filter((r) => r.id === "quality" ? t("quality") || t("construction") : t(r.id)).map((r) => ({ ...r, offline: e(r.id === "quality" ? "quality" : r.id) }));
+], Vd = ["twi_photo", "twi_pdf", "node_file", "custom_doc_pdf", "assistant_kb_file", "etalon_file"];
+function Jd(t, e) {
+  return Kd.filter((r) => r.id === "quality" ? t("quality") || t("construction") : t(r.id)).map((r) => ({ ...r, offline: e(r.id === "quality" ? "quality" : r.id) }));
 }
-function Td(t) {
-  return !t || !t.view ? { text: "Только онлайн", kind: "on" } : Bc(t, "*", !0) ? { text: "Без сети: смотреть", kind: "ro" } : { text: "Без сети: смотреть и вносить", kind: "rw" };
+function Gd(t) {
+  return !t || !t.view ? { text: "Только онлайн", kind: "on" } : Zc(t, "*", !0) ? { text: "Без сети: смотреть", kind: "ro" } : { text: "Без сети: смотреть и вносить", kind: "rw" };
 }
-function Rd(t) {
+function Yd(t) {
   const e = {};
   for (const r of t.matchAll(/^\s*"[^"]+": \["[0-9a-f]+",(\d+),"([^"]*)"\]/gm)) e[r[2]] = (e[r[2]] || 0) + Number(r[1]);
   return e;
 }
-function Od(t) {
+function Xd(t) {
   const e = { quality: 0, knowledge: 0 };
   for (const r of t) {
     const n = String(r.cache_status || r.cacheStatus || "");
     if (n !== "cached_cloud" && n !== "cached_local") continue;
     const s = Number(r.size_bytes || r.sizeBytes || 0) || 0;
-    Ad.includes(String(r.entity_type || r.entityType || "")) ? e.knowledge += s : e.quality += s;
+    Vd.includes(String(r.entity_type || r.entityType || "")) ? e.knowledge += s : e.quality += s;
   }
   return e;
 }
-const lt = (t) => {
+const gt = (t) => {
   if (!t) return "0 КБ";
   const e = (r, n) => (r < 10 ? r.toFixed(1) : Math.round(r).toString()).replace(".", ",") + " " + n;
   return t < 1048576 ? e(t / 1024, "КБ") : t < 1073741824 ? e(t / 1048576, "МБ") : e(t / 1073741824, "ГБ");
-}, be = (t) => t.replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), Cd = (t) => {
+}, Ae = (t) => t.replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), Qd = (t) => {
   const e = new Date(t), r = /* @__PURE__ */ new Date(), n = String(e.getHours()).padStart(2, "0") + ":" + String(e.getMinutes()).padStart(2, "0"), s = e.toDateString() === r.toDateString(), i = new Date(r);
   return i.setDate(r.getDate() - 1), (s ? "сегодня " : e.toDateString() === i.toDateString() ? "вчера " : String(e.getDate()).padStart(2, "0") + "." + String(e.getMonth() + 1).padStart(2, "0") + " ") + n;
-}, Id = `
+}, Zd = `
 .p2o{background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:16px;overflow:hidden;margin:12px 0}
 .p2o__head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px}
 .p2o__ico{width:44px;height:44px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--accent,var(--primary,#c49a5f));background:color-mix(in srgb,var(--accent,var(--primary,#c49a5f)) 14%,transparent)}
@@ -20197,57 +20262,57 @@ const lt = (t) => {
 .p2o-dlg__box{width:100%;max-width:440px;background:var(--card-bg);color:var(--text-main);border-radius:18px;border:1px solid var(--card-border);padding:18px;display:flex;flex-direction:column;gap:10px}
 .p2o-dlg__t{font-size:17px;font-weight:800}.p2o-dlg__p{font-size:14px;color:var(--text-muted);line-height:1.45}
 @media (min-width:768px){.p2o-dlg{align-items:center}.p2o__body{grid-column:1/2}}
-@media (max-width:599px){.p2o__total{margin-left:0;text-align:left;flex:1 1 100%}.p2o__sel{max-width:none}}`, qi = "считаем…", tr = (t) => t === null ? qi : lt(t), jd = (t) => {
+@media (max-width:599px){.p2o__total{margin-left:0;text-align:left;flex:1 1 100%}.p2o__sel{max-width:none}}`, Xi = "считаем…", or = (t) => t === null ? Xi : gt(t), eh = (t) => {
   const e = new Date(t);
   return String(e.getHours()).padStart(2, "0") + ":" + String(e.getMinutes()).padStart(2, "0");
-}, Pd = {
-  quality: dn.map((t) => [t, Oi[t]]),
+}, th = {
+  quality: _n.map((t) => [t, Bi[t]]),
   knowledge: [["all", "Все"], ["none", "Не скачивать заранее"]]
 };
-function Mi(t) {
+function Qi(t) {
   return [
-    t.codeBytes ? `<span>Код <b>${lt(t.codeBytes)}</b></span>` : t.codeBytes === null && t.row.code.length ? `<span>Код <b>${qi}</b></span>` : "",
-    t.copyBytes || t.row.id === "planfact" || t.row.id === "company" ? `<span>Данные <b>${tr(t.copyBytes)}</b></span>` : "",
-    t.row.files ? `<span>${t.row.files === "knowledge" ? "Документы и TWI" : "Фото и PDF"} <b>${tr(t.fileBytes)}</b></span>` : ""
+    t.codeBytes ? `<span>Код <b>${gt(t.codeBytes)}</b></span>` : t.codeBytes === null && t.row.code.length ? `<span>Код <b>${Xi}</b></span>` : "",
+    t.copyBytes || t.row.id === "planfact" || t.row.id === "company" ? `<span>Данные <b>${or(t.copyBytes)}</b></span>` : "",
+    t.row.files ? `<span>${t.row.files === "knowledge" ? "Документы и TWI" : "Фото и PDF"} <b>${or(t.fileBytes)}</b></span>` : ""
   ].filter(Boolean).join("");
 }
-function Fi(t, e = 0) {
+function Zi(t, e = 0) {
   const { used: r, free: n } = t, s = r !== null && n !== null && r + n > 0 ? Math.max(1, Math.round(r * 100 / (r + n))) : 0;
-  return `На телефоне <b>${tr(r)}</b> · свободно ${tr(n)}${e ? " · на " + jd(e) : ""}<div class="p2o__bar"><i style="width:${s}%"></i></div>`;
+  return `На телефоне <b>${or(r)}</b> · свободно ${or(n)}${e ? " · на " + eh(e) : ""}<div class="p2o__bar"><i style="width:${s}%"></i></div>`;
 }
-function Ls(t, e, r, n = 0) {
+function Hs(t, e, r, n = 0) {
   const s = (i) => {
-    const o = Td(i.row.offline), a = o.kind === "on", l = i.row.files ? `<label class="p2o__field">${i.row.files === "knowledge" ? "Документы заранее" : "Фото и PDF заранее"}<select class="p2o__sel" data-act="scope" data-mod="${i.row.files}" id="p2o-scope-${i.row.id}"${i.keep ? "" : " disabled"}>` + Pd[i.row.files].map(([c, u]) => `<option value="${c}"${c === i.scope ? " selected" : ""}>${be(u)}${c === i.roleScope ? " · по роли" : ""}</option>`).join("") + "</select></label>" : "";
-    return `<div class="p2o__mod${a ? " p2o__mod--online" : ""}" data-mod="${i.row.id}" data-testid="p2o-mod-${i.row.id}"><div><span class="p2o__name">${be(i.row.name)}</span><span class="p2o__what">${be(i.row.what)}</span><span class="p2o__chip p2o__chip--${o.kind}">${o.text}</span></div>` + (a ? "" : `<label class="p2o__sw"><input type="checkbox" data-act="keep" data-mod="${i.row.id}" id="p2o-keep-${i.row.id}"${i.keep ? " checked" : ""}><span aria-hidden="true"></span>Держать без сети</label><div class="p2o__body"><div class="p2o__size" data-testid="p2o-size-${i.row.id}">${Mi(i)}</div>${l}<div class="p2o__last">${be(i.last)}</div><div class="p2o__btns"><button type="button" class="p2o__btn p2o__btn--main" data-act="download" data-mod="${i.row.id}"${i.keep ? "" : " disabled"}>Скачать сейчас</button>` + (i.row.id === "quality" ? '<button type="button" class="p2o__btn" data-act="reports" data-mod="quality">Отчёты на телефон</button>' : "") + `<button type="button" class="p2o__btn p2o__btn--danger" data-act="clear" data-mod="${i.row.id}" data-testid="p2o-clear-${i.row.id}">Очистить скачанное</button></div></div>`) + "</div>";
+    const o = Gd(i.row.offline), a = o.kind === "on", l = i.row.files ? `<label class="p2o__field">${i.row.files === "knowledge" ? "Документы заранее" : "Фото и PDF заранее"}<select class="p2o__sel" data-act="scope" data-mod="${i.row.files}" id="p2o-scope-${i.row.id}"${i.keep ? "" : " disabled"}>` + th[i.row.files].map(([c, u]) => `<option value="${c}"${c === i.scope ? " selected" : ""}>${Ae(u)}${c === i.roleScope ? " · по роли" : ""}</option>`).join("") + "</select></label>" : "";
+    return `<div class="p2o__mod${a ? " p2o__mod--online" : ""}" data-mod="${i.row.id}" data-testid="p2o-mod-${i.row.id}"><div><span class="p2o__name">${Ae(i.row.name)}</span><span class="p2o__what">${Ae(i.row.what)}</span><span class="p2o__chip p2o__chip--${o.kind}">${o.text}</span></div>` + (a ? "" : `<label class="p2o__sw"><input type="checkbox" data-act="keep" data-mod="${i.row.id}" id="p2o-keep-${i.row.id}"${i.keep ? " checked" : ""}><span aria-hidden="true"></span>Держать без сети</label><div class="p2o__body"><div class="p2o__size" data-testid="p2o-size-${i.row.id}">${Qi(i)}</div>${l}<div class="p2o__last">${Ae(i.last)}</div><div class="p2o__btns"><button type="button" class="p2o__btn p2o__btn--main" data-act="download" data-mod="${i.row.id}"${i.keep ? "" : " disabled"}>Скачать сейчас</button>` + (i.row.id === "quality" ? '<button type="button" class="p2o__btn" data-act="reports" data-mod="quality">Отчёты на телефон</button>' : "") + `<button type="button" class="p2o__btn p2o__btn--danger" data-act="clear" data-mod="${i.row.id}" data-testid="p2o-clear-${i.row.id}">Очистить скачанное</button></div></div>`) + "</div>";
   };
-  return `<section class="p2o" data-testid="p2-offline-modules"><div class="p2o__head"><div class="p2o__ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div><div style="flex:1 1 220px;min-width:0"><span class="p2o__title">Офлайн по модулям</span><span class="p2o__sub">Что телефон держит без сети. По умолчанию — по вашей роли: ${be(r)}. Можно поменять у каждого модуля.</span></div><div class="p2o__total" data-testid="p2o-total">${Fi(e, n)}</div></div>` + t.map(s).join("") + '<div class="p2o__foot"><span>Неотправленное («не отправлено: N») не удаляется никогда — ни очисткой, ни правилом по роли. Без сети раздел покажет то, что скачано заранее или открывалось.</span></div></section>';
+  return `<section class="p2o" data-testid="p2-offline-modules"><div class="p2o__head"><div class="p2o__ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div><div style="flex:1 1 220px;min-width:0"><span class="p2o__title">Офлайн по модулям</span><span class="p2o__sub">Что телефон держит без сети. По умолчанию — по вашей роли: ${Ae(r)}. Можно поменять у каждого модуля.</span></div><div class="p2o__total" data-testid="p2o-total">${Zi(e, n)}</div></div>` + t.map(s).join("") + '<div class="p2o__foot"><span>Неотправленное («не отправлено: N») не удаляется никогда — ни очисткой, ни правилом по роли. Без сети раздел покажет то, что скачано заранее или открывалось.</span></div></section>';
 }
-const $s = { engineer: "инженер качества", contractor: "подрядчик", manager: "руководитель", director: "руководство", guest: "просмотр" }, an = { code: null, copy: null, files: null, used: null, free: null, at: 0 }, Nd = 10 * 6e4, Hi = "platform2_offline_figures:";
-function Ld(t) {
+const zs = { engineer: "инженер качества", contractor: "подрядчик", manager: "руководитель", director: "руководство", guest: "просмотр" }, fn = { code: null, copy: null, files: null, used: null, free: null, at: 0 }, rh = 10 * 6e4, eo = "platform2_offline_figures:";
+function nh(t) {
   try {
-    const e = JSON.parse(localStorage.getItem(Hi + t) || "null");
-    if (e && typeof e == "object") return { ...an, ...e };
+    const e = JSON.parse(localStorage.getItem(eo + t) || "null");
+    if (e && typeof e == "object") return { ...fn, ...e };
   } catch {
   }
-  return { ...an };
+  return { ...fn };
 }
-function $d(t, e) {
+function sh(t, e) {
   try {
-    localStorage.setItem(Hi + t, JSON.stringify(e));
+    localStorage.setItem(eo + t, JSON.stringify(e));
   } catch {
   }
 }
-function Dd(t, e) {
+function ih(t, e) {
   var c;
   const r = t.RBI || {}, n = (c = r.services) == null ? void 0 : c.shell, s = r.platformMenuAccess || {}, i = (u) => {
     var d, p;
     return u === "planfact" ? !!((d = n == null ? void 0 : n.isPlatformModuleAllowed) != null && d.call(n, "planfact")) : u === "company" ? s.company === !0 : !!((p = n == null ? void 0 : n.legacyModuleAllowed) != null && p.call(n, u));
   }, o = (u) => {
     var d, p;
-    return Ri(((p = (d = r.moduleLoader) == null ? void 0 : d.getById) == null ? void 0 : p.call(d, u)) || null);
-  }, a = gn();
-  return { rows: xd(i, o).map((u) => {
-    const d = pn(u.id === "quality" ? "quality" : u.id), p = u.files === "quality" ? en("quality") || Gr(a) : u.files === "knowledge" ? en("knowledge") || Yr(a) : null, h = u.files === "quality" ? Gr(a) : u.files === "knowledge" ? Yr(a) : null, f = iu(u.id), g = d ? u.files === "quality" ? tn() === "none" ? "Фото заранее не скачиваются — открытые остаются на телефоне" : "Фото и PDF заранее: " + Oi[tn()].toLowerCase() : u.files === "knowledge" ? Pi() === "none" ? "Открытые документы остаются на телефоне" : "Документы заранее: все" : f ? "Скачано заранее: " + Cd(f.at) : "Заранее ещё не скачивалось — скачается, когда будет связь" : "Заранее не скачивается — без сети раздел покажет то, что вы открывали", m = e.code;
+    return Ui(((p = (d = r.moduleLoader) == null ? void 0 : d.getById) == null ? void 0 : p.call(d, u)) || null);
+  }, a = kn();
+  return { rows: Jd(i, o).map((u) => {
+    const d = bn(u.id === "quality" ? "quality" : u.id), p = u.files === "quality" ? on("quality") || en(a) : u.files === "knowledge" ? on("knowledge") || tn(a) : null, h = u.files === "quality" ? en(a) : u.files === "knowledge" ? tn(a) : null, f = wu(u.id), g = d ? u.files === "quality" ? an() === "none" ? "Фото заранее не скачиваются — открытые остаются на телефоне" : "Фото и PDF заранее: " + Bi[an()].toLowerCase() : u.files === "knowledge" ? Hi() === "none" ? "Открытые документы остаются на телефоне" : "Документы заранее: все" : f ? "Скачано заранее: " + Qd(f.at) : "Заранее ещё не скачивалось — скачается, когда будет связь" : "Заранее не скачивается — без сети раздел покажет то, что вы открывали", m = e.code;
     return {
       row: u,
       keep: d,
@@ -20260,51 +20325,51 @@ function Dd(t, e) {
     };
   }), total: { used: e.used, free: e.free }, role: a };
 }
-let Cr = null;
-const Ir = {};
-async function Ud(t, e, r = an, n = !1) {
-  const s = (i, o) => Ir[i] || (Ir[i] = o().then((a) => {
+let $r = null;
+const Lr = {};
+async function oh(t, e, r = fn, n = !1) {
+  const s = (i, o) => Lr[i] || (Lr[i] = o().then((a) => {
     a && e(i, a);
   }, () => {
   }).finally(() => {
-    delete Ir[i];
+    delete Lr[i];
   }));
   await Promise.all([
     s("code", async () => {
-      if (!Cr)
+      if (!$r)
         try {
-          Cr = Rd(await (await fetch("./sw.js")).text());
+          $r = Yd(await (await fetch("./sw.js")).text());
         } catch {
           return { code: {} };
         }
-      return { code: Cr };
+      return { code: $r };
     }),
     s("files", async () => {
       var a;
       const i = (a = t.STORES) == null ? void 0 : a.FILE_REGISTRY;
       if (!t.dbGetAll || !i) return null;
       const o = t.dbCount ? await t.dbCount(i).catch(() => -1) : -1;
-      return !n && r.files && o >= 0 && o === r.filesN && Date.now() - (r.filesAt || 0) < Nd ? { files: r.files } : { files: Od(await t.dbGetAll(i)), filesN: o, filesAt: Date.now() };
+      return !n && r.files && o >= 0 && o === r.filesN && Date.now() - (r.filesAt || 0) < rh ? { files: r.files } : { files: Xd(await t.dbGetAll(i)), filesN: o, filesAt: Date.now() };
     }),
     s("memory", async () => {
       const i = await navigator.storage.estimate(), o = i.usage || 0;
       return { used: o, free: Math.max(0, (i.quota || 0) - o) };
     }),
     s("copy", async () => {
-      const i = lr(), [o, a] = await Promise.all([i.size("planfact"), i.size("company")]);
+      const i = fr(), [o, a] = await Promise.all([i.size("planfact"), i.size("company")]);
       return { copy: { planfact: o, company: a } };
     })
   ]);
 }
-function Bd(t) {
+function ah(t) {
   if (t.getElementById("p2o-css")) return;
   const e = t.createElement("style");
-  e.id = "p2o-css", e.textContent = Id, t.head.appendChild(e);
+  e.id = "p2o-css", e.textContent = Zd, t.head.appendChild(e);
 }
-function Ds(t, e, r, n, s) {
+function Ws(t, e, r, n, s) {
   return new Promise((i) => {
     const o = t.createElement("div");
-    o.className = "p2o-dlg", o.setAttribute("role", "dialog"), o.setAttribute("aria-modal", "true"), o.setAttribute("data-testid", "p2o-confirm"), o.innerHTML = `<div class="p2o-dlg__box"><div class="p2o-dlg__t">${be(e)}</div><div class="p2o-dlg__p">${be(r)}</div><div class="p2o__btns"><button type="button" class="p2o__btn ${s ? "p2o__btn--danger" : "p2o__btn--main"}" data-yes style="flex:1">${be(n)}</button><button type="button" class="p2o__btn" data-no style="flex:1">${s ? "Отмена" : "Оставить"}</button></div></div>`;
+    o.className = "p2o-dlg", o.setAttribute("role", "dialog"), o.setAttribute("aria-modal", "true"), o.setAttribute("data-testid", "p2o-confirm"), o.innerHTML = `<div class="p2o-dlg__box"><div class="p2o-dlg__t">${Ae(e)}</div><div class="p2o-dlg__p">${Ae(r)}</div><div class="p2o__btns"><button type="button" class="p2o__btn ${s ? "p2o__btn--danger" : "p2o__btn--main"}" data-yes style="flex:1">${Ae(n)}</button><button type="button" class="p2o__btn" data-no style="flex:1">${s ? "Отмена" : "Оставить"}</button></div></div>`;
     const a = (l) => {
       o.remove(), i(l);
     };
@@ -20314,40 +20379,40 @@ function Ds(t, e, r, n, s) {
     }), t.body.appendChild(o), o.querySelector("[data-yes]").focus();
   });
 }
-let Us = null, Bs = 0, _e = null;
-const qd = 1e4;
-function qs(t, e) {
-  if (!_e) return;
-  const { f: r, fresh: n } = _e, s = Dd(e, r), i = n.has("memory") ? 0 : r.at, o = Ls(s.rows, s.total, $s[s.role] || "просмотр", i), a = Ls(s.rows.map((c) => ({ ...c, codeBytes: 0, copyBytes: 0, fileBytes: 0 })), { used: 0, free: 0 }, $s[s.role] || "просмотр"), l = t;
+let Ks = null, Vs = 0, Se = null;
+const lh = 1e4;
+function Js(t, e) {
+  if (!Se) return;
+  const { f: r, fresh: n } = Se, s = ih(e, r), i = n.has("memory") ? 0 : r.at, o = Hs(s.rows, s.total, zs[s.role] || "просмотр", i), a = Hs(s.rows.map((c) => ({ ...c, codeBytes: 0, copyBytes: 0, fileBytes: 0 })), { used: 0, free: 0 }, zs[s.role] || "просмотр"), l = t;
   if (l.__p2oShape === a && t.firstChild) {
     for (const d of s.rows) {
-      const p = t.querySelector(`[data-testid=p2o-size-${d.row.id}]`), h = Mi(d);
+      const p = t.querySelector(`[data-testid=p2o-size-${d.row.id}]`), h = Qi(d);
       p && p.innerHTML !== h && (p.innerHTML = h);
     }
-    const c = t.querySelector("[data-testid=p2o-total]"), u = Fi(s.total, i);
+    const c = t.querySelector("[data-testid=p2o-total]"), u = Zi(s.total, i);
     c && c.innerHTML !== u && (c.innerHTML = u);
   } else t.dataset.p2o !== o && (t.innerHTML = o);
-  t.dataset.p2o = o, l.__p2oShape = a, l.__p2oRows = s.rows, Us !== t && (Us = t, Md(t, e));
+  t.dataset.p2o = o, l.__p2oShape = a, l.__p2oRows = s.rows, Ks !== t && (Ks = t, ch(t, e));
 }
-async function zi(t, e = !1) {
+async function to(t, e = !1) {
   if (!t) return;
-  const r = t.ownerDocument, n = le();
+  const r = t.ownerDocument, n = de();
   if (!n) {
     t.replaceChildren();
     return;
   }
-  Bd(r);
+  ah(r);
   const s = r.defaultView;
-  if ((!_e || _e.slot !== n) && (_e = { slot: n, f: Ld(n), fresh: /* @__PURE__ */ new Set() }), qs(t, s), !e && Date.now() - Bs < qd) return;
-  Bs = Date.now();
-  const i = _e;
-  i.fresh.clear(), await Ud(s, (o, a) => {
-    _e === i && (i.f = { ...i.f, ...a }, i.fresh.add(o), qs(t, s));
-  }, i.f, e), _e === i && (i.f = { ...i.f, at: Date.now() }, $d(n, i.f));
+  if ((!Se || Se.slot !== n) && (Se = { slot: n, f: nh(n), fresh: /* @__PURE__ */ new Set() }), Js(t, s), !e && Date.now() - Vs < lh) return;
+  Vs = Date.now();
+  const i = Se;
+  i.fresh.clear(), await oh(s, (o, a) => {
+    Se === i && (i.f = { ...i.f, ...a }, i.fresh.add(o), Js(t, s));
+  }, i.f, e), Se === i && (i.f = { ...i.f, at: Date.now() }, sh(n, i.f));
 }
-function Md(t, e) {
+function ch(t, e) {
   const r = t.ownerDocument, n = () => t.__p2oRows || [], s = () => {
-    zi(t, !0);
+    to(t, !0);
   }, i = (o) => {
     typeof e.showToast == "function" && e.showToast(o);
   };
@@ -20355,19 +20420,19 @@ function Md(t, e) {
     var p, h, f, g;
     const a = o.target, l = a.dataset.mod || "";
     if (a.dataset.act === "scope") {
-      ou(l, a.value), s();
+      vu(l, a.value), s();
       return;
     }
     if (a.dataset.act !== "keep") return;
     const c = a;
     if (c.checked) {
-      Es(l, !0), s(), (l === "planfact" || l === "company") && ((f = (h = (p = e.RBI) == null ? void 0 : p.offlinePrefetch) == null ? void 0 : h[l]) == null || f.call(h, !0));
+      js(l, !0), s(), (l === "planfact" || l === "company") && ((f = (h = (p = e.RBI) == null ? void 0 : p.offlinePrefetch) == null ? void 0 : h[l]) == null || f.call(h, !0));
       return;
     }
     c.checked = !0;
     const u = ((g = n().find((m) => m.row.id === l)) == null ? void 0 : g.row.name) || "", d = l === "quality" ? "Записи останутся на телефоне — без них Качество не работает. Фото и PDF заранее скачиваться не будут, открытые останутся." : "Заранее ничего не будет скачиваться. Без сети раздел покажет только то, что вы открывали с интернетом.";
-    Ds(r, `Не держать ${u} без сети?`, d, "Выключить", !1).then((m) => {
-      m && (Es(l, !1), s());
+    Ws(r, `Не держать ${u} без сети?`, d, "Выключить", !1).then((m) => {
+      m && (js(l, !1), s());
     });
   }), t.addEventListener("click", (o) => {
     var u, d, p, h, f, g;
@@ -20389,29 +20454,29 @@ function Md(t, e) {
     }
     if (c === "clear") {
       const m = n().find((_) => _.row.id === l), y = m ? (m.copyBytes || 0) + (m.fileBytes || 0) : 0;
-      Ds(
+      Ws(
         r,
         `Очистить скачанное: ${m ? m.row.name : ""}?`,
-        `Освободится до ${lt(y)}. Неотправленные записи и фото останутся на телефоне и уйдут, когда будет связь. Открытое снова скачается, когда понадобится.`,
-        "Очистить " + lt(y),
+        `Освободится до ${gt(y)}. Неотправленные записи и фото останутся на телефоне и уйдут, когда будет связь. Открытое снова скачается, когда понадобится.`,
+        "Очистить " + gt(y),
         !0
       ).then(async (_) => {
         var E;
         if (!_) return;
-        let v = 0;
+        let w = 0;
         if (l === "planfact" || l === "company")
-          v = m && m.copyBytes || 0, await lr().clear(l);
+          w = m && m.copyBytes || 0, await fr().clear(l);
         else if ((E = e.RbiStorageManager) != null && E.runManualRecoverableCacheCleanup) {
           const R = await e.RbiStorageManager.runManualRecoverableCacheCleanup({ only: l === "knowledge" ? "knowledge" : "quality", noRefill: !0, silent: !0 });
-          v = R && R.freedBytes || 0;
+          w = R && R.freedBytes || 0;
         }
-        i(`✅ Освобождено ${lt(v)}. Неотправленное на месте`), s();
+        i(`✅ Освобождено ${gt(w)}. Неотправленное на месте`), s();
       });
     }
   });
 }
-const Wi = (t, e) => t.createdAt < e.createdAt ? -1 : t.createdAt > e.createdAt ? 1 : t.id < e.id ? -1 : 1;
-function Fd() {
+const ro = (t, e) => t.createdAt < e.createdAt ? -1 : t.createdAt > e.createdAt ? 1 : t.id < e.id ? -1 : 1;
+function uh() {
   const t = /* @__PURE__ */ new Map();
   return {
     size: () => t.size,
@@ -20425,17 +20490,17 @@ function Fd() {
       t.delete(e);
     },
     async list(e, r) {
-      return [...t.values()].filter((n) => n.slot === e && (!r || n.module === r)).map((n) => ({ ...n })).sort(Wi);
+      return [...t.values()].filter((n) => n.slot === e && (!r || n.module === r)).map((n) => ({ ...n })).sort(ro);
     }
   };
 }
-const Hd = "platform2_device_records", jr = "records";
-function zd(t) {
+const dh = "platform2_device_records", Dr = "records";
+function hh(t) {
   let e = null;
   const r = () => e || (e = new Promise((s, i) => {
-    const o = t.open(Hd, 1);
+    const o = t.open(dh, 1);
     o.onupgradeneeded = () => {
-      o.result.createObjectStore(jr, { keyPath: "id" }).createIndex("slot", "slot", { unique: !1 });
+      o.result.createObjectStore(Dr, { keyPath: "id" }).createIndex("slot", "slot", { unique: !1 });
     }, o.onsuccess = () => {
       const a = o.result;
       a.onversionchange = () => {
@@ -20447,7 +20512,7 @@ function zd(t) {
   })), n = async (s, i) => {
     const o = await r();
     return new Promise((a, l) => {
-      const c = o.transaction(jr, s), u = i(c.objectStore(jr));
+      const c = o.transaction(Dr, s), u = i(c.objectStore(Dr));
       s === "readwrite" ? (c.oncomplete = () => a(u.result), c.onerror = () => l(c.error)) : (u.onsuccess = () => a(u.result), u.onerror = () => l(u.error));
     });
   };
@@ -20472,33 +20537,33 @@ function zd(t) {
     async list(s, i) {
       try {
         const o = await n("readonly", (a) => a.index("slot").getAll(s));
-        return (i ? o.filter((a) => a.module === i) : o).sort(Wi);
+        return (i ? o.filter((a) => a.module === i) : o).sort(ro);
       } catch {
         return [];
       }
     }
   };
 }
-const Wd = (t) => t.syncStatus !== "synced" && !t.syncServerRejected;
-function Kd(t) {
+const fh = (t) => t.syncStatus !== "synced" && !t.syncServerRejected;
+function ph(t) {
   const e = {};
   for (const r of t || []) for (const n of r.sync || [])
     n && n.kind && n.rpc && !e[n.kind] && (e[n.kind] = { kind: n.kind, module: r.id, rpc: n.rpc, title: n.title || n.kind, store: n.store });
   return e;
 }
-const Vd = /failed to fetch|networkerror|network|load failed|aborted|timeout|fetch/i;
-function Jd(t, e) {
+const gh = /failed to fetch|networkerror|network|load failed|aborted|timeout|fetch/i;
+function mh(t, e) {
   if (e !== void 0 || !t) return { kind: "net" };
   if (!t.error) return { kind: "ok", value: t.data ?? null };
   const r = Number(t.status || 0), n = String(t.error.message || "");
-  return !r || r >= 500 || r === 401 || r === 408 || r === 429 || Vd.test(n) && !/[А-Яа-яЁё]/.test(n) ? { kind: "net" } : { kind: "rejected", message: /[А-Яа-яЁё]/.test(n) ? n.replace(/^\s*ERROR:\s*/i, "").slice(0, 300) : "отказ сервера" + (t.error.code ? " (" + t.error.code + ")" : "") };
+  return !r || r >= 500 || r === 401 || r === 408 || r === 429 || gh.test(n) && !/[А-Яа-яЁё]/.test(n) ? { kind: "net" } : { kind: "rejected", message: /[А-Яа-яЁё]/.test(n) ? n.replace(/^\s*ERROR:\s*/i, "").slice(0, 300) : "отказ сервера" + (t.error.code ? " (" + t.error.code + ")" : "") };
 }
-const Gd = { planfact: "План/Факт", quality: "Качество", construction: "Стройконтроль" }, Yd = "Исправьте условие (бригада, позиция, права) и нажмите «Отправить снова»";
-function Ms(t) {
+const yh = { planfact: "План/Факт", quality: "Качество", construction: "Стройконтроль" }, _h = "Исправьте условие (бригада, позиция, права) и нажмите «Отправить снова»";
+function Gs(t) {
   return [3e4, 6e4, 12e4, 3e5][Math.min(Math.max(t, 1), 4) - 1];
 }
-const Xd = 72 * 3600 * 1e3;
-function Qd(t, e) {
+const wh = 72 * 3600 * 1e3;
+function vh(t, e) {
   return new Promise((r, n) => {
     const s = setTimeout(() => n(new Error("timeout")), e);
     t.then((i) => {
@@ -20508,16 +20573,16 @@ function Qd(t, e) {
     });
   });
 }
-function Zd(t) {
+function bh(t) {
   const e = t.callMs ?? 2e4, r = t.passMs ?? 45e3;
   async function n(i, o) {
     let a = null, l;
     try {
-      a = await Qd(t.call(o.rpc, { p_client_id: i.id, p_entry: i.payload }), e);
+      a = await vh(t.call(o.rpc, { p_client_id: i.id, p_entry: i.payload }), e);
     } catch (c) {
       l = c ?? "error";
     }
-    return Jd(a, l);
+    return mh(a, l);
   }
   async function s(i, o) {
     var p, h, f, g;
@@ -20527,10 +20592,10 @@ function Zd(t) {
     let d = !1;
     for (const m of c) {
       if (m.syncStatus === "synced") {
-        l - Date.parse(m.sentAt || m.createdAt) > Xd && await t.store.delete(m.id);
+        l - Date.parse(m.sentAt || m.createdAt) > wh && await t.store.delete(m.id);
         continue;
       }
-      if (!Wd(m)) {
+      if (!fh(m)) {
         o.rejected++;
         continue;
       }
@@ -20540,7 +20605,7 @@ function Zd(t) {
         continue;
       }
       if (u && !u.includes(y.module)) {
-        const E = "Не отправлено: модуль «" + (Gd[y.module] || y.module) + "» выключен у компании";
+        const E = "Не отправлено: модуль «" + (yh[y.module] || y.module) + "» выключен у компании";
         (m.syncStatus !== "blocked" || m.syncBlockReason !== E) && (await t.store.put({ ...m, syncStatus: "blocked", syncBlockReason: E, syncBlockHint: "Запись сохранена на телефоне; уйдёт, когда администратор компании включит модуль" }), (p = t.changed) == null || p.call(t)), o.blocked++;
         continue;
       }
@@ -20549,8 +20614,8 @@ function Zd(t) {
         continue;
       }
       d || (d = !0, (h = t.journal) == null || h.call(t, { k: "start", mode: i, why: "device_records" }));
-      const _ = await n(m, y), v = await t.store.get(m.id) || m;
-      _.kind === "ok" ? (await t.store.put({ ...v, syncStatus: "synced", result: _.value, sentAt: new Date(t.now()).toISOString(), syncBlockReason: "", syncBlockHint: "", syncServerRejected: !1, tries: (v.tries || 0) + 1 }), o.sent++) : _.kind === "rejected" ? (await t.store.put({ ...v, syncStatus: "blocked", syncServerRejected: !0, syncBlockReason: "Сервер отклонил: " + _.message, syncBlockHint: Yd, tries: (v.tries || 0) + 1 }), o.rejected++) : (await t.store.put({ ...v, syncStatus: "not_synced", syncBlockReason: "", tries: (v.tries || 0) + 1 }), o.net = !0, o.left++), (f = t.changed) == null || f.call(t);
+      const _ = await n(m, y), w = await t.store.get(m.id) || m;
+      _.kind === "ok" ? (await t.store.put({ ...w, syncStatus: "synced", result: _.value, sentAt: new Date(t.now()).toISOString(), syncBlockReason: "", syncBlockHint: "", syncServerRejected: !1, tries: (w.tries || 0) + 1 }), o.sent++) : _.kind === "rejected" ? (await t.store.put({ ...w, syncStatus: "blocked", syncServerRejected: !0, syncBlockReason: "Сервер отклонил: " + _.message, syncBlockHint: _h, tries: (w.tries || 0) + 1 }), o.rejected++) : (await t.store.put({ ...w, syncStatus: "not_synced", syncBlockReason: "", tries: (w.tries || 0) + 1 }), o.net = !0, o.left++), (f = t.changed) == null || f.call(t);
     }
     d && ((g = t.journal) == null || g.call(t, { k: "end", mode: i, why: "device_records", ok: !o.net, pushed: o.sent, rejected: o.rejected, unsent: o.left, ms: t.now() - l, ...o.net ? { err: "нет связи" } : {} }));
   }
@@ -20577,24 +20642,24 @@ function Zd(t) {
     }
   };
 }
-const Ki = "rbi:device-records", eh = "p2-device-records", _n = () => typeof window > "u" ? void 0 : window, th = () => {
+const no = "rbi:device-records", kh = "p2-device-records", An = () => typeof window > "u" ? void 0 : window, Sh = () => {
   var t, e, r, n;
-  return (n = (r = (e = (t = _n()) == null ? void 0 : t.RBI) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r);
-}, Nt = "__platform2DeviceSend";
-function Qe() {
+  return (n = (r = (e = (t = An()) == null ? void 0 : t.RBI) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r);
+}, Bt = "__platform2DeviceSend";
+function it() {
   const t = globalThis;
-  if (t[Nt]) return t[Nt];
-  const e = typeof indexedDB < "u" ? zd(indexedDB) : Fd(), r = Kd(Ui), n = Zd({
+  if (t[Bt]) return t[Bt];
+  const e = typeof indexedDB < "u" ? hh(indexedDB) : uh(), r = ph(Sn), n = bh({
     store: e,
     kinds: r,
-    slot: le,
+    slot: de,
     modules: () => {
       var o;
-      const s = th(), i = (o = s == null ? void 0 : s.companies) == null ? void 0 : o.find((a) => a.id === s.companyId);
+      const s = Sh(), i = (o = s == null ? void 0 : s.companies) == null ? void 0 : o.find((a) => a.id === s.companyId);
       return i && Array.isArray(i.modules) ? i.modules : null;
     },
     async call(s, i) {
-      const o = bt();
+      const o = Tt();
       if (!o) throw new Error("network");
       const { data: a, error: l, status: c } = await o.rpc(s, i);
       return { data: a, error: l ? { message: l.message, code: l.code } : null, status: c };
@@ -20602,46 +20667,46 @@ function Qe() {
     now: () => Date.now(),
     lock: async (s) => {
       const i = typeof navigator < "u" ? navigator.locks : void 0;
-      return !i || typeof i.request != "function" ? (await s(), !0) : i.request(eh, { ifAvailable: !0 }, async (o) => o ? (await s(), !0) : !1);
+      return !i || typeof i.request != "function" ? (await s(), !0) : i.request(kh, { ifAvailable: !0 }, async (o) => o ? (await s(), !0) : !1);
     },
     journal: (s) => {
       var i, o;
       try {
-        (o = (i = _n()) == null ? void 0 : i.RbiSyncJournal) == null || o.add(s);
+        (o = (i = An()) == null ? void 0 : i.RbiSyncJournal) == null || o.add(s);
       } catch {
       }
     },
     changed: () => {
-      typeof window < "u" && window.dispatchEvent(new Event(Ki));
+      typeof window < "u" && window.dispatchEvent(new Event(no));
     }
   });
-  return t[Nt] = { store: e, kinds: r, sender: n, fails: 0, timer: null, running: null, again: !1, wired: !1 }, t[Nt];
+  return t[Bt] = { store: e, kinds: r, sender: n, fails: 0, timer: null, running: null, again: !1, wired: !1 }, t[Bt];
 }
-function Pr(t) {
-  const e = Qe();
+function Ur(t) {
+  const e = it();
   e.timer && clearTimeout(e.timer), e.timer = setTimeout(() => {
-    e.timer = null, oe("silent");
+    e.timer = null, le("silent");
   }, t);
 }
-async function oe(t = "silent") {
-  const e = Qe();
-  if (fn() || !le()) return null;
+async function le(t = "silent") {
+  const e = it();
+  if (vn() || !de()) return null;
   if (e.running)
     return e.again = !0, e.running;
   e.running = e.sender.run(t);
   try {
     const r = await e.running;
-    return r.net ? (e.fails++, Pr(Ms(e.fails))) : (e.fails = 0, (r.busy || r.left) && Pr(3e4)), r;
+    return r.net ? (e.fails++, Ur(Gs(e.fails))) : (e.fails = 0, (r.busy || r.left) && Ur(3e4)), r;
   } catch {
-    return e.fails++, Pr(Ms(e.fails)), null;
+    return e.fails++, Ur(Gs(e.fails)), null;
   } finally {
-    e.running = null, e.again && (e.again = !1, oe(t));
+    e.running = null, e.again && (e.again = !1, le(t));
   }
 }
-const rr = (t) => Qe().sender.pending(t), Vi = () => Qe().sender.resetRejected();
-async function rh() {
-  const t = Qe().kinds;
-  return (await rr().catch(() => [])).map((e) => {
+const ar = (t) => it().sender.pending(t), so = () => it().sender.resetRejected();
+async function Eh() {
+  const t = it().kinds;
+  return (await ar().catch(() => [])).map((e) => {
     var r;
     return {
       store: "device_records",
@@ -20650,24 +20715,24 @@ async function rh() {
     };
   });
 }
-function nh() {
-  const t = Qe();
+function xh() {
+  const t = it();
   if (t.wired || typeof window > "u") return;
   t.wired = !0, window.addEventListener("online", () => {
-    t.fails = 0, oe();
+    t.fails = 0, le();
   }), window.addEventListener("rbi:platform-net", () => {
-    oe();
+    le();
   }), window.addEventListener("rbi:platform-access", () => {
-    oe();
+    le();
   });
-  const e = _n();
-  e && ((e.RBI = e.RBI || {}).deviceSend = { run: oe, pending: rr, reset: Vi }), setInterval(() => {
-    rr().then((r) => {
-      r.some((n) => !n.syncServerRejected) && !t.timer && oe();
+  const e = An();
+  e && ((e.RBI = e.RBI || {}).deviceSend = { run: le, pending: ar, reset: so }), setInterval(() => {
+    ar().then((r) => {
+      r.some((n) => !n.syncServerRejected) && !t.timer && le();
     });
-  }, 6e4), oe();
+  }, 6e4), le();
 }
-const sh = "rbi:net-status", Fs = "#/settings/my/device", Hs = "p2-net-style", ih = 6e3, oh = `
+const Ah = "rbi:net-status", Ys = "#/settings/my/device", Xs = "p2-net-style", Th = 6e3, Rh = `
 .p2-offline #desk-sync-status,.p2-offline #header-sync-status{display:none!important}
 .p2-net{display:inline-flex;align-items:center;gap:6px;margin-left:6px;height:26px;padding:0 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;cursor:pointer;
   color:var(--warning,#b8844a);background:color-mix(in srgb,var(--warning,#b8844a) 14%,transparent);border:1px solid color-mix(in srgb,var(--warning,#b8844a) 35%,transparent)}
@@ -20689,161 +20754,161 @@ const sh = "rbi:net-status", Fs = "#/settings/my/device", Hs = "p2-net-style", i
 @media (max-width:767px){.p2-need{margin:16px;padding:24px 16px}.p2-need__btns .p2-nbtn{flex:1 1 100%}}
 .p2-dev-unsent{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:16px;background:var(--card-bg);color:var(--text-main);border:1px solid color-mix(in srgb,var(--warning,#b8844a) 45%,transparent)}
 .p2-dev-unsent .p2-need__ico{width:44px;height:44px;border-radius:12px}
-.p2-dev-unsent b{display:block;font-size:15px}.p2-dev-unsent span{font-size:13px;color:var(--text-muted)}`, vn = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', ah = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="M8 17l4-4 4 4"/><path d="M20 16.6A4 4 0 0 0 18 9h-1.3A7 7 0 1 0 4 15.3"/></svg>';
-function Ji(t) {
-  if (t.getElementById(Hs)) return;
+.p2-dev-unsent b{display:block;font-size:15px}.p2-dev-unsent span{font-size:13px;color:var(--text-muted)}`, Tn = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Oh = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="M8 17l4-4 4 4"/><path d="M20 16.6A4 4 0 0 0 18 9h-1.3A7 7 0 1 0 4 15.3"/></svg>';
+function io(t) {
+  if (t.getElementById(Xs)) return;
   const e = t.createElement("style");
-  e.id = Hs, e.textContent = oh, t.head.appendChild(e);
+  e.id = Xs, e.textContent = Rh, t.head.appendChild(e);
 }
-function zs(t, e) {
+function Qs(t, e) {
   const r = (t.offline ? "Нет связи, " : "") + "не отправлено: " + t.unsent;
   if (!t.offline && t.unsent <= 0) return { show: !1, label: r, html: "" };
-  const n = t.offline ? vn : ah;
+  const n = t.offline ? Tn : Oh;
   return e ? { show: !0, label: r, html: n + "<b>" + t.unsent + "</b>" } : { show: !0, label: r, html: n + (t.offline ? '<span>Нет связи</span><span class="p2-net__sep">·</span>' : "") + "<span>не отправлено: <b>" + t.unsent + "</b></span>" };
 }
-function lh(t, e, r) {
+function Ch(t, e, r) {
   const n = t.ownerDocument;
-  Ji(n);
+  io(n);
   const s = n.createElement("div");
-  s.className = "p2-need", s.setAttribute("role", "status"), s.setAttribute("data-testid", "p2-need-internet"), s.innerHTML = '<div class="p2-need__ico">' + vn.replace(/15/g, "26") + '</div><h2>Нужен интернет</h2><p></p><div class="p2-need__btns"></div>', s.querySelector("p").textContent = "Раздел " + e + " работает только онлайн. Данные Качества и Стройконтроля доступны без связи — осмотры сохраняются на телефоне и отправятся сами.";
+  s.className = "p2-need", s.setAttribute("role", "status"), s.setAttribute("data-testid", "p2-need-internet"), s.innerHTML = '<div class="p2-need__ico">' + Tn.replace(/15/g, "26") + '</div><h2>Нужен интернет</h2><p></p><div class="p2-need__btns"></div>', s.querySelector("p").textContent = "Раздел " + e + " работает только онлайн. Данные Качества и Стройконтроля доступны без связи — осмотры сохраняются на телефоне и отправятся сами.";
   const i = s.querySelector(".p2-need__btns"), o = (a, l, c) => {
     const u = n.createElement("button");
     u.type = "button", u.className = "p2-nbtn" + (l ? " p2-nbtn--primary" : ""), u.textContent = a, u.addEventListener("click", c), i.appendChild(u);
   };
   r.quality && o("Открыть Качество", !0, () => r.go("#/quality")), o("Повторить", !r.quality, () => window.dispatchEvent(new Event("platform2:refresh"))), t.replaceChildren(s);
 }
-function ch(t, e) {
+function Ih(t, e) {
   const r = Date.parse(t || "");
   if (!Number.isFinite(r)) return "";
   const n = new Date(r), s = (o) => String(o).padStart(2, "0");
   return (new Date(e).toDateString() === n.toDateString() ? "" : s(n.getDate()) + "." + s(n.getMonth() + 1) + " ") + s(n.getHours()) + ":" + s(n.getMinutes());
 }
-let Ws = !1;
-function uh(t) {
-  if (Ws || typeof window > "u") return;
-  Ws = !0;
+let Zs = !1;
+function jh(t) {
+  if (Zs || typeof window > "u") return;
+  Zs = !0;
   const e = window, r = document;
-  Ji(r);
+  io(r);
   let n = { offline: !1, unsent: 0 }, s = 0, i = 0, o = !1;
   const a = () => {
     const T = t.platform();
     return T.mode === "email" && (!!T.offline || navigator.onLine === !1);
-  }, l = () => t.navigate(Fs);
+  }, l = () => t.navigate(Ys);
   function c() {
-    const T = zs(n, window.innerWidth < 768);
+    const T = Qs(n, window.innerWidth < 768);
     r.body.classList.toggle("p2-offline", n.offline);
-    let w = r.querySelector(".p2-net");
+    let v = r.querySelector(".p2-net");
     if (!T.show) {
-      w && w.remove();
+      v && v.remove();
       return;
     }
-    const S = (Z) => !!Z && Z.getClientRects().length > 0, L = [r.getElementById("desk-sync-status"), r.getElementById("header-sync-status")].find((Z) => Z && S(Z.parentElement)) || null, C = r.querySelector(".mobile-module-menu-wrap"), U = !L && C && S(C) ? C.parentElement : null, V = !L && !U ? r.getElementById("app-sidebar") : null, J = U || (V && S(V) ? V : null), ce = (window.innerWidth < 768 || !!V) !== window.innerWidth < 768 ? zs(n, !0) : T;
-    w || (w = r.createElement("span"), w.className = "p2-net", w.setAttribute("role", "button"), w.tabIndex = 0, w.dataset.testid = "p2-net", w.setAttribute("data-testid", "p2-net"), w.addEventListener("click", l), w.addEventListener("keydown", (Z) => {
+    const S = (Z) => !!Z && Z.getClientRects().length > 0, $ = [r.getElementById("desk-sync-status"), r.getElementById("header-sync-status")].find((Z) => Z && S(Z.parentElement)) || null, C = r.querySelector(".mobile-module-menu-wrap"), B = !$ && C && S(C) ? C.parentElement : null, V = !$ && !B ? r.getElementById("app-sidebar") : null, J = B || (V && S(V) ? V : null), he = (window.innerWidth < 768 || !!V) !== window.innerWidth < 768 ? Qs(n, !0) : T;
+    v || (v = r.createElement("span"), v.className = "p2-net", v.setAttribute("role", "button"), v.tabIndex = 0, v.dataset.testid = "p2-net", v.setAttribute("data-testid", "p2-net"), v.addEventListener("click", l), v.addEventListener("keydown", (Z) => {
       (Z.key === "Enter" || Z.key === " ") && (Z.preventDefault(), l());
-    })), J && w.parentElement !== J ? (w.classList.toggle("p2-net--row", J === U), w.classList.toggle("p2-net--rail", J !== U), J.appendChild(w)) : !J && L && w.previousElementSibling !== L && (w.classList.remove("p2-net--row", "p2-net--rail"), L.insertAdjacentElement("afterend", w)), w.innerHTML !== ce.html && (w.innerHTML = ce.html), w.setAttribute("aria-label", T.label), w.title = T.label;
+    })), J && v.parentElement !== J ? (v.classList.toggle("p2-net--row", J === B), v.classList.toggle("p2-net--rail", J !== B), J.appendChild(v)) : !J && $ && v.previousElementSibling !== $ && (v.classList.remove("p2-net--row", "p2-net--rail"), $.insertAdjacentElement("afterend", v)), v.innerHTML !== he.html && (v.innerHTML = he.html), v.setAttribute("aria-label", T.label), v.title = T.label;
   }
   const u = 5e3;
   let d = null, p = null;
-  async function h(T, w = !1) {
+  async function h(T, v = !1) {
     var C;
-    if (d && w && await d.catch(() => null), d) return d;
+    if (d && v && await d.catch(() => null), d) return d;
     if (p && Date.now() - p.at < T) return p.r;
     const S = (C = e.RbiSyncMergePolicy) == null ? void 0 : C.isUnsentLocal, O = e.RBI_DB_NAME || "";
     if (!S || !O || typeof indexedDB > "u") return { unsent: 0, rows: [] };
-    const L = ad(indexedDB, O, S).then((U) => (p = { r: U, at: Date.now() }, U));
-    d = L;
+    const $ = Od(indexedDB, O, S).then((B) => (p = { r: B, at: Date.now() }, B));
+    d = $;
     try {
-      return await L;
+      return await $;
     } finally {
-      d === L && (d = null);
+      d === $ && (d = null);
     }
   }
   let f = !1, g = !1, m = !1, y = null, _ = 0;
-  const v = () => {
-    const T = String(location.hash || "").startsWith(Fs), w = r.getElementById("p2-net-status-slot");
-    if (T && !w && !_) {
+  const w = () => {
+    const T = String(location.hash || "").startsWith(Ys), v = r.getElementById("p2-net-status-slot");
+    if (T && !v && !_) {
       let S = 0;
       _ = window.setInterval(() => {
-        (++S > 50 || r.getElementById("p2-net-status-slot")) && (clearInterval(_), _ = 0, x());
+        (++S > 50 || r.getElementById("p2-net-status-slot")) && (clearInterval(_), _ = 0, A());
       }, 200);
     }
-    return !w || !T ? null : t.platform().mode !== "email" ? (w.replaceChildren(), null) : w;
+    return !v || !T ? null : t.platform().mode !== "email" ? (v.replaceChildren(), null) : v;
   };
-  function E(T, w, S) {
-    if (!r.getElementById(Ns)) {
+  function E(T, v, S) {
+    if (!r.getElementById(Fs)) {
       const Y = r.createElement("style");
-      Y.id = Ns, Y.textContent = pd, r.head.appendChild(Y);
+      Y.id = Fs, Y.textContent = Ld, r.head.appendChild(Y);
     }
-    const O = Date.now(), L = (Y) => {
+    const O = Date.now(), $ = (Y) => {
       try {
         return window.localStorage.getItem(Y) || "";
       } catch {
         return "";
       }
-    }, C = e.RbiSyncNet, U = !!C && !!C.lastProbeAt && O - C.lastProbeAt < 12e4, V = { offline: n.offline || U && C.lastProbe === "offline", now: O, retryAfter: Number(L("rbi_sync_retry_after")) || 0, retryKind: L("rbi_sync_retry_kind") }, J = e.RbiSyncJournal, Se = e.RbiSyncJournalPolicy, ce = J ? J.list() : [], Z = Se ? ce.slice(-20).reverse().map((Y) => ({ t: ch(Y.t, O), text: Se.eventLine(Y), tone: Se.eventTone(Y) })) : [], Sn = wd(w || [], V);
+    }, C = e.RbiSyncNet, B = !!C && !!C.lastProbeAt && O - C.lastProbeAt < 12e4, V = { offline: n.offline || B && C.lastProbe === "offline", now: O, retryAfter: Number($("rbi_sync_retry_after")) || 0, retryKind: $("rbi_sync_retry_kind") }, J = e.RbiSyncJournal, Oe = e.RbiSyncJournalPolicy, he = J ? J.list() : [], Z = Oe ? he.slice(-20).reverse().map((Y) => ({ t: Ih(Y.t, O), text: Oe.eventLine(Y), tone: Oe.eventTone(Y) })) : [], In = Fd(v || [], V);
     if (!S) {
-      const Y = Sn.filter((Yi) => !Yi.rejected).length;
+      const Y = In.filter((uo) => !uo.rejected).length;
       Y !== n.unsent && (n = { ...n, unsent: Y }, c());
     }
-    const dr = kd(
+    const yr = zd(
       {
         ...V,
-        items: Sn,
+        items: In,
         lastOkAt: J ? J.lastOkAt() : "",
         probe: (C == null ? void 0 : C.lastProbe) ?? null,
         probeAt: (C == null ? void 0 : C.lastProbeAt) || 0,
         journal: Z,
-        journalTotal: ce.length,
-        counting: S ? w ? "refresh" : "first" : void 0,
+        journalTotal: he.length,
+        counting: S ? v ? "refresh" : "first" : void 0,
         countedAt: y ? y.at : 0
       },
       !!T.querySelector("details[open]")
     );
-    T.dataset.p2 !== dr && (T.dataset.p2 = dr, T.innerHTML = dr), m || (m = !0, T.addEventListener("click", I));
+    T.dataset.p2 !== yr && (T.dataset.p2 = yr, T.innerHTML = yr), m || (m = !0, T.addEventListener("click", I));
   }
   async function R(T) {
-    const w = await h(0, T).catch(() => null), S = w ? [...w.rows] : [];
-    return S.push(...await rh()), S;
+    const v = await h(0, T).catch(() => null), S = v ? [...v.rows] : [];
+    return S.push(...await Eh()), S;
   }
-  async function x(T = !1) {
-    const w = v();
-    if (w) {
+  async function A(T = !1) {
+    const v = w();
+    if (v) {
       if (f) {
         T && (g = !0);
         return;
       }
       f = !0;
       try {
-        E(w, y ? y.rows : null, !0), zi(r.getElementById("p2-offline-modules-slot"));
+        E(v, y ? y.rows : null, !0), to(r.getElementById("p2-offline-modules-slot"));
         const S = await R(T);
         y = { rows: S, at: Date.now() };
-        const O = v();
+        const O = w();
         O && E(O, S, !1);
       } finally {
-        f = !1, g && (g = !1, x(!0));
+        f = !1, g && (g = !1, A(!0));
       }
     }
   }
   function I(T) {
     var O;
-    const w = T.target.closest("[data-act]");
-    if (!w) return;
-    const S = w.dataset.act;
-    if (S === "sync" && (oe("manual"), typeof e.triggerSync == "function" && e.triggerSync("manual")), S === "drop" && w.dataset.id && ((O = e.HistoryActions) != null && O.resolveSyncAttention) && Promise.resolve(e.HistoryActions.resolveSyncAttention(w.dataset.id)).then(() => x(!0)), S === "copy" && j(w), S === "retry") {
-      const L = e.RBI_DB_NAME || "";
-      Promise.all([L && typeof indexedDB < "u" ? od(indexedDB, L) : Promise.resolve(0), Vi().catch(() => 0)]).then(() => Promise.all([oe("manual"), typeof e.triggerSync == "function" ? e.triggerSync("manual") : null])).then(() => x(!0), () => x(!0));
+    const v = T.target.closest("[data-act]");
+    if (!v) return;
+    const S = v.dataset.act;
+    if (S === "sync" && (le("manual"), typeof e.triggerSync == "function" && e.triggerSync("manual")), S === "drop" && v.dataset.id && ((O = e.HistoryActions) != null && O.resolveSyncAttention) && Promise.resolve(e.HistoryActions.resolveSyncAttention(v.dataset.id)).then(() => A(!0)), S === "copy" && j(v), S === "retry") {
+      const $ = e.RBI_DB_NAME || "";
+      Promise.all([$ && typeof indexedDB < "u" ? Rd(indexedDB, $) : Promise.resolve(0), so().catch(() => 0)]).then(() => Promise.all([le("manual"), typeof e.triggerSync == "function" ? e.triggerSync("manual") : null])).then(() => A(!0), () => A(!0));
     }
   }
   async function j(T) {
-    const w = e.RbiSyncJournal;
-    if (!w) return;
-    const S = w.report({
+    const v = e.RbiSyncJournal;
+    if (!v) return;
+    const S = v.report({
       now: (/* @__PURE__ */ new Date()).toISOString(),
       version: e.APP_VERSION || e.SW_VERSION || "",
       ua: navigator.userAgent,
       onLine: navigator.onLine,
       unsent: n.unsent,
-      lastOk: w.lastOkAt() || ""
+      lastOk: v.lastOkAt() || ""
     });
     let O = !1;
     try {
@@ -20861,9 +20926,9 @@ function uh(t) {
       }
       C.remove();
     }
-    const L = T.textContent;
+    const $ = T.textContent;
     T.textContent = O ? "Отчёт скопирован" : "Не удалось скопировать", setTimeout(() => {
-      T.textContent = L;
+      T.textContent = $;
     }, 2500);
   }
   function M() {
@@ -20871,37 +20936,37 @@ function uh(t) {
     o = !0;
     const T = r.createElement("div");
     T.className = "p2-banner", T.setAttribute("role", "status"), T.setAttribute("data-testid", "p2-net-banner");
-    const w = r.getElementById("app-desk-topbar") || r.getElementById("main-header"), S = w && w.getClientRects().length ? w.getBoundingClientRect().bottom : 0;
-    T.style.top = "calc(" + Math.max(Math.round(S), 56) + "px + 8px)", T.innerHTML = vn + '<span>Нет связи — данные сохраняются на телефоне</span><button type="button" aria-label="Закрыть">×</button>';
+    const v = r.getElementById("app-desk-topbar") || r.getElementById("main-header"), S = v && v.getClientRects().length ? v.getBoundingClientRect().bottom : 0;
+    T.style.top = "calc(" + Math.max(Math.round(S), 56) + "px + 8px)", T.innerHTML = Tn + '<span>Нет связи — данные сохраняются на телефоне</span><button type="button" aria-label="Закрыть">×</button>';
     const O = () => {
       T.remove();
     };
-    T.querySelector("button").addEventListener("click", O), r.body.appendChild(T), setTimeout(O, ih);
+    T.querySelector("button").addEventListener("click", O), r.body.appendChild(T), setTimeout(O, Th);
   }
-  function me() {
-    c(), x(), M(), (e.RBI = e.RBI || {}).netStatus = {
+  function ve() {
+    c(), A(), M(), (e.RBI = e.RBI || {}).netStatus = {
       get: () => ({ ...n }),
       isOffline: a,
-      needInternet: (T, w) => {
+      needInternet: (T, v) => {
         const S = (e.RBI || {}).platformMenuAccess || {};
-        lh(T, w, { quality: S.quality === !0 || S.construction === !0, go: t.navigate });
+        Ch(T, v, { quality: S.quality === !0 || S.construction === !0, go: t.navigate });
       }
-    }, window.dispatchEvent(new Event(sh));
+    }, window.dispatchEvent(new Event(Ah));
   }
   async function P(T = !1) {
-    var Se;
-    x();
-    const w = a(), S = t.platform(), O = (Se = e.RbiSyncMergePolicy) == null ? void 0 : Se.isUnsentLocal, L = e.RBI_DB_NAME || "";
-    let C = i, U = !1;
+    var Oe;
+    A();
+    const v = a(), S = t.platform(), O = (Oe = e.RbiSyncMergePolicy) == null ? void 0 : Oe.isUnsentLocal, $ = e.RBI_DB_NAME || "";
+    let C = i, B = !1;
     try {
-      U = window.localStorage.getItem("rbi_cloud_dirty") === "1";
+      B = window.localStorage.getItem("rbi_cloud_dirty") === "1";
     } catch {
-      U = !1;
+      B = !1;
     }
-    const V = T || w || C > 0 || U || Date.now() - s > 6e4;
-    S.mode !== "email" || !O || !L || typeof indexedDB > "u" ? C = 0 : V && (s = Date.now(), C = await h(T ? 0 : u).then((ce) => ce.unsent, () => C)), i = C;
-    const J = S.mode === "email" ? (await rr().catch(() => [])).filter((ce) => ce.syncStatus === "not_synced").length : 0;
-    n = { offline: w, unsent: C + J }, me();
+    const V = T || v || C > 0 || B || Date.now() - s > 6e4;
+    S.mode !== "email" || !O || !$ || typeof indexedDB > "u" ? C = 0 : V && (s = Date.now(), C = await h(T ? 0 : u).then((he) => he.unsent, () => C)), i = C;
+    const J = S.mode === "email" ? (await ar().catch(() => [])).filter((he) => he.syncStatus === "not_synced").length : 0;
+    n = { offline: v, unsent: C + J }, ve();
   }
   window.addEventListener("online", () => {
     P(!0);
@@ -20913,191 +20978,191 @@ function uh(t) {
     P();
   }), window.addEventListener("hashchange", () => {
     requestAnimationFrame(() => {
-      x();
-    }), setTimeout(me, 300);
+      A();
+    }), setTimeout(ve, 300);
   }), window.addEventListener("rbi:sync-journal", () => {
-    x(!0);
-  }), window.addEventListener(Ki, () => {
+    A(!0);
+  }), window.addEventListener(no, () => {
     P(!0);
   }), setInterval(() => {
     P();
   }, 15e3), setInterval(c, 1500), P(!0);
 }
-const dh = "auth-gate-overlay", Ks = "p2-login-style";
-let ye = null, Me = null;
-function _t() {
+const Ph = "auth-gate-overlay", ei = "p2-login-style";
+let be = null, Pe = null;
+function Me() {
   return window;
 }
-function cr() {
-  const t = _t();
+function gr() {
+  const t = Me();
   return t.RBI = t.RBI || {}, t.RBI;
 }
-function kt() {
-  if (document.getElementById(Ks)) return;
+function ot() {
+  if (document.getElementById(ei)) return;
   const t = document.createElement("style");
-  t.id = Ks, t.textContent = Tu + Ou + `
+  t.id = ei, t.textContent = id + ad + Vu + `
 .p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}`, document.head.appendChild(t);
 }
-function vt() {
+function we() {
   try {
     return window.localStorage;
   } catch {
     return null;
   }
 }
-function q() {
-  if (ye) return ye;
-  const t = Ei(), e = t ? hc(t) : null, r = e ? bt() : null;
-  return ye = xu({
+function U() {
+  if (be) return be;
+  const t = Ni(), e = t ? Ac(t) : null, r = e ? Tt() : null;
+  return be = Uu({
     auth: e,
     rpc: r ? async (n, s, i) => {
       const o = r.rpc(n, s || {}), a = await (i ? o.abortSignal(i) : o);
       return { data: a.data, error: a.error, status: a.status };
     } : null,
-    storage: vt(),
+    storage: we(),
     // P2-0016: в Платформе 2.0 вход только почтой (+ демо); PIN — в старом приложении РБИ.
     pinActive: () => !1,
     // P2-0060: меню при запуске — по копии прав сохранённого входа, сервер в фоне
     storedSession: () => {
-      const n = Gt(vt());
+      const n = er(we());
       return n ? { email: n.email, issuedAt: n.issuedAt } : null;
     }
-  }), ye.subscribe(yh), e && e.onAuthChange && e.onAuthChange(() => {
-    ye.refresh();
+  }), be.subscribe(Bh), e && e.onAuthChange && e.onAuthChange(() => {
+    be.refresh();
   }), window.addEventListener("platform2:refresh", () => {
-    ye.refresh();
+    be.refresh();
   }), window.addEventListener("online", () => {
-    ye.refresh();
-  }), ye;
+    be.refresh();
+  }), be;
 }
-function ur() {
-  return document.getElementById(dh);
+function mr() {
+  return document.getElementById(Ph);
 }
-const hh = "Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены";
-function wn() {
-  const t = ur();
+const Nh = "Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены";
+function Rn() {
+  const t = mr();
   if (!t) return;
-  kt();
-  const e = t.querySelector("[data-p2-login-host]") || t, r = q();
-  Ru(e, {
-    notice: r.getState().loginReason === "stale" ? hh : void 0,
+  ot();
+  const e = t.querySelector("[data-p2-login-host]") || t, r = U();
+  od(e, {
+    notice: r.getState().loginReason === "stale" ? Nh : void 0,
     signIn: async (n, s) => {
       const i = await r.signIn(n, s);
-      return i.ok && bn(), i;
+      return i.ok && Cn(), i;
     },
     onDemo: () => {
-      r.chooseDemo(), kn("#/planfact/vor");
+      r.chooseDemo(), xt("#/planfact/vor");
     }
   }), t.classList.remove("hidden");
 }
-let nr = !1;
-function fh(t) {
-  const e = ur();
+let lr = !1;
+function $h(t) {
+  const e = mr();
   if (!e) return;
-  kt();
-  const r = e.querySelector("[data-p2-login-host]") || e, n = q();
-  nr || (Cu(r, {
+  ot();
+  const r = e.querySelector("[data-p2-login-host]") || e, n = U();
+  lr || (ld(r, {
     email: t,
     change: async (s) => {
       const i = await n.changePassword(s);
-      return i.ok && bn(), i;
+      return i.ok && Cn(), i;
     },
     signOut: () => {
       n.signOut();
     }
-  }), nr = !0), e.classList.remove("hidden");
+  }), lr = !0), e.classList.remove("hidden");
 }
-function ph() {
-  nr = !1;
-  const t = ur();
+function Lh() {
+  lr = !1;
+  const t = mr();
   t && t.classList.add("hidden");
 }
-function Gi() {
-  const t = q().getState(), e = vt();
+function On() {
+  const t = U().getState(), e = we();
   let r = null;
   try {
-    r = window.localStorage.getItem(yu);
+    r = window.localStorage.getItem(Iu);
   } catch {
   }
-  return Su({
+  return Lu({
     mode: t.mode,
-    access: q().access(),
+    access: U().access(),
     lastHash: r,
-    welcomeSeen: Au(e, t.email),
-    actions: Eu(e, t.companyId, t.email)
+    welcomeSeen: Vi(e, t.email),
+    actions: Du(e, t.companyId, t.email)
   });
 }
-function bn() {
-  const t = Gi();
-  t && kn(t);
+function Cn() {
+  const t = On();
+  t && xt(t);
 }
-function kn(t) {
-  const e = _t().AppRouter;
-  e && typeof e.navigate == "function" ? e.navigate(t, !0) : window.location.hash = t;
+function xt(t, e = !0) {
+  const r = Me().AppRouter;
+  r && typeof r.navigate == "function" ? r.navigate(t, e) : window.location.hash = t;
 }
-function gh(t) {
+function Dh(t) {
   if (!t) return;
-  const e = q().getState();
-  kt();
+  const e = U().getState();
+  ot();
   let r = t.querySelector("select");
   if (e.mode !== "email" || e.companies.length < 2) {
     r && r.remove();
     return;
   }
-  r || (r = document.createElement("select"), r.className = "p2-company-switch", r.setAttribute("aria-label", "Компания"), r.setAttribute("data-testid", "p2-company-switch"), r.addEventListener("change", () => q().setCompany(r.value)), t.appendChild(r)), r.replaceChildren(...e.companies.map((n) => {
+  r || (r = document.createElement("select"), r.className = "p2-company-switch", r.setAttribute("aria-label", "Компания"), r.setAttribute("data-testid", "p2-company-switch"), r.addEventListener("change", () => U().setCompany(r.value)), t.appendChild(r)), r.replaceChildren(...e.companies.map((n) => {
     const s = document.createElement("option");
     return s.value = n.id, s.textContent = "Компания: " + n.name, s;
   })), r.value = e.companyId || "";
 }
-const mh = "Доступ к разделу изменился";
-let Vs = null, Js = null;
-function yh(t) {
+const Uh = "Доступ к разделу изменился";
+let ti = null, ri = null;
+function Bh(t) {
   var a;
-  const e = cr(), r = q().access(), n = wu(Vs, r, window.location.hash);
-  Vs = r;
-  const s = vu(Js, t);
-  Js = t, e.platformMenuAccess = r, e.platform2 = Ah, s && window.dispatchEvent(new Event("rbi:platform-access")), window.dispatchEvent(new Event(Nu));
+  const e = gr(), r = U().access(), n = Nu(ti, r, window.location.hash);
+  ti = r;
+  const s = Pu(ri, t);
+  ri = t, e.platformMenuAccess = r, e.platform2 = Vh, s && window.dispatchEvent(new Event("rbi:platform-access")), window.dispatchEvent(new Event(hd));
   const i = (a = e.services) == null ? void 0 : a.shell;
   i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu();
-  const o = _t().AppModeManager;
+  const o = Me().AppModeManager;
   if (o && typeof o.renderBottomNav == "function" && o.renderBottomNav(), t.mode === "email" && t.email) {
     const l = t.companies.find((c) => c.id === t.companyId);
-    ju(t.fullName || t.email, l ? l.name + (l.roles[0] ? " · " + l.roles[0] : "") : t.isPlatformAdmin ? "администратор платформы" : "");
+    ud(t.fullName || t.email, l ? l.name + (l.roles[0] ? " · " + l.roles[0] : "") : t.isPlatformAdmin ? "администратор платформы" : "");
   } else
-    Pu();
+    dd();
   if (t.mode === "email" && t.mustChangePassword && t.email) {
-    fh(t.email);
+    $h(t.email);
     return;
   }
-  if (t.mode === "none" ? (nr = !1, wn()) : ph(), n && t.mode === "email") {
-    bn();
-    const l = _t().showToast;
-    typeof l == "function" && l(mh);
+  if (t.mode === "none" ? (lr = !1, Rn()) : Lh(), n && t.mode === "email") {
+    Cn();
+    const l = Me().showToast;
+    typeof l == "function" && l(Uh);
   }
-  (!t.offline || t.companies.length > 0) && bh(), _h(t), vh(t);
+  (!t.offline || t.companies.length > 0) && Hh(), qh(t), Mh(t), lo(), t.mode === "email" && window.location.hash === ce && oo();
 }
-let rt = null;
-function _h(t) {
-  rt && (clearTimeout(rt), rt = null), t.offline && t.mode === "email" && (rt = setTimeout(() => {
-    rt = null, q().refresh();
+let ct = null;
+function qh(t) {
+  ct && (clearTimeout(ct), ct = null), t.offline && t.mode === "email" && (ct = setTimeout(() => {
+    ct = null, U().refresh();
   }, 6e4));
 }
-let Gs = !1;
-function ln() {
-  const t = window.localStorage, e = t.getItem(ke) || "";
-  return e ? e + ":" + (t.getItem(at) || "") : "";
+let ni = !1;
+function pn() {
+  const t = window.localStorage, e = t.getItem(Te) || "";
+  return e ? e + ":" + (t.getItem(pt) || "") : "";
 }
-async function vh(t) {
+async function Mh(t) {
   var e;
   try {
-    const r = Ei(), n = bt();
-    await Rc(t, {
+    const r = Ni(), n = Tt();
+    await Fc(t, {
       win: window,
       store: window.localStorage,
       reload: () => window.location.reload(),
       platformClient: n,
       cfg: r,
-      createClient: Si,
+      createClient: Pi,
       serviceWorker: "serviceWorker" in navigator ? navigator.serviceWorker : null,
       dropDatabase: (o) => {
         try {
@@ -21106,53 +21171,53 @@ async function vh(t) {
         }
       },
       listProjects: async (o) => {
-        const a = uu();
+        const a = Eu();
         return (a ? await a.listProjects(o) : []).filter((c) => !c.archived_at).map((c) => ({ id: c.id, name: c.name }));
       }
     });
-    const s = ln();
+    const s = pn();
     if ("serviceWorker" in navigator) {
       const o = navigator.serviceWorker;
-      o.controller && o.controller.postMessage({ type: "P2_STORAGE_SLOT", slot: s }), Gs || (Gs = !0, o.addEventListener("controllerchange", () => {
+      o.controller && o.controller.postMessage({ type: "P2_STORAGE_SLOT", slot: s }), ni || (ni = !0, o.addEventListener("controllerchange", () => {
         var a;
-        (a = o.controller) == null || a.postMessage({ type: "P2_STORAGE_SLOT", slot: ln() });
+        (a = o.controller) == null || a.postMessage({ type: "P2_STORAGE_SLOT", slot: pn() });
       }));
     }
-    const i = (e = cr().services) == null ? void 0 : e.shell;
-    i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu(), !t.offline && !t.checking && t.mode === "email" && wh();
+    const i = (e = gr().services) == null ? void 0 : e.shell;
+    i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu(), !t.offline && !t.checking && t.mode === "email" && Fh();
   } catch (r) {
     console.warn("[Platform2] Качество: подключение к хранилищу компании не удалось", r);
   }
 }
-let Ys = !1;
-async function wh() {
+let si = !1;
+async function Fh() {
   var i, o;
-  const t = _t(), e = cr().qualitySync, r = (i = t.RbiSyncMergePolicy) == null ? void 0 : i.isUnsentLocal, n = ((o = t.APP_CONFIG) == null ? void 0 : o.LOCAL_DB_NAME) || "PLATFORM2_DB", s = t.RBI_DB_NAME || "";
-  if (!(Ys || !e || !e.projectId || !r || !s || s === n || typeof indexedDB > "u")) {
-    Ys = !0;
+  const t = Me(), e = gr().qualitySync, r = (i = t.RbiSyncMergePolicy) == null ? void 0 : i.isUnsentLocal, n = ((o = t.APP_CONFIG) == null ? void 0 : o.LOCAL_DB_NAME) || "PLATFORM2_DB", s = t.RBI_DB_NAME || "";
+  if (!(si || !e || !e.projectId || !r || !s || s === n || typeof indexedDB > "u")) {
+    si = !0;
     try {
-      const a = await id(indexedDB, n, r), l = window.localStorage;
+      const a = await Td(indexedDB, n, r), l = window.localStorage;
       if (!a.orphans.length) {
-        l.removeItem(js);
+        l.removeItem(qs);
         return;
       }
-      if (kt(), !document.getElementById("p2-rescue-style")) {
+      if (ot(), !document.getElementById("p2-rescue-style")) {
         const u = document.createElement("style");
-        u.id = "p2-rescue-style", u.textContent = cd, document.head.appendChild(u);
+        u.id = "p2-rescue-style", u.textContent = Id, document.head.appendChild(u);
       }
       const c = e.projectId;
-      document.body.appendChild(hd(document, {
+      document.body.appendChild(Nd(document, {
         companyName: e.companyName || "компанию",
         orphans: a.orphans,
         onLater: () => {
         },
         onMove: async () => {
           try {
-            await ld(indexedDB, n, s, a, { slot: ln(), projectCode: c, author: e.engineerName || "" });
+            await Cd(indexedDB, n, s, a, { slot: pn(), projectCode: c, author: e.engineerName || "" });
           } catch {
             return "Не удалось перенести. Попробуйте ещё раз";
           }
-          return typeof t.rbiMarkCloudDirty == "function" ? t.rbiMarkCloudDirty() : l.setItem("rbi_cloud_dirty", "1"), l.removeItem(js), window.location.reload(), null;
+          return typeof t.rbiMarkCloudDirty == "function" ? t.rbiMarkCloudDirty() : l.setItem("rbi_cloud_dirty", "1"), l.removeItem(qs), window.location.reload(), null;
         }
       }));
     } catch (a) {
@@ -21160,9 +21225,9 @@ async function wh() {
     }
   }
 }
-function bh() {
+function Hh() {
   var n;
-  const t = (n = cr().services) == null ? void 0 : n.shell, e = q().access(), r = [];
+  const t = (n = gr().services) == null ? void 0 : n.shell, e = U().access(), r = [];
   t && typeof t.isPlatformModuleAllowed == "function" && t.isPlatformModuleAllowed("planfact") && r.push("planfact"), e.company && r.push("company"), e.platformAdmin && r.push("platform-admin");
   try {
     const s = navigator.serviceWorker && navigator.serviceWorker.controller;
@@ -21170,73 +21235,129 @@ function bh() {
   } catch {
   }
 }
-function kh() {
+const gn = "tab-welcome";
+let ii = !1, re = null;
+const oi = 1300;
+function zh() {
+  let t = document.getElementById(gn);
+  if (t) return t;
+  t = document.createElement("div"), t.id = gn, t.className = "view-section";
+  const e = document.getElementById("tab-mode-placeholder");
+  return e && e.parentNode ? e.parentNode.insertBefore(t, e.nextSibling) : (document.getElementById("app-content") || document.body).appendChild(t), t;
+}
+function oo() {
+  if (window.location.hash !== ce) return;
+  const t = U().getState();
+  if (t.mode !== "email" || !t.email) {
+    const l = On();
+    l && l !== ce && xt(l);
+    return;
+  }
+  ot();
+  const e = zh();
+  document.querySelectorAll(".view-section").forEach((l) => l.classList.remove("active")), e.classList.add("active"), e.classList.remove("hidden");
+  const r = document.getElementById("main-header");
+  if (r && (r.style.display = "block"), document.body.classList.add(se), !re) {
+    const l = t.email;
+    re = { key: "", animate: !Vi(we(), l), at: Date.now(), email: l }, re.animate ? setTimeout(() => un(we(), l), oi) : un(we(), l);
+  }
+  const n = t.companies.find((l) => l.id === t.companyId) || null, s = Fu(U().access(), Sn), i = JSON.stringify([t.email, t.fullName, n && n.id, s.map((l) => l.id)]);
+  if (re.key === i && e.querySelector("[data-testid=p2-welcome]")) return;
+  const o = re.animate && (!re.key || Date.now() - re.at < oi);
+  re.key = i, Ju(e, {
+    name: t.fullName || t.email,
+    company: n ? n.name : null,
+    role: n && n.roles[0] ? n.roles[0] : null,
+    tiles: s,
+    animate: o,
+    open: (l) => xt(l, !1)
+  });
+  const a = Me().updateBodyPadding;
+  typeof a == "function" && a(), ao();
+}
+function ao() {
+  const t = document.getElementById(gn);
+  if (!t || window.location.hash !== ce) return;
+  const e = document.getElementById("main-header"), r = !!e && getComputedStyle(e).display !== "none" && getComputedStyle(e).position === "fixed";
+  t.style.paddingTop = r ? Math.max(0, Math.round(e.getBoundingClientRect().bottom)) + "px" : "";
+}
+function lo() {
+  if (ii) return;
+  const t = Me().AppRouter;
+  !t || typeof t.addRoute != "function" || (ii = !0, t.addRoute(ce, () => {
+    (Pe || co()).then(oo);
+  }), window.addEventListener("rbi:route", (e) => {
+    var n;
+    ((n = e.detail) == null ? void 0 : n.path) !== ce && (document.body.classList.remove(se), re && un(we(), re.email), re = null);
+  }), window.addEventListener("resize", ao), window.location.hash === ce && typeof t.renderRoute == "function" && t.renderRoute());
+}
+function Wh() {
   let t = null;
   try {
     t = window.localStorage;
   } catch {
     t = null;
   }
-  Du({
+  gd({
     store: t,
-    deleteDatabase: typeof indexedDB < "u" ? (e) => Uu(indexedDB, e) : null
+    deleteDatabase: typeof indexedDB < "u" ? (e) => md(indexedDB, e) : null
   }).catch(() => {
   });
 }
-function Sh() {
-  const t = Gt(vt());
-  if (!t || !t.email || Bt(vt(), t.email)) return;
-  const e = ur();
+function Kh() {
+  const t = er(we());
+  if (!t || !t.email || zt(we(), t.email)) return;
+  const e = mr();
   e && !e.querySelector("[data-testid=p2-login]") && e.classList.remove("hidden");
 }
-function Eh() {
-  return Me ? Me.then((t) => {
-    t.mode === "none" && wn();
-  }) : (kh(), Sh(), Me = q().boot(), Me.then(() => uh({ platform: () => q().getState(), navigate: (t) => kn(t) })), Me.then(() => nh())), Me;
+function co() {
+  return Pe ? Pe.then((t) => {
+    t.mode === "none" && Rn();
+  }) : (lo(), Wh(), Kh(), Pe = U().boot(), Pe.then(() => jh({ platform: () => U().getState(), navigate: (t) => xt(t) })), Pe.then(() => xh())), Pe;
 }
-const Ah = {
-  start: Eh,
+const Vh = {
+  start: co,
   /** P2-0074: роутер оболочки (js/core/router.js) при открытии без адреса — после start(). */
-  homePath: Gi,
-  getState: () => q().getState(),
-  access: () => q().access(),
-  setCompany: (t) => q().setCompany(t),
-  refresh: () => q().refresh(),
+  homePath: On,
+  getState: () => U().getState(),
+  access: () => U().access(),
+  setCompany: (t) => U().setCompany(t),
+  refresh: () => U().refresh(),
   /** «Выйти» (Настройки → Платформа, полоса раздела): сессия завершается, экран «Вход». */
   signOut: async () => {
-    await q().signOut();
+    await U().signOut();
   },
-  showLogin: wn,
-  renderCompanySwitch: gh,
+  showLogin: Rn,
+  renderCompanySwitch: Dh,
   /** P2-0028: «Настройки → Платформа → Мой профиль» (вызывают Настройки при показе). Не вошёл почтой — пусто. */
   renderMyProfile: (t) => {
     if (!t) return;
-    const e = q().getState();
+    const e = U().getState();
     if (e.mode !== "email" || !e.email) {
       t.replaceChildren(), delete t.dataset.p2Profile;
       return;
     }
     const r = e.email + "|" + (e.fullName || "");
-    t.dataset.p2Profile === r && t.firstChild || (t.dataset.p2Profile = r, kt(), Iu(t, {
+    t.dataset.p2Profile === r && t.firstChild || (t.dataset.p2Profile = r, ot(), cd(t, {
       email: e.email,
       fullName: e.fullName || null,
-      change: (n) => q().changePassword(n),
-      saveName: e.userId ? (n) => q().setFullName(n) : void 0
+      change: (n) => U().changePassword(n),
+      saveName: e.userId ? (n) => U().setFullName(n) : void 0
     }));
   },
   /** Вызов функции сервера от имени вошедшего (одно соединение платформы; раздел администрирования своего клиента не создаёт). */
   rpc: async (t, e) => {
-    q();
-    const r = bt();
+    U();
+    const r = Tt();
     if (!r) return { data: null, error: { message: "Сервер не настроен" } };
     const n = await r.rpc(t, e || {});
     return { data: n.data, error: n.error ? { message: n.error.message, code: n.error.code } : null };
   }
 };
 export {
-  mh as ACCESS_CHANGED_TEXT,
-  hh as STALE_LOGIN_TEXT,
-  Ah as api,
-  Eh as start
+  Uh as ACCESS_CHANGED_TEXT,
+  Nh as STALE_LOGIN_TEXT,
+  Vh as api,
+  co as start
 };
 //# sourceMappingURL=platform.js.map

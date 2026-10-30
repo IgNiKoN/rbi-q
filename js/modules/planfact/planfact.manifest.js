@@ -8,6 +8,8 @@ export const PlanfactManifest = {
     id: 'planfact',
     role: 'module',
     title: 'План/Факт',
+    // P2-0074: строка «что тут делают» на плитке приветствия (src/platform/auth/welcome-screen.ts)
+    summary: 'ВОР, смета и выполнение работ по дням',
     icon: 'table',
     version: '0.1.0',
     status: 'active',

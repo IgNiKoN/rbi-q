@@ -357,7 +357,8 @@ window.AppRouter = {
 
     _rememberModuleHash(path) {
         const p = String(path || '');
-        if (!p || p === '#/' || this._isSettingsPath(p)) return;
+        // P2-0074: приветствие (#/welcome) — экран оболочки, не раздел: последним не запоминается
+        if (!p || p === '#/' || p === '#/welcome' || this._isSettingsPath(p)) return;
         try {
             localStorage.setItem('rbi_last_module_hash', p);
         } catch (_) { /* ignore */ }

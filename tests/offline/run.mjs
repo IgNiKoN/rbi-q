@@ -12,6 +12,7 @@
 // P2-0061: s-rename, s-foreign, s-leader — автор по id, смена ФИО, чужая запись с причиной, руководитель (sync.mjs).
 // P2-0064: pf-offline, pf-offline1440, pf-drop — факт без сети и обрыв при отправке (fact.mjs).
 // P2-0073: c-who375, c-who1440 — «Кто что может» → роль → «Роли и права», → человек → «Сотрудники» (who.mjs).
+// P2-0074: w375, w1440 — первый экран: приветствие → плитка → раздел → повторный запуск → по роли → ссылка → без сети (welcome.mjs).
 // P2-0067a: --gzip (или P2_OFFLINE_GZIP=1) — стенд отдаёт файлы приложения сжатыми, как nginx app.rbi-q.ru (servers.mjs, site.gzip).
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
@@ -27,6 +28,7 @@ import { deviceScenarios } from './device.mjs';
 import { syncScenarios } from './sync.mjs';
 import { factScenarios } from './fact.mjs';
 import { whoScenarios } from './who.mjs';
+import { welcomeScenarios } from './welcome.mjs';
 import { count, freshProfile, go, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
 
 const args = process.argv.slice(2);
@@ -341,7 +343,7 @@ async function screen(width, scheme) {
 }
 
 const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue, expired, stale14, invalid, cache, otheruser,
-  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out), ...releaseScenarios(out), ...menuScenarios(out), ...viewScenarios(out), ...filesScenarios(out), ...deviceScenarios(out), ...syncScenarios(out), ...factScenarios(out), ...whoScenarios(out) };
+  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out), ...releaseScenarios(out), ...menuScenarios(out), ...viewScenarios(out), ...filesScenarios(out), ...deviceScenarios(out), ...syncScenarios(out), ...factScenarios(out), ...whoScenarios(out), ...welcomeScenarios(out) };
 const list = pick.length ? pick : Object.keys(SCENARIOS);
 for (const n of list) {
   if (!SCENARIOS[n]) { ok(false, 'нет сценария ' + n); continue; }
