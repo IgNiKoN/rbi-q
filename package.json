@@ -22,6 +22,7 @@
     "smoke:knowledge": "node _ai/scripts/smoke-knowledge.mjs --reload",
     "smoke:construction-knowledge": "node _ai/scripts/smoke-construction-knowledge.mjs --reload",
     "test": "npm run test:unit",
+    "test:schema": "node scripts/schema-inventory.mjs --check",
     "test:server": "node tests/server/rest.test.mjs",
     "test:offline": "node tests/offline/run.mjs"
   },
