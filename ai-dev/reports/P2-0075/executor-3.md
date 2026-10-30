@@ -21,7 +21,7 @@
 
 - `node --check tests/server/rest.test.mjs` — OK.
 - PGlite: правило `core_id` на 5 таблицах — «без `core_id`: `core_id = id`», «чужой `core_id`: 22023» (п. 4–8); объект Качества → объект ядра, после пометки / удаления строки объект ядра остаётся (п. 13); шаблон `qc_engineer` — `quality.inspections.view` есть, `edit_any` нет (п. 12).
-- `npm run test:unit` — см. коммит; `test:schema` — без изменений схемы.
+- `npm run test:unit` — 1023/1023; `test:schema` — схема не менялась.
 - **NOT RUN:** `test:server` на боевой — повторные прогоны делает Архитектор.
 
 ## Для Архитектора
