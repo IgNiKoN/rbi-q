@@ -1,19 +1,17 @@
 // P2-0076: стенд «Внешний СК по номерам» — загрузка Excel → шаг сопоставления → «Разобрать» → Аналитика по id «Компании».
-// node tests/offline/sk.mjs [sk375 sk1440 sk375dark sk1440dark sk768 sk1024 sk1920] [--out <папка>]  (без сценариев — все)
+// node tests/offline/sk.mjs [sk375 sk1440 sk375dark sk1440dark sk768 sk1024 sk1920] [--out <папка>]  (без сценариев — все);
+// те же сценарии входят в полный стенд run.mjs (skScenarios, ТД 397).
 // Подставной сервер (servers.mjs) отвечает на функции 056 по той же логике, что сервер (сама логика сервера проверена в PGlite:
 // tests/server/056_sk_core_ids*.sql): соответствие текста → запись «Компании», выбор человека главнее автоподбора, «сторож» ставит
 // id замечаниям при отдаче на телефон. Порты — P2_OFFLINE_APP_PORT / P2_OFFLINE_API_PORT (как у run.mjs). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import ExcelJS from 'exceljs';
 import { start, stop, stand, rows } from './servers.mjs';
 import { freshProfile, launch, note, ok, results, signIn } from './lib.mjs';
 
-const args = process.argv.slice(2);
-const oi = args.indexOf('--out');
-const out = oi >= 0 ? args[oi + 1] : join(tmpdir(), 'p2-sk');
-const pick = args.filter((a, i) => !a.startsWith('--') && (oi < 0 || i !== oi + 1));
 
 // ---------- «Компания» стенда и логика сервера 056 (упрощённое зеркало quality.sk_*) ----------
 const CP = [{ id: 'cp-1', name: 'ООО Ромашка' }, { id: 'cp-2', name: 'Лютик Строй' }, { id: 'cp-3', name: 'Ромашка-Сервис' }];
@@ -129,7 +127,7 @@ async function upload(page, file) {
 const pending = (page) => page.evaluate(() => [...document.querySelectorAll('[data-sk-link-item]')].map((e) => e.querySelector('.font-black')?.textContent.trim()));
 const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
-async function scenario(tag, width, height, scheme) {
+async function scenario(out, tag, width, height, scheme) {
   note(`== ${tag}: загрузка → шаг сопоставления → «Разобрать» → выбор / «Отменить» → Аналитика по id → повторная загрузка → фильтр по месту`);
   freshProfile(out, tag);
   links.clear(); stamped.clear(); calls.length = 0; CP.splice(3);
@@ -262,8 +260,18 @@ async function scenario(tag, width, height, scheme) {
 
 const ALL = { sk375: [375, 812, 'light'], sk375dark: [375, 812, 'dark'], sk768: [768, 1024, 'light'], sk1024: [1024, 768, 'light'],
   sk1440: [1440, 900, 'light'], sk1440dark: [1440, 900, 'dark'], sk1920: [1920, 1080, 'light'] };
-for (const [tag, [w, h, scheme]] of Object.entries(ALL)) if (!pick.length || pick.includes(tag)) await scenario(tag, w, h, scheme);
-writeFileSync(join(out, 'sk-results.txt'), results.join('\n') + '\n');
-const fails = results.filter((r) => r.startsWith('FAIL')).length;
-console.log(`\nИтого: PASS ${results.filter((r) => r.startsWith('PASS')).length}, FAIL ${fails}; снимки — ${out}`);
-process.exit(fails ? 1 : 0);
+export function skScenarios(out) {
+  return Object.fromEntries(Object.entries(ALL).map(([tag, [w, h, scheme]]) => [tag, () => scenario(out, tag, w, h, scheme)]));
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const args = process.argv.slice(2);
+  const oi = args.indexOf('--out');
+  const out = oi >= 0 ? args[oi + 1] : join(tmpdir(), 'p2-sk');
+  const pick = args.filter((a, i) => !a.startsWith('--') && (oi < 0 || i !== oi + 1));
+  for (const [tag, [w, h, scheme]] of Object.entries(ALL)) if (!pick.length || pick.includes(tag)) await scenario(out, tag, w, h, scheme);
+  writeFileSync(join(out, 'sk-results.txt'), results.join('\n') + '\n');
+  const fails = results.filter((r) => r.startsWith('FAIL')).length;
+  console.log(`\nИтого: PASS ${results.filter((r) => r.startsWith('PASS')).length}, FAIL ${fails}; снимки — ${out}`);
+  process.exit(fails ? 1 : 0);
+}
