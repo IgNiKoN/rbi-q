@@ -68,11 +68,14 @@ begin
   select count(*), string_agg(c.conrelid::regclass || '.' || c.conname, ', ') into n, s from pg_constraint c
    where c.connamespace = 'quality'::regnamespace and c.contype in ('p', 'u')
      and c.conrelid::regclass::text not like 'quality.rbi\_transfer\_%'   -- P2-0027: служебные таблицы переноса (клиенту закрыты)
-     and not ((select attnum from pg_attribute where attrelid = c.conrelid and attname = 'core_company_id') = any(c.conkey));
+     and not ((select attnum from pg_attribute where attrelid = c.conrelid and attname = 'core_company_id') = any(c.conkey))
+     -- P2-0072 (054): ключ core_id — uuid по стандарту (DATA_TABLES п. 1), уникален сам по себе, без компании
+     and c.conkey <> array[(select attnum from pg_attribute where attrelid = c.conrelid and attname = 'core_id')];
   res := res || pg_temp.t(n = 0, 'ключи без компании: ' || coalesce(s, '—'));
   select count(*), string_agg(i.indexrelid::regclass::text, ', ') into n, s from pg_index i join pg_class t on t.oid = i.indrelid
    where t.relnamespace = 'quality'::regnamespace and i.indisunique and t.relname not like 'rbi\_transfer\_%'
-     and not ((select attnum from pg_attribute where attrelid = t.oid and attname = 'core_company_id') = any(i.indkey::int2[]));
+     and not ((select attnum from pg_attribute where attrelid = t.oid and attname = 'core_company_id') = any(i.indkey::int2[]))
+     and not (i.indnatts = 1 and i.indkey[0] = (select attnum from pg_attribute where attrelid = t.oid and attname = 'core_id'));   -- P2-0072
   res := res || pg_temp.t(n = 0, 'уникальные индексы без компании: ' || coalesce(s, '—'));
 
   for r in select c.relname t,

@@ -57,7 +57,7 @@ begin
   for c in select a.attname, format_type(a.atttypid, a.atttypmod) typ
              from pg_attribute a left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
             where a.attrelid = ('quality.' || tbl)::regclass and a.attnum > 0 and not a.attisdropped
-              and a.attname not in ('core_company_id', 'core_project_id', 'core_created_by')
+              and a.attname not in ('core_company_id', 'core_project_id', 'core_created_by', 'core_id')   -- P2-0072: core_id ставит сервер
               and (a.attname = 'project_code' or (a.attnotnull and d.adbin is null)) order by a.attnum loop
     cols := cols || ', ' || quote_ident(c.attname);
     vals := vals || ', ' || case when c.attname = 'project_code' then quote_nullable(pc)

@@ -25,7 +25,7 @@ begin
   for c in select a.attname, format_type(a.atttypid, a.atttypmod) typ, a.attnotnull nn, d.adbin is not null hasdef
              from pg_attribute a left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
             where a.attrelid = ('quality.' || tbl)::regclass and a.attnum > 0 and not a.attisdropped
-              and a.attname not in ('core_company_id', 'core_project_id') order by a.attnum loop
+              and a.attname not in ('core_company_id', 'core_project_id', 'core_id') order by a.attnum loop   -- P2-0072: core_id ставит сервер
     if c.attname = 'project_code' then
       cols := cols || ', project_code'; vals := vals || ', ' || quote_nullable(pc);
     elsif c.nn and not c.hasdef then
@@ -92,7 +92,8 @@ begin
      and tg.tgname <> 'zz_contractor_defect_guard'       -- 043: подрядчик — только «В работу» / «Устранено»
      and tg.tgname <> 'location_nodes_place_sync'        -- 044: место узла → core.locations
      and tg.tgname not like '%_v2_bind_object'           -- 044: объект замечания/приёмки v2 по месту
-     and tg.tgname not like '%_zzz_rights_guard';        -- 053: сторож действий проверок и задач
+     and tg.tgname not like '%_zzz_rights_guard'         -- 053: сторож действий проверок и задач
+     and tg.tgname not like 'zzzz\_core\_ids%';          -- 054: номер записи core_id и связи по uuid
   res := res || pg_temp.t(n = 0, 'в quality только триггер привязки к компании (лишние: ' || coalesce(s, '—') || ')');
   select count(*), string_agg(p.proname, ', ') into n, s from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'quality' and has_function_privilege('anon', p.oid, 'execute');

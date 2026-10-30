@@ -158,7 +158,7 @@ const CONTRACTOR_UUID = ['counterparty_id', 'core_counterparty_id'];
 /** Похожи на ссылку, но не ссылаются на запись: id устройства, группы отправки, многотабличные ссылки журналов. */
 export const NOT_REF = { device_id: 'id устройства', client_id: 'id с устройства для повтора без дубля', batch_id: 'группа отправки, не запись',
   import_batch: 'группа загрузки, не запись', record_id: 'журнал: ссылка на запись любой таблицы', source_record_id: 'очередь: запись любой таблицы',
-  entity_id: 'реестр файлов: запись любой таблицы' };
+  entity_id: 'реестр файлов: запись любой таблицы', core_id: 'ключ записи (P2-0072, мост 054): uuid рядом со старым id, не ссылка' };
 const isUserRef = (n) => n === 'user_id' || /_user_id$/.test(n) || n === 'auth_user_id';
 const isRefName = (n) => n !== 'id' && (/_id$/.test(n) || /[a-z]Id$/.test(n)) && !(n in NOT_REF);
 

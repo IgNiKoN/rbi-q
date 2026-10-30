@@ -1,6 +1,7 @@
 -- P2-0016 этап 1: структура quality.<таблица> = public.<таблица> + core_company_id, core_project_id (ТОЛЬКО ЧТЕНИЕ).
 -- Сравниваются колонки (имя, тип, обязательность, значение по умолчанию, порядок), ограничения и индексы.
 -- Допустимые отличия 018: уникальности и внешние ключи — в пределах компании (+ core_company_id), служебные ключи/индекс компании.
+-- P2-0072 (054): мост номеров (core_id и связи core_<связь>_id с их ключами и индексами) — служебный, в сравнение не входит.
 -- Отчёт — ERROR P0001 с «FAIL всего: N».
 create or replace function pg_temp.t(c boolean, l text) returns text language sql as $f$
   select case when coalesce(c, false) then '' else 'FAIL ' || l || E'\n' end $f$;
@@ -9,16 +10,18 @@ create or replace function pg_temp.cols(s text, t text) returns text language sq
                               coalesce(pg_get_expr(d.adbin, d.adrelid), '')), ' ‖ ' order by a.attnum)
   from pg_attribute a left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
   where a.attrelid = (s || '.' || t)::regclass and a.attnum > 0 and not a.attisdropped
-    and a.attname not in ('core_company_id', 'core_project_id') $f$;
+    and a.attname not in ('core_company_id', 'core_project_id') and a.attname !~ '^(core_id|core_inspection_id|core_report_id|core_parent_id|core_construction_object_id|core_building_id|core_floor_id|core_location_node_id|core_contractor_id)$' $f$;
 create or replace function pg_temp.norm(x text) returns text language sql as $f$
   select regexp_replace(replace(replace(replace(x, 'core_company_id, ', ''), ', core_company_id)', ')'), 'quality.', ''), ' ON public.', ' ON ') $f$;
 create or replace function pg_temp.cons(s text, t text) returns text language sql as $f$
   select coalesce(string_agg(x.conname || ' ' || pg_temp.norm(pg_get_constraintdef(x.oid)), ' ‖ ' order by x.conname), '')
   from pg_constraint x where x.conrelid = (s || '.' || t)::regclass
-    and x.conname not like '%\_core\_project\_fk' and x.conname not like '%\_core\_company\_id\_fkey' and x.conname not like '%\_company\_key' and x.contype <> 'n' $f$;
+    and x.conname not like '%\_core\_project\_fk' and x.conname not like '%\_core\_company\_id\_fkey' and x.conname not like '%\_company\_key' and x.contype <> 'n'
+    and pg_get_constraintdef(x.oid) !~ '\m(core_id|core_inspection_id|core_report_id|core_parent_id|core_construction_object_id|core_building_id|core_floor_id|core_location_node_id|core_contractor_id)\M' $f$;
 create or replace function pg_temp.idx(s text, t text) returns text language sql as $f$
   select coalesce(string_agg(i.indexname || ' ' || pg_temp.norm(replace(i.indexdef, ' ON ' || s || '.', ' ON ')), ' ‖ ' order by i.indexname), '')
   from pg_indexes i where i.schemaname = s and i.tablename = t and i.indexname not like '%\_core\_company\_idx'
+    and i.indexdef !~ '\m(core_id|core_inspection_id|core_report_id|core_parent_id|core_construction_object_id|core_building_id|core_floor_id|core_location_node_id|core_contractor_id)\M'
     and not exists (select 1 from pg_constraint x where x.conrelid = (s || '.' || t)::regclass and x.conname = i.indexname) $f$;
 
 do $$
