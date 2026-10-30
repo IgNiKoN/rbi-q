@@ -67,3 +67,16 @@ test('P2-0061: «Не отправлено: …» (решило устройст
   assert.ok(!/Всё отправлено/.test(html), 'не «Всё отправлено», когда само не уйдёт');
   assert.match(html, /Не ушло, нужно действие: 2/);
 });
+
+test('P2-0073: карточка «Отправка» до подсчёта — «считаем…», не «Всё отправлено»; при пересчёте — прежний список и время', () => {
+  const empty = { ...base, items: [], lastOkAt: '', probe: null, probeAt: 0, journal: [], journalTotal: 0 };
+  const first = statusHtml({ ...empty, counting: 'first' }, false);
+  assert.match(first, /Считаем, что не отправлено…/);
+  assert.doesNotMatch(first, /Всё отправлено/);
+  assert.match(first, /Журнал синхронизации/, 'журнал — сразу');
+  const items = toItems([{ store: 'app_history', rec: { id: 'x1', syncStatus: 'not_synced', object: 'ЖК Тестовый' }, rejected: false }], base);
+  const again = statusHtml({ ...empty, items, counting: 'refresh', countedAt: new Date(2026, 9, 28, 14, 20).getTime() }, false);
+  assert.match(again, /не отправлено: 1/);
+  assert.match(again, /Обновляем · список на 14:20/);
+  assert.doesNotMatch(statusHtml({ ...empty, items }, false), /Обновляем/, 'подсчёт закончен — без пометки');
+});

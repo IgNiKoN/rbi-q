@@ -111,63 +111,77 @@ export const OFFLINE_MODULES_CSS = `
 @media (min-width:768px){.p2o-dlg{align-items:center}.p2o__body{grid-column:1/2}}
 @media (max-width:599px){.p2o__total{margin-left:0;text-align:left;flex:1 1 100%}.p2o__sel{max-width:none}}`;
 
-export interface ModuleState { row: ModuleRow; keep: boolean; codeBytes: number; copyBytes: number; fileBytes: number; scope: string | null; roleScope: string | null; last: string }
+/** Байты модуля; null — ещё не посчитано (P2-0073: блок рисуется сразу, цифры дорисовываются в фоне). */
+export interface ModuleState { row: ModuleRow; keep: boolean; codeBytes: number | null; copyBytes: number | null; fileBytes: number | null; scope: string | null; roleScope: string | null; last: string }
+export interface DeviceTotal { used: number | null; free: number | null }
+export const COUNTING_TEXT = 'считаем…';
+const size = (b: number | null): string => (b === null ? COUNTING_TEXT : mb(b));
+const hhmm = (t: number): string => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 const SCOPE_OPTIONS: Record<'quality' | 'knowledge', Array<[string, string]>> = {
   quality: FILES_SCOPES.map((s) => [s, FILES_SCOPE_LABEL[s]]),
   knowledge: [['all', 'Все'], ['none', 'Не скачивать заранее']]
 };
 
+/** Размеры модуля: код, данные (копия для просмотра), фото и PDF / документы. */
+export function sizesHtml(m: ModuleState): string {
+  return [m.codeBytes ? `<span>Код <b>${mb(m.codeBytes)}</b></span>` : m.codeBytes === null && m.row.code.length ? `<span>Код <b>${COUNTING_TEXT}</b></span>` : '',
+    m.copyBytes || m.row.id === 'planfact' || m.row.id === 'company' ? `<span>Данные <b>${size(m.copyBytes)}</b></span>` : '',
+    m.row.files ? `<span>${m.row.files === 'knowledge' ? 'Документы и TWI' : 'Фото и PDF'} <b>${size(m.fileBytes)}</b></span>` : ''].filter(Boolean).join('');
+}
+/** «На телефоне N · свободно M» и полоса; at — цифры прошлого подсчёта, пока идёт новый («· на 14:32»). */
+export function totalHtml(total: DeviceTotal, at = 0): string {
+  const { used, free } = total;
+  const pct = used !== null && free !== null && used + free > 0 ? Math.max(1, Math.round(used * 100 / (used + free))) : 0;
+  return `На телефоне <b>${size(used)}</b> · свободно ${size(free)}${at ? ' · на ' + hhmm(at) : ''}<div class="p2o__bar"><i style="width:${pct}%"></i></div>`;
+}
+
 /** Разметка блока по состоянию (чистая функция — для unit и для экрана). */
-export function modulesHtml(rows: ModuleState[], total: { used: number; free: number }, roleLabel: string): string {
+export function modulesHtml(rows: ModuleState[], total: DeviceTotal, roleLabel: string, at = 0): string {
   const mod = (m: ModuleState): string => {
     const a = abilityLabel(m.row.offline);
     const online = a.kind === 'on';
-    const sizes = [m.codeBytes ? `<span>Код <b>${mb(m.codeBytes)}</b></span>` : '', m.copyBytes || m.row.id === 'planfact' || m.row.id === 'company' ? `<span>Данные <b>${mb(m.copyBytes)}</b></span>` : '',
-      m.row.files ? `<span>${m.row.files === 'knowledge' ? 'Документы и TWI' : 'Фото и PDF'} <b>${mb(m.fileBytes)}</b></span>` : ''].filter(Boolean).join('');
     const sel = m.row.files ? `<label class="p2o__field">${m.row.files === 'knowledge' ? 'Документы заранее' : 'Фото и PDF заранее'}<select class="p2o__sel" data-act="scope" data-mod="${m.row.files}" id="p2o-scope-${m.row.id}"${m.keep ? '' : ' disabled'}>` +
       SCOPE_OPTIONS[m.row.files].map(([v, t]) => `<option value="${v}"${v === m.scope ? ' selected' : ''}>${esc(t)}${v === m.roleScope ? ' · по роли' : ''}</option>`).join('') + '</select></label>' : '';
     return `<div class="p2o__mod${online ? ' p2o__mod--online' : ''}" data-mod="${m.row.id}" data-testid="p2o-mod-${m.row.id}">` +
       `<div><span class="p2o__name">${esc(m.row.name)}</span><span class="p2o__what">${esc(m.row.what)}</span><span class="p2o__chip p2o__chip--${a.kind}">${a.text}</span></div>` +
       (online ? '' : `<label class="p2o__sw"><input type="checkbox" data-act="keep" data-mod="${m.row.id}" id="p2o-keep-${m.row.id}"${m.keep ? ' checked' : ''}><span aria-hidden="true"></span>Держать без сети</label>` +
-        `<div class="p2o__body"><div class="p2o__size" data-testid="p2o-size-${m.row.id}">${sizes}</div>${sel}<div class="p2o__last">${esc(m.last)}</div>` +
+        `<div class="p2o__body"><div class="p2o__size" data-testid="p2o-size-${m.row.id}">${sizesHtml(m)}</div>${sel}<div class="p2o__last">${esc(m.last)}</div>` +
         `<div class="p2o__btns"><button type="button" class="p2o__btn p2o__btn--main" data-act="download" data-mod="${m.row.id}"${m.keep ? '' : ' disabled'}>Скачать сейчас</button>` +
         (m.row.id === 'quality' ? `<button type="button" class="p2o__btn" data-act="reports" data-mod="quality">Отчёты на телефон</button>` : '') +
         `<button type="button" class="p2o__btn p2o__btn--danger" data-act="clear" data-mod="${m.row.id}" data-testid="p2o-clear-${m.row.id}">Очистить скачанное</button></div></div>`) +
       '</div>';
   };
-  const pct = total.used + total.free > 0 ? Math.max(1, Math.round(total.used * 100 / (total.used + total.free))) : 0;
   return `<section class="p2o" data-testid="p2-offline-modules"><div class="p2o__head"><div class="p2o__ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div>` +
     `<div style="flex:1 1 220px;min-width:0"><span class="p2o__title">Офлайн по модулям</span><span class="p2o__sub">Что телефон держит без сети. По умолчанию — по вашей роли: ${esc(roleLabel)}. Можно поменять у каждого модуля.</span></div>` +
-    `<div class="p2o__total" data-testid="p2o-total">На телефоне <b>${mb(total.used)}</b> · свободно ${mb(total.free)}<div class="p2o__bar"><i style="width:${pct}%"></i></div></div></div>` +
+    `<div class="p2o__total" data-testid="p2o-total">${totalHtml(total, at)}</div></div>` +
     rows.map(mod).join('') +
     `<div class="p2o__foot"><span>Неотправленное («не отправлено: N») не удаляется никогда — ни очисткой, ни правилом по роли. Без сети раздел покажет то, что скачано заранее или открывалось.</span></div></section>`;
 }
 
-let codeCache: Record<string, number> | null = null;
 const ROLE_LABEL: Record<string, string> = { engineer: 'инженер качества', contractor: 'подрядчик', manager: 'руководитель', director: 'руководство', guest: 'просмотр' };
 
-/** Собрать состояние экрана из устройства (манифесты, права, опись версии, копия, реестр файлов, память). */
-export async function readModules(win: W): Promise<{ rows: ModuleState[]; total: { used: number; free: number }; role: string }> {
+/** P2-0073: цифры блока — последние известные хранятся на устройстве (по «компания + пользователь») со временем подсчёта;
+ *  null — ещё ни разу не считали. Экран показывает их сразу и пересчитывает в фоне. */
+export interface Figures { code: Record<string, number> | null; copy: Record<string, number> | null; files: { quality: number; knowledge: number } | null; used: number | null; free: number | null; at: number }
+export const EMPTY_FIGURES: Figures = { code: null, copy: null, files: null, used: null, free: null, at: 0 };
+const FIGURES_KEY = 'platform2_offline_figures:';
+function loadFigures(slot: string): Figures {
+  try { const v = JSON.parse(localStorage.getItem(FIGURES_KEY + slot) || 'null'); if (v && typeof v === 'object') return { ...EMPTY_FIGURES, ...v }; } catch { /* нет хранилища */ }
+  return { ...EMPTY_FIGURES };
+}
+function saveFigures(slot: string, f: Figures): void { try { localStorage.setItem(FIGURES_KEY + slot, JSON.stringify(f)); } catch { /* нет места */ } }
+
+/** Состояние экрана из того, что есть сразу (манифесты, права, выбор человека), и цифр f (null — «считаем…»). */
+export function moduleStates(win: W, f: Figures): { rows: ModuleState[]; total: DeviceTotal; role: string } {
   const r = win.RBI || {};
   const sh = r.services?.shell;
   const access = r.platformMenuAccess || {};
   const allowed = (id: string): boolean => (id === 'planfact' ? !!sh?.isPlatformModuleAllowed?.('planfact') : id === 'company' ? access.company === true
     : !!sh?.legacyModuleAllowed?.(id));
   const manifest = (id: string): ModuleOffline | null => offlineOf(r.moduleLoader?.getById?.(id) || null);
-  const rows = myRows(allowed, manifest);
-  // опись версии одна на открытую вкладку — читается один раз
-  if (!codeCache) { try { codeCache = codeBytesByModule(await (await fetch('./sw.js')).text()); } catch { /* без описи — без кода */ } }
-  const code = codeCache || {};
-  let files = { quality: 0, knowledge: 0 };
-  try { if (win.dbGetAll && win.STORES?.FILE_REGISTRY) files = fileBytes((await win.dbGetAll(win.STORES.FILE_REGISTRY)) as Array<Record<string, unknown>>); } catch { /* без реестра */ }
-  let used = 0, free = 0;
-  try { const e = await navigator.storage.estimate(); used = e.usage || 0; free = Math.max(0, (e.quota || 0) - used); } catch { /* без оценки */ }
   const role = qualityRole();
-  const reader = offlineReader();
-  const out: ModuleState[] = [];
-  for (const row of rows) {
+  const rows = myRows(allowed, manifest).map((row): ModuleState => {
     const keep = keepOffline(row.id === 'quality' ? 'quality' : row.id);
-    const copyBytes = row.id === 'planfact' || row.id === 'company' ? await reader.size(row.id) : 0;
     const scope = row.files === 'quality' ? (filesChoice('quality') || defaultFilesScope(role)) : row.files === 'knowledge' ? (filesChoice('knowledge') || defaultDocsScope(role)) : null;
     const roleScope = row.files === 'quality' ? defaultFilesScope(role) : row.files === 'knowledge' ? defaultDocsScope(role) : null;
     const lp = lastPrefetch(row.id);
@@ -175,10 +189,32 @@ export async function readModules(win: W): Promise<{ rows: ModuleState[]; total:
       : row.files === 'quality' ? (currentFilesScope() === 'none' ? 'Фото заранее не скачиваются — открытые остаются на телефоне' : 'Фото и PDF заранее: ' + FILES_SCOPE_LABEL[currentFilesScope() as FilesScope].toLowerCase())
       : row.files === 'knowledge' ? (currentDocsScope() === 'none' ? 'Открытые документы остаются на телефоне' : 'Документы заранее: все')
       : lp ? 'Скачано заранее: ' + when(lp.at) : 'Заранее ещё не скачивалось — скачается, когда будет связь';
-    out.push({ row, keep, codeBytes: row.code.reduce((a, g) => a + (code[g] || 0), 0), copyBytes,
-      fileBytes: row.files === 'knowledge' ? files.knowledge : row.files === 'quality' ? files.quality : 0, scope, roleScope, last });
-  }
-  return { rows: out, total: { used, free }, role };
+    const code = f.code;
+    return { row, keep, scope, roleScope, last,
+      codeBytes: code ? row.code.reduce((a, g) => a + (code[g] || 0), 0) : row.code.length ? null : 0,
+      copyBytes: row.id === 'planfact' || row.id === 'company' ? (f.copy ? f.copy[row.id] || 0 : null) : 0,
+      fileBytes: row.files ? (f.files ? f.files[row.files] : null) : 0 };
+  });
+  return { rows, total: { used: f.used, free: f.free }, role };
+}
+
+// опись версии одна на открытую вкладку — читается один раз (в фоне: в сеть, сервис-воркер её не хранит)
+let codeCache: Record<string, number> | null = null;
+type Step = 'code' | 'files' | 'memory' | 'copy';
+const inflight: Partial<Record<Step, Promise<void>>> = {};
+/** Пересчитать цифры: шаги идут параллельно, каждый по готовности отдаёт свою часть (part). Шаг, который ещё идёт, не запускается второй раз. */
+export async function refreshFigures(win: W, part: (step: Step, patch: Partial<Figures>) => void): Promise<void> {
+  const run = (step: Step, f: () => Promise<Partial<Figures> | null>): Promise<void> => inflight[step] || (inflight[step] = f()
+    .then((p) => { if (p) part(step, p); }, () => undefined).finally(() => { delete inflight[step]; }));
+  await Promise.all([
+    run('code', async () => {
+      if (!codeCache) { try { codeCache = codeBytesByModule(await (await fetch('./sw.js')).text()); } catch { return { code: {} }; } }   // без описи — без кода
+      return { code: codeCache };
+    }),
+    run('files', async () => (win.dbGetAll && win.STORES?.FILE_REGISTRY ? { files: fileBytes((await win.dbGetAll(win.STORES.FILE_REGISTRY)) as Array<Record<string, unknown>>) } : null)),
+    run('memory', async () => { const e = await navigator.storage.estimate(); const used = e.usage || 0; return { used, free: Math.max(0, (e.quota || 0) - used) }; }),
+    run('copy', async () => { const reader = offlineReader(); const [planfact, company] = await Promise.all([reader.size('planfact'), reader.size('company')]); return { copy: { planfact, company } }; })
+  ]);
 }
 
 function ensureCss(doc: Document): void {
@@ -200,28 +236,51 @@ function confirmBox(doc: Document, title: string, text: string, yes: string, dan
   });
 }
 
-let busy = false;
 let wired: HTMLElement | null = null;
 let shownAt = 0;
-/** Экран перерисовывается вместе с карточкой «Отправка» (раз в 15 с) — данные блока читаются не чаще раза в 10 с, после действия — сразу. */
+let figures: { slot: string; f: Figures; fresh: Set<string> } | null = null;
+/** Экран перерисовывается вместе с карточкой «Отправка» — цифры пересчитываются не чаще раза в 10 с, после действия — сразу. */
 const EVERY_MS = 10000;
-/** Нарисовать блок в slot (вызывает «Данные на устройстве», net-status.ts). Только вошедшему почтой. */
+
+/** Нарисовать блок по текущим цифрам: тот же состав и выбор — меняются только цифры (выпадающий список и фокус не сбрасываются). */
+function paint(slot: HTMLElement, win: W): void {
+  if (!figures) return;
+  const { f, fresh } = figures;
+  const s = moduleStates(win, f);
+  const at = fresh.has('memory') ? 0 : f.at;
+  const html = modulesHtml(s.rows, s.total, ROLE_LABEL[s.role] || 'просмотр', at);
+  const shape = modulesHtml(s.rows.map((m) => ({ ...m, codeBytes: 0, copyBytes: 0, fileBytes: 0 })), { used: 0, free: 0 }, ROLE_LABEL[s.role] || 'просмотр');
+  const box = slot as HTMLElement & { __p2oRows?: ModuleState[]; __p2oShape?: string };
+  if (box.__p2oShape === shape && slot.firstChild) {
+    for (const m of s.rows) { const el = slot.querySelector(`[data-testid=p2o-size-${m.row.id}]`); const v = sizesHtml(m); if (el && el.innerHTML !== v) el.innerHTML = v; }
+    const t = slot.querySelector('[data-testid=p2o-total]'); const v = totalHtml(s.total, at);
+    if (t && t.innerHTML !== v) t.innerHTML = v;
+  } else if (slot.dataset.p2o !== html) { slot.innerHTML = html; }
+  slot.dataset.p2o = html; box.__p2oShape = shape; box.__p2oRows = s.rows;
+  if (wired !== slot) { wired = slot; wire(slot, win); }
+}
+
+/** Нарисовать блок в slot (вызывает «Данные на устройстве», net-status.ts). Только вошедшему почтой.
+ *  P2-0073: сразу — последние известные цифры (или «считаем…»), переключатели работают; цифры пересчитываются в фоне параллельно. */
 export async function renderOfflineModules(slot: HTMLElement | null, force = false): Promise<void> {
-  if (!slot || busy) return;
-  if (!force && wired === slot && slot.firstChild && Date.now() - shownAt < EVERY_MS) return;
+  if (!slot) return;
   const doc = slot.ownerDocument;
-  if (!currentSlot()) { slot.replaceChildren(); return; }
-  busy = true;
-  try {
-    ensureCss(doc);
-    const win = doc.defaultView as unknown as W;
-    const s = await readModules(win);
-    const html = modulesHtml(s.rows, s.total, ROLE_LABEL[s.role] || 'просмотр');
-    if (slot.dataset.p2o !== html) { slot.dataset.p2o = html; slot.innerHTML = html; }
-    if (wired !== slot) { wired = slot; wire(slot, win); }
-    (slot as HTMLElement & { __p2oRows?: ModuleState[] }).__p2oRows = s.rows;
-    shownAt = Date.now();
-  } finally { busy = false; }
+  const me = currentSlot();
+  if (!me) { slot.replaceChildren(); return; }
+  ensureCss(doc);
+  const win = doc.defaultView as unknown as W;
+  if (!figures || figures.slot !== me) figures = { slot: me, f: loadFigures(me), fresh: new Set() };
+  paint(slot, win);
+  if (!force && Date.now() - shownAt < EVERY_MS) return;
+  shownAt = Date.now();
+  const cur = figures;
+  cur.fresh.clear();   // до ответа памяти — итог «на ЧЧ:ММ» (прошлый подсчёт)
+  await refreshFigures(win, (step, patch) => {
+    if (figures !== cur) return;   // вошёл другой человек — его цифры свои
+    cur.f = { ...cur.f, ...patch }; cur.fresh.add(step);
+    paint(slot, win);
+  });
+  if (figures === cur) { cur.f = { ...cur.f, at: Date.now() }; saveFigures(me, cur.f); }
 }
 
 function wire(slot: HTMLElement, win: W): void {
@@ -258,13 +317,13 @@ function wire(slot: HTMLElement, win: W): void {
     if (act === 'reports') { void Promise.resolve(win.downloadMissingCloudFiles?.(false, 'reports')).then(rerender); return; }
     if (act === 'clear') {
       const m = rowsNow().find((r) => r.row.id === mod);
-      const bytes = m ? m.copyBytes + m.fileBytes : 0;
+      const bytes = m ? (m.copyBytes || 0) + (m.fileBytes || 0) : 0;
       void confirmBox(doc, `Очистить скачанное: ${m ? m.row.name : ''}?`,
         `Освободится до ${mb(bytes)}. Неотправленные записи и фото останутся на телефоне и уйдут, когда будет связь. Открытое снова скачается, когда понадобится.`,
         'Очистить ' + mb(bytes), true).then(async (ok) => {
         if (!ok) return;
         let freed = 0;
-        if (mod === 'planfact' || mod === 'company') { freed = m ? m.copyBytes : 0; await offlineReader().clear(mod); }
+        if (mod === 'planfact' || mod === 'company') { freed = m ? m.copyBytes || 0 : 0; await offlineReader().clear(mod); }
         else if (win.RbiStorageManager?.runManualRecoverableCacheCleanup) {
           const res = await win.RbiStorageManager.runManualRecoverableCacheCleanup({ only: mod === 'knowledge' ? 'knowledge' : 'quality', noRefill: true, silent: true });
           freed = (res && res.freedBytes) || 0;

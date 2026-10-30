@@ -118,6 +118,8 @@ const WATCH = (cold) => {
     const at = (window.__p2dev = { t0, marks: {} }).marks;
     const seen = (k, cond) => { if (!(k in at) && cond) at[k] = Math.round(performance.now() - t0); };
     const check = () => {
+      const p2 = window.RBI && window.RBI.platform2 && window.RBI.platform2.getState && window.RBI.platform2.getState();
+      seen('вход почтой известен', !!p2 && p2.mode === 'email');
       const panel = document.getElementById('settings-panel-my-device');
       seen('панель', !!panel && !panel.hidden && panel.getClientRects().length > 0);
       const send = document.querySelector('#p2-net-status-slot .p2s');
@@ -131,7 +133,7 @@ const WATCH = (cold) => {
       seen('цифры «На телефоне»', !!total && /\d/.test(total.textContent || '') && !/считаем/i.test(total.textContent || ''));
       const pf = document.querySelector('[data-testid=p2o-size-planfact]');
       seen('размер копии План/Факта', !!pf && /Данные\s*[\d,]+\s*(КБ|МБ|ГБ)/.test(pf.textContent || '') && !/Данные\s*0 КБ/.test(pf.textContent || ''));
-      if (Object.keys(at).length < 7 && performance.now() - t0 < 90000) requestAnimationFrame(check);
+      if (Object.keys(at).length < 8 && performance.now() - t0 < 90000) requestAnimationFrame(check);
     };
     if (!location.hash.startsWith('#/settings/my/device')) location.hash = '#/settings/my/device';
     requestAnimationFrame(check);
@@ -155,7 +157,7 @@ async function measure(pass) {
   while (Date.now() - t0 < WAIT_MS) {
     await page.waitForTimeout(500);
     marks = await page.evaluate(() => (window.__p2dev || { marks: {} }).marks).catch(() => ({}));
-    if (Object.keys(marks).length >= 7) break;
+    if (Object.keys(marks).length >= 8) break;
   }
   if (SHOTS) await page.evaluate(() => { const s = document.getElementById('p2-offline-modules-slot'); if (s) s.scrollIntoView({ block: 'center' }); }).catch(() => {});
   if (SHOTS) await page.screenshot({ path: `${OUT}/${TAG}-${pass}-end.png` }).catch(() => {});

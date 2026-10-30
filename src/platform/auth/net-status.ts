@@ -171,41 +171,72 @@ export function startNetStatus(deps: Deps): void {
   }
 
   // P2-0059 (С8, С9): «Данные на устройстве» — карточка «Отправка» (что не ушло и почему) и «Журнал синхронизации» (sync-status.ts)
+  // P2-0073: экран рисуется сразу — прежний список этой вкладки (или «считаем…»), «Офлайн по модулям» — параллельно; записи на
+  // телефоне дочитываются в фоне и перерисовывают карточку. Раньше экран ждал полного чтения Качества, затем — всех подсчётов модулей.
+  type PendingRow = { store: string; rec: Record<string, unknown>; rejected: boolean };
   let devBusy = false;
+  let devAgain = false;
   let devWired = false;
-  async function fillDevice(): Promise<void> {
+  let devRows: { rows: PendingRow[]; at: number } | null = null;   // последний подсчёт на этой вкладке
+  let devWait = 0;   // запуск прямо на экране: панель «Настроек» ещё не нарисована — заглядываем снова (до 10 с)
+  const deviceSlot = (): HTMLElement | null => {
+    const on = String(location.hash || '').startsWith(DEVICE_PATH);
     const slot = doc.getElementById('p2-net-status-slot');
-    if (!slot || devBusy) return;
-    if (deps.platform().mode !== 'email') { slot.replaceChildren(); return; }
-    if (!String(location.hash || '').startsWith(DEVICE_PATH)) return;
-    devBusy = true;
-    try {
-      if (!doc.getElementById(SYNC_STYLE_ID)) {
-        const css = doc.createElement('style'); css.id = SYNC_STYLE_ID; css.textContent = SYNC_CSS; doc.head.appendChild(css);
-      }
-      const isUnsent = win.RbiSyncMergePolicy?.isUnsentLocal;
-      const db = win.RBI_DB_NAME || '';
-      const rows = isUnsent && db && typeof indexedDB !== 'undefined' ? await listPending(indexedDB, db, isUnsent).catch(() => []) : [];
-      rows.push(...(await deviceRows()));   // P2-0064: записи устройства модулей с rpc (факт План/Факта) — в той же карточке
-      const now = Date.now();
-      const ls = (k: string): string => { try { return window.localStorage.getItem(k) || ''; } catch { return ''; } };
-      const net = win.RbiSyncNet;
-      const probeFresh = !!net && !!net.lastProbeAt && now - net.lastProbeAt < 120000;
-      const ctx = { offline: st.offline || (probeFresh && net!.lastProbe === 'offline'), now, retryAfter: Number(ls('rbi_sync_retry_after')) || 0, retryKind: ls('rbi_sync_retry_kind') };
-      const J = win.RbiSyncJournal; const JP = win.RbiSyncJournalPolicy;
-      const events = J ? J.list() : [];
-      const journal = JP ? events.slice(-20).reverse().map((e) => ({ t: shortTime(e.t, now), text: JP.eventLine(e), tone: JP.eventTone(e) })) : [];
-      const items = toItems(rows, ctx);
+    if (on && !slot && !devWait) {
+      let n = 0;
+      devWait = window.setInterval(() => { if (++n > 50 || doc.getElementById('p2-net-status-slot')) { clearInterval(devWait); devWait = 0; void fillDevice(); } }, 200);
+    }
+    if (!slot || !on) return null;
+    if (deps.platform().mode !== 'email') { slot.replaceChildren(); return null; }
+    return slot;
+  };
+  function paintDevice(slot: HTMLElement, rows: PendingRow[] | null, counting: boolean): void {
+    if (!doc.getElementById(SYNC_STYLE_ID)) {
+      const css = doc.createElement('style'); css.id = SYNC_STYLE_ID; css.textContent = SYNC_CSS; doc.head.appendChild(css);
+    }
+    const now = Date.now();
+    const ls = (k: string): string => { try { return window.localStorage.getItem(k) || ''; } catch { return ''; } };
+    const net = win.RbiSyncNet;
+    const probeFresh = !!net && !!net.lastProbeAt && now - net.lastProbeAt < 120000;
+    const ctx = { offline: st.offline || (probeFresh && net!.lastProbe === 'offline'), now, retryAfter: Number(ls('rbi_sync_retry_after')) || 0, retryKind: ls('rbi_sync_retry_kind') };
+    const J = win.RbiSyncJournal; const JP = win.RbiSyncJournalPolicy;
+    const events = J ? J.list() : [];
+    const journal = JP ? events.slice(-20).reverse().map((e) => ({ t: shortTime(e.t, now), text: JP.eventLine(e), tone: JP.eventTone(e) })) : [];
+    const items = toItems(rows || [], ctx);
+    if (!counting) {
       // счётчик в шапке — то же число, что в карточке (раньше обновлялся раз в 15 с)
       const unsentNow = items.filter((i) => !i.rejected).length;
       if (unsentNow !== st.unsent) { st = { ...st, unsent: unsentNow }; placeChip(); }
-      const html = statusHtml({ ...ctx, items, lastOkAt: J ? J.lastOkAt() : '', probe: net?.lastProbe ?? null, probeAt: net?.lastProbeAt || 0,
-        journal, journalTotal: events.length }, !!slot.querySelector('details[open]'));
-      if (slot.dataset.p2 !== html) { slot.dataset.p2 = html; slot.innerHTML = html; }
-      if (!devWired) { devWired = true; slot.addEventListener('click', onDeviceClick); }
-      void renderOfflineModules(doc.getElementById('p2-offline-modules-slot'));   // P2-0060: «Офлайн по модулям» — под журналом
+    }
+    const html = statusHtml({ ...ctx, items, lastOkAt: J ? J.lastOkAt() : '', probe: net?.lastProbe ?? null, probeAt: net?.lastProbeAt || 0,
+      journal, journalTotal: events.length, counting: counting ? (rows ? 'refresh' : 'first') : undefined, countedAt: devRows ? devRows.at : 0 },
+    !!slot.querySelector('details[open]'));
+    if (slot.dataset.p2 !== html) { slot.dataset.p2 = html; slot.innerHTML = html; }
+    if (!devWired) { devWired = true; slot.addEventListener('click', onDeviceClick); }
+  }
+  async function readPending(): Promise<PendingRow[]> {
+    const isUnsent = win.RbiSyncMergePolicy?.isUnsentLocal;
+    const db = win.RBI_DB_NAME || '';
+    const rows: PendingRow[] = isUnsent && db && typeof indexedDB !== 'undefined' ? await listPending(indexedDB, db, isUnsent).catch(() => []) : [];
+    rows.push(...(await deviceRows()));   // P2-0064: записи устройства модулей с rpc (факт План/Факта) — в той же карточке
+    return rows;
+  }
+  /** fresh — после действия («Отправить снова», событие журнала): идёт подсчёт — повторить его после, иначе прежний подсчёт годится. */
+  async function fillDevice(fresh = false): Promise<void> {
+    const first = deviceSlot();
+    if (!first) return;
+    if (devBusy) { if (fresh) devAgain = true; return; }
+    devBusy = true;
+    try {
+      paintDevice(first, devRows ? devRows.rows : null, true);   // сразу: прежний список вкладки или «считаем…»
+      void renderOfflineModules(doc.getElementById('p2-offline-modules-slot'));   // P2-0060: «Офлайн по модулям» — параллельно
+      const rows = await readPending();
+      devRows = { rows, at: Date.now() };
+      const slot = deviceSlot();
+      if (slot) paintDevice(slot, rows, false);
     } finally {
       devBusy = false;
+      if (devAgain) { devAgain = false; void fillDevice(true); }
     }
   }
   function onDeviceClick(e: Event): void {
@@ -213,14 +244,14 @@ export function startNetStatus(deps: Deps): void {
     if (!b) return;
     const act = b.dataset.act;
     if (act === 'sync') { void sendNow('manual'); if (typeof win.triggerSync === 'function') void win.triggerSync('manual'); }
-    if (act === 'drop' && b.dataset.id && win.HistoryActions?.resolveSyncAttention) void Promise.resolve(win.HistoryActions.resolveSyncAttention(b.dataset.id)).then(() => fillDevice());
+    if (act === 'drop' && b.dataset.id && win.HistoryActions?.resolveSyncAttention) void Promise.resolve(win.HistoryActions.resolveSyncAttention(b.dataset.id)).then(() => fillDevice(true));
     if (act === 'copy') void copyReport(b);
     // P2-0061 (ТД 313): «Отправить снова» — перепроверить правилом всё «Не отправлено» / «Сервер отклонил» и запустить отправку
     if (act === 'retry') {
       const db = win.RBI_DB_NAME || '';
       void Promise.all([db && typeof indexedDB !== 'undefined' ? resetBlocked(indexedDB, db) : Promise.resolve(0), resetDeviceRejected().catch(() => 0)])
         .then(() => Promise.all([sendNow('manual'), typeof win.triggerSync === 'function' ? win.triggerSync('manual') : null]))
-        .then(() => fillDevice(), () => fillDevice());
+        .then(() => fillDevice(true), () => fillDevice(true));
     }
   }
   async function copyReport(btn: HTMLElement): Promise<void> {
@@ -270,6 +301,7 @@ export function startNetStatus(deps: Deps): void {
   }
 
   async function recount(force = false): Promise<void> {
+    void fillDevice();   // P2-0073: запуск прямо на «Данных на устройстве» — экран не ждёт подсчёта значка
     const offline = isOffline();
     const p = deps.platform();
     const isUnsent = win.RbiSyncMergePolicy?.isUnsentLocal;
@@ -295,8 +327,9 @@ export function startNetStatus(deps: Deps): void {
   window.addEventListener('offline', () => { void recount(true); });
   window.addEventListener('rbi:platform-access', () => { void recount(); });
   window.addEventListener('rbi:platform-net', () => { void recount(); });   // P2-0060: сервер замолчал / ответил
-  window.addEventListener('hashchange', () => { setTimeout(render, 300); });
-  window.addEventListener('rbi:sync-journal', () => { void fillDevice(); });
+  // P2-0073: «Данные на устройстве» — сразу при переходе (раздел «Настройки» рисует панель в том же кадре), затем как раньше
+  window.addEventListener('hashchange', () => { requestAnimationFrame(() => { void fillDevice(); }); setTimeout(render, 300); });
+  window.addEventListener('rbi:sync-journal', () => { void fillDevice(true); });
   window.addEventListener(DEVICE_RECORDS_EVENT, () => { void recount(true); });
   setInterval(() => { void recount(); }, 15000);
   setInterval(placeChip, 1500);   // шапку перерисовывают разделы — значок возвращается на место

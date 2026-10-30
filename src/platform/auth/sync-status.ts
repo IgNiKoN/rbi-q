@@ -13,6 +13,8 @@ export interface JournalLine { t: string; text: string; tone: string }
 export interface StatusData {
   offline: boolean; now: number; items: Item[]; lastOkAt: string; probe: string | null; probeAt: number;
   retryAfter: number; retryKind: string; journal: JournalLine[]; journalTotal: number;
+  /** P2-0073: подсчёт ещё идёт — 'first': записей ещё не читали (вместо списка «считаем…»); 'refresh': список прежний, на countedAt */
+  counting?: 'first' | 'refresh'; countedAt?: number;
 }
 
 export const SYNC_STYLE_ID = 'p2-sync-status-css';
@@ -22,6 +24,7 @@ export const SYNC_CSS = `
 .p2s__head>div:nth-child(2){flex:1 1 200px;min-width:0}
 .p2s__ico{width:44px;height:44px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center}
 .p2s__ico--warn{color:var(--warning,#b8844a);background:color-mix(in srgb,var(--warning,#b8844a) 14%,transparent)}
+.p2s__ico--wait{color:var(--text-muted);background:color-mix(in srgb,var(--text-muted) 14%,transparent)}
 .p2s__ico--ok{color:var(--success,#3f8f5e);background:color-mix(in srgb,var(--success,#3f8f5e) 14%,transparent)}
 .p2s__title{display:block;font-size:16px;font-weight:800;line-height:1.25}
 .p2s__sub{display:block;font-size:13px;color:var(--text-muted);margin-top:2px}
@@ -140,7 +143,11 @@ export function statusHtml(d: StatusData, journalOpen: boolean): string {
   const rejected = d.items.filter((i) => i.rejected);
   const lastOk = d.lastOkAt ? whenLabel(d.lastOkAt, d.now) : '';
   let head: string;
-  if (!unsent.length && rejected.length) {
+  if (d.counting === 'first') {
+    // P2-0073: карточка видна сразу, число — когда записи на телефоне прочитаны (не «Всё отправлено» раньше времени)
+    head = '<div class="p2s__head"><div class="p2s__ico p2s__ico--wait">' + ICON_UP + '</div><div><b class="p2s__title">Отправка</b>' +
+      '<span class="p2s__sub" data-testid="p2-sync-counting">Считаем, что не отправлено…</span></div></div>';
+  } else if (!unsent.length && rejected.length) {
     // P2-0061: само ничего не уйдёт — не «Всё отправлено», а сколько не ушло (причины — у записей ниже)
     head = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + ICON_UP + '</div><div><b class="p2s__title">Не ушло: ' + rejected.length + '</b>' +
       '<span class="p2s__sub">Само не уйдёт — у каждой записи ниже причина и что делать</span></div></div>';
@@ -167,8 +174,9 @@ export function statusHtml(d: StatusData, journalOpen: boolean): string {
     '<button class="p2s__act" type="button" data-act="retry" data-testid="p2-sync-retry">Отправить снова</button></div><ul class="p2s__list">' + rejected.map(row).join('') + '</ul>' : '';
   const footParts: string[] = [];
   if (unsent.length || rejected.length) footParts.push('Последняя успешная отправка: ' + (lastOk ? esc(lastOk) : 'ещё не было'));
+  if (d.counting === 'refresh' && d.countedAt) footParts.push('<span data-testid="p2-sync-counting">Обновляем · список на ' + hhmm(d.countedAt) + '</span>');
   if (d.probe && d.probeAt) footParts.push('Проверка связи: ' + esc(PROBE_RU[d.probe] || d.probe) + ', ' + hhmm(d.probeAt));
-  const foot = footParts.length ? '<div class="p2s__foot">' + footParts.map((x) => '<span>' + x + '</span>').join('') + '</div>' : '';
+  const foot = footParts.length ? '<div class="p2s__foot">' + footParts.map((x) => (x.startsWith('<span') ? x : '<span>' + x + '</span>')).join('') + '</div>' : '';
   const card = '<section class="p2s" role="status" data-testid="p2-net-device">' + head + list + rej + foot + '</section>';
   const ev = d.journal.length
     ? '<ul class="p2j__ev" data-testid="p2-sync-journal-list">' + d.journal.map((e) => '<li><span class="p2j__t">' + esc(e.t) + '</span><span class="p2j__k' + (e.tone ? ' p2j__k--' + e.tone : '') + '">' + esc(e.text) + '</span></li>').join('') + '</ul>' +
