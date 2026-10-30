@@ -12,6 +12,8 @@
 --  4) правила строк проверок (с пунктами и фото) и задач — quality.rec_ok → core.row_allowed: объект записи — core_object_id
 --     (проект ядра); «видеть все» — по действию, своя запись (автор или исполнитель) — по действию «своих»; запись без
 --     объекта — участники на всю компанию и автор; сторож действий — quality.quality_rights_guard (отказ 42501 с текстом);
+--  4а) остальные записи Качества на объекте (совещания и мероприятия, FMEA и этапы, отчёты, внешний СК) — тот же quality.rec_ok по
+--     действиям своей группы; общие таблицы внешнего СК и шаблоны отчётов — по действиям группы без области;
 --  5) мост «объекты Качества» снят: pf_set_participation / pf_assign_role не принимают и не пишут quality_objects;
 --     set_record_object проверяет «объект за вами» по участию; общие таблицы Качества (quality.can) и прежние правила
 --     Стройконтроля 1 / черновиков видят записи контейнера при участии на любой объект.
@@ -34,31 +36,31 @@ alter table core.permission_catalog add column unplaced text check (unplaced in 
 comment on column core.permission_catalog.unplaced is 'P2-0071: запись без места у участника части проекта: null — только своя и только просмотр (052); all — все записи проекта без места; own — своя запись без места';
 
 insert into core.permission_catalog(action, description, area_scoped, module, group_name, sort, label, unplaced) values
-  ('quality.inspections.view', 'Качество: видеть все проверки (без галочки — только свои)', true, 'quality', 'Проверки', 2110, 'Видеть все проверки', 'all'),
-  ('quality.inspections.create', 'Качество: проводить проверки и править свои', true, 'quality', 'Проверки', 2120, 'Проводить проверки', 'own'),
-  ('quality.inspections.edit_any', 'Качество: править чужие проверки', true, 'quality', 'Проверки', 2130, 'Править чужие проверки', null),
-  ('quality.inspections.delete', 'Качество: удалять проверки (чужие — вместе с «Править чужие проверки»)', true, 'quality', 'Проверки', 2140, 'Удалять проверки', 'own'),
-  ('quality.tasks.view', 'Качество: видеть все задачи (без галочки — только свои и порученные)', true, 'quality', 'Задачи', 2210, 'Видеть все задачи', 'all'),
-  ('quality.tasks.create', 'Качество: ставить задачи и править свои', true, 'quality', 'Задачи', 2220, 'Ставить задачи', 'own'),
-  ('quality.tasks.work', 'Качество: выполнять порученные задачи (статус, отметки)', true, 'quality', 'Задачи', 2230, 'Выполнять свои задачи', 'own'),
-  ('quality.tasks.edit_any', 'Качество: править чужие задачи — закрыть, вернуть, переназначить', true, 'quality', 'Задачи', 2240, 'Править чужие задачи (закрыть, переназначить)', null),
-  ('quality.tasks.delete', 'Качество: удалять задачи (чужие — вместе с «Править чужие задачи»)', true, 'quality', 'Задачи', 2250, 'Удалять задачи', 'own'),
-  ('quality.meetings.view', 'Качество: видеть совещания и мероприятия воздействия', true, 'quality', 'Совещания и мероприятия', 2310, 'Видеть совещания и мероприятия', 'all'),
-  ('quality.meetings.edit', 'Качество: вести совещания и мероприятия воздействия', true, 'quality', 'Совещания и мероприятия', 2320, 'Вести совещания и мероприятия', 'own'),
-  ('quality.method.view', 'Качество: видеть FMEA и этапы графика объекта', true, 'quality', 'FMEA и этапы', 2410, 'Видеть FMEA и этапы графика', 'all'),
-  ('quality.method.edit', 'Качество: вести FMEA и этапы графика объекта', true, 'quality', 'FMEA и этапы', 2420, 'Вести FMEA и этапы графика', 'own'),
-  ('quality.reports.view', 'Качество: видеть отчёты', true, 'quality', 'Отчёты', 2510, 'Видеть отчёты', 'all'),
-  ('quality.reports.edit', 'Качество: формировать отчёты и шаблоны', true, 'quality', 'Отчёты', 2520, 'Формировать отчёты', 'own'),
-  ('quality.sk.view', 'Качество: видеть замечания внешнего СК', true, 'quality', 'Внешний СК', 2610, 'Видеть замечания внешнего СК', 'all'),
-  ('quality.sk.import', 'Качество: загружать выгрузки внешнего СК', true, 'quality', 'Внешний СК', 2620, 'Загружать выгрузки внешнего СК', 'own');
+  ('quality.inspections.view', 'Качество: видеть все проверки (без галочки — только свои)', true, 'quality', 'Проверки', 2110, 'Просмотр всех', 'all'),
+  ('quality.inspections.create', 'Качество: проводить проверки и править свои', true, 'quality', 'Проверки', 2120, 'Создание', 'own'),
+  ('quality.inspections.edit_any', 'Качество: править чужие проверки', true, 'quality', 'Проверки', 2130, 'Редактирование чужих', null),
+  ('quality.inspections.delete', 'Качество: удалять проверки (чужие — вместе с «Редактирование чужих»)', true, 'quality', 'Проверки', 2140, 'Удаление', 'own'),
+  ('quality.tasks.view', 'Качество: видеть все задачи (без галочки — только свои и порученные)', true, 'quality', 'Задачи', 2210, 'Просмотр всех', 'all'),
+  ('quality.tasks.create', 'Качество: ставить задачи и править свои', true, 'quality', 'Задачи', 2220, 'Создание', 'own'),
+  ('quality.tasks.work', 'Качество: выполнять порученные задачи (статус, отметки)', true, 'quality', 'Задачи', 2230, 'Выполнение', 'own'),
+  ('quality.tasks.edit_any', 'Качество: править чужие задачи — закрыть, вернуть, переназначить', true, 'quality', 'Задачи', 2240, 'Редактирование чужих', null),
+  ('quality.tasks.delete', 'Качество: удалять задачи (чужие — вместе с «Редактирование чужих»)', true, 'quality', 'Задачи', 2250, 'Удаление', 'own'),
+  ('quality.meetings.view', 'Качество: видеть совещания и мероприятия воздействия', true, 'quality', 'Совещания и мероприятия', 2310, 'Просмотр', 'all'),
+  ('quality.meetings.edit', 'Качество: вести совещания и мероприятия воздействия', true, 'quality', 'Совещания и мероприятия', 2320, 'Редактирование', 'own'),
+  ('quality.method.view', 'Качество: видеть FMEA и этапы графика объекта', true, 'quality', 'FMEA и этапы', 2410, 'Просмотр', 'all'),
+  ('quality.method.edit', 'Качество: вести FMEA и этапы графика объекта', true, 'quality', 'FMEA и этапы', 2420, 'Редактирование', 'own'),
+  ('quality.reports.view', 'Качество: видеть отчёты', true, 'quality', 'Отчёты', 2510, 'Просмотр', 'all'),
+  ('quality.reports.edit', 'Качество: формировать отчёты и шаблоны', true, 'quality', 'Отчёты', 2520, 'Редактирование', 'own'),
+  ('quality.sk.view', 'Качество: видеть замечания внешнего СК', true, 'quality', 'Внешний СК', 2610, 'Просмотр', 'all'),
+  ('quality.sk.import', 'Качество: загружать выгрузки внешнего СК', true, 'quality', 'Внешний СК', 2620, 'Загрузка выгрузок', 'own');
 
 update core.permission_catalog c set group_name = v.grp, sort = v.sort, label = v.label
   from (values
-    ('quality.view', 'Общие разделы', 2910, 'Открывать Качество: база знаний, справочники, профили'),
-    ('quality.edit', 'Общие разделы', 2920, 'Вести базу знаний и справочники'),
-    ('quality.ai', 'Общие разделы', 2930, 'ИИ-помощник'),
-    ('quality.manage', 'Настройки', 2950, 'Настройки Качества, все записи в своей области'),
-    ('quality.objects.manage', 'Настройки', 2960, 'Справочник объектов и дерево локаций (только администратор)')
+    ('quality.view', 'База знаний и справочники', 2910, 'Просмотр'),
+    ('quality.edit', 'База знаний и справочники', 2920, 'Редактирование'),
+    ('quality.ai', 'База знаний и справочники', 2930, 'ИИ-помощник'),
+    ('quality.manage', 'Настройки', 2950, 'Полный доступ (настройки и все записи)'),
+    ('quality.objects.manage', 'Настройки', 2960, 'Справочник объектов и дерево локаций')
   ) v(action, grp, sort, label)
  where c.action = v.action;
 
@@ -190,12 +192,14 @@ begin
      and quality.has_anywhere(p_company, '{quality.inspections.view,quality.inspections.create}', null);
 end $$;
 
--- Отказ сторожа с понятным текстом (подпись действия из каталога, объект записи).
+-- Отказ сторожа с понятным текстом: «группа: действие» из каталога (подписи — единые: просмотр, создание, редактирование …),
+-- объект записи.
 create function quality.deny(p_object uuid, p_action text)
 returns void language plpgsql stable security definer set search_path = pg_catalog as $$
 declare v_label text; v_obj text;
 begin
-  select coalesce(pc.label, pc.description) into v_label from core.permission_catalog pc where pc.action = p_action;
+  select pc.group_name || ': ' || lower(left(coalesce(pc.label, pc.description), 1)) || substr(coalesce(pc.label, pc.description), 2)
+    into v_label from core.permission_catalog pc where pc.action = p_action;
   select p.name into v_obj from core.projects p where p.id = p_object;
   raise exception 'Нет права «%» %', coalesce(v_label, p_action), coalesce('на объекте «' || v_obj || '»', 'для записи без объекта')
     using errcode = '42501';
@@ -253,7 +257,7 @@ begin
   v_own := coalesce(auth.uid() = v_author or auth.uid() = v_assignee, false);
   v_own_edit := case when v_task then array[p || 'create', p || 'work'] else array[p || 'create'] end;
   if tg_op = 'UPDATE' then n := to_jsonb(new); end if;
-  -- удаление (и пометка удаления): «Удалять …»; чужая запись — ещё и «Править чужие …»
+  -- удаление (и пометка удаления): «Удаление»; чужая запись — ещё и «Редактирование чужих»
   if tg_op = 'DELETE' or (select bool_or((n -> k) is distinct from (o -> k)) from unnest(v_del) k) then
     if not quality.rec_ok(v_c, v_pr, v_obj0, case when v_own then '{}'::text[] else array[p || 'delete'] end,
                           array[p || 'delete'], v_author, v_assignee, v_cp) then
@@ -264,8 +268,8 @@ begin
     end if;
     if tg_op = 'DELETE' then return old; end if;
   end if;
-  -- остальные поля: своя — «Проводить проверки» / «Ставить» или «Выполнять»; чужая или смена исполнителя не автором —
-  -- «Править чужие …»
+  -- остальные поля: своя — «Создание» (задачи — или «Выполнение»); чужая или смена исполнителя не автором —
+  -- «Редактирование чужих»
   if (n - v_skip - v_del) is distinct from (o - v_skip - v_del) then
     if v_own and not (v_task and coalesce(auth.uid() is distinct from v_author, true)
                       and (n -> 'assigned_to_auth_user_id', n -> 'assigned_to_name')
@@ -666,6 +670,51 @@ begin
     returning id into v_new;
     insert into p2_backup.m053_assignments(old_id, new_id, kind) values (a.id, v_new, 'own_only');
     update core.role_assignments set revoked_at = now() where id = a.id;
+  end loop;
+end $$;
+
+-- 7. Остальные записи Качества на объекте — по действиям своей группы: видеть — «Видеть …» или своя запись; править — «Вести …»
+-- (участник части объекта — только своя, признак unplaced). Совещания и мероприятия, FMEA и этапы графика, отчёты, внешний СК.
+do $$
+declare r record; v_view text; v_edit text; v_rule text;
+begin
+  for r in select * from (values
+      ('project_meetings', 'quality.meetings.view', 'quality.meetings.edit'),
+      ('project_interventions', 'quality.meetings.view', 'quality.meetings.edit'),
+      ('project_fmea', 'quality.method.view', 'quality.method.edit'),
+      ('project_schedule_stages', 'quality.method.view', 'quality.method.edit'),
+      ('shared_reports', 'quality.reports.view', 'quality.reports.edit'),
+      ('shared_report_snapshots', 'quality.reports.view', 'quality.reports.edit'),
+      ('sk_records', 'quality.sk.view', 'quality.sk.import')) v(t, a_view, a_edit) loop
+    v_view := format('quality.rec_ok(core_company_id, core_project_id, core_object_id, %L, %L, core_created_by, null, core_counterparty_id)',
+                     array[r.a_view], array[r.a_view, r.a_edit]);
+    v_edit := format('quality.rec_ok(core_company_id, core_project_id, core_object_id, %L, %L, core_created_by, null, core_counterparty_id)',
+                     array[r.a_edit], array[r.a_edit]);
+    execute format('drop policy %I on quality.%I', r.t || '_select', r.t);
+    execute format('drop policy %I on quality.%I', r.t || '_insert', r.t);
+    execute format('drop policy %I on quality.%I', r.t || '_update', r.t);
+    execute format('drop policy %I on quality.%I', r.t || '_delete', r.t);
+    execute format('create policy %I on quality.%I for select to authenticated using (%s)', r.t || '_select', r.t, v_view);
+    execute format('create policy %I on quality.%I for insert to authenticated with check (%s)', r.t || '_insert', r.t, v_edit);
+    execute format('create policy %I on quality.%I for update to authenticated using (%s) with check (%s)', r.t || '_update', r.t, v_edit, v_edit);
+    execute format('create policy %I on quality.%I for delete to authenticated using (%s)', r.t || '_delete', r.t, v_edit);
+  end loop;
+  -- общие таблицы внешнего СК и шаблоны отчётов — по действиям группы (без области, как прежде)
+  for r in select * from (values
+      ('sk_volumes', 'quality.sk.view', 'quality.sk.import'), ('sk_data_bundles', 'quality.sk.view', 'quality.sk.import'),
+      ('sk_import_batches', 'quality.sk.view', 'quality.sk.import'), ('sk_mapping', 'quality.sk.view', 'quality.sk.import'),
+      ('sk_category_map', 'quality.sk.view', 'quality.sk.import'), ('sk_contractor_map', 'quality.sk.view', 'quality.sk.import'),
+      ('shared_report_templates', 'quality.reports.view', 'quality.reports.edit')) v(t, a_view, a_edit) loop
+    v_view := format('quality.can(core_company_id, core_project_id, %L)', array[r.a_view]);
+    v_edit := format('quality.can(core_company_id, core_project_id, %L)', array[r.a_edit]);
+    execute format('drop policy %I on quality.%I', r.t || '_select', r.t);
+    execute format('drop policy %I on quality.%I', r.t || '_insert', r.t);
+    execute format('drop policy %I on quality.%I', r.t || '_update', r.t);
+    execute format('drop policy %I on quality.%I', r.t || '_delete', r.t);
+    execute format('create policy %I on quality.%I for select to authenticated using (%s)', r.t || '_select', r.t, v_view);
+    execute format('create policy %I on quality.%I for insert to authenticated with check (%s)', r.t || '_insert', r.t, v_edit);
+    execute format('create policy %I on quality.%I for update to authenticated using (%s) with check (%s)', r.t || '_update', r.t, v_edit, v_edit);
+    execute format('create policy %I on quality.%I for delete to authenticated using (%s)', r.t || '_delete', r.t, v_edit);
   end loop;
 end $$;
 

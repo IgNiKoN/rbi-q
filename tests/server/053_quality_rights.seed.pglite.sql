@@ -2,7 +2,8 @@
 -- затем 053_quality_rights_up.sql, затем 053_quality_rights_compare.check.sql (снимок ПОСЛЕ и сравнение).
 -- Пользователи — как в РБИ: руководитель, директор, просмотр на компанию, инженеры с выбранными «объектами Качества» (один и два
 -- объекта), инженер без объектов («только свои»), просмотр с объектом, подрядчик, роль План/Факт + Качество на объект и на секцию.
--- Записи: проверки (с пунктом), задачи (с исполнителем), запись без объекта, замечания Стройконтроля 2.0 на двух объектах,
+-- Записи: проверки (с пунктом), задачи (с исполнителем), запись без объекта, совещания, FMEA, замечания внешнего СК (этап 2),
+-- замечания Стройконтроля 2.0 на двух объектах,
 -- эталон (общий раздел). Снимок: пользователь × запись × действие (видит, править, пометить удалённой, удалить, создать
 -- на том же объекте; задачи — выполнить, переназначить) → произошло ли действие на самом деле.
 create or replace function pg_temp.as_user(u uuid) returns void language plpgsql as $f$
@@ -78,6 +79,16 @@ begin
       insert into public.t053 values (p_phase, u.k, 'задача', r.id, 'удалить',
         pg_temp.try(u.id, format('delete from quality.rbi_tasks where id = %L', r.id),
                     format('select not exists (select 1 from quality.rbi_tasks where id = %L)', r.id)));
+    end loop;
+    for r in select x.t, x.id from (select 'project_meetings' t, id from quality.project_meetings union all
+                                    select 'project_fmea', id from quality.project_fmea union all
+                                    select 'sk_records', id from quality.sk_records) x where x.id like '%-m53' loop
+      insert into public.t053 values (p_phase, u.k, r.t, r.id, 'видит', pg_temp.sees(u.id, r.t, r.id));
+      insert into public.t053 values (p_phase, u.k, r.t, r.id, 'править',
+        pg_temp.try(u.id, format('update quality.%I set %s where id = %L', r.t,
+                                 case when r.t = 'sk_records' then 'text = ''m53''' else 'data = ''{"m": 53}''' end, r.id),
+                    format('select exists (select 1 from quality.%I where id = %L and %s)', r.t, r.id,
+                           case when r.t = 'sk_records' then 'text = ''m53''' else 'data = ''{"m": 53}''' end)));
     end loop;
     for r in select id from quality.construction_defects_v2 where id like '%-m53' loop
       insert into public.t053 values (p_phase, u.k, 'замечание СК', r.id, 'видит', pg_temp.sees(u.id, 'construction_defects_v2', r.id));
@@ -174,6 +185,12 @@ begin
   insert into quality.rbi_tasks(id, core_company_id, project_code, core_object_id, core_created_by, assigned_to_auth_user_id, core_counterparty_id, title, status) values
     ('t1-m53', ca, cont::text, p1, uadmin, ueng, null, 'т', 'pending'), ('t2-m53', ca, cont::text, p1, ueng, null, null, 'т', 'pending'),
     ('t3-m53', ca, cont::text, p2, uadmin, unoobj, null, 'т', 'pending'), ('t4-m53', ca, cont::text, p2, uadmin, null, f1, 'т', 'pending');
+  insert into quality.project_meetings(id, core_company_id, project_code, core_object_id, core_created_by, data) values
+    ('m1-m53', ca, cont::text, p1, uadmin, '{}'), ('m2-m53', ca, cont::text, p2, uadmin, '{}'), ('m3-m53', ca, cont::text, p1, upart, '{}');
+  insert into quality.project_fmea(id, core_company_id, project_code, core_object_id, core_created_by, data) values
+    ('f1-m53', ca, cont::text, p1, ueng, '{}');
+  insert into quality.sk_records(id, core_company_id, project_code, sk_number, sk_unique_key, core_object_id, core_created_by, core_counterparty_id, text) values
+    ('k1-m53', ca, cont::text, '1', 'k1', p1, uadmin, f1, 'т'), ('k2-m53', ca, cont::text, '2', 'k2', p2, uadmin, null, 'т');
   perform set_config('quality.object_bind', '', false);
   insert into quality.construction_defects_v2(id, core_company_id, core_created_by, "locationId", status, text, history) values
     ('d1-m53', ca, uadmin, n_o1, 'issued', 'т', '[]'), ('d2-m53', ca, uadmin, n_o2, 'issued', 'т', '[]');

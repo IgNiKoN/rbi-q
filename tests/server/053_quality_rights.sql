@@ -3,7 +3,7 @@
 -- все записи объекта без места и правит только свои; отказ сервера с текстом (чужая задача, удаление без права, проверка на
 -- чужом объекте), в том числе upsert-ом в обход экрана; исполнитель выполняет порученную задачу, но не переназначает;
 -- подрядчик — только своя фирма; «без объектов» — общие разделы без записей объектов; запись без объекта — автор и назначенные
--- на всю компанию; пункты проверки — по своей проверке; назначение: «объекты Качества» не принимаются, роль Качества
+-- на всю компанию; пункты проверки — по своей проверке; совещания и внешний СК (этап 2) — по объекту и своей группе действий; назначение: «объекты Качества» не принимаются, роль Качества
 -- назначается на объект; изоляция: чужая компания, модуль выключен. Всё откатывается; отчёт — ERROR P0001 «FAIL всего: N».
 -- Запуск: после 053_quality_rights_up.sql.
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
@@ -63,14 +63,14 @@ begin
                           'признак — только у Качества (Стройконтроль и План/Факт — как 052)');
   res := res || pg_temp.t((select count(distinct sort) = count(*) from core.permission_catalog), 'каталог: порядок без повторов');
   res := res || pg_temp.t((select count(*) from core.role_template_permissions where template_code = 'qc_engineer' and action = any(v_new)) = 15,
-                          'шаблон «Инженер»: видеть, проводить, ставить, выполнять, вести, удалять — без «Править чужие»');
+                          'шаблон «Инженер»: видеть, проводить, ставить, выполнять, вести, удалять — без «Редактирование чужих»');
   res := res || pg_temp.t((select count(*) from core.role_template_permissions where template_code = 'company_admin' and action = any(v_new)) = 17,
                           'шаблон «Администратор компании»: все 17');
   res := res || pg_temp.t((select array_agg(action order by action) from core.role_template_permissions where template_code = 'contractor_rep'
                             and action = any(v_new)) = array['quality.inspections.view', 'quality.meetings.view', 'quality.method.view',
                             'quality.reports.view', 'quality.sk.view', 'quality.tasks.view'], 'шаблон «Подрядчик»: только видеть');
-  res := res || pg_temp.t(exists (select 1 from core.permission_catalog where action = 'quality.edit' and group_name = 'Общие разделы'),
-                          'прежние ключи — «Общие разделы»');
+  res := res || pg_temp.t(exists (select 1 from core.permission_catalog where action = 'quality.edit' and group_name = 'База знаний и справочники'),
+                          'прежние ключи — «База знаний и справочники»');
 
   -- засев: А — два объекта (ЖК-1 с секциями), контейнер; Б — чужая; В — Качество выключено
   insert into core.companies(id, name, is_test) values (ca, 'Альфа 053т', true), (cb, 'Бета 053т', true), (cq, 'Без Качества 053т', true);
@@ -120,6 +120,10 @@ begin
   insert into quality.rbi_tasks(id, core_company_id, project_code, core_object_id, core_created_by, assigned_to_auth_user_id, core_counterparty_id, title, status) values
     ('t1-m71', ca, cont::text, p1, uboss, ueng, f1, 'т', 'pending'), ('t2-m71', ca, cont::text, p1, uboss, null, null, 'т', 'pending'),
     ('t3-m71', ca, cont::text, p2, ucomp, null, null, 'т', 'pending'), ('t4-m71', ca, cont::text, p1, ucomp, uown, null, 'т', 'pending');
+  insert into quality.project_meetings(id, core_company_id, project_code, core_object_id, core_created_by, data) values
+    ('m1-m71', ca, cont::text, p1, uboss, '{}'), ('m2-m71', ca, cont::text, p2, ucomp, '{}'), ('m3-m71', ca, cont::text, p1, usec, '{}');
+  insert into quality.sk_records(id, core_company_id, project_code, sk_number, sk_unique_key, core_object_id, core_created_by, core_counterparty_id, text) values
+    ('k1-m71', ca, cont::text, '1', 'k1', p1, ucomp, f1, 'т'), ('k2-m71', ca, cont::text, '2', 'k2', p2, ucomp, f2, 'т');
   perform set_config('quality.object_bind', '', true);
   insert into quality.shared_etalons(id, core_company_id, project_code, data) values ('e1-m71', ca, cont::text, '{}');
 
@@ -131,18 +135,18 @@ begin
   res := res || pg_temp.t(pg_temp.vis('shared_etalons') = 'e1', 'инженер ЖК-1: общие разделы (эталоны)');
   res := res || pg_temp.t(pg_temp.err('update quality.rbi_inspections set template_title = ''m'' where id = ''a1-m71''') = 'OK', 'своя проверка правится');
   e := pg_temp.err('update quality.rbi_inspections set template_title = ''m'' where id = ''a2-m71''');
-  res := res || pg_temp.t(e like '42501%Править чужие проверки%ЖК-1 053т%' and (select template_title from quality.rbi_inspections where id = 'a2-m71') = 'т',
+  res := res || pg_temp.t(e like '42501%Проверки: редактирование чужих%ЖК-1 053т%' and (select template_title from quality.rbi_inspections where id = 'a2-m71') = 'т',
                           'чужая проверка — отказ с текстом — ' || e);
   e := pg_temp.err('insert into quality.rbi_inspections(id, core_company_id, project_code, template_title, core_created_by) values '
                    || format('(%L, %L, %L, ''x'', %L) on conflict (core_company_id, id) do update set template_title = ''x''', 'a2-m71', ca, cont, ueng));
   res := res || pg_temp.t(e like '42501%', 'upsert чужой проверки в обход экрана — отказ — ' || e);
   e := pg_temp.err(format('insert into quality.rbi_inspections(id, core_company_id, project_code, "projectId", template_title) values (''x1-z71'', %L, %L, %L, ''x'')',
                           ca, cont, (select id from quality.project_objects where core_object_id = p2)));
-  res := res || pg_temp.t(e like '42501%' and e like '%Проводить проверки%ЖК-2 053т%', 'проверка на чужом объекте — отказ с текстом — ' || e);
+  res := res || pg_temp.t(e like '42501%' and e like '%Проверки: создание%ЖК-2 053т%', 'проверка на чужом объекте — отказ с текстом — ' || e);
   res := res || pg_temp.t(pg_temp.err(format('insert into quality.rbi_inspections(id, core_company_id, project_code, "projectId", template_title) values (''x2-z71'', %L, %L, %L, ''x'')',
                           ca, cont, po1)) = 'OK', 'проверка на своём объекте — можно');
   e := pg_temp.err('update quality.rbi_tasks set status = ''done'' where id = ''t2-m71''');
-  res := res || pg_temp.t(e like '42501%' and e like '%Править чужие задачи%', 'чужая задача без «Править чужие» — отказ с текстом — ' || e);
+  res := res || pg_temp.t(e like '42501%' and e like '%Задачи: редактирование чужих%', 'чужая задача без «Редактирование чужих» — отказ с текстом — ' || e);
   res := res || pg_temp.t(pg_temp.err('update quality.rbi_tasks set status = ''done'' where id = ''t1-m71''') = 'OK', 'исполнитель выполняет порученную задачу');
   e := pg_temp.err(format('update quality.rbi_tasks set assigned_to_auth_user_id = %L where id = ''t1-m71''', uown));
   res := res || pg_temp.t(e like '42501%', 'исполнитель не переназначает задачу — ' || e);
@@ -154,10 +158,10 @@ begin
   res := res || pg_temp.t(pg_temp.vis('rbi_inspections') = '' and pg_temp.vis('rbi_tasks') = 't4', 'без «Видеть все»: только своё и порученное — '
                           || pg_temp.vis('rbi_inspections') || '/' || pg_temp.vis('rbi_tasks'));
   e := pg_temp.err('delete from quality.rbi_tasks where id = ''t4-m71''');
-  res := res || pg_temp.t(e like '42501%Удалять задачи%' and exists (select 1 from quality.rbi_tasks where id = 't4-m71'),
+  res := res || pg_temp.t(e like '42501%Задачи: удаление%' and exists (select 1 from quality.rbi_tasks where id = 't4-m71'),
                           'удалить порученную без «Удалять задачи» — отказ с текстом — ' || e);
   e := pg_temp.err('update quality.rbi_tasks set is_deleted = true where id = ''t4-m71''');
-  res := res || pg_temp.t(e like '42501%' and e like '%Удалять задачи%', 'пометка удаления без права — отказ с текстом — ' || e);
+  res := res || pg_temp.t(e like '42501%' and e like '%Задачи: удаление%', 'пометка удаления без права — отказ с текстом — ' || e);
   reset role;
 
   -- 3. Участник секции: все записи объекта без места — видит, правит только свои
@@ -215,6 +219,36 @@ begin
   res := res || pg_temp.t(pg_temp.vis('rbi_inspections') = '', 'модуль выключен у компании: записей нет');
   reset role;
   update core.company_modules set enabled = true where company_id = ca and module = 'quality';
+
+  -- 9а. Этап 2: совещания и внешний СК — по объекту; часть объекта — видит всё без места, правит своё; подрядчик — своя фирма
+  perform pg_temp.as_user(ueng, ca);
+  res := res || pg_temp.t(pg_temp.vis('project_meetings') = '' and pg_temp.vis('sk_records') = '', 'роль без галочек совещаний и внешнего СК — их не видит — '
+                          || pg_temp.vis('project_meetings') || '/' || pg_temp.vis('sk_records'));
+  reset role;
+  perform pg_temp.as_user(usec, ca);
+  perform pg_temp.err('update quality.project_meetings set data = ''{"m": 1}'' where id in (''m1-m71'', ''m3-m71'')');
+  res := res || pg_temp.t((select string_agg(id, ',' order by id) from quality.project_meetings where id like '%-m71' and data = '{"m": 1}') is null,
+                          'секция: без «Совещания: редактирование» — не правит');
+  reset role;
+  perform pg_temp.as_user(uboss, ca);
+  res := res || pg_temp.t(pg_temp.vis('project_meetings') = 'm1,m3' and pg_temp.vis('sk_records') = 'k1', 'руководитель ЖК-1: совещания и СК ЖК-1 — '
+                          || pg_temp.vis('project_meetings') || '/' || pg_temp.vis('sk_records'));
+  perform pg_temp.err('update quality.project_meetings set data = ''{"m": 2}'' where id = ''m3-m71''');
+  res := res || pg_temp.t((select data from quality.project_meetings where id = 'm3-m71') = '{"m": 2}', 'руководитель: чужое совещание объекта правит');
+  reset role;
+  insert into core.company_role_permissions(role_id, company_id, action) values (r_eng, ca, 'quality.meetings.view'), (r_eng, ca, 'quality.meetings.edit');
+  perform pg_temp.as_user(usec, ca);
+  perform pg_temp.err('update quality.project_meetings set data = ''{"m": 3}'' where id in (''m1-m71'', ''m3-m71'')');
+  res := res || pg_temp.t((select string_agg(id, ',' order by id) from quality.project_meetings where id like '%-m71' and data = '{"m": 3}') = 'm3-m71',
+                          'секция с «Редактирование»: правит только своё совещание');
+  reset role;
+  perform pg_temp.as_user(unone, ca);
+  res := res || pg_temp.t(pg_temp.vis('project_meetings') = '', 'без объектов: совещаний нет');
+  reset role;
+  insert into core.company_role_permissions(role_id, company_id, action) values (r_ctr, ca, 'quality.sk.view');
+  perform pg_temp.as_user(uctr, ca);
+  res := res || pg_temp.t(pg_temp.vis('sk_records') = 'k1', 'подрядчик F1: внешний СК своей фирмы — ' || pg_temp.vis('sk_records'));
+  reset role;
 
   -- 9. Назначение: «объекты Качества» не принимаются, роль Качества — на объект
   perform pg_temp.as_user(uadm, ca);

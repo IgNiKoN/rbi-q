@@ -50,7 +50,7 @@ select t as "таблица", count(*) filter (where o is null and not coalesce(
 
 -- 3. Роли: какой набор новых действий Качества получат (по прежним ключам)
 select case when 'quality.edit' = any(acts) and acts && array['quality.manage', 'quality.scope.company', 'quality.scope.contractor']
-              then 'всё, включая «Править чужие»'
+              then 'всё, включая «Редактирование чужих»'
             when 'quality.edit' = any(acts) then 'видеть все, проводить, ставить, выполнять, вести, удалять свои'
             when 'quality.view' = any(acts) then 'только видеть'
             else 'ничего (нет прежних ключей Качества)' end as "новые действия",

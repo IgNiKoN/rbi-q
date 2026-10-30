@@ -73,6 +73,189 @@ create policy rbi_tasks_select on quality.rbi_tasks for select to authenticated
 create policy rbi_tasks_update on quality.rbi_tasks for update to authenticated
   using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'author'::text, COALESCE(core_created_by, quality.member_by_email(core_company_id, engineer_name)), assigned_to_auth_user_id, core_counterparty_id, core_object_id))
   with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'author'::text, COALESCE(core_created_by, quality.member_by_email(core_company_id, engineer_name)), assigned_to_auth_user_id, core_counterparty_id, core_object_id));
+-- Остальные записи Качества и общие таблицы внешнего СК / шаблоны отчётов — прежние правила.
+drop policy project_fmea_delete on quality.project_fmea;
+drop policy project_fmea_insert on quality.project_fmea;
+drop policy project_fmea_select on quality.project_fmea;
+drop policy project_fmea_update on quality.project_fmea;
+drop policy project_interventions_delete on quality.project_interventions;
+drop policy project_interventions_insert on quality.project_interventions;
+drop policy project_interventions_select on quality.project_interventions;
+drop policy project_interventions_update on quality.project_interventions;
+drop policy project_meetings_delete on quality.project_meetings;
+drop policy project_meetings_insert on quality.project_meetings;
+drop policy project_meetings_select on quality.project_meetings;
+drop policy project_meetings_update on quality.project_meetings;
+drop policy project_schedule_stages_delete on quality.project_schedule_stages;
+drop policy project_schedule_stages_insert on quality.project_schedule_stages;
+drop policy project_schedule_stages_select on quality.project_schedule_stages;
+drop policy project_schedule_stages_update on quality.project_schedule_stages;
+drop policy shared_report_snapshots_delete on quality.shared_report_snapshots;
+drop policy shared_report_snapshots_insert on quality.shared_report_snapshots;
+drop policy shared_report_snapshots_select on quality.shared_report_snapshots;
+drop policy shared_report_snapshots_update on quality.shared_report_snapshots;
+drop policy shared_report_templates_delete on quality.shared_report_templates;
+drop policy shared_report_templates_insert on quality.shared_report_templates;
+drop policy shared_report_templates_select on quality.shared_report_templates;
+drop policy shared_report_templates_update on quality.shared_report_templates;
+drop policy shared_reports_delete on quality.shared_reports;
+drop policy shared_reports_insert on quality.shared_reports;
+drop policy shared_reports_select on quality.shared_reports;
+drop policy shared_reports_update on quality.shared_reports;
+drop policy sk_category_map_delete on quality.sk_category_map;
+drop policy sk_category_map_insert on quality.sk_category_map;
+drop policy sk_category_map_select on quality.sk_category_map;
+drop policy sk_category_map_update on quality.sk_category_map;
+drop policy sk_contractor_map_delete on quality.sk_contractor_map;
+drop policy sk_contractor_map_insert on quality.sk_contractor_map;
+drop policy sk_contractor_map_select on quality.sk_contractor_map;
+drop policy sk_contractor_map_update on quality.sk_contractor_map;
+drop policy sk_data_bundles_delete on quality.sk_data_bundles;
+drop policy sk_data_bundles_insert on quality.sk_data_bundles;
+drop policy sk_data_bundles_select on quality.sk_data_bundles;
+drop policy sk_data_bundles_update on quality.sk_data_bundles;
+drop policy sk_import_batches_delete on quality.sk_import_batches;
+drop policy sk_import_batches_insert on quality.sk_import_batches;
+drop policy sk_import_batches_select on quality.sk_import_batches;
+drop policy sk_import_batches_update on quality.sk_import_batches;
+drop policy sk_mapping_delete on quality.sk_mapping;
+drop policy sk_mapping_insert on quality.sk_mapping;
+drop policy sk_mapping_select on quality.sk_mapping;
+drop policy sk_mapping_update on quality.sk_mapping;
+drop policy sk_records_delete on quality.sk_records;
+drop policy sk_records_insert on quality.sk_records;
+drop policy sk_records_select on quality.sk_records;
+drop policy sk_records_update on quality.sk_records;
+drop policy sk_volumes_delete on quality.sk_volumes;
+drop policy sk_volumes_insert on quality.sk_volumes;
+drop policy sk_volumes_select on quality.sk_volumes;
+drop policy sk_volumes_update on quality.sk_volumes;
+create policy project_fmea_delete on quality.project_fmea for delete to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_fmea_insert on quality.project_fmea for insert to authenticated
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_fmea_select on quality.project_fmea for select to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.view}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_fmea_update on quality.project_fmea for update to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id))
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_interventions_delete on quality.project_interventions for delete to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_interventions_insert on quality.project_interventions for insert to authenticated
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_interventions_select on quality.project_interventions for select to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.view}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_interventions_update on quality.project_interventions for update to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id))
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_meetings_delete on quality.project_meetings for delete to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_meetings_insert on quality.project_meetings for insert to authenticated
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_meetings_select on quality.project_meetings for select to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.view}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_meetings_update on quality.project_meetings for update to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id))
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_schedule_stages_delete on quality.project_schedule_stages for delete to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_schedule_stages_insert on quality.project_schedule_stages for insert to authenticated
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_schedule_stages_select on quality.project_schedule_stages for select to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.view}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy project_schedule_stages_update on quality.project_schedule_stages for update to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id))
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy shared_report_snapshots_delete on quality.shared_report_snapshots for delete to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy shared_report_snapshots_insert on quality.shared_report_snapshots for insert to authenticated
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy shared_report_snapshots_select on quality.shared_report_snapshots for select to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.view}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy shared_report_snapshots_update on quality.shared_report_snapshots for update to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id))
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy shared_report_templates_delete on quality.shared_report_templates for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_report_templates_insert on quality.shared_report_templates for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_report_templates_select on quality.shared_report_templates for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy shared_report_templates_update on quality.shared_report_templates for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_reports_delete on quality.shared_reports for delete to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy shared_reports_insert on quality.shared_reports for insert to authenticated
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy shared_reports_select on quality.shared_reports for select to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.view}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy shared_reports_update on quality.shared_reports for update to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id))
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy sk_category_map_delete on quality.sk_category_map for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_category_map_insert on quality.sk_category_map for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_category_map_select on quality.sk_category_map for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy sk_category_map_update on quality.sk_category_map for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_contractor_map_delete on quality.sk_contractor_map for delete to authenticated
+  using ((quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]) AND (NOT quality.contractor_only(core_company_id, core_project_id))));
+create policy sk_contractor_map_insert on quality.sk_contractor_map for insert to authenticated
+  with check ((quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]) AND (NOT quality.contractor_only(core_company_id, core_project_id))));
+create policy sk_contractor_map_select on quality.sk_contractor_map for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy sk_contractor_map_update on quality.sk_contractor_map for update to authenticated
+  using ((quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]) AND (NOT quality.contractor_only(core_company_id, core_project_id))))
+  with check ((quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]) AND (NOT quality.contractor_only(core_company_id, core_project_id))));
+create policy sk_data_bundles_delete on quality.sk_data_bundles for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_data_bundles_insert on quality.sk_data_bundles for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_data_bundles_select on quality.sk_data_bundles for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy sk_data_bundles_update on quality.sk_data_bundles for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_import_batches_delete on quality.sk_import_batches for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_import_batches_insert on quality.sk_import_batches for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_import_batches_select on quality.sk_import_batches for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy sk_import_batches_update on quality.sk_import_batches for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_mapping_delete on quality.sk_mapping for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_mapping_insert on quality.sk_mapping for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_mapping_select on quality.sk_mapping for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy sk_mapping_update on quality.sk_mapping for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_records_delete on quality.sk_records for delete to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy sk_records_insert on quality.sk_records for insert to authenticated
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy sk_records_select on quality.sk_records for select to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.view}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy sk_records_update on quality.sk_records for update to authenticated
+  using (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id))
+  with check (quality.record_visible(core_company_id, core_project_id, '{quality.edit}'::text[], 'contractor'::text, core_created_by, NULL::uuid, core_counterparty_id, core_object_id));
+create policy sk_volumes_delete on quality.sk_volumes for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_volumes_insert on quality.sk_volumes for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy sk_volumes_select on quality.sk_volumes for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy sk_volumes_update on quality.sk_volumes for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
 drop function quality.quality_rights_guard();
 drop function quality.row_exists(text, text, uuid);
 drop function quality.is_platform_admin();

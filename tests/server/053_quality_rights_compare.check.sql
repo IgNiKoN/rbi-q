@@ -21,7 +21,10 @@ select b.usr, b.tbl, b.rec, b.op, b.ok before, a.ok after,
               and (b.tbl = 'эталон'
                    or b.tbl in ('проверка', 'задача', 'пункт') and b.op = 'видит' and b.rec in ('i1-m53', 'i2-m53', 'i5-m53', 'it1-m53', 't1-m53', 't2-m53')
                    or b.tbl = 'проверка' and b.op = 'создать на объекте'
-                   or b.usr = 'прораб + Качество секция 1' and b.tbl = 'проверка' and b.rec = 'i5-m53')
+                   or b.usr = 'прораб + Качество секция 1' and b.tbl = 'проверка' and b.rec = 'i5-m53'
+                   -- этап 2: совещания, FMEA, внешний СК объекта; часть объекта — правит только своё (m3)
+                   or b.tbl in ('project_meetings', 'project_fmea', 'sk_records') and b.rec in ('m1-m53', 'm3-m53', 'f1-m53', 'k1-m53')
+                      and (b.op = 'видит' or b.usr = 'прораб + Качество ЖК-1' or b.rec = 'm3-m53'))
            then 'в: участие на объект работает в Качестве'
        end why
   from public.t053 b join public.t053 a on a.usr = b.usr and a.tbl = b.tbl and a.rec = b.rec and a.op = b.op and a.phase = 'после'
