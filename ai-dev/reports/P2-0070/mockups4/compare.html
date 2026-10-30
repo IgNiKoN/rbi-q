@@ -1,0 +1,40 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Права: макет</title>
+<style>
+:root{--bg:#f6f3ee;--card:#fff;--text:#1d2433;--muted:#667085;--line:#e4ded4;--acc:#c79a5a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111827;--card:#1a2232;--text:#e8ecf3;--muted:#98a2b3;--line:#2b3446}}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:8px 0}h2{font-size:18px;margin:28px 0 6px}p{color:var(--muted);max-width:90ch;margin:4px 0 10px}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px;align-items:start}
+figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px}
+figcaption{font-weight:600;margin:2px 4px 8px}figcaption span{color:var(--acc)}
+img{width:100%;height:auto;border-radius:6px;display:block}
+.phone img{max-width:375px;margin:0 auto}
+</style></head><body><main>
+<h1>P2-0070 — «Сотрудники и доступ»: сейчас / предлагаю</h1>
+<p>Настоящие экраны приложения на стенде, данные — из локальной копии сервера (роли из шаблонов, участие: вся компания, объект, секция, подрядчик). Боевой сервер не трогали.</p>
+
+<h2>1. «Роли и права» — группы из каталога сервера</h2>
+<p>Сейчас: действия Стройконтроля и Качества свалены в «Прочее». Предлагаю: заголовки модулей (План/Факт, Качество, Стройконтроль, Компания) и группы внутри; у Стройконтроля — «Замечания», «Приёмка», «Передача», «Настройки», «Прежний доступ» (старые ключи — их читают Стройконтроль 1 и Качество). Новое действие любого модуля появится само, без правки программы. Ни одна галочка не пропала.</p>
+<div class="pair">
+<figure><figcaption>Сейчас · 1440, тёмная</figcaption><img src="now-roles-1440-dark.jpg"></figure>
+<figure><figcaption><span>Предлагаю</span> · 1440, тёмная</figcaption><img src="new-roles-1440-dark.jpg"></figure>
+<figure><figcaption>Сейчас · Руководитель проекта</figcaption><img src="now-roles-pm-1440.jpg"></figure>
+<figure><figcaption><span>Предлагаю</span> · Руководитель проекта</figcaption><img src="new-roles-pm-1440.jpg"></figure>
+<figure class="phone"><figcaption>Сейчас · телефон, список ролей</figcaption><img src="now-roles-list-375.jpg"></figure>
+<figure class="phone"><figcaption><span>Предлагаю</span> · телефон, список ролей</figcaption><img src="new-roles-list-375.jpg"></figure>
+<figure class="phone"><figcaption>Сейчас · телефон, роль</figcaption><img src="now-roles-375.jpg"></figure>
+<figure class="phone"><figcaption><span>Предлагаю</span> · телефон, роль</figcaption><img src="new-roles-375.jpg"></figure>
+</div>
+
+<h2>2. Новая вкладка «Кто что может» (только просмотр)</h2>
+<p>Объект → место (весь объект, корпус, секция) → модуль (Стройконтроль, План/Факт) → люди × действия. Колонки — из каталога. Человек с участием на часть объекта — с пометкой «только Корпус 1 · Секция 2». Изменить — в «Ролях и правах» и «Сотрудниках». Сервер проверяет то же самое.</p>
+<div class="pair">
+<figure><figcaption><span>Предлагаю</span> · Стройконтроль, весь объект · 1440 тёмная</figcaption><img src="new-who-sk-1440-dark.jpg"></figure>
+<figure><figcaption><span>Предлагаю</span> · Стройконтроль, Секция 1 (секции 2 нет)</figcaption><img src="new-who-sk-sec1-1440.jpg"></figure>
+<figure><figcaption><span>Предлагаю</span> · План/Факт, весь объект (широкая таблица — прокрутка вбок внутри карточки)</figcaption><img src="new-who-pf-1440.jpg"></figure>
+<figure class="phone"><figcaption><span>Предлагаю</span> · телефон, Стройконтроль</figcaption><img src="new-who-sk-375.jpg"></figure>
+<figure class="phone"><figcaption><span>Предлагаю</span> · телефон, План/Факт, Секция 2, тёмная</figcaption><img src="new-who-pf-375-dark.jpg"></figure>
+</div>
+</main></body></html>
