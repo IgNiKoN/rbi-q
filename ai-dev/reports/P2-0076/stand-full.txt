@@ -1,0 +1,14 @@
+# Полный стенд P2-0076 (после влития main fdb3824): 6 потоков run.mjs, 82 сценария
+0: cold375 cache w-slow double-start r-middeploy r-allow m-hang v-summary1440 d-device s-reject-retry s-foreign pf-drop w1440
+1: cold1440 otheruser w-hang double-start-nolocks r-partial r-launch m-hang375 v-other d-quality-only s-reject-retry-1440-dark s-leader pf-batch t375
+2: rescue screen375 w-flap reasons375 r-tabs r-return m-revoke v-prefetch375 d-screens s-own-first q-ids pf-batch1440-dark t1440
+3: expired screen768 w-drop reasons1440-dark r-chunk r-queue m-first v-prefetch1440 s-module-off s-contractor q-ids-other c-who375
+4: stale14 screen1440 w-5xx w-tabs r-requests r-transition m-other f-field s-new-kind s-kinds pf-offline c-who1440
+5: invalid w-offline edit-mid r-deploy r-delta r-size v-summary375 f-manager s-pull-scope s-rename pf-offline1440 w375
+t0: Итог: PASS 86, FAIL 0
+t1: Итог: PASS 77, FAIL 0
+t2: Итог: PASS 105, FAIL 0
+t3: Итог: PASS 84, FAIL 0
+t4: Итог: PASS 59, FAIL 0
+t5: Итог: PASS 59, FAIL 0
+Сумма: PASS 470, FAIL 0 (t0, t2, t3 перезапущены: при первом запуске порт занят остановленным прежним прогоном — EADDRINUSE)

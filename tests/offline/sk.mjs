@@ -75,7 +75,13 @@ const RPC = {
     const cnt = new Map();
     for (const r of records()) for (const kind of Object.keys(ID)) { const k = key(recText(kind, r)); if (k) cnt.set(kind + '|' + k, (cnt.get(kind + '|' + k) || 0) + 1); }
     const items = [...links.entries()].filter(([k, l]) => cnt.get(k) && (a.p_all || !l.target)).map(([k, l]) => ({ id: k, kind: l.kind, text: l.text, target: l.target, matched_by: l.by, records: cnt.get(k) }));
-    return { items, can_edit: true, can_edit_contractor: true, can_create_counterparty: false };
+    return { items, can_edit: true, can_edit_contractor: true, can_create_counterparty: true };
+  },
+  // «Компания»: создать контрагента (право проверяет сервер; стенд — как у администратора компании)
+  pf_counterparties_save: (u, a) => {
+    calls.push('cp_save');
+    if (!/^(\d{10}|\d{12})$/.test(String(a.p_inn || ''))) return { __status: 400, code: '22023', message: 'ИНН — 10 цифр (организация) или 12 цифр (ИП)' };
+    const id = 'cp-new-' + (CP.length + 1); CP.push({ id, name: String(a.p_name).trim() }); return id;
   },
   sk_link_set: (u, a) => {
     calls.push('set');
@@ -126,7 +132,7 @@ const overflow = (page) => page.evaluate(() => document.documentElement.scrollWi
 async function scenario(tag, width, height, scheme) {
   note(`== ${tag}: загрузка → шаг сопоставления → «Разобрать» → выбор / «Отменить» → Аналитика по id → повторная загрузка → фильтр по месту`);
   freshProfile(out, tag);
-  links.clear(); stamped.clear(); calls.length = 0;
+  links.clear(); stamped.clear(); calls.length = 0; CP.splice(3);
   await start();
   Object.assign(stand, { rpc: RPC, serve: { get sk_records() { return records().map(stamp); } } });
   const file = join(out, 'pk-sk.xlsx');
@@ -184,6 +190,20 @@ async function scenario(tag, width, height, scheme) {
     await page.waitForTimeout(1500);
     list = await pending(page);
     ok(list.length === 3 && !list.includes('Охрана труда и ПБ (ПК СК)'), `${tag}: категория сопоставлена из списка — осталось 3`, JSON.stringify(list));
+    // «Создать контрагента» (право «Компании»): неверный ИНН — текст сервера; верный — создан и сопоставлен
+    const newIdx = await page.evaluate(() => [...document.querySelectorAll('[data-sk-link-item]')].find((e) => /ИП Новиков/.test(e.innerText))?.getAttribute('data-sk-link-item'));
+    await page.click(`[data-sk-cp-open="${newIdx}"]`);
+    await page.fill('[data-sk-cp-inn]', '123');
+    await page.click(`[data-sk-cp-save="${newIdx}"]`);
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: join(out, `${tag}-3b-create.png`) });
+    await page.waitForTimeout(600);
+    ok(await page.evaluate(() => /ИНН — 10 цифр/.test(document.body.innerText)), `${tag}: «Создать контрагента» с неверным ИНН — отказ сервера с текстом`);
+    await page.fill('[data-sk-cp-inn]', '7700000123');
+    await page.click(`[data-sk-cp-save="${newIdx}"]`);
+    await page.waitForTimeout(2000);
+    list = await pending(page);
+    ok(list.length === 2 && !list.includes('ИП Новиков') && CP.some((c) => c.name === 'ИП Новиков'), `${tag}: «Создать контрагента» — создан в «Компании» и сопоставлен`, JSON.stringify(list));
 
     // 4. Аналитика: два написания → один подрядчик, несопоставленное — «не разобрано»; синхронизация подтянула id
     await page.evaluate(() => window.RBI?.services?.sync?.trigger?.('manual')).catch(() => {});
@@ -197,7 +217,7 @@ async function scenario(tag, width, height, scheme) {
     });
     ok(ana.ids.filter((x) => x[1] === 'cp-1').length === 3, `${tag}: после синхронизации у трёх замечаний — один контрагент «ООО Ромашка»`, JSON.stringify(ana.ids));
     ok(/ООО Ромашка/.test(ana.text) && !/Ромашка ООО(?! ·)/.test(ana.text), `${tag}: Аналитика — один подрядчик «ООО Ромашка»`);
-    ok(/ИП Новиков · не разобрано/.test(ana.text), `${tag}: несопоставленная фирма — «не разобрано»`);
+    ok(/ИП Новиков/.test(ana.text) && !/ИП Новиков · не разобрано/.test(ana.text), `${tag}: созданный контрагент — в Аналитике без пометки`);
     await page.screenshot({ path: join(out, `${tag}-4-analytics.png`), fullPage: true });
 
     // 5. Повторная загрузка того же файла — «Разобрать» не растёт

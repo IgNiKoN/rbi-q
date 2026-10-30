@@ -379,11 +379,13 @@ function _undoHtml() {
 var _state = { items: [], rights: {}, container: null };
 
 /** Вид «Разобрать»: тексты без записи «Компании», по видам; выбор применяется ко всем замечаниям проекта с этим текстом. */
-async function sk_renderLinks(container) {
+async function sk_renderLinks(container, force) {
     var box = container || document.getElementById('sk-view-links');
     if (!box) return;
+    // повторный вызов (синхронизация перерисовывает раздел) — список на месте до ответа сервера, ввод человека не сбрасывается
+    var again = box === _state.container && box.__skLinksPainted;
     _state.container = box;
-    box.innerHTML = '<div class="text-center py-6 text-muted text-rbi-caption font-bold uppercase">' + _esc(_t('quality.sk.links.loading', 'Загружаем «Разобрать»…')) + '</div>';
+    if (!again) box.innerHTML = '<div class="text-center py-6 text-muted text-rbi-caption font-bold uppercase">' + _esc(_t('quality.sk.links.loading', 'Загружаем «Разобрать»…')) + '</div>';
     var res;
     try {
         var both = await Promise.all([_rpc('sk_links_list', { p_project: _project(), p_all: false }, 20000), skLoadChoices(true)]);
@@ -392,10 +394,28 @@ async function sk_renderLinks(container) {
         box.innerHTML = '<div class="text-center py-6 text-muted text-rbi-caption font-bold">' + _esc(_errText(e)) + '</div>';
         return;
     }
-    _state.items = (res && res.items) || [];
+    var items = (res && res.items) || [];
+    _setBadge(items.length);
+    if (again && !force && (_createFor || box.contains(document.activeElement))) return;   // человек вводит — не мешать (своё действие — force)
+    var keep = again ? _picked(box) : null;
+    _state.items = items;
     _state.rights = res || {};
-    _setBadge(_state.items.length);
     _paint();
+    if (keep) Object.keys(keep).forEach(function (text) {
+        var i = _state.items.findIndex(function (it) { return it.text === text; });
+        var sel = i >= 0 && box.querySelector('[data-sk-link-select="' + i + '"]');
+        if (sel) sel.value = keep[text];
+    });
+}
+
+/** Выбранное в списках «Другая запись…» — по тексту (перерисовка не сбрасывает выбор). */
+function _picked(box) {
+    var out = {};
+    box.querySelectorAll('[data-sk-link-select]').forEach(function (sel) {
+        var it = _state.items[+sel.getAttribute('data-sk-link-select')];
+        if (it && sel.value) out[it.text] = sel.value;
+    });
+    return out;
 }
 
 function _paint() {
@@ -420,6 +440,7 @@ function _paint() {
         });
     }
     box.innerHTML = html;
+    box.__skLinksPainted = true;
     if (!box.__skLinksBound) { box.__skLinksBound = true; box.addEventListener('click', _onClick); }
 }
 
@@ -435,7 +456,7 @@ async function _set(it, target, isUndo) {
         _undo = isUndo ? null : { kind: it.kind, text: it.text, previous: res.previous || null, label: _labelOf(it.kind, target), records: res.records };
         _patchLocal(it.kind, it.text, res.target || null);
         if (isUndo) toast(_t('quality.sk.links.undone', 'Выбор отменён'));
-        await sk_renderLinks(_state.container);
+        await sk_renderLinks(_state.container, true);
         if (typeof window.triggerSync === 'function') setTimeout(function () { window.triggerSync('silent'); }, 300);
         else if (window.RBI && window.RBI.services && window.RBI.services.sync) setTimeout(function () { window.RBI.services.sync.trigger('silent'); }, 300);
     } catch (e) {

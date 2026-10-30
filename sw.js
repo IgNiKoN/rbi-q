@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.31-7965590d',
+  version: '2026.10.31-44c07803',
   date: '2026-10-31',
-  digest: '7965590d',
+  digest: '44c07803',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -196,7 +196,7 @@ const APP_RELEASE = {
     "js/modules/quality/features/shared/plan-pin-print.js": ["47b8efae58063d79",5459,"quality"],
     "js/modules/quality/features/sk/index.js": ["14df2a9bdbe9fe9d",758,"quality"],
     "js/modules/quality/features/sk/sk.actions.js": ["05664b95a6c8583a",82442,"quality"],
-    "js/modules/quality/features/sk/sk.links.js": ["92485ebeaf7a487e",32043,"quality"],
+    "js/modules/quality/features/sk/sk.links.js": ["27a909587418e737",33349,"quality"],
     "js/modules/quality/features/sk/sk.manifest.js": ["68fcbece42cb1dbf",1643,""],
     "js/modules/quality/features/sk/sk.module.js": ["46454369d44799d0",9544,"quality"],
     "js/modules/quality/features/sk/sk.render.js": ["27cb5f9da4fd965a",107408,"quality"],
