@@ -14,6 +14,7 @@
 | Исполнитель: «Исполнитель. P2-xxxx» | + `handoff/LATEST_ARCHITECT_PLAN.md`, карточка `tasks/<ID>.md`, [`roles/EXECUTOR.md`](roles/EXECUTOR.md), [`roles/TESTER.md`](roles/TESTER.md) (самопроверка), [`roles/DOCUMENTER.md`](roles/DOCUMENTER.md) (документы); нужные строки `FILE_MAP.md` | весь `FILE_MAP.md`, `ROADMAP.md` |
 | Экран / интерфейс | [`standards/DESIGN_SYSTEM.md`](standards/DESIGN_SYSTEM.md), [`standards/UI_COMPONENTS.md`](standards/UI_COMPONENTS.md), [`specs/2026-10-27-screens-and-layouts.md`](specs/2026-10-27-screens-and-layouts.md) | — |
 | Вход, роли, права, RLS | [`standards/AUTH_AND_ACCESS.md`](standards/AUTH_AND_ACCESS.md), [`standards/SYNC_AND_ACCESS.md`](standards/SYNC_AND_ACCESS.md), [`standards/SINGLE_SOURCE_OF_TRUTH.md`](standards/SINGLE_SOURCE_OF_TRUTH.md) | — |
+| Новая таблица / миграция | [`standards/DATA_TABLES.md`](standards/DATA_TABLES.md) (состав полей, классы исключений, сторож), имена — [`reference/GLOSSARY.md`](reference/GLOSSARY.md), опись и план переезда — `reports/P2-0069/` | — |
 | Сервер, миграции, выкладка | [`../docs/SERVERS.md`](../docs/SERVERS.md), [`../docs/EDGE_FUNCTIONS.md`](../docs/EDGE_FUNCTIONS.md), `reports/<ID>/release-plan.md` прошлого блока | — |
 | Бизнес-требования План/Факт | [`reference/TZ_PLAN_FACT.md`](reference/TZ_PLAN_FACT.md) (коды PTO/PR/LP/MN/NFR), [`specs/2026-10-27-planfact-vs-tz.md`](specs/2026-10-27-planfact-vs-tz.md) | — |
 | Слово непонятно | [`reference/GLOSSARY.md`](reference/GLOSSARY.md) | — |
