@@ -632,7 +632,8 @@ window.ConstManager = {
             if (isStale()) return;
 
             // 2. Рендерим PDF
-            const pdf = await pdfjsLib.getDocument({ data: pdfArrayBuffer }).promise;
+            const pdfjs = window.rbiPdfjs ? await window.rbiPdfjs() : window.pdfjsLib;
+            const pdf = await pdfjs.getDocument({ data: pdfArrayBuffer }).promise;
             const page = await pdf.getPage(1);
             if (isStale()) return;
 

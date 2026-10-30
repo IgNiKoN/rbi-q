@@ -1141,9 +1141,7 @@ async function generateAiHintForDefect() {
  */
 async function extractTextFromPdf(pdfDataUrl) {
     try {
-        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = './libs/pdfjs/pdf.worker.min.js';
-        }
+        const pdfjsLib = window.rbiPdfjs ? await window.rbiPdfjs() : window.pdfjsLib;
 
         let arrayBuffer;
         if (pdfDataUrl.startsWith('data:')) {

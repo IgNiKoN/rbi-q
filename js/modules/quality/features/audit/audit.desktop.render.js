@@ -530,7 +530,9 @@ function paintPlanPanel() {
 }
 
 async function renderPdfPreview(stage, pdfUrl, pin, token) {
-  const pdfjs = window.pdfjsLib;
+  let pdfjs = null;
+  try { pdfjs = window.rbiPdfjs ? await window.rbiPdfjs() : window.pdfjsLib; } catch (_e) { pdfjs = null; }
+  if (token !== _previewToken) return;
   if (!pdfjs) {
     stage.innerHTML = planEmptyHtml('nopdfjs');
     return;

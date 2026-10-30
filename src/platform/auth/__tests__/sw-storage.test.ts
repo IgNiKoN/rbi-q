@@ -31,6 +31,16 @@ test('файл компании: …/public/quality-… → …/authenticated/�
   assert.equal(fetched[0].init.headers.Authorization, 'Bearer TOK');
 });
 
+test('P2-0057: план места ядра (…/public/core-place-plans/…) — тоже с входом вошедшего; похожие бакеты — нет', async () => {
+  const { sw, fetched, fire } = setup();
+  await sw.message({ type: 'P2_STORAGE_TOKEN', token: 'TOK' });
+  const res = await fire(`${SRV}/storage/v1/object/public/core-place-plans/c1/p1/l1/d1.pdf`);
+  assert.equal(res.from, 'net');
+  assert.equal(fetched[0].url, `${SRV}/storage/v1/object/authenticated/core-place-plans/c1/p1/l1/d1.pdf`);
+  assert.equal(fetched[0].init.headers.Authorization, 'Bearer TOK');
+  assert.equal(fire(`${SRV}/storage/v1/object/public/core-place-plans-x/c1/a.pdf`), null);
+});
+
 test('файлы РБИ (публичные бакеты) и чужие серверы — без вмешательства, токен не уходит', () => {
   const { sw, fetched, fire } = setup();
   void sw.message({ type: 'P2_STORAGE_TOKEN', token: 'TOK' });

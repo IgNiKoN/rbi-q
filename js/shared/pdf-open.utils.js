@@ -220,7 +220,9 @@
         destroyPreview(modal);
         pagesRoot.innerHTML = '<div class="text-white/90 text-center p-8 text-sm font-semibold">Загрузка предпросмотра…</div>';
 
-        if (!window.pdfjsLib || typeof window.pdfjsLib.getDocument !== 'function') {
+        var pdfjs = null;
+        try { pdfjs = window.rbiPdfjs ? await window.rbiPdfjs() : window.pdfjsLib; } catch (_) { pdfjs = null; }
+        if (!pdfjs || typeof pdfjs.getDocument !== 'function') {
             pagesRoot.innerHTML =
                 '<div class="text-amber-200 text-center p-6 text-sm font-semibold">' +
                 'Предпросмотр недоступен. Нажмите «В браузере».</div>';
@@ -230,7 +232,7 @@
         var gen = modal._rbiPdfGen;
         try {
             var dataCopy = arrayBuffer.slice ? arrayBuffer.slice(0) : arrayBuffer;
-            var pdf = await window.pdfjsLib.getDocument({ data: dataCopy }).promise;
+            var pdf = await pdfjs.getDocument({ data: dataCopy }).promise;
             if (gen !== modal._rbiPdfGen) {
                 try { pdf.destroy(); } catch (_) { /* ignore */ }
                 return;

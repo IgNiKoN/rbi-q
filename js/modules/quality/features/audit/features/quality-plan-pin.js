@@ -143,8 +143,12 @@ function _bindPlanPinI18n() {
   }
 }
 
-function _pdfjs() {
-  return window.pdfjsLib || null;
+async function _pdfjs() {
+  try {
+    return (window.rbiPdfjs ? await window.rbiPdfjs() : window.pdfjsLib) || null;
+  } catch (_e) {
+    return null;
+  }
 }
 
 function _norm(s) {
@@ -619,7 +623,7 @@ async function _openPlanViewer(floorId, viewerOpts) {
     _toast(_t('quality.audit.plan.no_pdf_settings', '⚠️ У этажа нет PDF-плана. Загрузите план в Настройках.'));
     return;
   }
-  const pdfjs = _pdfjs();
+  const pdfjs = await _pdfjs();
   if (!pdfjs || typeof pdfjs.getDocument !== 'function') {
     _toast(_t('quality.audit.plan.pdfjs_missing', '⚠️ PDF-библиотека недоступна'));
     return;

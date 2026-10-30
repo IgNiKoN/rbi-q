@@ -18,6 +18,7 @@ import { SCOPE_CSS } from './CompanyScope.ts';
 import { PROJECTS_CSS } from './ProjectsTab.ts';
 import { OBJECTS_CSS } from './ObjectsPlaces.ts';
 import { CHESS_CSS } from './PlacesChess.ts';
+import { PLANS_CSS } from './PlacePlans.ts';
 import { IMPORT_CSS } from './PlacesImport.ts';
 import { UNITS_CSS } from './UnitsTab.ts';
 import type { CompanyApi } from './company.service.ts';
@@ -53,7 +54,7 @@ function ensureStyle(doc: Document): void {
   if (doc.getElementById(STYLE_ID)) return;
   const style = doc.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = PLATFORM_AUTH_CSS + P2_UI_CSS + P2_REGISTRY_CSS + P2_PAGE_CSS + P2_TREE_CSS + COMPANY_CSS + SCOPE_CSS + PROJECTS_CSS + OBJECTS_CSS + CHESS_CSS + IMPORT_CSS + UNITS_CSS;
+  style.textContent = PLATFORM_AUTH_CSS + P2_UI_CSS + P2_REGISTRY_CSS + P2_PAGE_CSS + P2_TREE_CSS + COMPANY_CSS + SCOPE_CSS + PROJECTS_CSS + OBJECTS_CSS + CHESS_CSS + PLANS_CSS + IMPORT_CSS + UNITS_CSS;
   doc.head.appendChild(style);
 }
 

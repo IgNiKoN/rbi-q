@@ -47,8 +47,12 @@ function _locations() {
   }
 }
 
-function _pdfjs() {
-  return window.pdfjsLib || null;
+async function _pdfjs() {
+  try {
+    return (window.rbiPdfjs ? await window.rbiPdfjs() : window.pdfjsLib) || null;
+  } catch (_e) {
+    return null;
+  }
 }
 
 async function _loadPdfArrayBuffer(pdfUrl) {
@@ -77,7 +81,7 @@ async function _loadPdfArrayBuffer(pdfUrl) {
  * @returns {Promise<string|null>}
  */
 async function _pdfPage1DataUrl(pdfUrl) {
-  const pdfjs = _pdfjs();
+  const pdfjs = await _pdfjs();
   if (!pdfjs || typeof pdfjs.getDocument !== 'function') return null;
   const buf = await _loadPdfArrayBuffer(pdfUrl);
   const pdf = await pdfjs.getDocument({ data: buf }).promise;

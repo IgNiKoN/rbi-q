@@ -84,9 +84,13 @@ function _isCoreLed(svc, id) {
 }
 function _corePlacesHtml() {
     return `<div data-loc-dir-core-places class="rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/20 p-3 space-y-2">
-            <div class="text-[11px] font-bold text-teal-800 dark:text-teal-300">${_escape(_t('settings.admin.locations.core_places', 'Места этого проекта ведутся в «Компания → Объекты и места». Здесь — просмотр и планы этажей и квартир.'))}</div>
+            <div class="text-[11px] font-bold text-teal-800 dark:text-teal-300">${_escape(_t('settings.admin.locations.core_places_v2', 'Места и PDF-планы этого проекта ведутся в «Компания → Объекты и места». Здесь — просмотр.'))}</div>
             <a href="${CORE_PLACES_HREF}" class="inline-block bg-teal-600 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase">${_escape(_t('settings.admin.locations.core_places_link', 'Править в Компании →'))}</a>
         </div>`;
+}
+/** P2-0057: план места ядра загружается в «Компании» (документ ядра с версиями) — здесь ссылка вместо загрузки. */
+function _corePlanLinkHtml() {
+    return `<a href="${CORE_PLACES_HREF}" data-loc-dir-core-plan class="inline-block bg-teal-600 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase">${_escape(_t('settings.admin.locations.core_plan_link', 'Загрузить в Компании →'))}</a>`;
 }
 
 function _childType(parentType) {
@@ -307,7 +311,7 @@ function _editorHtml(svc) {
                     ? `<div class="text-[11px] mb-2">📄 ${_escape(plan.pdf_name || 'plan.pdf')}
                         <a href="${_escape(plan.pdf_url)}" target="_blank" class="text-indigo-600 ml-2">${_escape(_t('settings.admin.locations.open', 'открыть'))}</a></div>`
                     : '<div class="text-[11px] text-amber-600 mb-2">' + _escape(_t('settings.admin.locations.plan_missing', 'План не загружен')) + '</div>'}
-                ${can ? `<input id="loc-dir-pdf" type="file" accept="application/pdf" class="text-[11px] w-full" />
+                ${can && core ? _corePlanLinkHtml() : can ? `<input id="loc-dir-pdf" type="file" accept="application/pdf" class="text-[11px] w-full" />
                 <button type="button" data-loc-dir-action="upload-pdf" data-id="${_escape(node.id)}"
                     class="mt-2 bg-indigo-600 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase">${_escape(_t('settings.admin.locations.upload_pdf', 'Загрузить PDF'))}</button>` : ''}
             </div>` : ''}
@@ -318,7 +322,7 @@ function _editorHtml(svc) {
                     ? `<div class="text-[11px] mb-2">📄 ${_escape(aptUnit.pdf_name || 'plan.pdf')}
                         <a href="${_escape(aptPdfUrl)}" target="_blank" class="text-indigo-600 ml-2">${_escape(_t('settings.admin.locations.open', 'открыть'))}</a></div>`
                     : '<div class="text-[11px] text-amber-600 mb-2">' + _escape(_t('settings.admin.locations.plan_missing', 'План не загружен')) + '</div>'}
-                ${can ? `<input id="loc-dir-unit-pdf" type="file" accept="application/pdf" class="text-[11px] w-full" />
+                ${can && core ? _corePlanLinkHtml() : can ? `<input id="loc-dir-unit-pdf" type="file" accept="application/pdf" class="text-[11px] w-full" />
                 <div class="flex flex-wrap gap-2 mt-2">
                     <button type="button" data-loc-dir-action="upload-unit-pdf" data-id="${_escape(node.id)}"
                         class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase">${_escape(_t('settings.admin.locations.upload_pdf', 'Загрузить PDF'))}</button>

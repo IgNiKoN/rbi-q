@@ -71,7 +71,8 @@ function session(user, ttl = 3600) {
 /** P2-0061: names — ФИО пользователей стенда по id (смена ФИО в «Сотрудниках»); по умолчанию «Иванов Иван» / «Петров Пётр». */
 // P2-0070: rpc — ответы RPC сценария поверх стандартных (снимки экранов «Компании» на данных локальной копии сервера)
 // P2-0072: serve — что сервер отдаёт на чтение таблицы (таблица → строки; по умолчанию — пусто), для проверки загрузки на телефон
-export const stand = { user2Planfact: false, quality: null, names: {}, rpc: null, serve: null };
+// P2-0057: storage — ответ на чтение файла Storage сценария
+export const stand = { user2Planfact: false, quality: null, names: {}, rpc: null, serve: null, storage: null };
 const hasPf = (u) => u.id === USER.id || stand.user2Planfact;
 /** P2-0060: Сводка План/Факта первого пользователя (один объект) — по ней стенд сверяет цифры с сетью и без сети. */
 export const SUMMARY = { project_id: 'p-1', name: 'ЖК Тестовый', code: 'ЖКТ', planned_start: '2026-06-01', planned_finish: '2027-03-31',
@@ -227,6 +228,9 @@ function respond(req, res, u, body) {
       return json(res, 200, found.map((f) => ({ name: f.slice(dir.length), id: f, metadata: { size: 1 } })));
     }
     if (u.pathname.startsWith('/storage/v1/object/') && (req.method === 'POST' || req.method === 'PUT')) return json(res, 200, { Key: u.pathname.slice(19), Id: 'f' });
+    // P2-0057: файл Storage сценария (путь, заголовки → { status, type, body } или null) — закрытые файлы по …/authenticated/…
+    const own = req.method === 'GET' && stand.storage && u.pathname.startsWith('/storage/v1/object/') ? stand.storage(u.pathname, req.headers) : null;
+    if (own) { res.writeHead(own.status || 200, { 'Content-Type': own.type || 'application/octet-stream', 'Access-Control-Allow-Origin': '*' }); return res.end(own.body); }
     // P2-0060: фото по публичной ссылке — маленькая картинка (докачка фото «заранее»; запросы видны в журнале)
     if (req.method === 'GET' && u.pathname.startsWith('/storage/v1/object/public/')) { res.writeHead(200, { 'Content-Type': 'image/jpeg' }); return res.end(Buffer.alloc(2048, 7)); }
     if (u.pathname.startsWith('/storage/v1/')) return json(res, 200, []);
