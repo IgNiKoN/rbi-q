@@ -256,7 +256,8 @@ window.UniversalPdfViewer = {
                 }
             }
 
-            const pdf = await pdfjsLib.getDocument({ data: pdfArrayBuffer }).promise;
+            const pdfjs = window.rbiPdfjs ? await window.rbiPdfjs() : window.pdfjsLib;
+            const pdf = await pdfjs.getDocument({ data: pdfArrayBuffer }).promise;
             const page = await pdf.getPage(1);
 
             const viewport = page.getViewport({ scale: 2.5 });

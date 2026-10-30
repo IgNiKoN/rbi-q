@@ -75,8 +75,14 @@ function _planPz(): RbiPlanPz | null {
 
 type PanzoomFactory = (el: HTMLElement, opts?: Record<string, unknown>) => PanzoomInstance;
 
-function _pdfjs(): PdfjsLib | null {
-  return (window as unknown as { pdfjsLib?: PdfjsLib }).pdfjsLib || null;
+/** P2-0057 этап 0: pdf.js грузится по требованию (`js/shared/pdfjs-loader.js`). */
+async function _pdfjs(): Promise<PdfjsLib | null> {
+  const w = window as unknown as { pdfjsLib?: PdfjsLib; rbiPdfjs?: () => Promise<PdfjsLib> };
+  try {
+    return (w.rbiPdfjs ? await w.rbiPdfjs() : w.pdfjsLib) || null;
+  } catch {
+    return null;
+  }
 }
 
 function _panzoomFactory(): PanzoomFactory | null {
@@ -297,7 +303,7 @@ export class PlanViewer {
 
     this.wrap.addEventListener('click', (ev) => this._onClick(ev));
 
-    const pdfjs = _pdfjs();
+    const pdfjs = await _pdfjs();
     if (!pdfjs?.getDocument) throw new Error('pdfjsLib недоступен');
 
     let buf: ArrayBuffer | null = null;

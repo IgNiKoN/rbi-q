@@ -1002,8 +1002,13 @@ const PZ_MAX = 8;
 function _planPz() {
   return window.RbiPlanPanzoom || null;
 }
-function _pdfjs() {
-  return window.pdfjsLib || null;
+async function _pdfjs() {
+  const w = window;
+  try {
+    return (w.rbiPdfjs ? await w.rbiPdfjs() : w.pdfjsLib) || null;
+  } catch {
+    return null;
+  }
 }
 function _panzoomFactory() {
   return window.Panzoom || null;
@@ -1191,7 +1196,7 @@ class PlanViewer {
     const loader = this.host.querySelector("[data-c2-plan-loader]");
     if (!this.canvas || !this.stage || !this.wrap) throw new Error("plan-viewer DOM broken");
     this.wrap.addEventListener("click", (ev) => this._onClick(ev));
-    const pdfjs = _pdfjs();
+    const pdfjs = await _pdfjs();
     if (!(pdfjs == null ? void 0 : pdfjs.getDocument)) throw new Error("pdfjsLib недоступен");
     let buf = null;
     if (typeof window.rbiLoadCloudPdfArrayBuffer === "function") {
