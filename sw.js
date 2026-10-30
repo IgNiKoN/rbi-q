@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.31-6be42013',
+  version: '2026.10.31-412a5a1b',
   date: '2026-10-31',
-  digest: '6be42013',
+  digest: '412a5a1b',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -572,8 +572,10 @@ let p2TokenKnown = false;   // страница уже сообщила (в т.�
 let p2TokenWaiters = [];
 const P2_STORAGE_ORIGIN = (() => { try { return new URL(self.APP_CONFIG.P2_SUPABASE_URL).origin; } catch (e) { return ''; } })();
 
+// P2-0057: планы мест ядра — закрытый бакет core-place-plans (ссылка того же вида), берётся так же
 function isCompanyFileUrl(url) {
-  return !!P2_STORAGE_ORIGIN && url.startsWith(P2_STORAGE_ORIGIN + '/storage/v1/object/public/quality-');
+  return !!P2_STORAGE_ORIGIN && (url.startsWith(P2_STORAGE_ORIGIN + '/storage/v1/object/public/quality-')
+    || url.startsWith(P2_STORAGE_ORIGIN + '/storage/v1/object/public/core-place-plans/'));
 }
 
 async function p2Token() {

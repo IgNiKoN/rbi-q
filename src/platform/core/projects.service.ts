@@ -10,6 +10,7 @@ import type { Result } from '../company/company.service.ts';
 
 import type { CompanyAccess } from './core.service.ts';
 import { copyCall, isLeafPlace, offlineRead, pruneToMyProjects, rpcRead } from '../services/offline/copy.ts';
+import { checkPlanFile, PLACE_PLANS_BUCKET, placePlanPath, uploadCoreFile } from '../services/files/core-files.ts';
 
 /** P2-0060: чтения ядра (объекты, места, единицы) — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
 export const PROJECTS_READS: ReadonlySet<string> = new Set(['pf_my_company_access', 'pf_company_projects', 'pf_list_locations', 'pf_list_units', 'pf_project_catalog', 'pf_company_divisions', 'pf_project_dicts', 'pf_project_places', 'pf_location_path']);
@@ -82,6 +83,14 @@ export interface GenerateParams {
 
 /** P2-0055: ответ переноса — прежнее положение (для «Отменить»). */
 export interface MovePlaceResult { changed: boolean; oldParentId: string | null; oldBeforeId: string | null }
+/** P2-0057: версия плана места (документ ядра, pf_place_plans). */
+export interface PlacePlan {
+  id: string; location_id: string; version_no: number; is_current: boolean; file_name: string; file_size: number; file_url: string;
+  created_by: string | null; author: string; created_at: string;
+}
+/** P2-0057: место, куда грузится план (этаж или квартира). */
+export interface PlanTarget { id: string; projectId: string; companyId: string }
+export interface PlanChange { id: string | null; versionNo: number | null; previousId: string | null }
 
 export interface ProjectsApi {
   myAccess(): Promise<CompanyAccess[]>;
@@ -122,8 +131,25 @@ export interface ProjectsApi {
   importUndo?(batch: string): Promise<Result<number>>;
   /** P2-0056: площадь и комнаты помещения (null — стереть). */
   savePlaceInfo?(id: string, area: number | null, rooms: number | null): Promise<Result<string>>;
+  /** P2-0057: планы мест проекта — все версии (новые сверху); только с сетью. */
+  placePlans?(projectId: string): Promise<Result<PlacePlan[]>>;
+  /** P2-0057: загрузить PDF новой версией плана места (файл → закрытый бакет ядра → запись версии; становится текущей). */
+  uploadPlacePlan?(target: PlanTarget, file: File, docId?: string): Promise<Result<PlanChange>>;
+  /** P2-0057: сделать текущей прежнюю версию; ответ — какая была текущей (для «Отменить»). */
+  setPlacePlan?(docId: string): Promise<Result<PlanChange>>;
+  /** P2-0057: снять план места (версии остаются); ответ — какая была текущей. */
+  removePlacePlan?(placeId: string): Promise<Result<PlanChange>>;
+  /** P2-0057: сколько точек замечаний на плане места (подсказка при замене). */
+  placePins?(placeId: string): Promise<number>;
   addUnit(companyId: string, code: string, name: string): Promise<Result<string>>;
   deleteUnit(unitId: string): Promise<Result>;
+}
+
+/** P2-0057: ответ RPC плана → PlanChange. */
+export function planChange(v: Record<string, unknown> | null): PlanChange {
+  const x = v || {};
+  const s = (k: string): string | null => (typeof x[k] === 'string' && x[k] ? String(x[k]) : null);
+  return { id: s('id'), versionNo: typeof x.version_no === 'number' ? x.version_no : null, previousId: s('previous') };
 }
 
 /**
@@ -248,6 +274,32 @@ export function createProjectsService(): ProjectsApi | null {
     },
     importUndo: (batch) => call<number>('pf_import_undo', { p_batch: batch }),
     savePlaceInfo: (id, area, rooms) => call<string>('pf_save_place_info', { p_location: id, p_area: area, p_rooms: rooms }),
+    placePlans: async (project) => {
+      const r = await call<PlacePlan[]>('pf_place_plans', { p_project: project });
+      return r.ok ? { ok: true, value: Array.isArray(r.value) ? r.value : [] } : r;
+    },
+    uploadPlacePlan: async (t, file, docId) => {
+      const chk = checkPlanFile(file);
+      if (!chk.ok) return chk;
+      const id = docId || newId();
+      const up = await uploadCoreFile(PLACE_PLANS_BUCKET, placePlanPath(t.companyId, t.projectId, t.id, id), file);
+      if (!up.ok) return up;
+      const r = await call<Record<string, unknown> | null>('pf_add_place_plan',
+        { p_location: t.id, p_id: id, p_url: up.url, p_name: file.name || 'План.pdf', p_size: file.size });
+      return r.ok ? { ok: true, value: planChange(r.value) } : r;
+    },
+    setPlacePlan: async (docId) => {
+      const r = await call<Record<string, unknown> | null>('pf_set_place_plan', { p_id: docId });
+      return r.ok ? { ok: true, value: planChange(r.value) } : r;
+    },
+    removePlacePlan: async (placeId) => {
+      const r = await call<Record<string, unknown> | null>('pf_remove_place_plan', { p_location: placeId });
+      return r.ok ? { ok: true, value: planChange(r.value) } : r;
+    },
+    placePins: async (placeId) => {
+      const r = await call<number>('pf_place_pins', { p_location: placeId });
+      return r.ok && typeof r.value === 'number' ? r.value : 0;
+    },
     addUnit: (company, code, name) => call<string>('pf_add_unit', { p_company: company, p_code: code, p_name: name }),
     deleteUnit: (id) => call('pf_delete_unit', { p_unit: id })
   };
