@@ -4,7 +4,7 @@
 
 ## Боевое приложение
 
-- `app.rbi-q.ru` = `main` репозитория `IgNiKoN/rbi-q` (`git pull --ff-only` в `/var/www/rbi-quality` — владелец). Последняя выкладка — P2-0071 «Качество на единые права», 30.10.2026 (миграция 053; сайт `a5f026c`, версия `2026.10.30-84cbccef`; откат — `git reset --hard 41e68e7`, затем `053_down`).
+- `app.rbi-q.ru` = `main` репозитория `IgNiKoN/rbi-q` (`git pull --ff-only` в `/var/www/rbi-quality` — владелец). Последняя выкладка — P2-0072 «Номера Качества» + P2-0073 «Данные на устройстве сразу», 30.10.2026 (миграция 054; сайт `1755d13`, версия `2026.10.30-5b3ac324`; откат — `git reset --hard a5f026c`, затем `054_quality_ids_down.sql`).
 - Сервер и миграции — [`docs/SERVERS.md`](../docs/SERVERS.md). Техдолг — [`docs/TECH_DEBT.md`](../docs/TECH_DEBT.md).
 
 ## Блоки не в DONE (по карточкам `tasks/`)
