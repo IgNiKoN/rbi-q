@@ -29,7 +29,7 @@ import { OverheadTemplateTab } from './estimate/OverheadsEditor.ts';
 import type { EstimateApi } from './estimate/estimate.service.ts';
 import { Ks2Tab } from './ks2/Ks2Tab.ts';
 import { SummaryTab } from './summary/SummaryTab.ts';
-import { showShellUser, restoreShellUser, openPlatformLogin, readPlatformView, setPlatformCompany, platformRoleLabel, PLATFORM_ACCESS_EVENT } from '../../platform/auth/shell-user.ts';
+import { showShellUser, restoreShellUser, openPlatformLogin, readPlatformView, setPlatformCompany, platformRoleLabel, PLATFORM_ACCESS_EVENT, platformCompaniesShown, SHOW_TEST_EVENT } from '../../platform/auth/shell-user.ts';
 import type { SummaryApi } from './summary/summary.service.ts';
 import type { Ks2Api } from './ks2/ks2.service.ts';
 import { KS2_EDIT, KS2_VIEW } from './ks2/ks2.service.ts';
@@ -139,7 +139,8 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
   useEffect(() => {
     const onP2 = (): void => setP2(readPlatformView());
     window.addEventListener(PLATFORM_ACCESS_EVENT, onP2);
-    return () => window.removeEventListener(PLATFORM_ACCESS_EVENT, onP2);
+    window.addEventListener(SHOW_TEST_EVENT, onP2);   // P2-0075: «Показать тестовые» в Настройках
+    return () => { window.removeEventListener(PLATFORM_ACCESS_EVENT, onP2); window.removeEventListener(SHOW_TEST_EVENT, onP2); };
   }, []);
 
   useEffect(() => {
@@ -213,10 +214,11 @@ export function PlanfactApp(props: { auth: AuthApi | null; data: PlanfactDemo; a
     ? h('div', { className: 'pf-bar' }, h('span', null, 'Локальный демо-режим, без входа'),
         h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: openPlatformLogin }, 'Войти'))
     : null;
-  const company = mode === 'authed' && p2 && p2.companies.length > 1
+  const shownCompanies = p2 ? platformCompaniesShown(p2) : [];   // P2-0075: тестовые у администратора платформы — по галочке
+  const company = mode === 'authed' && p2 && shownCompanies.length > 1
     ? h('select', { className: 'pj-input pf-bar-company', 'aria-label': 'Компания', 'data-testid': 'pf-company', value: p2.companyId || '',
         onChange: (e: { target: EventTarget | null }) => setPlatformCompany((e.target as HTMLSelectElement).value) },
-        p2.companies.map((c) => h('option', { key: c.id, value: c.id }, 'Компания: ' + c.name)))
+        shownCompanies.map((c) => h('option', { key: c.id, value: c.id }, 'Компания: ' + c.name)))
     : null;
   const userTag = mode === 'authed' ? h('span', { className: 'pf-visually-hidden', 'data-testid': 'pf-user' }, who, ' · ', p2 ? platformRoleLabel(p2) : accessLabel(access)) : null;
   /** Шапка раздела: заголовок, места для объекта и главного действия (их заполняет экран), подвкладки под ней. */

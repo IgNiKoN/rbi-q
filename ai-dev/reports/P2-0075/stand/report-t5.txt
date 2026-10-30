@@ -1,0 +1,85 @@
+  == invalid: вход устарел, сервер отвечает «вход недействителен»
+  {"login":true,"mode":"none","authKept":false}
+PASS invalid: экран «Вход»
+PASS invalid: без текста про 14 дней (обычный вход)
+  == w-offline: нет сети 3 мин → сеть есть
+PASS w-offline: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-offline","title":"нет сети 3 мин → сеть есть","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":4.4,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":1,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":3,"hungRequests":0}
+PASS w-offline: погода прошла до конца
+PASS w-offline: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-offline: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-offline: не хуже, чем до исправлений — минут 4.4 (было 4.4), отправок записи 1 (было 1)
+  == edit-mid: правка осмотра, пока идёт загрузка, уходит в том же проходе
+PASS edit-mid: осмотр ушёл в начале прохода, правка сделана, пока проход шёл
+PASS edit-mid: правка на сервере после того же прохода — на сервере «EDIT-MARK», проходов 1
+  == r-deploy: была версия A → выкладка B → открыть ×3 (со 2-го — зайти в разделы)
+PASS r-deploy: до выкладки вкладка на версии A — html A, скрипты {"A":241}
+  открытие 1: html A, скрипты {"A":241}
+  открытие 2: html A, скрипты {"A":242}
+  открытие 3: html B, скрипты {"B":242}
+  новая версия ждёт кнопку: {"waiting":false}
+PASS r-deploy: ни одного открытия со смесью версий — смесь в 0 из 3
+  == r-delta: на сервере версия, где изменён один файл → что скачивается при установке
+PASS r-delta: до выкладки вкладка на версии A — html A, скрипты {"A":241}
+  установка: нет новой версии / установка не удалась; скачано файлов приложения: 0 — 
+FAIL r-delta: скачан только изменённый файл — нет новой версии / установка не удалась; 0
+  == r-size: файлов 316, всего 30.3 МБ; оболочка 18 МБ, company 2.6 МБ, planfact 3 МБ, platform-admin 0 МБ, construction-v2 0 МБ, construction 0.3 МБ, quality 6.3 МБ
+PASS r-size: опись без .map меньше 35 МБ (решение владельца 29.10) — 30.3 МБ
+  == v-summary375: Сводка с сетью → закрыть → без сети открыть заново
+PASS v-summary375: с сетью — Сводка объекта — Скачать ExcelЖК Тестовый · ЖКТРискПороги светофора →Отставание 7,5 п.п. — между порогами 5 и 15 п.п.План по договорной К
+PASS v-summary375: с сетью пометки нет
+PASS v-summary375: без сети после перезапуска — те же цифры
+PASS v-summary375: пометка «Без сети · данные на ЧЧ:ММ» — Без сети · данные на 00:34
+PASS v-summary375: «Даты проекта» неактивна — Даты проекта · Нужен интернет
+PASS v-summary375: не «Нужен интернет» — данные из копии
+PASS v-summary375: без прокрутки вбок — 0
+  == f-manager: 300 осмотров по 3 объектам за 90 дней → докачка «заранее» по роли (manager)
+  роль экрана: manager, охват: none
+PASS f-manager: охват по роли — не скачивать заранее — none
+  фото всего 600, ожидалось 0, скачано 0, лишних 0, не хватает 0
+PASS f-manager: скачано ровно положенное по роли — скачано 0 из 600
+PASS f-manager: неотправленный осмотр после докачки — на месте (фото на телефоне или уже ушло) — {"has":true,"st":"synced","blob":false,"cloud":true}
+PASS f-manager: неотправленный осмотр с фото ушёл на сервер ровно 1 раз — отправок 1, {"has":true,"st":"synced","blob":false,"cloud":true}
+  == s-pull-scope: одни и те же ответы сервера → что осталось на телефоне (подрядчик «Фирма 1», инженер «Только мои», инженер «Вся команда»)
+  s-pull-scope-ctr: {"meetings":["m-f1"],"me":{"id":"u-1","cp":"7a7a7a7a-1111-4111-8111-111111111111","acts":["quality.view","quality.edit","quality.scope.contractor"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"}
+  s-pull-scope-mine: {"meetings":["m-own"],"me":{"id":"u-1","cp":"","acts":["quality.view","quality.edit"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"}
+  s-pull-scope-team: {"meetings":["m-f1","m-f2","m-other","m-own"],"me":{"id":"u-1","cp":"","acts":["quality.view","quality.edit"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"}
+  скачано: {"contractor":{"meetings":["m-f1"],"me":{"id":"u-1","cp":"7a7a7a7a-1111-4111-8111-111111111111","acts":["quality.view","quality.edit","quality.scope.contractor"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"},"personal":{"meetings":["m-own"],"me":{"id":"u-1","cp":"","acts":["quality.view","quality.edit"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"},"team":{"meetings":["m-f1","m-f2","m-other","m-own"],"me":{"id":"u-1","cp":"","acts":["quality.view","quality.edit"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"}}
+PASS s-pull-scope: подрядчик — совещания только своей фирмы (по id) — {"meetings":["m-f1"],"me":{"id":"u-1","cp":"7a7a7a7a-1111-4111-8111-111111111111","acts":["quality.view","quality.edit","quality.scope.contractor"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"}
+PASS s-pull-scope: «Только мои» — совещания по id автора — {"meetings":["m-own"],"me":{"id":"u-1","cp":"","acts":["quality.view","quality.edit"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"}
+PASS s-pull-scope: «Вся команда» — все совещания, отданные сервером — {"meetings":["m-f1","m-f2","m-other","m-own"],"me":{"id":"u-1","cp":"","acts":["quality.view","quality.edit"],"mods":["quality","construction","planfact"]},"probe":{"ok":true},"kind":"meeting"}
+  == s-rename: инженер, два неотправленных осмотра (новый — с id автора, старый — без id, подпись ФИО) → ФИО сменили → оба ушли ровно 1 раз
+PASS s-rename: новый осмотр записан с id автора (ФИО — подпись) — {"st":"not_synced","authorId":"u-1","name":"Иванов Иван","reason":"","hint":""}
+PASS s-rename: новое ФИО, прежнее запомнено — ["Иванов-Сидоров Иван",["Иванов Иван"]]
+PASS s-rename: свой старый осмотр (прежнее ФИО) после смены ФИО можно удалить — true
+PASS s-rename: новый осмотр ушёл ровно 1 раз — 1
+PASS s-rename: старый осмотр (без id, прежнее ФИО) ушёл ровно 1 раз — 1 {"st":"synced","authorId":"u-1","name":"Иванов Иван","reason":"","hint":""}
+PASS s-rename: старому осмотру дописан id автора — {"st":"synced","authorId":"u-1","name":"Иванов Иван","reason":"","hint":""}
+  == pf-offline1440: без сети внести факт на экране «Факт» → сохранён на телефоне → связь появилась → на сервере одна запись
+PASS pf-offline1440: без сети кнопка «Внести» активна
+PASS pf-offline1440: без сети — «Сохранено на телефоне … уйдёт само» — Сохранено на телефоне: 3 м³ — уйдёт на сервер само, когда появится связь
+PASS pf-offline1440: запись на телефоне ждёт отправки — [{"id":"b447b56e-c2c7-47ae-9243-d3c6798885e3","st":"not_synced","why":"","title":"Кладка стен · Корпус 1 · Секция 1 · Этаж 1 · 3 м³"}]
+PASS pf-offline1440: без сети запросов на сервер нет — 0
+PASS pf-offline1440: значок «не отправлено: 1» — Нет связи, не отправлено: 1
+PASS pf-offline1440: связь появилась — факт ушёл сам
+PASS pf-offline1440: на сервере одна запись, один вызов — записей 1, вызовы [1]
+PASS pf-offline1440: значок «не отправлено» исчез
+  == w375: первый вход → приветствие; плитка → раздел; повтор → раздел; без последнего → по роли; без сети; ссылка
+PASS w375: первый вход — приветствие — {"hash":"#/welcome","welcome":true}
+PASS w375: первый показ — с анимацией — 1 p2w-in
+PASS w375: по имени из профиля — Добро пожаловать, Иванов Иван
+PASS w375: плитки — доступные разделы — ["Качество","Стройконтроль","План/Факт","Компания"]
+PASS w375: без прокрутки вбок — 0
+PASS w375: подвкладок модуля на приветствии нет — {"nav":false,"nav2":false}
+PASS w375: верх приветствия не под шапкой — 40
+PASS w375: ушли с приветствия — «приветствие было» отмечено
+PASS w375: «Уменьшить движение» — без анимации, всё видно сразу — none 1
+PASS w375: приветствие последним разделом не запоминается — null
+PASS w375: плитка → Осмотр, запомнен последним — #/quality/audit / #/quality/audit
+PASS w375: ушли с приветствия — оболочка как в разделе
+PASS w375: «Назад» — приветствие, без анимации — #/welcome 0
+PASS w375: повторный запуск — последний раздел — #/quality/audit
+PASS w375: без последнего, руководитель — приветствие без анимации — #/welcome 0
+PASS w375: ссылка на План/Факт — открыт он — #/planfact
+PASS w375: без сети — приветствие по копии прав — #/welcome ["Качество","Стройконтроль","План/Факт","Компания"]
+Итог: PASS 58, FAIL 1

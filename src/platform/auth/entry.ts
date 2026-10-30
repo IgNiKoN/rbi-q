@@ -16,6 +16,7 @@ import type { Platform, PlatformAccess, PlatformState } from './platform.service
 import { LOGIN_CSS, renderLoginScreen } from './login-screen.ts';
 import { PASSWORD_CSS, renderMyProfile as drawMyProfile, renderPasswordScreen } from './password-screen.ts';
 import { showShellUser, restoreShellUser, PLATFORM_NET_EVENT } from './shell-user.ts';
+import { hiddenTest, readShowTest, SHOW_TEST_EVENT, visibleCompanies, writeShowTest } from './test-companies.ts';
 import { cleanupLegacyDevice, deleteIndexedDb } from './legacy-device.ts';
 import { EMPTY_SLOT_KEY, RESCUE_CSS, moveOrphans, renderRescueSheet, scanOrphans } from './offline-rescue.ts';
 import type { IsUnsent } from './offline-rescue.ts';
@@ -43,7 +44,9 @@ function ensureStyle(): void {
   const s = document.createElement('style');
   s.id = STYLE_ID;
   s.textContent = LOGIN_CSS + PASSWORD_CSS + WELCOME_CSS + `
-.p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}`;
+.p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
+.p2-show-test{display:inline-flex;align-items:center;gap:8px;font-size:13px;min-height:44px;margin-left:12px;cursor:pointer;color:var(--text-main)}
+.p2-show-test input{width:20px;height:20px;accent-color:var(--primary)}`;
   document.head.appendChild(s);
 }
 
@@ -68,6 +71,7 @@ function getPlatform(): Platform {
   window.addEventListener('platform2:refresh', () => { void platform!.refresh(); });
   // P2-0058: связь вернулась — вход и права обновляются сами (без пароля)
   window.addEventListener('online', () => { void platform!.refresh(); });
+  window.addEventListener(SHOW_TEST_EVENT, onShowTest);   // P2-0075
   return platform;
 }
 
@@ -144,23 +148,59 @@ function go(path: string, replace = true): void {
   if (r && typeof r.navigate === 'function') r.navigate(path, replace); else window.location.hash = path;
 }
 
-/** «Компания: …» в «Настройки → Платформа» (вызывают Настройки при показе). Одна компания — переключателя нет. */
+/** «Компания: …» в «Настройки → Платформа» (вызывают Настройки при показе). Одна компания — переключателя нет.
+ *  P2-0075: администратору платформы тестовые компании — только с галочкой «Показать тестовые» (запоминается на устройстве). */
+let switchHost: HTMLElement | null = null;
 function renderCompanySwitch(host: HTMLElement | null): void {
   if (!host) return;
+  switchHost = host;
   const st = getPlatform().getState();
   ensureStyle();
   let sel = host.querySelector('select');
-  if (st.mode !== 'email' || st.companies.length < 2) { if (sel) sel.remove(); return; }
-  if (!sel) {
-    sel = document.createElement('select');
-    sel.className = 'p2-company-switch';
-    sel.setAttribute('aria-label', 'Компания');
-    sel.setAttribute('data-testid', 'p2-company-switch');
-    sel.addEventListener('change', () => getPlatform().setCompany(sel!.value));
+  let tog = host.querySelector<HTMLLabelElement>('label.p2-show-test');
+  const showTest = readShowTest(localStore());
+  const opt = { isPlatformAdmin: st.isPlatformAdmin, showTest, keepId: st.companyId };
+  const list = visibleCompanies(st.companies, opt);
+  // галочка — только если у администратора платформы есть что скрывать (или уже показано)
+  const canToggle = st.mode === 'email' && st.isPlatformAdmin && st.companies.some((c) => hiddenTest(c, { ...opt, showTest: false, keepId: null }));
+  if (!canToggle) { if (tog) tog.remove(); tog = null; }
+  else if (!tog) {
+    tog = document.createElement('label');
+    tog.className = 'p2-show-test';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.setAttribute('data-testid', 'p2-show-test');
+    box.addEventListener('change', () => {
+      writeShowTest(localStore(), box.checked);
+      window.dispatchEvent(new Event(SHOW_TEST_EVENT));   // → onShowTest: выбор компании и перерисовка
+    });
+    tog.append(box, document.createTextNode('Показать тестовые'));
+  }
+  if (st.mode !== 'email' || list.length < 2) { if (sel) sel.remove(); sel = null; }
+  else {
+    if (!sel) {
+      sel = document.createElement('select');
+      sel.className = 'p2-company-switch';
+      sel.setAttribute('aria-label', 'Компания');
+      sel.setAttribute('data-testid', 'p2-company-switch');
+      sel.addEventListener('change', () => getPlatform().setCompany(sel!.value));
+    }
+    sel.replaceChildren(...list.map((c) => { const o = document.createElement('option'); o.value = c.id; o.textContent = 'Компания: ' + c.name; return o; }));
+    sel.value = st.companyId || '';
     host.appendChild(sel);
   }
-  sel.replaceChildren(...st.companies.map((c) => { const o = document.createElement('option'); o.value = c.id; o.textContent = 'Компания: ' + c.name; return o; }));
-  sel.value = st.companyId || '';
+  if (tog) { tog.querySelector('input')!.checked = showTest; host.appendChild(tog); }
+}
+
+/** P2-0075: галочку «Показать тестовые» переключили (здесь или в «Администрировании платформы»): выбранная тестовая компания
+ *  при снятой галочке — переход в первую видимую; переключатель «Настроек» перерисовывается. */
+function onShowTest(): void {
+  const st = getPlatform().getState();
+  if (st.mode === 'email') {
+    const left = visibleCompanies(st.companies, { isPlatformAdmin: st.isPlatformAdmin, showTest: readShowTest(localStore()) });
+    if (left.length && !left.some((c) => c.id === st.companyId)) getPlatform().setCompany((left.find((c) => c.modules.length > 0) || left[0]).id);
+  }
+  if (switchHost && switchHost.isConnected) renderCompanySwitch(switchHost);
 }
 
 /** P2-0060: текст подсказки, когда ответ сервера отнял раздел, открытый по копии прав. */
