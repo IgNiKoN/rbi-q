@@ -33,7 +33,7 @@ function rights() {
 }
 /** Вкладка → нужное право; порядок и права — как TABS / visibleTabs в src/platform/company/CompanyApp.ts (сверяет unit-тест). */
 export var COMPANY_TAB_NEEDS = [
-    ['members', 'admin'], ['roles', 'admin'], ['objects', 'projects'], ['counterparties', 'admin'], ['directories', 'units'],
+    ['members', 'admin'], ['roles', 'admin'], ['who', 'admin'], ['objects', 'projects'], ['counterparties', 'admin'], ['directories', 'units'],
     ['branding', 'admin'], ['modules', 'admin'], ['audit', 'admin'], ['patterns', 'platform']
 ];
 /** Какие вкладки CompanyApp показал бы при правах r (без права вкладки нет). */

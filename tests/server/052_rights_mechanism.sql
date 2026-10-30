@@ -268,6 +268,30 @@ begin
                           and pg_temp.err(format('select core.require_action(%L, null, null, ''construction.defects.view'', null, null)', ca)) like '42501: permission%',
                           'служебные функции ядра закрыты');
 
+  -- 7. «Кто что может на объекте» (pf_who_can): объект и место → люди × действия, только администратор ролей
+  reset role;
+  r_adm := pg_temp.role(ca, 'Админ ролей', array['security.roles.assign']);
+  uadm := pg_temp.member(ca, r_adm, null, null, null);
+  perform pg_temp.as_user(uadm, ca);
+  res := res || pg_temp.t((select actions @> array['construction.defects.close'] and not partial from public.pf_who_can(ca, p1, s1loc) where user_id = usec),
+                          'who_can: секция 1 — участник секции 1 полностью, с «Закрыть»');
+  res := res || pg_temp.t((select partial and places[1] like '%Секция 1' from public.pf_who_can(ca, p1, k1) where user_id = usec),
+                          'who_can: корпус — участник секции 1 «только часть»');
+  res := res || pg_temp.t(not exists (select 1 from public.pf_who_can(ca, p1, (select id from core.locations where parent_id = k1 and name = 'Секция 2'))
+                                       where user_id = usec), 'who_can: секция 2 — участника секции 1 нет');
+  res := res || pg_temp.t((select places = array['вся компания'] from public.pf_who_can(ca, p1, s1f) where user_id = ueng), 'who_can: инженер компании — везде');
+  res := res || pg_temp.t(not exists (select 1 from public.pf_who_can(ca, p2, null) where user_id = ueng1), 'who_can: инженер ЖК-1 — не в ЖК-2');
+  res := res || pg_temp.t((select firm = 'ООО Ромашка 052т' and not actions @> array['construction.defects.close'] from public.pf_who_can(ca, p1, null) where user_id = uctr),
+                          'who_can: подрядчик — фирма, без «Закрыть»');
+  res := res || pg_temp.t(not (select actions @> array['construction.defects.close'] from public.pf_who_can(ca, p1, null) where user_id = unoclose),
+                          'who_can: роль без «Закрыть» — нет');
+  res := res || pg_temp.t(pg_temp.err(format('select * from public.pf_who_can(%L, %L, null)', ca, p1)) = 'OK'
+                          and pg_temp.err(format('select * from public.pf_who_can(%L, %L, null)', ca, gen_random_uuid())) like '22023%', 'who_can: чужой объект — отказ');
+  perform pg_temp.as_user(ueng, ca);
+  res := res || pg_temp.t(pg_temp.err(format('select * from public.pf_who_can(%L, %L, null)', ca, p1)) like '42501%', 'who_can: не администратор ролей — отказ');
+  perform pg_temp.as_user(ub, cb);
+  res := res || pg_temp.t(pg_temp.err(format('select * from public.pf_who_can(%L, %L, null)', ca, p1)) like '42501%', 'who_can: чужая компания — отказ');
+
   reset role;
   raise exception E'ОТЧЁТ (откат):\n%FAIL всего: %', res, (select count(*) from regexp_matches(res, 'FAIL', 'g')) using errcode = 'P0001';
 end $$;

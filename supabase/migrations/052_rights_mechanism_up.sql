@@ -13,7 +13,8 @@
 --  4) План/Факт — на проверку ядра без смены поведения: planfact.my_area / my_area_nodes / in_area / has_permission /
 --     has_company_permission — обёртки над core.* (прежние вызовы в функциях и правилах 047–051 не меняются);
 --  5) телефон: core.my_grants — участие × действия модуля для правила устройства (quality.my_access → construction.grants,
---     pf_my_area → grants).
+--     pf_my_area → grants);
+--  6) экран «Кто что может на объекте» — pf_who_can (только чтение, администратор ролей компании).
 -- Стройконтроль 1 (construction_* без _v2), Качество и помещения (construction_units_v2) не меняются.
 -- Применять после 051, одним запросом, ДО выкладки приложения. Откат — 052_rights_mechanism_down.sql.
 begin;
@@ -580,5 +581,56 @@ begin
     'can_on_behalf', planfact.has_permission(p_project, 'planfact.fact.approve'),
     'grants', core.my_grants((select company_id from core.projects where id = p_project), p_project, 'planfact'));
 end $$;
+
+-- 6. «Кто что может на объекте» (экран «Компания → Сотрудники и доступ»), только чтение, администратор ролей компании.
+-- Объект и место (null — весь объект) → люди × действия включённых модулей по тому же правилу, что core.can_at: назначение на
+-- всю компанию, объект или место выше выбранного — полностью; участие на часть внутри выбранного места — «только …» (partial);
+-- на часть проекта — только действия area_scoped. Признаки видимости (quality.scope.*) и фирма подрядчика — для подписи.
+create function public.pf_who_can(p_company uuid, p_project uuid, p_location uuid default null)
+returns table(user_id uuid, full_name text, email text, roles text[], places text[], partial boolean, firm text, actions text[])
+language plpgsql stable security definer set search_path = pg_catalog, planfact, core as $$
+declare v_up uuid[];
+begin
+  perform planfact.require_roles_admin(p_company);
+  if not exists (select 1 from core.projects pr where pr.id = p_project and pr.company_id = p_company) then
+    raise exception 'Объект не найден в компании' using errcode = '22023';
+  end if;
+  if p_location is not null and not exists (select 1 from core.locations l where l.id = p_location and l.project_id = p_project) then
+    raise exception 'Место не найдено в объекте' using errcode = '22023';
+  end if;
+  v_up := core.place_up(p_location);
+  return query
+  with asg as (
+    select a.*, (a.location_id is not null and not a.location_id = any (v_up)) part
+      from core.role_assignments a
+      join core.company_members m on m.company_id = a.company_id and m.user_id = a.user_id and m.disabled_at is null
+     where a.company_id = p_company and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())
+       and (a.project_id is null or a.project_id = p_project)
+       and (a.location_id is null or a.location_id = any (v_up) or p_location is null or p_location = any (core.place_up(a.location_id))))
+  select g.user_id, max(up.full_name), max(u.email::text),
+         array_agg(distinct r.name order by r.name),
+         array_agg(distinct case when g.location_id is not null then planfact.location_path(g.location_id)
+                                 when g.project_id is not null then 'весь объект' else 'вся компания' end),
+         bool_and(g.part),
+         max(c.name) filter (where exists (select 1 from core.company_role_permissions x where x.role_id = g.role_id
+                                            and x.company_id = g.company_id and x.action = 'quality.scope.contractor')),
+         coalesce((select array_agg(distinct rp.action order by rp.action)
+                     from asg g2
+                     join core.company_role_permissions rp on rp.role_id = g2.role_id and rp.company_id = g2.company_id
+                     join core.permission_catalog pc on pc.action = rp.action
+                    where g2.user_id = g.user_id
+                      and (pc.module is null or exists (select 1 from core.company_modules cm where cm.company_id = p_company
+                                                          and cm.module = pc.module and cm.enabled))
+                      and (g2.location_id is null or pc.area_scoped or rp.action like 'quality.scope.%')), '{}')
+    from asg g
+    join core.company_roles r on r.id = g.role_id
+    left join core.user_profiles up on up.user_id = g.user_id
+    left join auth.users u on u.id = g.user_id
+    left join core.counterparties c on c.id = g.counterparty_id
+   group by g.user_id
+   order by max(coalesce(up.full_name, u.email::text));
+end $$;
+revoke all on function public.pf_who_can(uuid, uuid, uuid) from public, anon;
+grant execute on function public.pf_who_can(uuid, uuid, uuid) to authenticated;
 
 commit;

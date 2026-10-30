@@ -91,6 +91,7 @@ function fakeApi(opts: { fail?: string } = {}) {
       return { ok: true, value: { added: p.users.length * Math.max(1, p.locations.length), changed: 0, revoked: 0 } };
     },
     async revoke(id) { calls.push(`revoke:${id}`); if (!opts.fail) members = members.filter((m) => m.assignment_id !== id); return res(null); },
+    async whoCan() { return { ok: true as const, value: [] }; },
     async addMember(co, email, name, role, project) {
       calls.push(`add:${co}:${email}:${name}:${role}:${project}`);
       if (opts.fail) return { ok: false, message: opts.fail };

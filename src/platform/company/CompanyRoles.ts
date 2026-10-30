@@ -7,13 +7,12 @@
 import { createElement as h, useEffect, useState } from 'react';
 import { ConfirmDialog } from '../ui/settings.ts';
 import type { FormEvent, ReactElement } from 'react';
-import { groupCatalog } from './action-groups.ts';
+import { abilities, actionLabel, groupCatalog } from './action-groups.ts';
 import type { CatalogRow, CompanyApi, MemberRow, RoleRow } from './company.service.ts';
 
-/** Что может роль — названия групп, где отмечено хоть одно действие («Работы и план, Факт»). */
+/** Что может роль — группы, где отмечено хоть одно действие («Работы и план, Факт»); в нескольких модулях — модули. */
 export function roleAbilities(actions: string[], catalog: CatalogRow[]): string {
-  const has = new Set(actions);
-  const groups = groupCatalog(catalog).filter((g) => g.items.some((i) => has.has(i.action))).map((g) => g.title);
+  const groups = abilities(actions, catalog);
   return groups.length ? groups.join(', ') : actions.length ? 'особые права' : 'ничего не может';
 }
 /** Сколько разных людей с действующим назначением роли (по строкам сотрудников). */
@@ -104,6 +103,7 @@ export function CompanyRoles(props: { api: CompanyApi; companyId: string }): Rea
   if (roles === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
 
   const groups = groupCatalog(catalog);
+  const manyModules = new Set(groups.map((g) => g.moduleName).filter(Boolean)).size > 1;
   const changed = role ? !sameSet(role.actions, draft) : false;
 
   const who = (r: RoleRow): string => {
@@ -136,13 +136,16 @@ export function CompanyRoles(props: { api: CompanyApi; companyId: string }): Rea
       error ? h('div', { className: 'pf-error', role: 'alert' }, error) : null,
       notice ? h('div', { className: 'co-notice', role: 'status' }, notice) : null,
       h('div', { className: 'co-groups cr-groups' },
-        groups.map((g) => {
+        groups.flatMap((g, i) => {
           const on = g.items.filter((it) => draft.has(it.action)).length;
-          return h('details', { key: role.id + g.title, className: 'co-group cr-group', open: on > 0 || undefined, 'data-group': g.title },
+          // P2-0070: группы — из каталога; несколько модулей — заголовок модуля перед его группами
+          const head = manyModules && g.moduleName && g.moduleName !== groups[i - 1]?.moduleName
+            ? [h('div', { key: 'm-' + g.key, className: 'cr-module', 'data-testid': 'co-module-head' }, g.moduleName)] : [];
+          return [...head, h('details', { key: role.id + g.key, className: 'co-group cr-group', open: on > 0 || undefined, 'data-group': g.title },
             h('summary', null, h('b', null, g.title), h('span', { className: 'cr-count', 'data-testid': 'co-group-count' }, `${on} из ${g.items.length}`)),
-            h('div', { className: 'cr-items' }, g.items.map((it) => h('label', { key: it.action, className: 'co-check' },
+            h('div', { className: 'cr-items' }, g.items.map((it) => h('label', { key: it.action, className: 'co-check', title: it.description },
               h('input', { type: 'checkbox', 'data-action': it.action, checked: draft.has(it.action), disabled: isTemplate || busy, onChange: () => toggle(it.action) }),
-              h('span', null, it.description)))));
+              h('span', null, actionLabel(it))))))];
         })),
       isTemplate ? null : h('div', { className: 'co-row cr-bar' },
         h('button', { type: 'button', className: 'pf-btn', 'data-testid': 'co-save-actions', disabled: busy || !changed,
@@ -169,6 +172,7 @@ export const COMPANY_ROLES_CSS = `
 .cr-list{max-height:none}
 .cr .co-input{width:100%}
 .cr-group{padding:0}
+.cr-module{margin:8px 0 -4px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
 .cr-group summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px;padding:0 12px;cursor:pointer;font-size:14px}
 .cr-count{font-size:12.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .cr-items{padding:0 12px 8px}

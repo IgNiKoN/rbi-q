@@ -28,11 +28,14 @@ type N = any;
 const click = (b: N) => b.dispatchEvent(new win.Event('click', { bubbles: true }));
 const submit = (f: N) => f.dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
 
+// как отдаёт сервер после 052 (pf_permission_catalog): модуль, группа, порядок, подпись
+const PF = { module: 'planfact', module_name: 'План/Факт' };
 const CATALOG = [
-  { action: 'planfact.works.view', description: 'Просмотр работ плана' },
-  { action: 'planfact.works.edit', description: 'Добавление и правка работ (ВОР, ГПР)' },
-  { action: 'planfact.fact.create', description: 'Ввод фактического объёма' },
-  { action: 'security.roles.assign', description: 'Назначение и отзыв ролей пользователей' }
+  { action: 'planfact.works.view', description: 'Просмотр работ плана', ...PF, group_name: 'Работы и план', sort: 1010, label: 'Просмотр работ плана', area_scoped: true },
+  { action: 'planfact.works.edit', description: 'Добавление и правка работ (ВОР, ГПР)', ...PF, group_name: 'Работы и план', sort: 1020, label: 'Добавление и правка работ (ВОР, ГПР)' },
+  { action: 'planfact.fact.create', description: 'Ввод фактического объёма', ...PF, group_name: 'Факт', sort: 1120, label: 'Ввод фактического объёма', area_scoped: true },
+  { action: 'security.roles.assign', description: 'Назначение и отзыв ролей пользователей', module: null, module_name: 'Компания', group_name: 'Сотрудники и справочники',
+    sort: 9010, label: 'Назначение и отзыв ролей пользователей' }
 ];
 
 function fakeApi(opts: { fail?: string } = {}) {
@@ -66,7 +69,8 @@ function fakeApi(opts: { fail?: string } = {}) {
     async deleteRole(id) { calls.push(`delete:${id}`); if (!opts.fail) roles = roles.filter((r) => r.id !== id); return res(null); },
     async assignRole() { return res('a1'); },
     async setParticipation() { return { ok: true, value: { added: 0, changed: 0, revoked: 0 } }; },
-    async revoke() { return res(null); }
+    async revoke() { return res(null); },
+    async whoCan() { return { ok: true as const, value: [] }; }
   };
   return { api, calls };
 }
@@ -92,7 +96,7 @@ test('галочки сгруппированы по-русски, подпис�
   const el = mountRoles(fakeApi().api);
   await tick();
   const legends = Array.from(el.querySelectorAll('.cr-group summary b')).map((l: N) => l.textContent);
-  assert.deepEqual(legends, ['Работы и план', 'Факт', 'Безопасность']);
+  assert.deepEqual(legends, ['Работы и план', 'Факт', 'Сотрудники и справочники'], 'P2-0070: группы — из каталога сервера');
   assert.match(el.textContent, /Добавление и правка работ/);
 });
 
@@ -191,7 +195,7 @@ test('не вошёл — своей формы входа нет, «Войти�
   assert.ok(off.querySelector('[data-testid=co-offline]'));
 });
 
-test('администратор — первая «Сотрудники»; внутри только вкладки «Сотрудники · Роли и права» (P2-0048), «Роли» — по вкладке', async () => {
+test('администратор — первая «Сотрудники»; внутри только вкладки «Сотрудники · Роли и права · Кто что может» (P2-0048, P2-0070), «Роли» — по вкладке', async () => {
   win.history.replaceState(null, '', '/');
   const el = win.document.createElement('div') as N; win.document.body.appendChild(el);
   const root = createRoot(el);
@@ -199,7 +203,7 @@ test('администратор — первая «Сотрудники»; вн
   await tick(); await tick();
   assert.match(el.querySelector('[data-testid=co-user]').textContent, /Альфа/);
   assert.deepEqual([...el.querySelectorAll('[data-testid=co-tabs] [role=tab]')].map((t: N) => t.textContent),
-    ['Сотрудники', 'Роли и права'], 'остальные разделы — в левой колонке «Настроек»');
+    ['Сотрудники', 'Роли и права', 'Кто что может'], 'остальные разделы — в левой колонке «Настроек»');
   assert.ok(el.querySelector('[data-testid=co-members]'));
   click(el.querySelector('[data-tab=roles]')); await tick(); await tick();
   assert.ok(el.querySelector('[data-testid=co-roles]'));
@@ -216,7 +220,7 @@ test('права на вкладки: управление ролями / объ
   assert.deepEqual(visibleTabs(rightsFrom([], [acc(true, true)])), ['objects', 'directories'], 'ПТО: объекты и единицы');
   assert.deepEqual(visibleTabs(rightsFrom([], [acc(false, false)])), [], 'инженер — ничего');
   assert.deepEqual(visibleTabs(rightsFrom([{ company_id: 'c1', company_name: 'Альфа' }], [acc(true, true)])),
-    ['members', 'roles', 'objects', 'counterparties', 'directories', 'branding', 'modules', 'audit']);
+    ['members', 'roles', 'who', 'objects', 'counterparties', 'directories', 'branding', 'modules', 'audit']);
 });
 
 // P2-0048: левая колонка «Настроек» узнаёт вкладки без загрузки бандла — та же таблица прав, что у CompanyApp
@@ -262,4 +266,15 @@ test('P2-0048: строка роли «что может · у N чел.» (лю
   assert.equal(el.querySelectorAll('[data-testid=co-group-count]')[1].textContent, '0 из 1', '«Отменить изменения» вернул галочки');
   click(el.querySelector('[data-testid=co-roles-back]')); await tick();
   assert.equal(el.querySelector('[data-testid=co-roles]').dataset.detail, '0');
+});
+
+test('P2-0070: группы из каталога — порядок сервера, несколько модулей → строка роли называет модули', async () => {
+  const { abilities } = await import('../action-groups.ts');
+  const sk = { action: 'construction.defects.close', description: 'Стройконтроль: закрыть замечание', module: 'construction', module_name: 'Стройконтроль',
+    group_name: 'Замечания', sort: 3060, label: 'Закрыть замечание', area_scoped: true };
+  const cat = [sk, ...CATALOG];
+  assert.deepEqual(groupCatalog(cat).map((x) => x.title), ['Работы и план', 'Факт', 'Замечания', 'Сотрудники и справочники'], 'по порядку каталога');
+  assert.deepEqual(abilities(['planfact.works.view', 'planfact.fact.create'], cat), ['Работы и план', 'Факт'], 'один модуль — группы');
+  assert.deepEqual(abilities(['planfact.works.view', 'construction.defects.close'], cat), ['План/Факт', 'Стройконтроль'], 'несколько модулей — модули');
+  assert.equal(groupCatalog(cat).find((x) => x.title === 'Замечания')!.items[0].label, 'Закрыть замечание');
 });

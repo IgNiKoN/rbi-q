@@ -185,6 +185,7 @@ begin
     'can_on_behalf', planfact.has_permission(p_project, 'planfact.fact.approve'));
 end $function$;
 
+drop function public.pf_who_can(uuid, uuid, uuid);
 drop function core.require_action(uuid, uuid, uuid, text, uuid, uuid);
 drop function core.my_grants(uuid, uuid, text);
 drop function core.row_allowed(uuid, uuid, uuid, text[], uuid, uuid);

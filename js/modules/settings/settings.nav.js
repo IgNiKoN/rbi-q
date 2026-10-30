@@ -84,7 +84,7 @@ export function settingsNavItems() {
 }
 
 /** Вкладка CompanyApp → пункт (Роли — внутри «Сотрудники и доступ»). */
-const COMPANY_TAB_TO_NAV = { roles: 'company/members' };
+const COMPANY_TAB_TO_NAV = { roles: 'company/members', who: 'company/members' };
 
 /** Адрес → id пункта; 'home' — главная; не «Настройки» — null; «Компания» без вкладки — 'company'. */
 export function settingsNavIdFromHash(hash) {

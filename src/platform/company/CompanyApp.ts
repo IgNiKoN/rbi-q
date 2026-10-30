@@ -18,7 +18,7 @@ import type { ReactElement } from 'react';
 import type { AuthApi } from '../auth/auth.service.ts';
 import { openPlatformLogin, platformSignOut } from '../auth/shell-user.ts';
 import { CompanyRoles, COMPANY_ROLES_CSS } from './CompanyRoles.ts';
-import { CompanyMembers, COMPANY_MEMBERS_CSS } from './CompanyMembers.ts';
+import { CompanyMembers, COMPANY_MEMBERS_CSS, placesLoader } from './CompanyMembers.ts';
 import { CompanyAudit, COMPANY_AUDIT_CSS } from './CompanyAudit.ts';
 import { SETTINGS_UI_CSS } from '../ui/settings.ts';
 import type { CompanyApi, CompanyRef, MemberRow } from './company.service.ts';
@@ -29,9 +29,10 @@ import { CompanyScope } from './CompanyScope.ts';
 import { ProjectsTab } from './ProjectsTab.ts';
 import { Patterns, PATTERNS_CSS } from './Patterns.ts';
 import { UnitsTab } from './UnitsTab.ts';
+import { CompanyWho, COMPANY_WHO_CSS } from './CompanyWho.ts';
 
 type Mode = 'loading' | 'login' | 'noaccess' | 'ready';
-type Tab = 'members' | 'roles' | 'objects' | 'counterparties' | 'directories' | 'branding' | 'modules' | 'audit' | 'patterns';
+type Tab = 'members' | 'roles' | 'who' | 'objects' | 'counterparties' | 'directories' | 'branding' | 'modules' | 'audit' | 'patterns';
 
 const BASE = '#/settings/company';
 /** Событие раздела: адрес #/settings/company… показан снова (index.ts — при повторном монтировании в тот же контейнер). */
@@ -46,6 +47,7 @@ export function tabFromHash(hash: string): Tab | null {
 const TABS: { id: Tab; label: string; need: 'admin' | 'projects' | 'units' | 'platform' }[] = [
   { id: 'members', label: 'Сотрудники', need: 'admin' },
   { id: 'roles', label: 'Роли', need: 'admin' },
+  { id: 'who', label: 'Кто что может', need: 'admin' },   // P2-0070: люди × действия на объекте (только просмотр)
   { id: 'objects', label: 'Проекты', need: 'projects' },
   { id: 'counterparties', label: 'Контрагенты', need: 'admin' },
   { id: 'directories', label: 'Справочники', need: 'units' },
@@ -56,8 +58,8 @@ const TABS: { id: Tab; label: string; need: 'admin' | 'projects' | 'units' | 'pl
 ];
 
 /** P2-0048: внутренние вкладки раздела «Сотрудники и доступ» (остальные вкладки — пункты левой колонки «Настроек»). */
-const INNER_TABS: Tab[] = ['members', 'roles'];
-const INNER_LABELS: Partial<Record<Tab, string>> = { members: 'Сотрудники', roles: 'Роли и права' };
+const INNER_TABS: Tab[] = ['members', 'roles', 'who'];
+const INNER_LABELS: Partial<Record<Tab, string>> = { members: 'Сотрудники', roles: 'Роли и права', who: 'Кто что может' };
 
 export interface CompanyRights { admin: boolean; projects: boolean; units: boolean; platform?: boolean }
 /** Какие вкладки видны: по правам сервера (без права вкладки нет, прямой адрес → первая доступная). */
@@ -199,6 +201,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
   const cur: Tab = tab && tabs.includes(tab) ? tab : tabs[0];
   const body = cur === 'members' ? h(CompanyMembers, { api, companyId, me: who, projects: projects || null, key: companyId })
     : cur === 'roles' ? h(CompanyRoles, { api, companyId, key: companyId })
+    : cur === 'who' ? h(CompanyWho, { api, companyId, loadPlaces: placesLoader(projects), key: companyId })
     : cur === 'objects' && projects ? h(CompanyScope, { api: projects, render: (c) => h(ProjectsTab, { api: projects, company: c, core: core || null, people: () => peopleOf(api, c.company_id) }) })
     : cur === 'counterparties' && core ? h(CounterpartiesTab, { core, companyId, key: companyId })
     : cur === 'directories' && projects ? h(CompanyScope, { api: projects, render: (c) => h(UnitsTab, { api: projects, company: c }) })
@@ -220,7 +223,7 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
       body));
 }
 
-export const COMPANY_CSS = SETTINGS_UI_CSS + PATTERNS_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT_CSS + COUNTERPARTIES_CSS + `
+export const COMPANY_CSS = SETTINGS_UI_CSS + PATTERNS_CSS + COMPANY_WHO_CSS + COMPANY_MEMBERS_CSS + COMPANY_AUDIT_CSS + COUNTERPARTIES_CSS + `
 .co-root{max-width:1200px}
 .co-offline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12px;margin-bottom:12px}
 .co-head{margin-bottom:16px}

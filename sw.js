@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.30-33feb326',
+  version: '2026.10.30-b9927a99',
   date: '2026-10-30',
-  digest: '33feb326',
+  digest: 'b9927a99',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -71,7 +71,7 @@ const APP_RELEASE = {
     "js/core/views.js": ["2aee99732cc01597",31332,""],
     "js/dist/company/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"company"],
     "js/dist/company/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"company"],
-    "js/dist/company/company.js": ["95f264854983dcde",1358835,"company"],
+    "js/dist/company/company.js": ["b6eb68c574569111",1370830,"company"],
     "js/dist/construction-v2.js": ["da8879d1e88f3a04",337444,"construction-v2"],
     "js/dist/planfact/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"planfact"],
     "js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"planfact"],
@@ -84,7 +84,7 @@ const APP_RELEASE = {
     "js/dist/rbi-construction-units.js": ["24fc5f9644437f65",17075,"construction"],
     "js/dist/rbi-locations.js": ["4fe79f9019eaf31f",31350,""],
     "js/modules/company/company.manifest.js": ["2eea006b4fe1c5c1",1192,""],
-    "js/modules/company/index.js": ["d8aadc93b9207bc1",9013,""],
+    "js/modules/company/index.js": ["0def60e56ba9eda4",9031,""],
     "js/modules/construction-v2/construction-v2.manifest.js": ["33e9ff41fb7484ec",2773,""],
     "js/modules/construction-v2/index.js": ["198cf47ab56aac85",324,"construction-v2"],
     "js/modules/construction/construction.actions.js": ["10009a3972004706",12342,"construction"],
@@ -224,7 +224,7 @@ const APP_RELEASE = {
     "js/modules/settings/settings.desktop.render.js": ["76d739c2d52fa7eb",8464,""],
     "js/modules/settings/settings.manifest.js": ["cb8fb906246cb924",752,""],
     "js/modules/settings/settings.module.js": ["9acc04e635d95ffc",13540,""],
-    "js/modules/settings/settings.nav.js": ["ddad8284ba2f443c",14161,""],
+    "js/modules/settings/settings.nav.js": ["686d48ca74504399",14185,""],
     "js/modules/settings/settings.render.js": ["24d66ef454ff66ff",208844,""],
     "js/modules/settings/settings.routes.js": ["03a11c3b25a05c68",6753,""],
     "js/services/ai.service.js": ["81319b59599cf8c6",3352,""],

@@ -7,10 +7,14 @@ import { createCoreService } from '../core/core.service.ts';
 import { copyCall } from '../services/offline/copy.ts';
 
 /** P2-0060: чтения «Компании» (роли, люди, журнал) — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
-export const COMPANY_READS: ReadonlySet<string> = new Set(['pf_my_admin_companies', 'pf_permission_catalog', 'pf_list_company_roles', 'pf_list_company_members', 'pf_list_company_audit', 'pf_list_quality_objects']);
+export const COMPANY_READS: ReadonlySet<string> = new Set(['pf_my_admin_companies', 'pf_permission_catalog', 'pf_list_company_roles', 'pf_list_company_members', 'pf_list_company_audit', 'pf_list_quality_objects', 'pf_who_can']);
 
 export interface CompanyRef { company_id: string; company_name: string }
-export interface CatalogRow { action: string; description: string }
+/** Действие каталога; P2-0070 (052): модуль, группа, порядок и подпись для экрана — данные сервера (без них — «Прочее»). */
+export interface CatalogRow {
+  action: string; description: string;
+  module?: string | null; module_name?: string; group_name?: string; sort?: number; label?: string; area_scoped?: boolean;
+}
 export interface RoleRow { id: string; name: string; template_code: string | null; actions: string[]; active_assignments: number }
 export interface MemberRow {
   user_id: string; email: string | null; assignment_id: string | null; role_id: string | null; role_name: string | null;
@@ -36,6 +40,12 @@ export interface QualityObjectRef { id: string; name: string }
 /** P2-0028: результат «Добавить сотрудника» — временный пароль только у новой учётки и только один раз. */
 export interface AddMemberResult { user_id: string; temp_password: string | null; created: boolean }
 export interface ContractorRef { id: string; name: string; draft?: boolean }
+/** P2-0070 (052): «Кто что может на объекте» — человек × действия включённых модулей в выбранном месте (pf_who_can). */
+export interface WhoRow {
+  user_id: string; full_name: string | null; email: string | null; roles: string[]; places: string[];
+  /** участие только на часть внутри выбранного места */
+  partial: boolean; firm: string | null; actions: string[];
+}
 export interface ProjectRef { id: string; name: string; company_id: string; archived_at?: string | null }
 export interface CompanyAuditRow {
   at: string; actor_email: string | null; action: string; record_id: string; subject_email: string | null;
@@ -69,6 +79,8 @@ export interface CompanyApi {
   addMember(companyId: string, email: string, fullName: string, roleId: string, projectId: string | null): Promise<Result<AddMemberResult>>;
   resetPassword(companyId: string, userId: string): Promise<Result<string>>;
   disableMember(companyId: string, userId: string): Promise<Result>;
+  /** P2-0070: кто что может на объекте (место null — весь объект); только чтение, администратор ролей. */
+  whoCan(companyId: string, projectId: string, locationId: string | null): Promise<Result<WhoRow[]>>;
   /** P2-0028 (032a): ФИО сотрудника — сервер переписывает имя в его записях Качества. Возвращает число переписанных записей. */
   setFullName(userId: string, fullName: string): Promise<Result<number>>;
 }
@@ -116,6 +128,10 @@ export function createCompanyService(): CompanyApi | null {
     assignRole: (u, r, p, to, cp, objs) => call<string>('pf_assign_role', { p_user: u, p_role: r, p_project: p, p_valid_to: to,
       ...(cp ? { p_counterparty: cp } : {}), ...(objs && objs.length ? { p_objects: objs } : {}) }),
     revoke: (id) => call('pf_revoke_assignment', { p_assignment: id }),
+    whoCan: async (co, p, loc) => {
+      const r = await call<WhoRow[]>('pf_who_can', { p_company: co, p_project: p, p_location: loc });
+      return r.ok ? { ok: true, value: Array.isArray(r.value) ? r.value : [] } : r;
+    },
     setParticipation: async (p) => {
       const r = await call<Partial<ParticipationResult> | null>('pf_set_participation', { p_users: p.users, p_role: p.roleId, p_project: p.projectId,
         p_locations: p.locations.length ? p.locations : null, p_fact_owner: p.factOwner, p_valid_to: p.validTo,
