@@ -117,8 +117,9 @@ try {   // до конца файла (без отступа): что бы ни 
 const stamp = 'REST-тест ' + new Date().toISOString();
 const addOk = await rpc('pf_add_work', { p_project: pR, p_name: stamp, p_unit: 'шт', p_plan_qty: 1 }, tok.alfaPto);
 check('ПТО добавил работу через pf_add_work', addOk.ok, `статус ${addOk.status}`);
-const wPto = await wl('alfaPto', pR), wFor = await wl('alfaForeman', pR), wAdm = await wl('alfaAdmin', pR);
-check('новая работа видна в списке ПТО', wPto.some((w) => w.name === stamp));
+check('новая работа видна в списке ПТО', (await wl('alfaPto', pR)).some((w) => w.name === stamp));
+// суммы — на работах «Альфа основной» (у них плановая сумма есть; pf_add_work суммы не задаёт — P2-0075 доработка №2)
+const wPto = await wl('alfaPto', pA), wFor = await wl('alfaForeman', pA), wAdm = await wl('alfaAdmin', pA);
 check('ПТО видит суммы (есть money.view)', wPto.some((w) => w.plan_amount !== null));
 check('прораб не видит ни одной суммы', wFor.length > 0 && wFor.every((w) => w.plan_amount === null));
 check('администратор не видит ни одной суммы', wAdm.length > 0 && wAdm.every((w) => w.plan_amount === null));
@@ -383,7 +384,8 @@ else {
       check('повтор имени бригады отклонён', !(await rpc('pf_brigade_save', { p_company: cV, p_id: null, p_name: stampB.toUpperCase() }, tok.alfaPto)).ok);
       check('прораб видит бригады компании', (await j(await rpc('pf_brigade_list', { p_company: cV }, tok.alfaForeman))).some((b) => b.id === brigId));
       check('Бета-ПТО не видит бригады Альфы', !(await rpc('pf_brigade_list', { p_company: cV }, tok.betaPto)).ok);
-      const today = new Date().toISOString().slice(0, 10);
+      // «сегодня» сервера — по Москве (fact_today): прогон после 21:00 UTC — уже следующий день (P2-0075 доработка №2)
+      const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
       const posId = pos[0]?.id;
       check('факт: без бригады — отказ', !(await rpc('pf_fact_add', { p_position: posId, p_brigade: null, p_date: today, p_qty: 1 }, tok.alfaForeman)).ok);
       check('факт: объём 0 — отказ', !(await rpc('pf_fact_add', { p_position: posId, p_brigade: brigId, p_date: today, p_qty: 0 }, tok.alfaForeman)).ok);
@@ -711,6 +713,10 @@ else {
       return r.ok ? await r.json() : []; };
     const cpRest = async () => ((await j(await rpc('pf_counterparties_list', { p_company: cA, p_include_archived: false }, tok.alfaAdmin))) || []).filter?.((c) => isRest(c.name)) || [];
     const dirBefore = new Set((await dirRest()).map((x) => x.id)), cpBefore = new Set((await cpRest()).map((x) => x.id));
+    // объект Качества «REST-018-…» («туда-обратно» по project_objects) сервер отражает объектом ядра (P2-0035) — он не удаляется
+    // вместе с записью Качества (объекты ведёт «Компания → Проекты»); новые за блок объекты «REST…» — в finally в архив
+    const projRest = async () => ((await j(await rpc('pf_company_projects', { p_company: cA }, tok.alfaAdmin))) || []).filter?.((p) => isRest(p.name) && !p.archived_at) || [];
+    const projBefore = new Set((await projRest()).map((x) => x.id));
     try {
       const pRest = (await j(await rpc('pf_company_projects', { p_company: cA }, tok.alfaAdmin))).find((p) => p.name === REST_PROJECT)?.id;
       check('018: объект автопроверок Альфы найден', !!pRest);
@@ -771,9 +777,15 @@ else {
       const tables = Object.keys(defs).filter((t) => !t.startsWith('rpc')).sort();
       check('018: в API раздела quality 55 таблиц', tables.length === 55, String(tables.length));
       let rt = 0;
+      const parentInsp = `${stampQ}-parent`;
+      const pi = await q('rbi_inspections', 'alfaAdmin', cA, { method: 'POST', body: JSON.stringify({ id: parentInsp, project_code: pRest }) });
+      check('018: проверка-родитель для строк и фото', pi.ok, `статус ${pi.status}`);
       for (const t of tables) {
         const d = defs[t]; const row = {};
-        for (const c of d.required || []) if (!['core_company_id', 'core_project_id'].includes(c) && !(d.properties[c]?.default !== undefined)) row[c] = val(d.properties[c] || {});
+        // core_* (номер записи core_id, связи с ядром) ставит сервер, приложение их не шлёт (054: чужой core_id при uuid-номере — отказ)
+        for (const c of d.required || []) if (!c.startsWith('core_') && !(d.properties[c]?.default !== undefined)) row[c] = val(d.properties[c] || {});
+        // строки и фото проверки — к настоящей проверке объекта (053: дочернюю строку видит тот, кто видит проверку; «сирота» — только автор)
+        if (['rbi_inspection_items', 'rbi_inspection_photos'].includes(t) && d.properties.inspection_id) row.inspection_id = parentInsp;
         if (d.properties.project_code) row.project_code = pRest;
         if (d.properties.id && !row.id && d.properties.id.format !== 'uuid') row.id = `${stampQ}-${t}`;
         if (t === 'rbi_company_settings') row.company_id = 'rbi';
@@ -797,6 +809,7 @@ else {
         if (okT) rt++; else check(`018: ${t} — туда-обратно`, false, `компания ${got.core_company_id === cA}, ПТО ${seenPto}, Бета ${seenBeta}/${seenBetaHdr}, удаление ${del.status}`);
       }
       await q(`contractors?id=eq.${stampQ}-ctr`, 'alfaAdmin', cA, { method: 'DELETE' });
+      await q(`rbi_inspections?id=eq.${parentInsp}`, 'alfaAdmin', cA, { method: 'DELETE' });
       check(`018: «туда-обратно» по таблицам quality: ${rt} из ${tables.length}`, rt === tables.length);
 
       // 018d через настоящий Storage API: закрытый бакет компании, путь <компания>/…
@@ -855,7 +868,7 @@ else {
             const id = r.ok ? await j(r) : null; if (id) asg18.push(id); check(`0018: alfa-foreman назначен «${tpl}»${cpId ? ' с фирмой' : ''}`, !!id, `статус ${r.status}`); return id; };
           const revoke = async (id) => { if (id && (await rpc('pf_revoke_assignment', { p_assignment: id }, tok.alfaAdmin)).ok) asg18.splice(asg18.indexOf(id), 1); };
           const row = (t, extra) => { const d = defs[t]; const r0 = {};
-            for (const c of d.required || []) if (!['core_company_id', 'core_project_id'].includes(c) && d.properties[c]?.default === undefined) r0[c] = val(d.properties[c] || {});
+            for (const c of d.required || []) if (!c.startsWith('core_') && d.properties[c]?.default === undefined) r0[c] = val(d.properties[c] || {});
             return { ...r0, project_code: pRest, ...extra }; };
           const ids = (t, k) => q(`${t}?select=id&id=like.${s18}*&order=id`, k, cA).then(async (r) => r.ok ? (await r.json()).map((x) => x.id.slice(s18.length + 1)).join(',') : `ERR${r.status}`);
           const patch = async (t, id, k, body) => { const r = await q(`${t}?id=eq.${s18}-${id}`, k, cA, { method: 'PATCH', body: JSON.stringify(body), headers: { Prefer: 'return=representation' } });
@@ -885,7 +898,8 @@ else {
             const aE = await assign('qc_engineer');
             const iE = await q('rbi_inspections', 'alfaForeman', cA, { method: 'POST', body: JSON.stringify(row('rbi_inspections', { id: `${s18}-i3` })) });
             check('0018: инженер СК создаёт свою проверку', iE.ok, `статус ${iE.status}`);
-            check('0018: инженер СК видит только свои проверки', await ids('rbi_inspections', 'alfaForeman') === 'i3', await ids('rbi_inspections', 'alfaForeman'));
+            // P2-0071: шаблон «Инженер» — «видеть все проверки» объекта, править только свои (053, принято владельцем)
+            check('0018: инженер СК видит все проверки объекта', await ids('rbi_inspections', 'alfaForeman') === 'i1,i2,i3', await ids('rbi_inspections', 'alfaForeman'));
             check('0018: инженер СК не правит чужую проверку', await patch('rbi_inspections', 'i1', 'alfaForeman', { location: 'x' }) <= 0);
             check('0018: инженер СК правит свою проверку', await patch('rbi_inspections', 'i3', 'alfaForeman', { location: 'x' }) === 1);
             check('0018: ПТО (свои объекты) видит все проверки объекта', await ids('rbi_inspections', 'alfaPto') === 'i1,i2,i3', await ids('rbi_inspections', 'alfaPto'));
@@ -943,6 +957,8 @@ else {
     } finally {
       if (asgQ) check('018: назначение ПТО на объект автопроверок отозвано', (await rpc('pf_revoke_assignment', { p_assignment: asgQ }, tok.alfaAdmin)).ok);
       for (const c of (await cpRest()).filter((x) => !cpBefore.has(x.id))) await rpc('pf_counterparties_archive', { p_id: c.id, p_archived: true }, tok.alfaAdmin);
+      for (const p of (await projRest()).filter((x) => !projBefore.has(x.id)))
+        check(`018: объект ядра «${p.name}» от объекта Качества — в архив`, (await rpc('pf_update_project', { p_project: p.id, p_name: p.name, p_code: p.code ?? null, p_archived: true }, tok.alfaAdmin)).ok);
       for (const d of (await dirRest()).filter((x) => !dirBefore.has(x.id))) await q(`contractor_directory?id=eq.${d.id}`, 'alfaAdmin', cA, { method: 'DELETE' });
       const dirLeft = (await dirRest()).filter((x) => !dirBefore.has(x.id)).length;
       check('P2-0075: справочник подрядчиков Качества — строк «REST…» не прибавилось', dirLeft === 0, `новых осталось ${dirLeft}`);
