@@ -1,0 +1,7 @@
+PASS кэш приложения управляет страницей
+PASS план Качества (quality-*) — как раньше: открыт и нарисован — {"bytes":286,"red":true}
+PASS копия плана из ядра (core-place-plans) — открыта той же функцией и нарисована — {"bytes":286,"red":true}
+PASS запрос файла ядра — по закрытому адресу с входом (не публичный) — [{"url":"http://localhost:8976/storage/v1/object/authenticated/core-place-plans/11111111-2222-3333-4444-555555555555/p-1/11111111-0000-4000-8000-000000000005/22222222-0000-4000-8000-000000000001.pdf","auth":"Bearer …"}]
+PASS «Фото и PDF заранее»: файл ядра скачан на устройство
+PASS без сети: копия плана ядра открывается из устройства — {"bytes":286,"red":true}
+  запросы к Storage: /storage/v1/object/authenticated/quality-custom-assets/<компания>/location_plans/f5/plan_1.pdf [вход] | /storage/v1/object/authenticated/core-place-plans/<компания>/p-1/11111111-0000-4000-8000-000000000005/22222222-0000-4000-8000-000000000001.pdf [вход]
