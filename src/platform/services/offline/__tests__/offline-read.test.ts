@@ -210,3 +210,21 @@ test('сервер промолчал дольше ожидания — мину
   assert.equal(calls, 1);
   assert.deepEqual(r3.ok && r3.value, ['новое']);
 });
+
+test('P2-0073: размер, очистка и отбор по объектам — по описи копии, без чтения содержимого', async () => {
+  const store = memoryCopyStore();
+  let lists = 0;
+  const counted = { ...store, list: (s: string, m?: string) => { lists++; return store.list(s, m); } };
+  const reader = createOfflineReader({ store: counted, slot: () => 'c1:u1', offline: () => false, now: () => NOW, waitMs: 20 });
+  await reader.read('planfact', 'a', ok('x'.repeat(98)), { project: 'p-1' });
+  await reader.read('planfact', 'b', ok('y'.repeat(48)), { project: 'p-2' });
+  await reader.read('company', 'c', ok([1, 2]));
+  assert.equal(await reader.size('planfact'), 150);
+  assert.equal(await reader.size('planfact', 'p-2'), 50);
+  assert.deepEqual((await store.meta('c1:u1', 'planfact')).map((m) => [m.id, m.project, m.bytes]), [['c1:u1|planfact|a', 'p-1', 100], ['c1:u1|planfact|b', 'p-2', 50]]);
+  assert.equal(await reader.pruneProjects('planfact', ['p-1']), 1);
+  assert.equal(await reader.size('planfact'), 100);
+  assert.equal(await reader.clear('company'), 1);
+  assert.equal(await reader.size('company'), 0);
+  assert.equal(lists, 0, 'содержимое копии не читалось');
+});

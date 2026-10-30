@@ -146,27 +146,7 @@ export async function scanOrphans(idb: IDBFactory, from: string, isUnsent: IsUns
 
 /** P2-0058 (З6): сколько записей работы в базе ещё не отправлено (то же правило, что у переноса; демо и системные — нет). */
 export async function countUnsent(idb: IDBFactory, name: string, isUnsent: IsUnsent): Promise<number> {
-  const db = await openExisting(idb, name);
-  if (!db) return 0;
-  let n = 0;
-  try {
-    for (const store of Array.from(db.objectStoreNames)) {
-      if (!(store in RECORD_STORES)) continue;
-      await new Promise<void>((resolve, reject) => {
-        const rq = db.transaction(store, 'readonly').objectStore(store).openCursor();
-        rq.onsuccess = () => {
-          const c = rq.result;
-          if (!c) return resolve();
-          if (pickOrphans(store, [c.value as Rec], isUnsent).length) n++;
-          c.continue();
-        };
-        rq.onerror = () => reject(rq.error);
-      });
-    }
-  } finally {
-    db.close();
-  }
-  return n;
+  return (await scanPending(idb, name, isUnsent, 0)).unsent;
 }
 
 /** P2-0059 (С8): запись «отклонена сервером» (нет прав) — сама не уйдёт; в счётчик «не отправлено» не входит. */
@@ -205,24 +185,47 @@ export async function resetBlocked(idb: IDBFactory, name: string): Promise<numbe
 
 /** P2-0059 (С8): неотправленные и отклонённые записи работы в базе — для списка «что не ушло и почему» (то же правило, что у счётчика). */
 export async function listPending(idb: IDBFactory, name: string, isUnsent: IsUnsent, limit = 200): Promise<{ store: string; rec: Rec; rejected: boolean }[]> {
+  return (await scanPending(idb, name, isUnsent, limit)).rows;
+}
+
+export type PendingRow = { store: string; rec: Rec; rejected: boolean };
+export interface PendingScan { unsent: number; rows: PendingRow[] }
+/** Записей за одно чтение (P2-0073: порциями, а не курсором по одной — на слабом телефоне каждый шаг курсора дорог). */
+export const SCAN_BATCH = 200;
+
+/** P2-0073: один проход по записям работы даёт и число «не отправлено» (countUnsent), и список для «Отправка» (listPending, до limit
+ *  записей — неотправленные и отклонённые). Правило то же: pickOrphans + isUnsent / isRejected. Читается порциями по SCAN_BATCH,
+ *  каждая порция — своя короткая транзакция (запись в базу не ждёт конца подсчёта). */
+export async function scanPending(idb: IDBFactory, name: string, isUnsent: IsUnsent, limit = 200): Promise<PendingScan> {
+  const out: PendingScan = { unsent: 0, rows: [] };
   const db = await openExisting(idb, name);
-  if (!db) return [];
-  const out: { store: string; rec: Rec; rejected: boolean }[] = [];
+  if (!db) return out;
   const either: IsUnsent = (r) => isUnsent(r) || isRejected(r);
+  const take = (store: string, r: Rec): void => {
+    if (pickOrphans(store, [r], isUnsent).length) out.unsent++;
+    if (out.rows.length < limit && pickOrphans(store, [r], either).length) out.rows.push({ store, rec: r, rejected: !isUnsent(r) && isRejected(r) });
+  };
   try {
     for (const store of Array.from(db.objectStoreNames)) {
-      if (!(store in RECORD_STORES) || out.length >= limit) continue;
-      await new Promise<void>((resolve, reject) => {
-        const rq = db.transaction(store, 'readonly').objectStore(store).openCursor();
-        rq.onsuccess = () => {
-          const c = rq.result;
-          if (!c || out.length >= limit) return resolve();
-          const r = c.value as Rec;
-          if (pickOrphans(store, [r], either).length) out.push({ store, rec: r, rejected: !isUnsent(r) && isRejected(r) });
-          c.continue();
-        };
-        rq.onerror = () => reject(rq.error);
-      });
+      if (!(store in RECORD_STORES)) continue;
+      const key = db.transaction(store, 'readonly').objectStore(store).keyPath;
+      if (typeof key !== 'string' || typeof IDBKeyRange === 'undefined') {
+        // ключ не одно поле — курсором, как раньше
+        await new Promise<void>((resolve, reject) => {
+          const rq = db.transaction(store, 'readonly').objectStore(store).openCursor();
+          rq.onsuccess = () => { const c = rq.result; if (!c) return resolve(); take(store, c.value as Rec); c.continue(); };
+          rq.onerror = () => reject(rq.error);
+        });
+        continue;
+      }
+      let after: IDBValidKey | null = null;
+      for (;;) {
+        const range: IDBKeyRange | null = after === null ? null : IDBKeyRange.lowerBound(after, true);
+        const part = await req(db.transaction(store, 'readonly').objectStore(store).getAll(range, SCAN_BATCH)) as Rec[];
+        for (const r of part) take(store, r);
+        if (part.length < SCAN_BATCH) break;
+        after = part[part.length - 1][key] as IDBValidKey;
+      }
     }
   } finally {
     db.close();

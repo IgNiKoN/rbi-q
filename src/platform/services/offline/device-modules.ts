@@ -26,6 +26,7 @@ type Loader = { getById?: (id: string) => { offline?: unknown } | null };
 type Shell = { isPlatformModuleAllowed?: (id: string) => boolean; legacyModuleAllowed?: (id: string) => boolean };
 type W = Window & { RBI?: { moduleLoader?: Loader; services?: { shell?: Shell }; platformMenuAccess?: Record<string, boolean>;
   offlinePrefetch?: Record<string, (force: boolean) => Promise<unknown>> }; downloadMissingCloudFiles?: (silent: boolean, scope: string) => Promise<void>;
+  dbCount?: (store: string) => Promise<number>;
   RbiStorageManager?: { runManualRecoverableCacheCleanup?: (o: Record<string, unknown>) => Promise<{ freedBytes?: number } | undefined> };
   showToast?: (m: string) => void; dbGetAll?: (store: string) => Promise<unknown[]>; STORES?: Record<string, string> };
 
@@ -162,8 +163,11 @@ const ROLE_LABEL: Record<string, string> = { engineer: 'инженер каче�
 
 /** P2-0073: цифры блока — последние известные хранятся на устройстве (по «компания + пользователь») со временем подсчёта;
  *  null — ещё ни разу не считали. Экран показывает их сразу и пересчитывает в фоне. */
-export interface Figures { code: Record<string, number> | null; copy: Record<string, number> | null; files: { quality: number; knowledge: number } | null; used: number | null; free: number | null; at: number }
+export interface Figures { code: Record<string, number> | null; copy: Record<string, number> | null; files: { quality: number; knowledge: number } | null; used: number | null; free: number | null; at: number;
+  /** записей в реестре файлов при последнем подсчёте фото и PDF: число то же — сумма не пересчитывается (не чаще раза в FILES_MS) */
+  filesN?: number; filesAt?: number }
 export const EMPTY_FIGURES: Figures = { code: null, copy: null, files: null, used: null, free: null, at: 0 };
+const FILES_MS = 10 * 60000;
 const FIGURES_KEY = 'platform2_offline_figures:';
 function loadFigures(slot: string): Figures {
   try { const v = JSON.parse(localStorage.getItem(FIGURES_KEY + slot) || 'null'); if (v && typeof v === 'object') return { ...EMPTY_FIGURES, ...v }; } catch { /* нет хранилища */ }
@@ -202,8 +206,9 @@ export function moduleStates(win: W, f: Figures): { rows: ModuleState[]; total: 
 let codeCache: Record<string, number> | null = null;
 type Step = 'code' | 'files' | 'memory' | 'copy';
 const inflight: Partial<Record<Step, Promise<void>>> = {};
-/** Пересчитать цифры: шаги идут параллельно, каждый по готовности отдаёт свою часть (part). Шаг, который ещё идёт, не запускается второй раз. */
-export async function refreshFigures(win: W, part: (step: Step, patch: Partial<Figures>) => void): Promise<void> {
+/** Пересчитать цифры: шаги идут параллельно, каждый по готовности отдаёт свою часть (part). Шаг, который ещё идёт, не запускается второй раз.
+ *  known — прежние цифры: фото и PDF пересчитываются, только если в реестре другое число записей, прошло FILES_MS или после действия (force). */
+export async function refreshFigures(win: W, part: (step: Step, patch: Partial<Figures>) => void, known: Figures = EMPTY_FIGURES, force = false): Promise<void> {
   const run = (step: Step, f: () => Promise<Partial<Figures> | null>): Promise<void> => inflight[step] || (inflight[step] = f()
     .then((p) => { if (p) part(step, p); }, () => undefined).finally(() => { delete inflight[step]; }));
   await Promise.all([
@@ -211,7 +216,13 @@ export async function refreshFigures(win: W, part: (step: Step, patch: Partial<F
       if (!codeCache) { try { codeCache = codeBytesByModule(await (await fetch('./sw.js')).text()); } catch { return { code: {} }; } }   // без описи — без кода
       return { code: codeCache };
     }),
-    run('files', async () => (win.dbGetAll && win.STORES?.FILE_REGISTRY ? { files: fileBytes((await win.dbGetAll(win.STORES.FILE_REGISTRY)) as Array<Record<string, unknown>>) } : null)),
+    run('files', async () => {
+      const store = win.STORES?.FILE_REGISTRY;
+      if (!win.dbGetAll || !store) return null;
+      const n = win.dbCount ? await win.dbCount(store).catch(() => -1) : -1;
+      if (!force && known.files && n >= 0 && n === known.filesN && Date.now() - (known.filesAt || 0) < FILES_MS) return { files: known.files };
+      return { files: fileBytes((await win.dbGetAll(store)) as Array<Record<string, unknown>>), filesN: n, filesAt: Date.now() };
+    }),
     run('memory', async () => { const e = await navigator.storage.estimate(); const used = e.usage || 0; return { used, free: Math.max(0, (e.quota || 0) - used) }; }),
     run('copy', async () => { const reader = offlineReader(); const [planfact, company] = await Promise.all([reader.size('planfact'), reader.size('company')]); return { copy: { planfact, company } }; })
   ]);
@@ -279,7 +290,7 @@ export async function renderOfflineModules(slot: HTMLElement | null, force = fal
     if (figures !== cur) return;   // вошёл другой человек — его цифры свои
     cur.f = { ...cur.f, ...patch }; cur.fresh.add(step);
     paint(slot, win);
-  });
+  }, cur.f, force);
   if (figures === cur) { cur.f = { ...cur.f, at: Date.now() }; saveFigures(me, cur.f); }
 }
 

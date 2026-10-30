@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.30-8f568ec5',
+  version: '2026.10.30-8fe6631a',
   date: '2026-10-30',
-  digest: '8f568ec5',
+  digest: '8fe6631a',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -71,14 +71,14 @@ const APP_RELEASE = {
     "js/core/views.js": ["2aee99732cc01597",31332,""],
     "js/dist/company/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"company"],
     "js/dist/company/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"company"],
-    "js/dist/company/company.js": ["15db929d096c108e",1376106,"company"],
+    "js/dist/company/company.js": ["80274b866f819068",1377067,"company"],
     "js/dist/construction-v2.js": ["da8879d1e88f3a04",337444,"construction-v2"],
     "js/dist/planfact/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"planfact"],
     "js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"planfact"],
     "js/dist/planfact/chunks/xlsx-writer-C1YpHX_s.js": ["70ba43f300adeb4d",12722,"planfact"],
-    "js/dist/planfact/planfact.js": ["8b94cea10e84d060",1698268,"planfact"],
+    "js/dist/planfact/planfact.js": ["9108d3ae5ba2ba38",1703933,"planfact"],
     "js/dist/platform-admin/platform-admin.js": ["ce93570c6c17f382",26360,"platform-admin"],
-    "js/dist/platform/platform.js": ["6f03f731d72b337c",798170,""],
+    "js/dist/platform/platform.js": ["8347c1cce080aa77",799923,""],
     "js/dist/rbi-construction-acceptance.js": ["bc64aaa6db993c9c",14605,"construction"],
     "js/dist/rbi-construction-defects.js": ["234ce71f41917c30",12286,"construction"],
     "js/dist/rbi-construction-units.js": ["24fc5f9644437f65",17075,"construction"],

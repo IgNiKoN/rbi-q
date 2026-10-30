@@ -6,9 +6,9 @@
  * устройства модулей с rpc (P2-0064, факт План/Факта; отправка — device-send.ts).
  * Макет утверждён владельцем 28.10.2026 (reports/P2-0058/stage3/mockups/compare.html).
  */
-import { countUnsent, listPending, resetBlocked } from './offline-rescue.ts';
+import { resetBlocked, scanPending } from './offline-rescue.ts';
 import { statusHtml, toItems, SYNC_CSS, SYNC_STYLE_ID } from './sync-status.ts';
-import type { IsUnsent } from './offline-rescue.ts';
+import type { IsUnsent, PendingRow, PendingScan } from './offline-rescue.ts';
 import { renderOfflineModules } from '../services/offline/device-modules.ts';
 import { DEVICE_RECORDS_EVENT, deviceRows, pendingDeviceRecords, resetDeviceRejected, sendNow } from '../services/offline/device-send.ts';
 
@@ -170,10 +170,27 @@ export function startNetStatus(deps: Deps): void {
     chip.title = v.label;
   }
 
+  // P2-0073: неотправленное Качества считает один проход за раз — его ждут и значок (recount), и карточка «Отправка» (fillDevice);
+  // подсчёт младше SCAN_FRESH_MS не повторяется (таймер значка не перечитывает базу сразу после экрана и наоборот).
+  const SCAN_FRESH_MS = 5000;
+  let scanRun: Promise<PendingScan> | null = null;
+  let scanLast: { r: PendingScan; at: number } | null = null;
+  /** after — нужен подсчёт, начатый после этого вызова (после «Отправить снова»): идущий дожидается и считается заново. */
+  async function scanQuality(maxAge: number, after = false): Promise<PendingScan> {
+    if (scanRun && after) await scanRun.catch(() => null);
+    if (scanRun) return scanRun;
+    if (scanLast && Date.now() - scanLast.at < maxAge) return scanLast.r;
+    const isUnsent = win.RbiSyncMergePolicy?.isUnsentLocal;
+    const db = win.RBI_DB_NAME || '';
+    if (!isUnsent || !db || typeof indexedDB === 'undefined') return { unsent: 0, rows: [] };
+    const run = scanPending(indexedDB, db, isUnsent).then((r) => { scanLast = { r, at: Date.now() }; return r; });
+    scanRun = run;
+    try { return await run; } finally { if (scanRun === run) scanRun = null; }
+  }
+
   // P2-0059 (С8, С9): «Данные на устройстве» — карточка «Отправка» (что не ушло и почему) и «Журнал синхронизации» (sync-status.ts)
   // P2-0073: экран рисуется сразу — прежний список этой вкладки (или «считаем…»), «Офлайн по модулям» — параллельно; записи на
   // телефоне дочитываются в фоне и перерисовывают карточку. Раньше экран ждал полного чтения Качества, затем — всех подсчётов модулей.
-  type PendingRow = { store: string; rec: Record<string, unknown>; rejected: boolean };
   let devBusy = false;
   let devAgain = false;
   let devWired = false;
@@ -214,10 +231,9 @@ export function startNetStatus(deps: Deps): void {
     if (slot.dataset.p2 !== html) { slot.dataset.p2 = html; slot.innerHTML = html; }
     if (!devWired) { devWired = true; slot.addEventListener('click', onDeviceClick); }
   }
-  async function readPending(): Promise<PendingRow[]> {
-    const isUnsent = win.RbiSyncMergePolicy?.isUnsentLocal;
-    const db = win.RBI_DB_NAME || '';
-    const rows: PendingRow[] = isUnsent && db && typeof indexedDB !== 'undefined' ? await listPending(indexedDB, db, isUnsent).catch(() => []) : [];
+  async function readPending(fresh: boolean): Promise<PendingRow[]> {
+    const q = await scanQuality(fresh ? 0 : SCAN_FRESH_MS, fresh).catch(() => null);
+    const rows: PendingRow[] = q ? [...q.rows] : [];
     rows.push(...(await deviceRows()));   // P2-0064: записи устройства модулей с rpc (факт План/Факта) — в той же карточке
     return rows;
   }
@@ -230,7 +246,7 @@ export function startNetStatus(deps: Deps): void {
     try {
       paintDevice(first, devRows ? devRows.rows : null, true);   // сразу: прежний список вкладки или «считаем…»
       void renderOfflineModules(doc.getElementById('p2-offline-modules-slot'));   // P2-0060: «Офлайн по модулям» — параллельно
-      const rows = await readPending();
+      const rows = await readPending(fresh);
       devRows = { rows, at: Date.now() };
       const slot = deviceSlot();
       if (slot) paintDevice(slot, rows, false);
@@ -314,7 +330,7 @@ export function startNetStatus(deps: Deps): void {
     if (p.mode !== 'email' || !isUnsent || !db || typeof indexedDB === 'undefined') unsent = 0;
     else if (due) {
       lastScan = Date.now();
-      unsent = await countUnsent(indexedDB, db, isUnsent).catch(() => unsent);
+      unsent = await scanQuality(force ? 0 : SCAN_FRESH_MS).then((r) => r.unsent, () => unsent);
     }
     qualityUnsent = unsent;
     // P2-0064: записи устройства (сервис платформы) — в любой компании, и без Качества

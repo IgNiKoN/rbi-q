@@ -190,14 +190,34 @@ async function steps() {
       }
       db.close(); return n;
     };
-    await time('listPending (все записи Качества курсором)', scan);
-    await time('countUnsent (то же, по таймеру 15 с)', scan);
+    // порциями по 200 (P2-0073, scanPending) — то же правило
+    const batch = async () => {
+      const db = await done(indexedDB.open(window.RBI_DB_NAME));
+      let n = 0;
+      for (const s of stores) {
+        if (!db.objectStoreNames.contains(s)) continue;
+        let after = null;
+        for (;;) {
+          const part = await done(db.transaction(s).objectStore(s).getAll(after === null ? null : IDBKeyRange.lowerBound(after, true), 200));
+          for (const r of part) if (isUnsent(r) || String(r.syncStatus || '') === 'blocked') n++;
+          if (part.length < 200) break;
+          after = part[part.length - 1].id;
+        }
+      }
+      db.close(); return n;
+    };
+    // по очереди дважды: фоновые подсчёты приложения не должны достаться одному способу
+    await time('все записи Качества курсором по одной (до P2-0073: listPending, затем countUnsent)', scan);
+    await time('все записи Качества порциями по 200 (P2-0073: один общий проход)', batch);
+    await time('то же курсором, второй раз', scan);
+    await time('то же порциями, второй раз', batch);
     await time('записи устройства (факт План/Факта)', async () => (await window.RBI.deviceSend.pending()).length);
     await time('fetch sw.js (опись версии)', async () => (await (await fetch('./sw.js')).text()).length);
     await time('реестр файлов целиком (dbGetAll)', async () => (await window.dbGetAll(window.STORES.FILE_REGISTRY)).length);
     await time('navigator.storage.estimate', async () => Math.round((await navigator.storage.estimate()).usage / 1048576) + ' МБ');
-    await time('размер копии План/Факта (читает всю копию)', async () => Math.round(await window.RBI.offlineCopy.size('planfact') / 1048576) + ' МБ');
-    await time('размер копии «Компании»', async () => Math.round(await window.RBI.offlineCopy.size('company') / 1024) + ' КБ');
+    await time('размер копии План/Факта (до P2-0073 — читает всю копию)', async () => Math.round(await window.RBI.offlineCopy.size('planfact') / 1048576) + ' МБ');
+    await time('размер копии «Компании» (до P2-0073 — тоже всю копию)', async () => Math.round(await window.RBI.offlineCopy.size('company') / 1024) + ' КБ');
+    await time('размер копии План/Факта ещё раз', async () => Math.round(await window.RBI.offlineCopy.size('planfact') / 1048576) + ' МБ');
     return out;
   });
 }
@@ -206,7 +226,34 @@ const rows = [];
 for (const pass of ['первый', 'повтор']) rows.push(await measure(pass));
 const breakdown = await steps();
 console.log(JSON.stringify({ breakdown }));
-const result = { label: LABEL, cpu: CPU, width: WIDTH, net: NET || 'стенд', swDelay: SW_DELAY, cold: COLD, seeded, rows, breakdown, errors: [...new Set(errors)].slice(0, 20) };
+// сверка на тех же данных: число «не отправлено» прежним правилом (курсор по всем записям, правило движка) = карточка = значок;
+// размер копии на экране = сумма bytes копии этого человека
+const truth = await page.evaluate(async () => {
+  const done = (rq) => new Promise((res, rej) => { rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
+  const isUnsent = window.RbiSyncMergePolicy.isUnsentLocal;
+  const db = await done(indexedDB.open(window.RBI_DB_NAME));
+  let unsent = 0;
+  for (const s of ['app_history', 'rbi_tasks', 'rbi_meetings', 'rbi_interventions', 'rbi_fmea', 'rbi_schedule_stages', 'app_reports', 'rbi_etalon_acts', 'custom_docs', 'construction_defects', 'construction_acceptance', 'construction_units']) {
+    if (!db.objectStoreNames.contains(s)) continue;
+    for (const r of await done(db.transaction(s).objectStore(s).getAll())) if (isUnsent(r) && !/^demo[_-]/i.test(String(r.id)) && !String(r.id).startsWith('sys_') && !r.p2_moved_to && r.type !== 'auto') unsent++;
+  }
+  db.close();
+  const cdb = await done(indexedDB.open('platform2_offline_copy'));
+  const all = await done(cdb.transaction('reads').objectStore('reads').getAll());
+  cdb.close();
+  const slot = all.length ? all.find((r) => r.module === 'planfact')?.slot : null;
+  const copy = all.filter((r) => r.slot === slot && r.module === 'planfact').reduce((a, r) => a + (r.bytes || 0), 0);
+  return { unsent, copy, size: await window.RBI.offlineCopy.size('planfact') };
+});
+const last = rows[rows.length - 1].texts;
+const num = (t) => { const m = String(t || '').match(/не отправлено:\s*(\d+)/); return m ? Number(m[1]) : 0; };
+const checks = [
+  [num(last.send) === truth.unsent, `«не отправлено» на карточке = прежнее правило по всем записям`, `${num(last.send)} / ${truth.unsent}`],
+  [num(last.chip) === num(last.send), `значок в шапке = карточка`, `${last.chip || 'значка нет'} / ${last.send}`],
+  [truth.size === truth.copy, `размер копии План/Факта = сумма bytes копии`, `${truth.size} / ${truth.copy}`]
+].map(([c, l, x]) => (c ? 'PASS ' : 'FAIL ') + l + ' — ' + x);
+checks.forEach((c) => console.log(c));
+const result = { label: LABEL, cpu: CPU, width: WIDTH, net: NET || 'стенд', swDelay: SW_DELAY, cold: COLD, seeded, rows, breakdown, checks, errors: [...new Set(errors)].slice(0, 20) };
 writeFileSync(`${OUT}/${TAG}.json`, JSON.stringify(result, null, 1));
 await browser.close(); await stop();
 process.exit(0);

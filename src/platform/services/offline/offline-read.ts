@@ -159,7 +159,7 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
     async pruneProjects(module, allowed) {
       const slot = deps.slot();
       if (!slot) return 0;
-      const gone = (await deps.store.list(slot, module)).filter((r) => r.project !== null && !allowed.includes(r.project));
+      const gone = (await deps.store.meta(slot, module)).filter((r) => r.project !== null && !allowed.includes(r.project));
       for (const r of gone) await deps.store.delete(r.id);
       return gone.length;
     },
@@ -177,12 +177,13 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
     serverSilent: () => now() < silentUntil,
     async size(module, project) {
       const slot = deps.slot();
-      return slot ? (await deps.store.list(slot, module)).filter((r) => project === undefined || r.project === project).reduce((a, r) => a + (r.bytes || 0), 0) : 0;
+      // P2-0073: по описи копии — без чтения содержимого (раньше каждый вызов читал всю копию человека)
+      return slot ? (await deps.store.meta(slot, module)).filter((r) => project === undefined || r.project === project).reduce((a, r) => a + (r.bytes || 0), 0) : 0;
     },
     async clear(module) {
       const slot = deps.slot();
       if (!slot) return 0;
-      const all = await deps.store.list(slot, module);
+      const all = await deps.store.meta(slot, module);
       for (const r of all) await deps.store.delete(r.id);
       shown.clear(); missed.clear(); emit();
       return all.length;
