@@ -11,7 +11,7 @@ with t as (
         join pg_attribute a on a.attrelid = k.conrelid and a.attnum = u.num order by u.o))
       from pg_constraint k where k.conrelid = t.oid and k.contype = 'p'), '[]'::jsonb) as pk,
     coalesce((select jsonb_object_agg(col, refs) from (
-        select a.attname as col, jsonb_agg(distinct k.confrelid::regclass::text) as refs
+        select a.attname as col, jsonb_agg(distinct (select rn.nspname || '.' || rc.relname from pg_class rc join pg_namespace rn on rn.oid = rc.relnamespace where rc.oid = k.confrelid)) as refs
         from pg_constraint k cross join unnest(k.conkey) u(num) join pg_attribute a on a.attrelid = k.conrelid and a.attnum = u.num
         where k.conrelid = t.oid and k.contype = 'f' group by a.attname) f), '{}'::jsonb) as fk,
     (select jsonb_agg(jsonb_build_array(a.attname, format_type(a.atttypid, a.atttypmod), a.attnotnull) order by a.attnum)

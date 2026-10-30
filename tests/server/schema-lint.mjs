@@ -118,7 +118,7 @@ export async function readSchema(db) {
   const cons = (await db.query(`
     select n.nspname as schema, c.relname as tbl, k.contype as type,
       array(select a.attname from unnest(k.conkey) with ordinality u(num, o) join pg_attribute a on a.attrelid = k.conrelid and a.attnum = u.num order by u.o)::text[] as cols,
-      case when k.contype = 'f' then k.confrelid::regclass::text end as ref
+      case when k.contype = 'f' then (select rn.nspname || '.' || rc.relname from pg_class rc join pg_namespace rn on rn.oid = rc.relnamespace where rc.oid = k.confrelid) end as ref
     from pg_constraint k join pg_class c on c.oid = k.conrelid join pg_namespace n on n.oid = c.relnamespace
     where k.contype in ('p', 'f') and n.nspname not in ('pg_catalog', 'information_schema', 'pg_toast', 'extensions')
     order by 1, 2, 3`)).rows;

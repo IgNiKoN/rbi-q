@@ -66,11 +66,14 @@ if (prodFile) {
   if (Array.isArray(prod)) prod = prod[0].schema_inventory;
   if (typeof prod === 'string') prod = JSON.parse(prod);
   const diff = diffSchemas(inventory.tables, prod.tables);
+  const bySchema = new Map();
+  for (const d of diff) { const k = d.id.split('.')[0]; bySchema.set(k, (bySchema.get(k) || 0) + 1); }
+  const inScope = diff.filter((d) => SCOPE.includes(d.id.split('.')[0])).length;
   const groups = new Map();
   for (const d of diff) (groups.get(d.id) || groups.set(d.id, []).get(d.id)).push(d);
   writeFileSync(join(DIR, 'prod.html'), `<h2>Сверка с боевой базой</h2>
 <div class="card"><p>Источник: ${esc(prod.source)}; запрос только на чтение <code>supabase/checks/002_schema_inventory_readonly.sql</code> (описание таблиц, без строк данных). Сравнивались разделы core, planfact, quality, public, p2_backup: таблицы, колонки, типы, «может быть пустым», ключ, внешние ключи, RLS.</p>
-<p><b>${diff.length ? `Расхождений: ${diff.length} в ${groups.size} таблицах.` : 'Совпадает: боевая база = миграции.'}</b> Разделы на боевой: ${Object.entries(prod.counts).sort().map(([s, n]) => `${esc(s)} ${n}`).join(' · ')}.</p></div>
+<p><b>Разделы стандарта (core, planfact, quality): ${inScope ? `расхождений ${inScope}` : 'боевая база = миграции, расхождений нет'}.</b> Всего расхождений: ${diff.length}${diff.length ? ` (${[...bySchema].map(([k, n]) => `${esc(k)} ${n}`).join(' · ')})` : ''}; разделы public и p2_backup — вне стандарта, их расхождения записаны в техдолг.</p><p> Разделы на боевой: ${Object.entries(prod.counts).sort().map(([s, n]) => `${esc(s)} ${n}`).join(' · ')}.</p></div>
 ${diff.length ? `<div class="scroll"><table><thead><tr><th>Таблица</th><th>Что</th><th>Расхождение</th></tr></thead><tbody>
 ${diff.map((d) => `<tr><td><code>${esc(d.id)}</code></td><td>${esc(d.kind)}</td><td>${esc(d.what)}</td></tr>`).join('\n')}
 </tbody></table></div>` : ''}

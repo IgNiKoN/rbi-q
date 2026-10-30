@@ -1,0 +1,80 @@
+<h2>Сверка с боевой базой</h2>
+<div class="card"><p>Источник: боевой сервер, 2026-10-30 06:50 МСК; запрос только на чтение <code>supabase/checks/002_schema_inventory_readonly.sql</code> (описание таблиц, без строк данных). Сравнивались разделы core, planfact, quality, public, p2_backup: таблицы, колонки, типы, «может быть пустым», ключ, внешние ключи, RLS.</p>
+<p><b>Разделы стандарта (core, planfact, quality): боевая база = миграции, расхождений нет.</b> Всего расхождений: 75 (p2_backup 1 · public 74); разделы public и p2_backup — вне стандарта, их расхождения записаны в техдолг.</p><p> Разделы на боевой: _realtime 3 · auth 19 · core 22 · net 2 · p2_backup 11 · planfact 23 · public 74 · quality 60 · realtime 8 · storage 11 · supabase_functions 2 · vault 1.</p></div>
+<div class="scroll"><table><thead><tr><th>Таблица</th><th>Что</th><th>Расхождение</th></tr></thead><tbody>
+<tr><td><code>p2_backup.p2_0054_switch</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.construction_buildings_v2</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.construction_objects_v2</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.contractor_aliases_v2</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.issue_items</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.issues</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_audit</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_baselines</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_calendar</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_change_requests</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_facts</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_imports</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_norms</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_proposal_rows</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_proposals</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_wor</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_wor_quantities</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_work_aliases</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.plan_fact_works</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.sk_records_v2</code></td><td>нет в миграциях</td><td>таблица есть только на боевой</td></tr>
+<tr><td><code>public.allowed_projects</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.app_assistant_kb</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_acceptance</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_acceptance_v2</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_buildings</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_defects</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_defects_v2</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_floors</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_floors_v2</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_objects</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_units</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.construction_units_v2</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.contractor_aliases</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.contractor_directory</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.contractor_normalization_queue</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.contractors</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.contracts</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.file_registry</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.location_node_aliases</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.location_nodes</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.object_aliases</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.object_normalization_queue</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.project_fmea</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.project_interventions</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.project_meetings</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.project_objects</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.project_schedule_stages</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.project_settings</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_company_settings</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_draft_sessions</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_engineer_profiles</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_engineer_ratings</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_error_logs</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_inspection_items</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_inspection_photos</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_inspections</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_sync_queue</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.rbi_tasks</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_checklists</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_docs</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_etalons</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_feedback</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_nodes</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_practices</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_report_snapshots</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_report_templates</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_reports</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.shared_twi_cards</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.sk_category_map</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.sk_contractor_map</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.sk_data_bundles</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.sk_import_batches</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.sk_mapping</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.sk_records</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+<tr><td><code>public.sk_volumes</code></td><td>RLS</td><td>миграции выкл, боевая вкл</td></tr>
+</tbody></table></div>

@@ -1,0 +1,79 @@
+# P2-0069 — боевая ≠ миграции
+
+Источник: боевой сервер, 2026-10-30 06:50 МСК. Расхождений: 75.
+
+- `p2_backup.p2_0054_switch` — нет в миграциях: таблица есть только на боевой
+- `public.construction_buildings_v2` — нет в миграциях: таблица есть только на боевой
+- `public.construction_objects_v2` — нет в миграциях: таблица есть только на боевой
+- `public.contractor_aliases_v2` — нет в миграциях: таблица есть только на боевой
+- `public.issue_items` — нет в миграциях: таблица есть только на боевой
+- `public.issues` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_audit` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_baselines` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_calendar` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_change_requests` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_facts` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_imports` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_norms` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_proposal_rows` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_proposals` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_wor` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_wor_quantities` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_work_aliases` — нет в миграциях: таблица есть только на боевой
+- `public.plan_fact_works` — нет в миграциях: таблица есть только на боевой
+- `public.sk_records_v2` — нет в миграциях: таблица есть только на боевой
+- `public.allowed_projects` — RLS: миграции выкл, боевая вкл
+- `public.app_assistant_kb` — RLS: миграции выкл, боевая вкл
+- `public.construction_acceptance` — RLS: миграции выкл, боевая вкл
+- `public.construction_acceptance_v2` — RLS: миграции выкл, боевая вкл
+- `public.construction_buildings` — RLS: миграции выкл, боевая вкл
+- `public.construction_defects` — RLS: миграции выкл, боевая вкл
+- `public.construction_defects_v2` — RLS: миграции выкл, боевая вкл
+- `public.construction_floors` — RLS: миграции выкл, боевая вкл
+- `public.construction_floors_v2` — RLS: миграции выкл, боевая вкл
+- `public.construction_objects` — RLS: миграции выкл, боевая вкл
+- `public.construction_units` — RLS: миграции выкл, боевая вкл
+- `public.construction_units_v2` — RLS: миграции выкл, боевая вкл
+- `public.contractor_aliases` — RLS: миграции выкл, боевая вкл
+- `public.contractor_directory` — RLS: миграции выкл, боевая вкл
+- `public.contractor_normalization_queue` — RLS: миграции выкл, боевая вкл
+- `public.contractors` — RLS: миграции выкл, боевая вкл
+- `public.contracts` — RLS: миграции выкл, боевая вкл
+- `public.file_registry` — RLS: миграции выкл, боевая вкл
+- `public.location_node_aliases` — RLS: миграции выкл, боевая вкл
+- `public.location_nodes` — RLS: миграции выкл, боевая вкл
+- `public.object_aliases` — RLS: миграции выкл, боевая вкл
+- `public.object_normalization_queue` — RLS: миграции выкл, боевая вкл
+- `public.project_fmea` — RLS: миграции выкл, боевая вкл
+- `public.project_interventions` — RLS: миграции выкл, боевая вкл
+- `public.project_meetings` — RLS: миграции выкл, боевая вкл
+- `public.project_objects` — RLS: миграции выкл, боевая вкл
+- `public.project_schedule_stages` — RLS: миграции выкл, боевая вкл
+- `public.project_settings` — RLS: миграции выкл, боевая вкл
+- `public.rbi_company_settings` — RLS: миграции выкл, боевая вкл
+- `public.rbi_draft_sessions` — RLS: миграции выкл, боевая вкл
+- `public.rbi_engineer_profiles` — RLS: миграции выкл, боевая вкл
+- `public.rbi_engineer_ratings` — RLS: миграции выкл, боевая вкл
+- `public.rbi_error_logs` — RLS: миграции выкл, боевая вкл
+- `public.rbi_inspection_items` — RLS: миграции выкл, боевая вкл
+- `public.rbi_inspection_photos` — RLS: миграции выкл, боевая вкл
+- `public.rbi_inspections` — RLS: миграции выкл, боевая вкл
+- `public.rbi_sync_queue` — RLS: миграции выкл, боевая вкл
+- `public.rbi_tasks` — RLS: миграции выкл, боевая вкл
+- `public.shared_checklists` — RLS: миграции выкл, боевая вкл
+- `public.shared_docs` — RLS: миграции выкл, боевая вкл
+- `public.shared_etalons` — RLS: миграции выкл, боевая вкл
+- `public.shared_feedback` — RLS: миграции выкл, боевая вкл
+- `public.shared_nodes` — RLS: миграции выкл, боевая вкл
+- `public.shared_practices` — RLS: миграции выкл, боевая вкл
+- `public.shared_report_snapshots` — RLS: миграции выкл, боевая вкл
+- `public.shared_report_templates` — RLS: миграции выкл, боевая вкл
+- `public.shared_reports` — RLS: миграции выкл, боевая вкл
+- `public.shared_twi_cards` — RLS: миграции выкл, боевая вкл
+- `public.sk_category_map` — RLS: миграции выкл, боевая вкл
+- `public.sk_contractor_map` — RLS: миграции выкл, боевая вкл
+- `public.sk_data_bundles` — RLS: миграции выкл, боевая вкл
+- `public.sk_import_batches` — RLS: миграции выкл, боевая вкл
+- `public.sk_mapping` — RLS: миграции выкл, боевая вкл
+- `public.sk_records` — RLS: миграции выкл, боевая вкл
+- `public.sk_volumes` — RLS: миграции выкл, боевая вкл
