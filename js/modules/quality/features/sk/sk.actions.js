@@ -25,6 +25,7 @@ import {
     sk_closeContractorLinkModal,
     sk_fillContractorSuggestion
 } from './sk.render.js';
+import { skRegisterImport, sk_showLinksSummary, sk_renderLinks } from './sk.links.js';
 
 function _t(key, fallback, vars) {
     try {
@@ -546,9 +547,11 @@ function sk_switchView(view) {
     var vDash = document.getElementById('sk-view-dashboard');
     var vVol = document.getElementById('sk-view-volumes');
     var vHr = document.getElementById('sk-view-hr');
+    var vLinks = document.getElementById('sk-view-links');
     if (vDash) vDash.classList.add('hidden');
     if (vVol) vVol.classList.add('hidden');
     if (vHr) vHr.classList.add('hidden');
+    if (vLinks) vLinks.classList.add('hidden');
 
     var defaultBtnClass = 'shrink-0 px-4 bg-[var(--card-bg)] text-muted border border-[var(--card-border)] py-2 rounded-lg text-rbi-caption font-bold uppercase active:scale-95 transition-colors shadow-sm flex items-center gap-1.5';
     var activeBtnClass = 'shrink-0 px-4 bg-brand-soft text-brand border border-brand-soft py-2 rounded-lg text-rbi-caption font-bold uppercase active:scale-95 transition-colors shadow-sm flex items-center gap-1.5';
@@ -556,9 +559,11 @@ function sk_switchView(view) {
     var btnDash = document.getElementById('sk-btn-dashboard');
     var btnVol = document.getElementById('sk-btn-volumes');
     var btnHr = document.getElementById('sk-btn-hr');
+    var btnLinks = document.getElementById('sk-btn-links');
     if (btnDash) btnDash.className = defaultBtnClass;
     if (btnVol) btnVol.className = defaultBtnClass;
     if (btnHr) btnHr.className = defaultBtnClass;
+    if (btnLinks) btnLinks.className = defaultBtnClass;
 
     var viewEl = document.getElementById('sk-view-' + view);
     var btnEl = document.getElementById('sk-btn-' + view);
@@ -566,6 +571,7 @@ function sk_switchView(view) {
     if (btnEl) btnEl.className = activeBtnClass;
 
     if (view === 'hr') sk_renderHrTab();
+    if (view === 'links') sk_renderLinks();
 }
 
 async function sk_addVolume() {
@@ -861,6 +867,9 @@ async function sk_finalizeImport() {
         }
     }
 
+    // P2-0076: шаг сопоставления с «Компанией» — известные фирма / категория / место получают id, новое уходит в «Разобрать»
+    var linkSummary = recordsToSaveBatch.length > 0 ? await skRegisterImport(recordsToSaveBatch) : null;
+
     if (recordsToSaveBatch.length > 0) {
         await _storage().putBatch(_storage().stores().SK_RECORDS, recordsToSaveBatch);
     }
@@ -920,6 +929,7 @@ async function sk_finalizeImport() {
 
     closeModal();
     sk_renderDashboard();
+    if (linkSummary) sk_showLinksSummary(linkSummary);
 }
 
 async function sk_deleteRecord(recordId) {
@@ -1554,6 +1564,8 @@ if (typeof window !== 'undefined') {
 console.log('[SKActions] sk.actions.js loaded (real logic, v2.0)');
 
 export {
+    sk_similarity,
+    sk_cleanContractorName,
     sk_extractStandards,
     sk_normalizeCategoryKey,
     sk_sortHrTable,

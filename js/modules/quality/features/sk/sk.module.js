@@ -12,6 +12,8 @@
 import { SKState } from './sk.state.js';
 import {
     SKActions,
+    sk_similarity,
+    sk_cleanContractorName,
     sk_extractStandards,
     sk_normalizeCategoryKey,
     sk_sortHrTable,
@@ -46,10 +48,16 @@ import {
     sk_closeContractorLinkModal,
     sk_fillContractorSuggestion
 } from './sk.render.js';
+import { sk_renderLinks, sk_setPlaceFilter } from './sk.links.js';
 
 // Публичная граница модуля sk — единственная точка, присваивающая на window
 // (по образцу ai.module.js).
 window.sk_extractStandards = sk_extractStandards;
+// P2-0076: подбор похожих для «Разобрать» — тот же, что у импорта
+window.sk_similarity = sk_similarity;
+window.sk_cleanContractorName = sk_cleanContractorName;
+window.sk_renderLinks = sk_renderLinks;
+window.sk_setPlaceFilter = sk_setPlaceFilter;
 window.sk_normalizeCategoryKey = sk_normalizeCategoryKey;
 window.sk_sortHrTable = sk_sortHrTable;
 window.sk_loadData = sk_loadData;

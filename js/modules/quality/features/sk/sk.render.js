@@ -8,6 +8,7 @@
  */
 
 import { sk_loadData, sk_switchView, sk_executeImport, sk_normalizeCategoryKey, SKActions } from './sk.actions.js';
+import { skAnalyticRecords, skPlaceFilterHtml, skLoadChoices, skRefreshLinksCount, skPendingCount } from './sk.links.js';
 
 function _t(key, fallback, vars) {
     try {
@@ -268,11 +269,13 @@ async function sk_renderMainTab() {
                 <button onclick="sk_switchView('dashboard')" id="sk-btn-dashboard" class="shrink-0 px-4 bg-brand-soft text-brand border border-brand-soft py-2 rounded-lg text-rbi-caption font-bold uppercase active:scale-95 transition-colors shadow-sm flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path></svg> ${_t('quality.sk.tab.dashboard', 'Дашборд')}</button>
                 <button onclick="sk_switchView('volumes')" id="sk-btn-volumes" class="shrink-0 px-4 bg-[var(--card-bg)] text-muted border border-[var(--card-border)] py-2 rounded-lg text-rbi-caption font-bold uppercase active:scale-95 transition-colors shadow-sm flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> ${_t('quality.sk.tab.volumes', 'Объемы')}</button>
                 ${hrBtnHtml}
+                <button onclick="sk_switchView('links')" id="sk-btn-links" class="shrink-0 px-4 bg-[var(--card-bg)] text-muted border border-[var(--card-border)] py-2 rounded-lg text-rbi-caption font-bold uppercase active:scale-95 transition-colors shadow-sm flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"></path></svg> ${_t('quality.sk.tab.links', 'Разобрать')}<span data-sk-links-count class="${skPendingCount() ? '' : 'hidden '}min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] leading-[18px] text-center">${skPendingCount() || ''}</span></button>
             </div>
 
             <div id="sk-view-dashboard" class="block"></div>
             <div id="sk-view-volumes" class="hidden"></div>
             <div id="sk-view-hr" class="hidden"></div>
+            <div id="sk-view-links" class="hidden"></div>
         `;
         container.innerHTML = html;
     } else {
@@ -285,6 +288,16 @@ async function sk_renderMainTab() {
     if (typeof sk_renderContractorQueueBanner === 'function') {
         sk_renderContractorQueueBanner().catch(function (e) { console.warn(e); });
     }
+    // P2-0076: счётчик «Разобрать» и подписи «Компании» для Аналитики (первая загрузка подписей — перерисовать дашборд)
+    skRefreshLinksCount();
+    var hadChoices = !!window.__skCoreChoicesLoaded;
+    skLoadChoices(false).then(function (ch) {
+        window.__skCoreChoicesLoaded = !!ch;
+        if (ch && !hadChoices && (window.skCurrentSubTab || 'dashboard') === 'dashboard') {
+            if (typeof window.__anaDeskPaintSk === 'function' && document.getElementById('sub-sk') && document.getElementById('sub-sk').classList.contains('ana-desk-sk')) window.__anaDeskPaintSk();
+            else sk_renderDashboard();
+        }
+    }).catch(function () {});
 
     var targetTab = window.skCurrentSubTab || 'dashboard';
     if (typeof sk_renderVolumes === 'function') sk_renderVolumes();
@@ -459,6 +472,9 @@ function sk_renderDashboard() {
         activeRecords = activeRecords.filter(function (r) { return fTmpl0.includes((r.category || '').toLowerCase()); });
     }
 
+    // P2-0076: подрядчик, вид работ, место — по id «Компании» (копии записей); фильтр по месту
+    var placeFilterHtml = skPlaceFilterHtml(activeRecords, 'onchange="sk_setPlaceFilter(this.value)"');
+    activeRecords = skAnalyticRecords(activeRecords);
     var trendRecords = activeRecords.slice();
 
     var selPeriod = document.getElementById('global-filter-period') && document.getElementById('global-filter-period').value || 'D30';
@@ -476,7 +492,7 @@ function sk_renderDashboard() {
     }
 
     if (trendRecords.length === 0) {
-        container.innerHTML = `<div class="text-center py-10 bg-[var(--card-bg)] rounded-xl border border-dashed border-surface text-muted text-rbi-label font-bold uppercase tracking-widest shadow-sm">${_t('quality.sk.dashboard.no_filter_match', 'За выбранным фильтрам замечаний нет.')}</div>`;
+        container.innerHTML = placeFilterHtml + `<div class="text-center py-10 bg-[var(--card-bg)] rounded-xl border border-dashed border-surface text-muted text-rbi-label font-bold uppercase tracking-widest shadow-sm">${_t('quality.sk.dashboard.no_filter_match', 'За выбранным фильтрам замечаний нет.')}</div>`;
         return;
     }
 
@@ -799,7 +815,7 @@ function sk_renderDashboard() {
     });
     if (!spatialHtml) spatialHtml = '<div class="text-center py-4 text-muted text-rbi-caption font-bold uppercase">' + _t('quality.sk.spatial.no_location', 'Данные о расположении отсутствуют. При импорте убедитесь, что колонка "Элемент структуры" связана корректно.') + '</div>';
 
-    container.innerHTML = `
+    container.innerHTML = placeFilterHtml + `
         <div class="grid grid-cols-2 gap-2 mb-4">
             <div class="bg-[var(--card-bg)] border border-[var(--card-border)] p-3 rounded-xl shadow-sm text-center">
                 <div class="text-rbi-caption font-bold uppercase text-muted tracking-widest mb-1">${_t('quality.sk.summary.total', 'Всего замечаний СК')}</div>
@@ -999,6 +1015,7 @@ function sk_renderHrTab() {
         var fTmpl = _analyticsFilters().template.map(function (t) { return t.toLowerCase(); });
         baseRecords = baseRecords.filter(function (r) { return fTmpl.includes((r.category || '').toLowerCase()); });
     }
+    baseRecords = skAnalyticRecords(baseRecords, { noPlace: true });   // P2-0076: подрядчики — по id «Компании»
 
     var selPeriod = document.getElementById('global-filter-period') && document.getElementById('global-filter-period').value || 'D30';
     var currentRecords = baseRecords, prevRecords = [];

@@ -5,6 +5,7 @@
  */
 
 import { isIssueOpen } from './sk.issue-rules.js';
+import { skAnalyticRecords, skPlaceFilterHtml, sk_renderLinks, sk_setPlaceFilter } from '../sk/sk.links.js';
 
 const PANEL_ID = 'ana-desk-sk-panel';
 const RU_COLLATOR = new Intl.Collator('ru', { sensitivity: 'base', numeric: true });
@@ -15,6 +16,7 @@ let _deskSkBound = false;
 let _deskHrSort = { key: 'kpi', dir: 'desc' };
 let _deskMatrixSort = { key: 'total', dir: 'desc' };
 let _deskTrendChart = null;
+let _deskPlaceBase = [];   // P2-0076: замечания без фильтра по месту — варианты выбора места
 
 function _t(key, fallback, vars) {
   try {
@@ -140,7 +142,9 @@ function getFilteredSkRecords(opts) {
     const fTmpl = f.template.map((t) => String(t).toLowerCase());
     arr = arr.filter((r) => fTmpl.includes(String(r.category || '').toLowerCase()));
   }
-  return arr;
+  // P2-0076: подрядчик, вид работ, место — по id «Компании» (копии); фильтр по месту — только дашборд СК (opts.withPlace)
+  if (opts.withPlace) _deskPlaceBase = arr;
+  return skAnalyticRecords(arr, { noPlace: !opts.withPlace });
 }
 
 function normalizeDefectText(text) {
@@ -263,7 +267,7 @@ function clearSkDeskPanels() {
   const panel = document.getElementById(PANEL_ID);
   if (!panel) return;
   const stage = panel.parentElement;
-  ['sk-view-dashboard', 'sk-view-volumes', 'sk-view-hr'].forEach((id) => {
+  ['sk-view-dashboard', 'sk-view-volumes', 'sk-view-hr', 'sk-view-links'].forEach((id) => {
     const el = document.getElementById(id);
     if (el && panel.contains(el) && stage) stage.appendChild(el);
   });
@@ -271,7 +275,7 @@ function clearSkDeskPanels() {
 }
 
 function stashMobileViews(stage) {
-  ['sk-view-dashboard', 'sk-view-volumes', 'sk-view-hr'].forEach((id) => {
+  ['sk-view-dashboard', 'sk-view-volumes', 'sk-view-hr', 'sk-view-links'].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.add('ana-desk-sk-mobile-hide', 'hidden');
@@ -687,23 +691,24 @@ function paintDashboardDetail(detail, pack, selected, allRecords) {
 
   const isTrend = _deskSkSection === 'trend';
   const trendSource = isTrend
-    ? getFilteredSkRecords({ ignorePeriod: true })
+    ? getFilteredSkRecords({ ignorePeriod: true, withPlace: true })
     : allRecords;
+  const placeFilter = skPlaceFilterHtml(_deskPlaceBase, 'data-sk-place-filter');
   const scoped = scopeRecords(isTrend ? trendSource : allRecords, selected);
   const scopedPack = selected === 'ALL'
     ? (isTrend ? buildContrMap(trendSource) : pack)
     : buildContrMap(scoped);
 
   if (!scoped.length && selected !== 'ALL') {
-    liveDetail.innerHTML = `<div class="ana-desk-sk-empty">${esc(_t('quality.sk.desk.empty.contractor', 'Нет данных по подрядчику'))}</div>`;
+    liveDetail.innerHTML = placeFilter + `<div class="ana-desk-sk-empty">${esc(_t('quality.sk.desk.empty.contractor', 'Нет данных по подрядчику'))}</div>`;
     return;
   }
   if (!isTrend && !pack.totalIssues && selected === 'ALL') {
-    liveDetail.innerHTML = `<div class="ana-desk-sk-empty">${esc(_t('quality.sk.desk.empty.period', 'Нет данных за период и фильтры'))}</div>`;
+    liveDetail.innerHTML = placeFilter + `<div class="ana-desk-sk-empty">${esc(_t('quality.sk.desk.empty.period', 'Нет данных за период и фильтры'))}</div>`;
     return;
   }
   if (isTrend && !scoped.length) {
-    liveDetail.innerHTML = `<div class="ana-desk-sk-empty">${esc(_t('quality.sk.desk.empty.trend', 'Нет данных для тренда'))}</div>`;
+    liveDetail.innerHTML = placeFilter + `<div class="ana-desk-sk-empty">${esc(_t('quality.sk.desk.empty.trend', 'Нет данных для тренда'))}</div>`;
     return;
   }
 
@@ -737,6 +742,7 @@ function paintDashboardDetail(detail, pack, selected, allRecords) {
     + `<h3 class="ana-desk-sk-detail-title">${esc(title)}</h3>`
     + `<span class="ana-desk-sk-detail-count">${esc(countLabel)}</span></div>`
     + sectionPillsHtml(_deskSkSection)
+    + placeFilter
     + '<div class="ana-desk-sk-sec-body">' + body + '</div>';
 
   if (isTrend) {
@@ -802,6 +808,12 @@ function paintSkContent(mode) {
 
   // Park mobile views on stage BEFORE panel.innerHTML (innerHTML would destroy them)
   stashMobileViews(stage);
+  // P2-0076: «Разобрать» — режим рядом с «Дашборд / Объёмы / Инженеры» (кнопка из строки режимов мобильной версии)
+  const linksBtn = document.getElementById('sk-btn-links');
+  if (linksBtn) {
+    linksBtn.classList.add('ana-desk-sk-pill');
+    linksBtn.classList.toggle('is-on', m === 'links');
+  }
 
   const prevGuard = window.__anaDeskSkPainting;
   window.__anaDeskSkPainting = true;
@@ -820,8 +832,15 @@ function paintSkContent(mode) {
     return;
   }
 
+  if (m === 'links') {
+    panel.className = 'ana-desk-sk-panel';
+    panel.innerHTML = '<div class="ana-desk-sk-detail" data-sk-desk-detail><div data-sk-desk-links></div></div>';
+    sk_renderLinks(panel.querySelector('[data-sk-desk-links]'));
+    return;
+  }
+
   // dashboard — master–detail
-  const records = getFilteredSkRecords();
+  const records = getFilteredSkRecords({ withPlace: true });
   const pack = buildContrMap(records);
   const contractors = Object.keys(pack.map)
     .map((name) => ({ name, total: pack.map[name].total }))
@@ -892,6 +911,12 @@ function bindSkDeskEvents() {
       }
       try { paintSkContent('hr'); } catch (_) { /* ignore */ }
     }
+  }, true);
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (!t || !t.matches || !t.matches('[data-sk-place-filter]')) return;
+    if (!document.getElementById('sub-sk')?.classList.contains('ana-desk-sk')) return;
+    sk_setPlaceFilter(t.value);
   }, true);
 }
 
