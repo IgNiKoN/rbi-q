@@ -1,0 +1,130 @@
+<title>PDF-планы мест</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Рабочий лист сравнения: подпись «сейчас / предлагаю», снимки парами, опись таблицей. Цвета — тема «Стандартная» приложения. */
+  :root {
+    --bg: #f7f4ee; --card: #ffffff; --ink: #172330; --muted: #626e7b; --line: rgba(28,43,57,.14);
+    --gold: #c49a5f; --gold-text: #8a6a35; --new: #52705f; --soft: rgba(196,154,95,.10);
+    --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #101923; --card: #172330; --ink: #f7f4ee; --muted: #a8b2bd; --line: rgba(255,255,255,.12);
+    --gold-text: #d8bd91; --new: #86a593; --soft: rgba(196,154,95,.13); color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #101923; --card: #172330; --ink: #f7f4ee; --muted: #a8b2bd; --line: rgba(255,255,255,.12);
+    --gold-text: #d8bd91; --new: #86a593; --soft: rgba(196,154,95,.13); color-scheme: dark }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+  main { max-width: 1440px; margin: 0 auto; padding-block: 24px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 14px; }
+  h1 { font-size: 26px; margin: 0; text-wrap: balance; }
+  h2 { font-size: 19px; margin: 26px 0 0; text-wrap: balance; display: flex; gap: 10px; align-items: baseline; }
+  h2 .n { font: 600 13px var(--f-num); color: var(--gold-text); }
+  h3 { font-size: 12px; margin: 8px 0 0; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  p { margin: 0; max-width: 75ch; } .muted { color: var(--muted); }
+  .lead { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .lead ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .pair.phone { grid-template-columns: repeat(auto-fill, minmax(0, 300px)); }
+  .one { display: grid; grid-template-columns: minmax(0, 1fr); }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  figcaption { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  figcaption.now { color: var(--muted); } figcaption.new { color: var(--new); }
+  figcaption span { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); }
+  figure img { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--line); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11.5px; text-transform: uppercase; color: var(--muted); letter-spacing: .06em; }
+  td.n { width: 40px; font: 600 13px var(--f-num); color: var(--muted); }
+  tr.new td { background: var(--soft); }
+  .tag { display: inline-block; font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--line); white-space: nowrap; }
+  .tag.same { color: var(--muted); } .tag.chg { color: var(--gold-text); } .tag.add { color: var(--new); }
+  kbd { font: 12px var(--f-num); border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; }
+  @media (max-width: 767px) { .pair { grid-template-columns: 1fr; } h1 { font-size: 21px; } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap">
+<main>
+  <h1>PDF-планы этажей и квартир — сейчас и как предлагаю</h1>
+  <p class="muted">P2-0057, этап 2 · 31.10.2026 · снимки настоящего экрана «Компания → Проекты → ЖК Тестовый → Объекты и места» на стенде с подставными данными: «сейчас» — код, который работает на сайте; «предлагаю» — ветка P2-0057.</p>
+
+  <div class="lead">
+    <b>Коротко</b>
+    <ul>
+      <li>План этажа или квартиры теперь хранится в «Компании» (общий документ), с версиями: показывается последняя, прежние — списком «№ 2 · дата · кто загрузил», любую можно открыть или «Сделать текущей».</li>
+      <li>Загрузить: в карточке места — «Загрузить план» / «Заменить» (телефон и ПК); на компьютере — перетащить PDF на строку этажа или квартиры (строка подсвечивается).</li>
+      <li>Сразу много файлов («Этаж 1.pdf … Этаж 9.pdf») — бросить на корпус или «⋯ → Загрузить планы (PDF)»: экран сам разложит по этажам и квартирам по имени файла; что не нашлось — выбрать из списка.</li>
+      <li>Заменили план, на котором есть замечания, — подсказка «На этом плане 3 замечания — точки останутся на тех же местах листа». У каждого действия — «Отменить».</li>
+      <li>В дереве у места с планом — «есть план», в шахматке — «▤» у этажа и полоска у квартиры.</li>
+      <li>Качество и Стройконтроль 2.0 получают план автоматически (копией) — их экраны не меняются. В старом справочнике Качества для мест «Компании» вместо загрузки — ссылка «Загрузить в Компании →».</li>
+    </ul>
+  </div>
+
+  <h2><span class="n">1</span>Карточка этажа: блок «План» и версии</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас <span>· плана в «Компании» нет — его грузят в старом справочнике Качества</span></figcaption><img src="now-card-1440.jpg" alt="Сейчас: карточка без плана"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· «План · версий 2»: Открыть, Заменить, Снять; «Версии (2)»; в дереве — «есть план»</span></figcaption><img src="new-card-1440.jpg" alt="Карточка этажа с блоком План"></figure>
+  </div>
+  <div class="pair">
+    <figure><figcaption class="new">Тёмная тема</figcaption><img src="new-card-1440-dark.jpg" alt="То же в тёмной теме"></figure>
+    <figure><figcaption class="new">Квартира без плана <span>· «Загрузить план» и подсказка про перетаскивание</span></figcaption><img src="new-apt-1440.jpg" alt="Карточка квартиры без плана"></figure>
+  </div>
+
+  <h2><span class="n">2</span>Телефон</h2>
+  <div class="pair phone">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="now-card-375.jpg" alt="Сейчас на телефоне"></figure>
+    <figure><figcaption class="new">Предлагаю</figcaption><img src="new-card-375.jpg" alt="Лист карточки с планом на телефоне"></figure>
+    <figure><figcaption class="new">Тёмная тема</figcaption><img src="new-card-375-dark.jpg" alt="То же в тёмной теме"></figure>
+  </div>
+
+  <h2><span class="n">3</span>PDF перетащили на строку «эт. 6»</h2>
+  <div class="pair">
+    <figure><figcaption class="new">Файл над строкой <span>· строка подсвечена, «Отпустите — загрузим»</span></figcaption><img src="new-drop-over-1440.jpg" alt="Подсветка строки"></figure>
+    <figure><figcaption class="new">Отпустили <span>· «План «эт. 6»: версия 1» и «Отменить»</span></figcaption><img src="new-drop-done-1440.jpg" alt="План загружен"></figure>
+  </div>
+
+  <h2><span class="n">4</span>Замена плана с замечаниями</h2>
+  <div class="one"><figure><figcaption class="new">«Заменить» у эт. 5 <span>· «версия 3. На этом плане 3 замечания — точки останутся на тех же местах листа»</span></figcaption><img src="new-replace-1440.jpg" alt="Плашка после замены"></figure></div>
+
+  <h2><span class="n">5</span>9 файлов на корпус — «куда какой файл»</h2>
+  <div class="one"><figure><figcaption class="new">1440 px <span>· «Этаж 1», «2 этаж», «эт.3» — во все секции; «Секция 2 этаж 5» — только туда; «кв 7» — квартира; «Общий план» — выбрать вручную; внизу «Загрузить 8»</span></figcaption><img src="new-match-1440.jpg" alt="Лист сопоставления"></figure></div>
+  <div class="pair">
+    <figure><figcaption class="new">Тёмная тема</figcaption><img src="new-match-1440-dark.jpg" alt="Лист сопоставления, тёмная тема"></figure>
+    <figure><figcaption class="new">Телефон</figcaption><img src="new-match-375.jpg" alt="Лист сопоставления на телефоне"></figure>
+  </div>
+
+  <h2><span class="n">6</span>Шахматка: значок «есть план»</h2>
+  <div class="pair">
+    <figure><figcaption class="now">Сейчас</figcaption><img src="now-chess-1440.jpg" alt="Шахматка сейчас"></figure>
+    <figure><figcaption class="new">Предлагаю <span>· «▤» у этажа с планом, полоска внизу клетки — у квартиры с планом</span></figcaption><img src="new-chess-1440.jpg" alt="Шахматка с планами"></figure>
+  </div>
+  <div class="pair">
+    <figure><figcaption class="new">Тёмная тема</figcaption><img src="new-chess-1440-dark.jpg" alt="Шахматка, тёмная тема"></figure>
+    <figure><figcaption class="new">Телефон</figcaption><img src="new-chess-375.jpg" alt="Шахматка на телефоне"></figure>
+  </div>
+
+  <h2><span class="n">7</span>Другие ширины</h2>
+  <div class="pair">
+    <figure><figcaption class="new">Планшет 768</figcaption><img src="new-card-768.jpg" alt="768 px"></figure>
+    <figure><figcaption class="new">1024</figcaption><img src="new-card-1024.jpg" alt="1024 px"></figure>
+  </div>
+  <div class="one"><figure><figcaption class="new">1920</figcaption><img src="new-card-1920.jpg" alt="1920 px"></figure></div>
+
+  <h2><span class="n">8</span>Опись: ничего не потеряно</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Функция</th><th>Сейчас</th><th>После</th><th></th></tr></thead>
+    <tbody>
+      <tr><td>Дерево, шахматка, «+», переименовать, копировать / вырезать / вставить, выше / ниже, удалить, «Отменить», перетаскивание строк</td><td>«Объекты и места»</td><td>там же, без изменений</td><td><span class="tag same">как было</span></td></tr>
+      <tr><td>Excel со списком помещений (перетащить, «⋯ → Загрузить из Excel», шаблон)</td><td>«Объекты и места»</td><td>там же; Excel, брошенный на строку дерева, теперь тоже принимается (раньше строка показывала «нельзя»)</td><td><span class="tag same">как было</span></td></tr>
+      <tr><td>Площадь, комнаты, строительный и БТИ номер в карточке квартиры</td><td>карточка</td><td>карточка</td><td><span class="tag same">как было</span></td></tr>
+      <tr class="new"><td>Загрузить план этажа / квартиры</td><td>старый справочник Качества: «PDF-план» → «Загрузить PDF»</td><td>«Компания»: карточка «Загрузить план / Заменить», перетащить на строку, несколько файлов на корпус</td><td><span class="tag chg">переехало</span></td></tr>
+      <tr class="new"><td>Снять план квартиры</td><td>справочник Качества: «Снять план»</td><td>карточка «Снять» (версии остаются, «Отменить»)</td><td><span class="tag chg">переехало</span></td></tr>
+      <tr class="new"><td>Версии плана, «Сделать текущей», кто и когда загрузил</td><td>нет — новый файл затирал старый</td><td>«Версии (N)» в карточке</td><td><span class="tag add">новое</span></td></tr>
+      <tr><td>Посмотреть план этажа / квартиры в справочнике Качества</td><td>«📄 имя · открыть»</td><td>так же; для мест «Компании» загрузка — ссылкой «Загрузить в Компании →»</td><td><span class="tag same">как было</span></td></tr>
+      <tr><td>Осмотр Качества с точкой на плане, история, печать с метками, планы в телефоне без сети</td><td>Качество</td><td>то же, план приходит копией из «Компании»</td><td><span class="tag same">как было</span></td></tr>
+      <tr><td>Замечания Стройконтроля 2.0 точкой на плане, карточка квартиры</td><td>СК 2.0</td><td>то же, точки на прежних местах листа</td><td><span class="tag same">как было</span></td></tr>
+    </tbody>
+  </table></div>
+</main>

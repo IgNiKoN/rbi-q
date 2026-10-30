@@ -186,7 +186,7 @@ export function ProjectsTab(props: { api: ProjectsApi; company: CompanyAccess; c
       h(PageTabs, { testId: 'pj-card-tabs', active: view.tab, onPick: (id) => setView({ kind: 'card', id: p.id, tab: id === 'tree' ? 'tree' : 'card' }),
         items: [{ id: 'card', label: ['Карточка'] }, { id: 'tree', label: ['Объекты и места'] }] }));
     const body = view.tab === 'tree'
-      ? h(ObjectsPlaces, { api, project: p, kinds: dicts.objectKinds, onChanged: () => { void load(); } })
+      ? h(ObjectsPlaces, { api, project: p, kinds: dicts.objectKinds, companyId: company.company_id, onChanged: () => { void load(); } })
       : h('div', { className: 'pj-cardbody' },
           dicts.stages.length ? h(StageStrip, { testId: 'pj-stages', items: dicts.stages, current: p.stage }) : null,
           h(RecordFields, { testId: 'pj-fields', fields: [

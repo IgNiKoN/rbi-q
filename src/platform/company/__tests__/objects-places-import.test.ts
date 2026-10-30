@@ -131,12 +131,12 @@ test('ошибки в строках: «Создать» недоступна, �
   root.unmount();
 });
 
-test('PDF — «в следующем обновлении», .docx и старый .xls — «нужен .xlsx»; лист не открывается', async () => {
+test('PDF без загрузки планов (P2-0057: планы — PlacePlans) — понятный отказ, .docx и старый .xls — «нужен .xlsx»; лист не открывается', async () => {
   const s = fakeServer(); const { el, root } = mount(s.api); await tick();
   drop(q(el, 'op-root'), new win.File(['%PDF'], 'plan.pdf', { type: 'application/pdf' })); await tick();
-  assert.match(q(el, 'op-notice').textContent, /PDF-планы/);
+  assert.match(el.querySelector('.pf-error').textContent, /планы/);
   drop(q(el, 'op-root'), new win.File(['x'], 'spisok.docx', { type: 'application/msword' })); await tick();
-  assert.match(el.querySelector('.pf-error').textContent, /Нужен файл Excel \(\.xlsx\)/);
+  assert.match(el.querySelector('.pf-error').textContent, /Excel \(\.xlsx\)/);
   drop(q(el, 'op-root'), new win.File(['x'], 'old.xls', { type: 'application/vnd.ms-excel' })); await tick();
   assert.match(el.querySelector('.pf-error').textContent, /сохраните файл как \.xlsx/);
   assert.ok(!q(el, 'op-import') && s.calls.length === 0);

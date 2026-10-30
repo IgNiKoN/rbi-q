@@ -9,6 +9,9 @@
  * У объекта с секциями — переключатель «Дерево / Шахматка» (PlacesChess: те же места, карточка и «+»). Без сети правка недоступна. Дети грузятся при раскрытии. id нового места даёт приложение.
  * P2-0056: список помещений из Excel — файл перетаскивается на экран (ПК) или «⋯ → Загрузить из Excel»; лист PlacesImport
  * показывает предпросмотр и создаёт недостающее одной загрузкой («Отменить» снимает её); у помещения — площадь и комнаты.
+ * P2-0057: PDF-план этажа / квартиры — документ ядра с версиями (PlacePlans.ts): блок «План» в карточке; PDF, брошенный на строку
+ * этажа / квартиры (ПК), — новая версия этого места; несколько PDF на объект / секцию — лист сопоставления по имени файла.
+ * Значок «есть план» — в строке дерева и клетке шахматки. «Отменить» возвращает прежнюю текущую версию.
  */
 import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from 'react';
@@ -26,6 +29,11 @@ import { PlacesImport } from './PlacesImport.ts';
 import { buildTemplate, createdText, createdTotal } from './places-import.ts';
 import type { ImportResult } from '../core/projects.service.ts';
 import { saveXlsx } from '../ui/registry/export.ts';
+import type { PlacePlan } from '../core/projects.service.ts';
+import { PlanBlock, PlansMatch } from './PlacePlans.ts';
+import type { MatchRow } from './PlacePlans.ts';
+import { pinsText, plansByPlace, planSlots } from './place-plans.ts';
+import type { PlanSlot } from './place-plans.ts';
 
 const TYPE_LABEL: Record<string, string> = { object: 'объект', building: 'корпус', section: 'секция', floor: 'этаж', apartment: 'квартира', other: 'прочее' };
 const INNER: PlanNodeType[] = ['section', 'floor', 'apartment', 'other'];
@@ -86,7 +94,7 @@ function useOnline(): boolean {
   return on;
 }
 
-export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; kinds: DictItem[]; onChanged?: () => void }): ReactElement {
+export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; kinds: DictItem[]; onChanged?: () => void; companyId?: string }): ReactElement {
   const { api, project } = props;
   const kinds = props.kinds.length ? props.kinds : KIND_FALLBACK;
   const manage = !!api.savePlace && project.can_manage && !project.archived_at && !project.places_led_by_quality;
@@ -115,6 +123,14 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   const [importing, setImporting] = useState<{ file: File; obj: string | null } | null>(null);
   const [fileOver, setFileOver] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const plansRef = useRef<HTMLInputElement | null>(null);
+  // P2-0057: планы мест проекта (все версии) и лист сопоставления нескольких PDF
+  const [planList, setPlanList] = useState<PlacePlan[]>([]);
+  const [matching, setMatching] = useState<{ files: File[]; scope: PlaceNode; slots: PlanSlot[] } | null>(null);
+  const [progress, setProgress] = useState('');
+  const overRow = useRef<Element | null>(null);
+  const plansOn = !!api.placePlans;
+  const planEdit = edit && !!api.uploadPlacePlan && !!props.companyId;
   const pc = useWide('(min-width: 900px)');   // ПК: мышь, клавиши, перетаскивание
   // панель карточки справа — когда самой области хватает места: от 760 px — 340 px, от 600 — узкая 280 px; иначе — лист снизу
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -130,7 +146,12 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     setKids((k) => ({ ...k, [parent || '']: list }));
     return list;
   };
-  useEffect(() => { void load(null).then((l) => { if (l.length) { setObjId(l[0].id); void load(l[0].id); } }); }, []);
+  const loadPlans = async (): Promise<void> => {
+    if (!api.placePlans) return;
+    const r = await api.placePlans(project.id);
+    if (r.ok) setPlanList(r.value);
+  };
+  useEffect(() => { void load(null).then((l) => { if (l.length) { setObjId(l[0].id); void load(l[0].id); } }); void loadPlans(); }, []);
   useEffect(() => {
     const el = rootRef.current;
     const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
@@ -169,7 +190,7 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   async function refresh(extra: (string | null)[] = []): Promise<void> {
     const ids = new Set<string>([...Object.keys(kidsRef.current).filter((k) => k && openRef.current[k]), ...(objId ? [objId] : []),
       ...extra.filter((x): x is string => !!x)]);
-    await Promise.all([load(null), ...[...ids].map((id) => load(id))]);
+    await Promise.all([load(null), ...[...ids].map((id) => load(id)), loadPlans()]);
     props.onChanged?.();
   }
   function showToast(text: string, canUndo: boolean): void { seq.current += 1; setToast({ key: seq.current, text, canUndo }); }
@@ -283,12 +304,94 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
   }
   // ---------- P2-0056: список помещений из Excel ----------
   const isXlsx = (f: File): boolean => /\.xlsx$/i.test(f.name) || f.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-  function takeFile(f: File | null | undefined, objName: string | null): void {
-    if (!f || !edit || !api.importPlaces) return;
+  const isPdf = (f: File): boolean => /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+  /** Файлы с компьютера: Excel — загрузка списка помещений; PDF — план места (на строку этажа / квартиры) или лист сопоставления. */
+  function takeFile(f: File | null | undefined, objName: string | null, all: File[] = f ? [f] : [], over: PlaceNode | null = null): void {
+    if (!f || !edit) return;
     setError(''); setNotice('');
+    const pdfs = all.filter(isPdf);
+    if (pdfs.length) {
+      if (!planEdit) { setError('Нет права загружать планы этого проекта'); return; }
+      if (pdfs.length === 1 && over && (over.node_type === 'floor' || over.node_type === 'apartment')) { void uploadPlan(over, pdfs[0]); return; }
+      const scope = over && over.node_type !== 'floor' && over.node_type !== 'apartment' ? over : obj;
+      if (!scope) { setError('Сначала создайте объект — затем бросьте планы на него'); return; }
+      void openMatch(pdfs, scope);
+      return;
+    }
+    if (!api.importPlaces) return;
     if (isXlsx(f)) { setSelId(null); setImporting({ file: f, obj: objName }); return; }
-    if (/\.pdf$/i.test(f.name)) { setNotice('PDF-планы этажей и квартир — в следующем обновлении. Сейчас сюда можно бросить Excel со списком помещений.'); return; }
-    setError(/\.xls$/i.test(f.name) ? 'Старый формат .xls — сохраните файл как .xlsx и бросьте снова' : 'Нужен файл Excel (.xlsx) со списком помещений');
+    setError(/\.xls$/i.test(f.name) ? 'Старый формат .xls — сохраните файл как .xlsx и бросьте снова'
+      : 'Сюда можно бросить PDF-план (на строку этажа или квартиры) или Excel (.xlsx) со списком помещений');
+  }
+  // ---------- P2-0057: PDF-планы ----------
+  const plans = plansByPlace(planList);
+  const hasPlan = (id: string): boolean => !!(plans[id] && plans[id].current);
+  const target = (n: PlaceNode) => ({ id: n.id, projectId: project.id, companyId: props.companyId || '' });
+  const planUndo = (place: string, prev: string | null) => (): Promise<Result<unknown>> =>
+    (prev ? api.setPlacePlan!(prev) : api.removePlacePlan!(place)) as Promise<Result<unknown>>;
+  async function uploadPlan(n: PlaceNode, f: File): Promise<void> {
+    if (!api.uploadPlacePlan || busy) return;
+    const had = plans[n.id] && plans[n.id].current;
+    setBusy(true); setError(''); setNotice('');
+    const pins = had && api.placePins ? await api.placePins(n.id) : 0;
+    const r = await api.uploadPlacePlan(target(n), f);
+    setBusy(false);
+    if (!r.ok) { setError(`«${f.name}»: ${r.message || 'план не загружен'}`); return; }
+    const label = `План «${n.name}»: версия ${r.value.versionNo ?? ''}`.trim();
+    seq.current += 1; const id = seq.current;
+    if (api.setPlacePlan && api.removePlacePlan) setUndo((l) => pushUndo(l, { id, label: `план «${n.name}»`, undo: planUndo(n.id, r.value.previousId) }));
+    showToast(label + (pins ? '. ' + pinsText(pins) : ''), true);
+    setSelId(n.id);
+    await loadPlans();
+  }
+  async function setCurrentPlan(n: PlaceNode, p: PlacePlan): Promise<void> {
+    if (!api.setPlacePlan) return;
+    await act(api.setPlacePlan(p.id), `«${n.name}»: текущая — версия ${p.version_no}`, (v) => planUndo(n.id, v.previousId));
+  }
+  async function removePlan(n: PlaceNode): Promise<void> {
+    if (!api.removePlacePlan) return;
+    await act(api.removePlacePlan(n.id), `План «${n.name}» снят — версии остались`, (v) => (v.previousId ? planUndo(n.id, v.previousId) : null));
+  }
+  async function openMatch(files: File[], scope: PlaceNode): Promise<void> {
+    // всё, что внутри места, куда бросили: дети — из загруженного, недостающие — с сервера (свой список, не ждать отрисовки)
+    const map: Record<string, PlaceNode[] | undefined> = { ...kidsRef.current };
+    const walk = async (n: PlaceNode): Promise<void> => {
+      if (!n.child_count) return;
+      const list = map[n.id] || (map[n.id] = await load(n.id));
+      await Promise.all(list.map(walk));
+    };
+    setBusy(true);
+    await walk(scope);
+    setBusy(false);
+    setSelId(null); setProgress('');
+    setMatching({ files, scope, slots: planSlots(scope, map) });
+  }
+  async function uploadMatched(rows: MatchRow[]): Promise<void> {
+    if (!api.uploadPlacePlan || !matching) return;
+    const done: { place: string; prev: string | null }[] = [];
+    const fails: string[] = [];
+    const total = rows.reduce((n, r) => n + r.targets.length, 0);
+    setBusy(true); setError('');
+    for (const row of rows) {
+      for (const pid of row.targets) {
+        setProgress(`Загружаем ${done.length + fails.length + 1} из ${total}…`);
+        const n = byId(pid) || matching.slots.find((s) => s.place.id === pid)?.place;
+        if (!n) continue;
+        const r = await api.uploadPlacePlan(target(n), row.file);
+        if (r.ok) done.push({ place: pid, prev: r.value.previousId }); else fails.push(`«${row.file.name}» → ${n.name}: ${r.message}`);
+      }
+    }
+    setBusy(false); setProgress(''); setMatching(null);
+    if (fails.length) setError(`Не загружено ${fails.length}: ${fails.slice(0, 3).join('; ')}${fails.length > 3 ? '…' : ''}`);
+    if (done.length) {
+      seq.current += 1; const id = seq.current;
+      if (api.setPlacePlan && api.removePlacePlan) setUndo((l) => pushUndo(l, { id, label: `планы (${done.length})`, undo: async () => {
+        for (const d of done) { const r = await planUndo(d.place, d.prev)(); if (!r.ok) return r; }
+        return { ok: true, value: null };
+      } }));
+      showToast(`Загружено планов: ${done.length}`, true);
+    }
+    await loadPlans();
   }
   const hasFiles = (e: DragEvent): boolean => !!e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
   async function onImported(res: ImportResult, batch: string): Promise<void> {
@@ -359,6 +462,7 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     start: (n: PlaceNode) => { setDrag(n); setHint(null); },
     end: () => { setDrag(null); setHint(null); },
     over: (n: PlaceNode, where: DropWhere) => {
+      if (!drag) return false;   // тянут файл с компьютера, не строку
       const c = dropCheck(n, where);
       const reason = c.ok ? undefined : c.reason;
       if (!hint || hint.id !== n.id || hint.where !== where || hint.ok !== c.ok) setHint({ id: n.id, where, ok: c.ok, reason });
@@ -565,9 +669,10 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     return items;
   }
   const meta = (n: PlaceNode): string => {
-    if (n.node_type === 'apartment') return [n.build_no ? `стр. № ${n.build_no}` : '', n.bti_no ? `БТИ ${n.bti_no}` : '', areaText(n.area), roomsText(n.rooms)].filter(Boolean).join(' · ');
+    const plan = hasPlan(n.id) ? 'есть план' : '';
+    if (n.node_type === 'apartment') return [n.build_no ? `стр. № ${n.build_no}` : '', n.bti_no ? `БТИ ${n.bti_no}` : '', areaText(n.area), roomsText(n.rooms), plan].filter(Boolean).join(' · ');
     if (n.apartment_count) return `кв. ${n.apartment_count}`;
-    if (n.node_type === 'floor' && n.child_count) return `мест ${n.child_count}`;
+    if (n.node_type === 'floor') return [n.child_count ? `мест ${n.child_count}` : '', plan].filter(Boolean).join(' · ');
     return '';
   };
   const plusBtn = (n: PlaceNode): ReactElement | null => {
@@ -621,6 +726,9 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
       n.node_type === 'object' ? field('Вид объекта', h('select', { key: n.id + (n.object_kind || ''), className: 'pj-input', defaultValue: n.object_kind || 'other', disabled: !edit,
         'data-testid': 'op-c-kind', onChange: (e: Event) => { void saveFields(n, { kind: (e.target as HTMLSelectElement).value }); } },
         kinds.map((k) => h('option', { key: k.code, value: k.code }, k.name)))) : null,
+      plansOn && (n.node_type === 'floor' || apt) ? h(PlanBlock, { key: 'plan' + n.id, place: n, current: plans[n.id]?.current || null, versions: plans[n.id]?.versions || [],
+        edit: planEdit, busy: dis, pc, onUpload: (f) => { void uploadPlan(n, f); }, onSetCurrent: (p) => { void setCurrentPlan(n, p); },
+        onRemove: () => { void removePlan(n); }, onError: (m) => setError(m) }) : null,
       manage ? h('div', { className: 'op-acts' },
         child ? btn('plus', nm ? `+ ${nm}` : `+ ${TYPE_LABEL[child]}`, () => { void addNext(n); }, { wide: true, cls: 'op-gold' }) : null,
         api.movePlace ? btn('up', '↑ Выше', () => { void step(n, -1); }, { disabled: !up }) : null,
@@ -641,9 +749,13 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     h('div', { className: 'op-head__t' }, h('b', null, 'Объекты'), objects ? h('span', { className: 'pf-tab-n' }, String(objects.length)) : null),
     edit ? h('div', { className: 'op-head__acts' },
       h('button', { type: 'button', className: 'pf-btn op-main', 'data-testid': 'op-add-object', onClick: () => { setNewKind('building'); setFillNow(true); setFill(FILL0); openDialog({ kind: 'object' }); } }, '+ Объект'),
-      api.importPlaces ? h(MoreMenu, { testId: 'op-head-more', label: 'Загрузка из Excel', items: [
-        { id: 'import', label: 'Загрузить из Excel…', hint: pc ? 'или перетащите файл .xlsx на экран' : 'список помещений .xlsx', onClick: () => fileRef.current?.click() },
-        { id: 'template', label: 'Скачать шаблон', hint: 'Корпус, секция, этаж, помещение, номера, площадь, комнаты', onClick: () => { void template(); } }] }) : null,
+      api.importPlaces || planEdit ? h(MoreMenu, { testId: 'op-head-more', label: 'Загрузка файлов', items: [
+        ...(api.importPlaces ? [{ id: 'import', label: 'Загрузить из Excel…', hint: pc ? 'или перетащите файл .xlsx на экран' : 'список помещений .xlsx', onClick: () => fileRef.current?.click() },
+          { id: 'template', label: 'Скачать шаблон', hint: 'Корпус, секция, этаж, помещение, номера, площадь, комнаты', onClick: () => { void template(); } }] : []),
+        ...(planEdit && obj ? [{ id: 'plans', label: 'Загрузить планы (PDF)…', hint: `в «${obj.name}»: разложим по этажам и квартирам по имени файла`, onClick: () => plansRef.current?.click() }] : [])] }) : null,
+      planEdit ? h('input', { ref: plansRef, type: 'file', accept: 'application/pdf,.pdf', multiple: true, hidden: true, 'data-testid': 'op-plans-file',
+        onChange: (e: Event) => { const el = e.target as HTMLInputElement; const fs = el.files ? Array.from(el.files) : []; el.value = '';
+          if (fs.length && obj) takeFile(fs[0], obj.name, fs, obj); } }) : null,
       api.importPlaces ? h('input', { ref: fileRef, type: 'file', accept: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', hidden: true,
         'data-testid': 'op-import-file', onChange: (e: Event) => { const el = e.target as HTMLInputElement; takeFile(el.files && el.files[0], obj ? obj.name : null); el.value = ''; } }) : null) : null);
   const notes = [
@@ -655,13 +767,34 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     notice ? h('div', { key: 'n', className: 'pj-notice', role: 'status', 'data-testid': 'op-notice' }, notice) : null];
   const importEl = importing && api.importPlaces ? h(PlacesImport, { api, projectId: project.id, file: importing.file, objects: objects || [],
     defaultObject: importing.obj, onClose: () => setImporting(null), onDone: (r, b) => { void onImported(r, b); } }) : null;
-  const dropEl = fileOver ? h('div', { className: 'op-drop', 'data-testid': 'op-drop' }, h('div', null, 'Отпустите — загрузим список помещений',
-    h('small', null, 'Файл Excel (.xlsx): корпус, секция, этаж, помещение, номера, площадь, комнаты'))) : null;
-  /** Перетаскивание файла с компьютера (не строки дерева): подсветка и лист загрузки; на объекте — он корпус по умолчанию. */
-  const fileDrop = (objName: () => string | null): Record<string, unknown> => edit && api.importPlaces ? {
-    onDragOver: (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); if (!fileOver) setFileOver(true); },
-    onDragLeave: (e: DragEvent) => { if (e.currentTarget === e.target || !(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setFileOver(false); },
-    onDrop: (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopPropagation(); setFileOver(false); takeFile(e.dataTransfer && e.dataTransfer.files[0], objName()); } } : {};
+  const dropEl = fileOver ? h('div', { className: 'op-drop', 'data-testid': 'op-drop' }, h('div', null, planEdit ? 'Отпустите — загрузим' : 'Отпустите — загрузим список помещений',
+    h('small', null, planEdit ? 'PDF-план — на строку этажа или квартиры, несколько PDF — на корпус или секцию; Excel (.xlsx) — список помещений'
+      : 'Файл Excel (.xlsx): корпус, секция, этаж, помещение, номера, площадь, комнаты'))) : null;
+  /** P2-0057: место под курсором при перетаскивании файла — строка дерева, клетка или этаж шахматки, объект. */
+  const ROW_SEL = '.p2-tree__row, .op-chess__cell[data-place-id], .op-chess__row[data-floor-id], .op-obj[data-object-id]';
+  const placeAt = (el: EventTarget | null): { node: PlaceNode | null; row: Element | null } => {
+    const row = el && typeof (el as Element).closest === 'function' ? (el as Element).closest(ROW_SEL) : null;
+    if (!row) return { node: null, row: null };
+    const id = row.getAttribute('data-place-id') || row.getAttribute('data-floor-id') || row.getAttribute('data-object-id')
+      || (row.closest('[data-node-id]') ? row.closest('[data-node-id]')!.getAttribute('data-node-id') : null);
+    return { node: byId(id), row };
+  };
+  const markRow = (row: Element | null): void => {
+    if (overRow.current === row) return;
+    if (overRow.current) overRow.current.classList.remove('op-file-row');
+    overRow.current = row;
+    if (row && !row.classList.contains('op-obj')) row.classList.add('op-file-row');
+  };
+  /** Перетаскивание файла с компьютера (не строки дерева): подсветка строки и лист загрузки; на объекте — он корпус по умолчанию. */
+  const fileDrop = (objName: () => string | null): Record<string, unknown> => edit && (api.importPlaces || planEdit) ? {
+    onDragOver: (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+      if (!fileOver) setFileOver(true); if (planEdit) markRow(placeAt(e.target).row); },
+    onDragLeave: (e: DragEvent) => { if (e.currentTarget === e.target || !(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) { setFileOver(false); markRow(null); } },
+    onDrop: (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopPropagation(); setFileOver(false); markRow(null);
+      const files = e.dataTransfer ? Array.from(e.dataTransfer.files) : [];
+      takeFile(files[0], objName(), files, placeAt(e.target).node); } } : {};
+  const matchEl = matching ? h(PlansMatch, { files: matching.files, scope: matching.scope, slots: matching.slots, hasPlan, busy, progress,
+    onClose: () => { if (!busy) setMatching(null); }, onUpload: (rows) => { void uploadMatched(rows); } }) : null;
   const toastEl = toast ? h('div', { className: 'op-toast', role: 'status', 'data-testid': 'op-toast' }, h('span', null, toast.text),
     toast.canUndo && undo.length ? h('button', { type: 'button', 'data-testid': 'op-undo', disabled: busy, onClick: () => { void doUndo(); } }, 'Отменить') : null,
     h('button', { type: 'button', className: 'op-toast__x', 'aria-label': 'Скрыть', onClick: () => setToast(null) }, '✕')) : null;
@@ -671,7 +804,7 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     h('div', { className: 'pf-card op-empty', 'data-testid': 'op-empty' }, manage ? 'Объектов пока нет — нажмите «+ Объект»: корпус можно сразу заполнить секциями, этажами и квартирами.'
       : project.places_led_by_quality ? 'Мест пока нет — добавьте корпус в Качестве.' : 'Объектов пока нет.'),
       edit && api.importPlaces ? h('div', { className: 'pf-muted op-empty-x' }, 'Есть список помещений в Excel? «⋯ → Загрузить из Excel» или перетащите файл сюда — создадим всё сразу.') : null,
-      dropEl, sheet(), importEl, toastEl);
+      dropEl, sheet(), importEl, matchEl, toastEl);
 
   const cards = h('div', { className: 'op-objs', role: 'list', 'data-testid': 'op-objects' }, objects.map((o) => h('button', {
     key: o.id, type: 'button', role: 'listitem', className: 'op-obj' + (o.id === objId ? ' is-on' : '') + (hint && hint.id === 'obj:' + o.id ? ' is-no' : ''),
@@ -707,7 +840,7 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
         h(MoreMenu, { testId: 'op-obj-more', items: menu(obj, obj).filter((m) => m.id !== 'plus'), label: 'Действия: ' + obj.name }))),
     clipBar,
     inner === undefined ? h('div', { className: 'pf-muted' }, 'Загрузка…')
-      : chessOn ? h(PlacesChess, { sections: inner, kids, selected: selId, onSelect: (n) => select(n), busy,
+      : chessOn ? h(PlacesChess, { sections: inner, kids, selected: selId, onSelect: (n) => select(n), busy, hasPlan,
           onPlus: edit ? (p) => { void addNext(p); } : null, plusTitle: (p) => 'Добавить ' + (plusName(p) ? `«${plusName(p)}»` : TYPE_LABEL[CHILD_TYPE[p.node_type] as string]) })
       : inner.length ? h(PlaceTree<PlaceNode & { hasKids: boolean }>, {
           testId: 'op-tree', roots: inner.map((n) => ({ ...n, hasKids: n.child_count > 0 })),
@@ -724,7 +857,7 @@ export function ObjectsPlaces(props: { api: ProjectsApi; project: ProjectCard; k
     h('div', { className: 'op-split' + (wide && obj ? ' has-side' : '') + (slim ? ' is-slim' : '') }, objBox, wide && obj ? h('aside', { className: 'op-side' }, sel ? placeCard(sel)
       : h('div', { className: 'op-side__empty', 'data-testid': 'op-place-empty' }, 'Выберите место в дереве — здесь появятся его данные и действия.')) : null),
     !wide && sel && !dialog && !editing ? h(Sheet, { title: sel.name, sub: sel.path.split(' · ').slice(0, -1).join(' › ') || 'верхний уровень', testId: 'op-place-sheet', onClose: () => setSelId(null) }, placeCard(sel, true)) : null,
-    dropEl, sheet(), importEl, toastEl);
+    dropEl, sheet(), importEl, matchEl, toastEl);
 }
 
 const areaText = (a: number | null | undefined): string => (a != null ? `${String(a).replace('.', ',')} м²` : '');

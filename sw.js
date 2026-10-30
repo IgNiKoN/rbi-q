@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.31-412a5a1b',
+  version: '2026.10.31-1dd7b51d',
   date: '2026-10-31',
-  digest: '412a5a1b',
+  digest: '1dd7b51d',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -71,14 +71,14 @@ const APP_RELEASE = {
     "js/core/views.js": ["2aee99732cc01597",31332,""],
     "js/dist/company/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"company"],
     "js/dist/company/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"company"],
-    "js/dist/company/company.js": ["0d4baff269c71679",1379754,"company"],
+    "js/dist/company/company.js": ["96e0251fd0814dfe",1407424,"company"],
     "js/dist/construction-v2.js": ["a5e867f99a6562e9",337550,"construction-v2"],
     "js/dist/planfact/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"planfact"],
     "js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"planfact"],
     "js/dist/planfact/chunks/xlsx-writer-C1YpHX_s.js": ["70ba43f300adeb4d",12722,"planfact"],
-    "js/dist/planfact/planfact.js": ["131103ead255fd8e",1704486,"planfact"],
+    "js/dist/planfact/planfact.js": ["e2cb0966de8ef974",1708535,"planfact"],
     "js/dist/platform-admin/platform-admin.js": ["ce93570c6c17f382",26360,"platform-admin"],
-    "js/dist/platform/platform.js": ["46ff8e6e86faf47b",813665,""],
+    "js/dist/platform/platform.js": ["037547bebc6bbe78",816720,""],
     "js/dist/rbi-construction-acceptance.js": ["ea4a7f059ca0367b",14449,"construction"],
     "js/dist/rbi-construction-defects.js": ["4f86f24809f9ba0b",12130,"construction"],
     "js/dist/rbi-construction-units.js": ["b7010db3ee53912f",16918,"construction"],
@@ -214,7 +214,7 @@ const APP_RELEASE = {
     "js/modules/settings/features/contractor-directory-ui.js": ["7f8665f71dd640c4",28473,""],
     "js/modules/settings/features/contractor-id-backfill-ui.js": ["5c0585b8c9138090",9736,""],
     "js/modules/settings/features/feedback.js": ["a86fdce44b7037c5",37461,""],
-    "js/modules/settings/features/location-directory-ui.js": ["5f883d9b3bff8e63",30461,""],
+    "js/modules/settings/features/location-directory-ui.js": ["ef49f8b231efc693",31014,""],
     "js/modules/settings/features/official-templates-ui.js": ["bf5ba8e432667382",15730,""],
     "js/modules/settings/features/project-id-backfill-ui.js": ["78965bccc97f4699",12726,""],
     "js/modules/settings/features/role-matrix-ui.js": ["ceb338665df0b4bf",23958,""],

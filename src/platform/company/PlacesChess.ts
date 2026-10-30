@@ -13,6 +13,8 @@ export function PlacesChess(props: {
   sections: PlaceNode[]; kids: Record<string, PlaceNode[] | undefined>; selected: string | null; onSelect: (n: PlaceNode) => void;
   /** «+»: у секции — следующий этаж, у этажа — следующее помещение; null — правка недоступна. */
   onPlus: ((parent: PlaceNode) => void) | null; plusTitle: (parent: PlaceNode) => string; busy?: boolean;
+  /** P2-0057: есть ли у места текущий PDF-план (значок в клетке и у этажа). */
+  hasPlan?: (id: string) => boolean;
 }): ReactElement {
   const { sections, kids, selected } = props;
   const g = buildChess(sections, kids, kids);
@@ -22,6 +24,7 @@ export function PlacesChess(props: {
         'data-testid': parent.node_type === 'section' ? 'op-chess-plus-floor' : 'op-chess-plus-place', onClick: () => props.onPlus!(parent) }, label)
     : null;
   const sel = (n: PlaceNode): string => (selected === n.id ? ' is-sel' : '');
+  const plan = (n: PlaceNode): boolean => !!props.hasPlan && props.hasPlan(n.id);
   return h('div', { className: 'op-chess', 'data-testid': 'op-chess' },
     h('div', { className: 'op-chess__scroll' }, h('div', { className: 'op-chess__grid', role: 'grid', style: { gridTemplateColumns: `auto repeat(${g.cols.length}, max-content)` } },
       h('div', { className: 'op-chess__corner', role: 'columnheader' }),
@@ -34,16 +37,17 @@ export function PlacesChess(props: {
           const cell = c.cells[r.key];
           if (!cell) return h('div', { key: c.section.id + r.key, className: 'op-chess__none', 'aria-hidden': 'true' });
           return h('div', { key: c.section.id + r.key, className: 'op-chess__row', role: 'gridcell', 'data-floor-id': cell.floor.id },
-            h('button', { type: 'button', className: 'op-chess__fl' + sel(cell.floor), title: cell.floor.name, 'aria-label': `${c.section.name} · ${cell.floor.name}`,
-              onClick: () => props.onSelect(cell.floor) }, '⋮'),
-            cell.places.length ? cell.places.map((p) => h('button', { key: p.id, type: 'button', className: 'op-chess__cell' + sel(p), 'data-place-id': p.id,
-              'aria-label': `${c.section.name} · ${cell.floor.name} · ${p.name}`, title: placeTip(p), onClick: () => props.onSelect(p) },
+            h('button', { type: 'button', className: 'op-chess__fl' + sel(cell.floor) + (plan(cell.floor) ? ' has-plan' : ''),
+              title: cell.floor.name + (plan(cell.floor) ? ' · есть план' : ''), 'aria-label': `${c.section.name} · ${cell.floor.name}${plan(cell.floor) ? ' · есть план' : ''}`,
+              onClick: () => props.onSelect(cell.floor) }, plan(cell.floor) ? '▤' : '⋮'),
+            cell.places.length ? cell.places.map((p) => h('button', { key: p.id, type: 'button', className: 'op-chess__cell' + sel(p) + (plan(p) ? ' has-plan' : ''), 'data-place-id': p.id,
+              'aria-label': `${c.section.name} · ${cell.floor.name} · ${p.name}${plan(p) ? ' · есть план' : ''}`, title: placeTip(p) + (plan(p) ? ' · есть план' : ''), onClick: () => props.onSelect(p) },
               h('b', null, p.name), p.build_no ? h('small', null, 'стр. ' + p.build_no) : null))
               : h('span', { className: 'op-chess__empty' }, 'пусто'),
             cell.floor.node_type === 'floor' ? plus(cell.floor, '+', 'op-chess__cell op-chess__cell--add') : null);
         })]))),
     h('div', { className: 'op-chess__legend' }, 'Столбцы — секции, строки — этажи (верхний сверху), клетки — помещения: название и строительный №. ',
-      'Щелчок по клетке — карточка места; «⋮» в начале строки — карточка этажа; «+» — следующее помещение или этаж, как в дереве.'));
+      'Щелчок по клетке — карточка места; «⋮» в начале строки — карточка этажа («▤» — у этажа есть план; полоска снизу клетки — у помещения есть план); «+» — следующее помещение или этаж, как в дереве.'));
 }
 
 /** P2-0056: подсказка клетки — название, стр. №, площадь, комнаты. */
@@ -60,6 +64,7 @@ export const CHESS_CSS = `
 .op-chess__sec{font:inherit;font-size:13.5px;font-weight:600;border:0;background:transparent;color:var(--text-main);padding:4px 6px;border-radius:8px;cursor:pointer}
 .op-chess__floor{font-size:12.5px;color:var(--text-muted);text-align:right;white-space:nowrap;padding-right:2px}
 .op-chess__row{display:flex;align-items:stretch;gap:4px}
+.op-chess__fl.has-plan{color:var(--accent-text,var(--primary));font-weight:700}
 .op-chess__fl{font:inherit;width:18px;border:0;border-radius:6px;background:transparent;color:var(--text-muted);cursor:pointer;padding:0}
 .op-chess__cell{font:inherit;width:58px;min-height:44px;border:1px solid var(--card-border);border-radius:8px;background:var(--card-bg-2,var(--card-bg));color:var(--text-main);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:12px;line-height:1.2;cursor:pointer;padding:2px}
