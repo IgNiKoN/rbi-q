@@ -20741,7 +20741,7 @@ function th(t) {
     T.dataset.p2 !== cr && (T.dataset.p2 = cr, T.innerHTML = cr), m || (m = !0, T.addEventListener("click", j));
   }
   async function R(T) {
-    const w = await h(T ? 0 : u, T).catch(() => null), S = w ? [...w.rows] : [];
+    const w = await h(0, T).catch(() => null), S = w ? [...w.rows] : [];
     return S.push(...await Vd()), S;
   }
   async function A(T = !1) {

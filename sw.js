@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.30-2d18c8b1',
+  version: '2026.10.30-172512e0',
   date: '2026-10-30',
-  digest: '2d18c8b1',
+  digest: '172512e0',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -78,7 +78,7 @@ const APP_RELEASE = {
     "js/dist/planfact/chunks/xlsx-writer-C1YpHX_s.js": ["70ba43f300adeb4d",12722,"planfact"],
     "js/dist/planfact/planfact.js": ["9108d3ae5ba2ba38",1703933,"planfact"],
     "js/dist/platform-admin/platform-admin.js": ["ce93570c6c17f382",26360,"platform-admin"],
-    "js/dist/platform/platform.js": ["8347c1cce080aa77",799923,""],
+    "js/dist/platform/platform.js": ["177e80e6a1fcdfb3",799915,""],
     "js/dist/rbi-construction-acceptance.js": ["bc64aaa6db993c9c",14605,"construction"],
     "js/dist/rbi-construction-defects.js": ["234ce71f41917c30",12286,"construction"],
     "js/dist/rbi-construction-units.js": ["24fc5f9644437f65",17075,"construction"],

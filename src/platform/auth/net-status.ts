@@ -171,7 +171,7 @@ export function startNetStatus(deps: Deps): void {
   }
 
   // P2-0073: неотправленное Качества считает один проход за раз — его ждут и значок (recount), и карточка «Отправка» (fillDevice);
-  // подсчёт младше SCAN_FRESH_MS не повторяется (таймер значка не перечитывает базу сразу после экрана и наоборот).
+  // таймер значка не повторяет подсчёт младше SCAN_FRESH_MS (экран только что считал).
   const SCAN_FRESH_MS = 5000;
   let scanRun: Promise<PendingScan> | null = null;
   let scanLast: { r: PendingScan; at: number } | null = null;
@@ -232,7 +232,8 @@ export function startNetStatus(deps: Deps): void {
     if (!devWired) { devWired = true; slot.addEventListener('click', onDeviceClick); }
   }
   async function readPending(fresh: boolean): Promise<PendingRow[]> {
-    const q = await scanQuality(fresh ? 0 : SCAN_FRESH_MS, fresh).catch(() => null);
+    // экран всегда считает заново (записанное только что видно сразу); общий — только идущий подсчёт значка
+    const q = await scanQuality(0, fresh).catch(() => null);
     const rows: PendingRow[] = q ? [...q.rows] : [];
     rows.push(...(await deviceRows()));   // P2-0064: записи устройства модулей с rpc (факт План/Факта) — в той же карточке
     return rows;
