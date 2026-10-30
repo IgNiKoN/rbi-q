@@ -9,7 +9,12 @@ const URL_ = env.P2_SUPABASE_URL, ANON = env.P2_SUPABASE_ANON_KEY;
 { const f0 = globalThis.fetch; globalThis.fetch = async (...a) => { for (let i = 0; ; i++) { try { return await f0(...a); }
   catch (e) { if (i < 5 && ['UND_ERR_CONNECT_TIMEOUT', 'ENOTFOUND', 'EAI_AGAIN'].includes(e?.cause?.code)) { await new Promise((r) => setTimeout(r, 1000)); continue; } throw e; } } }; }
 let fails = 0;
-const REST_PROJECT = 'REST-автопроверки';   // P2-0011: единственный объект автопроверок в «Альфе» (не архивируется; уборка — scripts/cleanup-test-projects.sql)
+const REST_PROJECT = 'REST-автопроверки';   // P2-0011: постоянный объект автопроверок в «Альфе» — только для того, что без него не проверить
+// P2-0075: записи прогона (работы, ВОР, сметы, КП, факт, КС-2, места) — в своём проекте «REST-прогон <время>», в конце он уходит в архив
+// (скрыт; физически его удаляет scripts/cleanup-test-projects.sql по «да» владельца); справочники — постоянные имена или пометка / архив
+// в finally; Качество и роль — удаление. В конце: видимых «REST…» в Альфе и Бете не прибавилось (кроме постоянных записей теста).
+const RUN_PREFIX = 'REST-прогон ';
+const WT_NAME = 'REST-ВОР Устройство пола', DICT_NAME = 'REST-ВОР устройство пола';   // постоянные: вид работ и словарь ВОР переиспользуются
 const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${extra ? ' — ' + extra : ''}`); if (!ok) fails++; };
 const rpc = (fn, body, token) => fetch(`${URL_}/rest/v1/rpc/${fn}`, { method: 'POST', headers: { apikey: ANON, Authorization: `Bearer ${token || ANON}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
 async function login(email, password) {
@@ -23,6 +28,49 @@ for (const [k, [e, p]] of Object.entries(users)) { const r = await login(e, p); 
 const bad = await login('alfa-pto@test.invalid', 'wrong-password-123');
 check('неверный пароль отклонён', bad.status === 400 && !bad.json.access_token, `статус ${bad.status}`);
 const an = await rpc('pf_my_projects', {}); check('anon не вызывает pf_my_projects', an.status === 401 || an.status === 403, `статус ${an.status}`);
+const j = async (r) => { const t = await r.text(); try { return JSON.parse(t); } catch { return t; } };
+// --- P2-0075: видимые (не помеченные, не архивные) записи «REST…» Альфы и Беты — до прогона и после ---
+const cA0 = (await j(await rpc('pf_my_company_access', {}, tok.alfaAdmin))).find?.((c) => c.company_name === 'Альфа')?.company_id;
+const cB0 = (await j(await rpc('pf_my_company_access', {}, tok.betaPto))).find?.((c) => c.company_name === 'Бета')?.company_id;
+const isRest = (x) => /^REST/i.test(String(x || ''));
+const CONST_REST = new Set([REST_PROJECT, WT_NAME, DICT_NAME.toLowerCase()]);   // постоянные записи теста: создаются один раз, считаются отдельно
+async function restVisible() {
+  const arr = async (fn, args, k) => { const r = await rpc(fn, args, tok[k]); const v = r.ok ? await j(r) : null; return Array.isArray(v) ? v : []; };
+  const n = {}, once = {};
+  const put = (what, list, name = (x) => x.name) => {
+    const rest = list.map(name).filter(isRest);
+    n[what] = rest.filter((x) => !CONST_REST.has(x) && !CONST_REST.has(String(x).toLowerCase())).length;
+    for (const x of rest.filter((y) => CONST_REST.has(y) || CONST_REST.has(String(y).toLowerCase()))) once[x] = (once[x] || 0) + 1;
+  };
+  const projs = (await arr('pf_company_projects', { p_company: cA0 }, 'alfaAdmin')).filter((p) => !p.archived_at);
+  put('Альфа: объекты', projs);
+  const works = [];
+  for (const p of projs) works.push(...await arr('pf_list_works', { p_project: p.id }, 'alfaAdmin'));
+  put('Альфа: работы', works);
+  const pA0 = projs.find((p) => !isRest(p.name))?.id;
+  put('Альфа: виды работ', await arr('pf_vor_list_work_types', { p_project: pA0 }, 'alfaPto'));
+  put('Альфа: словарь ВОР', await arr('pf_vor_dictionary', { p_project: pA0 }, 'alfaPto'), (x) => x.canon_name);
+  put('Альфа: цены', await arr('pf_price_list', { p_company: cA0 }, 'alfaPto'));
+  put('Альфа: бригады', await arr('pf_brigade_list', { p_company: cA0 }, 'alfaPto'));
+  put('Альфа: единицы', (await arr('pf_list_units', { p_company: cA0 }, 'alfaAdmin')).filter((u) => !u.is_common));
+  put('Альфа: роли', await arr('pf_list_company_roles', { p_company: cA0 }, 'alfaAdmin'));
+  put('Альфа: контрагенты', await arr('pf_counterparties_list', { p_company: cA0, p_include_archived: false }, 'alfaAdmin'));
+  put('Альфа: подразделения', (await arr('pf_company_divisions', { p_company: cA0 }, 'alfaAdmin')).filter((d) => !d.archived_at));
+  const keep = projs.find((p) => p.name === REST_PROJECT)?.id;
+  put('Альфа: места объекта автопроверок', keep ? await arr('pf_project_places', { p_project: keep, p_parent: null }, 'alfaAdmin') : []);
+  put('Бета: объекты', await arr('pf_my_projects', {}, 'betaPto'));
+  put('Бета: бригады', await arr('pf_brigade_list', { p_company: cB0 }, 'betaPto'));
+  put('Бета: единицы', (await arr('pf_list_units', { p_company: cB0 }, 'betaPto')).filter((u) => !u.is_common));
+  put('Бета: контрагенты', await arr('pf_counterparties_list', { p_company: cB0, p_include_archived: false }, 'betaPto'));
+  return { n, once };
+}
+// остаток упавшего прогона: незаархивированный проект прогона — назначения отозвать, проект в архив
+for (const p of (await j(await rpc('pf_company_projects', { p_company: cA0 }, tok.alfaAdmin))).filter?.((x) => x.name.startsWith(RUN_PREFIX) && !x.archived_at) || []) {
+  for (const m of (await j(await rpc('pf_list_company_members', { p_company: cA0 }, tok.alfaAdmin))).filter((x) => x.project_id === p.id && x.is_active && x.assignment_id))
+    await rpc('pf_revoke_assignment', { p_assignment: m.assignment_id }, tok.alfaAdmin);
+  check(`P2-0075: остаток упавшего прогона «${p.name}» — в архив`, (await rpc('pf_update_project', { p_project: p.id, p_name: p.name, p_code: 'REST', p_archived: true }, tok.alfaAdmin)).ok);
+}
+const restBefore = await restVisible();
 const projs = {};
 for (const k of Object.keys(tok)) { const r = await rpc('pf_my_projects', {}, tok[k]); projs[k] = r.ok ? await r.json() : []; }
 check('Альфа-ПТО видит 1 проект Альфы', projs.alfaPto.length === 1 && projs.alfaPto[0].name.startsWith('Альфа'));
@@ -48,26 +96,42 @@ const cross = await rpc('pf_add_work', { p_project: pB, p_name: 'ВЗЛОМ-ЧУ
 check('ПТО Альфы: добавление в проект Беты отклонено', !cross.ok, `статус ${cross.status}`);
 const direct = await fetch(`${URL_}/rest/v1/works`, { method: 'POST', headers: { apikey: ANON, Authorization: `Bearer ${tok.alfaPto}`, 'Content-Type': 'application/json', 'Accept-Profile': 'planfact', 'Content-Profile': 'planfact' }, body: '{}' });
 check('схема planfact не открыта через REST напрямую', !direct.ok, `статус ${direct.status}`);
-// --- этап 4: суммы, журнал, добавление ---
+// --- P2-0075: проект прогона — ПТО и прораб Альфы назначены на него до конца прогона; в finally в конце файла — отзыв и архив ---
+const RUN = RUN_PREFIX + new Date().toISOString();
+const cpR = await rpc('pf_create_project', { p_company: cA0, p_name: RUN, p_code: 'REST' }, tok.alfaAdmin);
+const pR = cpR.ok ? await j(cpR) : null;
+check('P2-0075: проект прогона создан', typeof pR === 'string', `статус ${cpR.status}`);
+const asgR = [];
+try {   // до конца файла (без отступа): что бы ни упало — назначения отзываются, проект прогона уходит в архив
+{
+  const rolesR = await j(await rpc('pf_list_company_roles', { p_company: cA0 }, tok.alfaAdmin));
+  const membersR = await j(await rpc('pf_list_company_members', { p_company: cA0 }, tok.alfaAdmin));
+  for (const [email, tpl] of [['alfa-pto@test.invalid', 'pto'], ['alfa-foreman@test.invalid', 'foreman']]) {
+    const u = membersR.find((m) => m.email === email)?.user_id, r = rolesR.find((x) => x.template_code === tpl)?.id;
+    const a = await rpc('pf_assign_role', { p_user: u, p_role: r, p_project: pR }, tok.alfaAdmin);
+    check(`P2-0075: назначение ${tpl} на проект прогона`, a.ok, `статус ${a.status}`);
+    if (a.ok) asgR.push(await j(a));
+  }
+}
+// --- этап 4: суммы, журнал, добавление (P2-0075: в проекте прогона) ---
 const stamp = 'REST-тест ' + new Date().toISOString();
-const addOk = await rpc('pf_add_work', { p_project: pA, p_name: stamp, p_unit: 'шт', p_plan_qty: 1 }, tok.alfaPto);
+const addOk = await rpc('pf_add_work', { p_project: pR, p_name: stamp, p_unit: 'шт', p_plan_qty: 1 }, tok.alfaPto);
 check('ПТО добавил работу через pf_add_work', addOk.ok, `статус ${addOk.status}`);
-const wPto = await wl('alfaPto', pA), wFor = await wl('alfaForeman', pA), wAdm = await wl('alfaAdmin', pA);
+const wPto = await wl('alfaPto', pR), wFor = await wl('alfaForeman', pR), wAdm = await wl('alfaAdmin', pR);
 check('новая работа видна в списке ПТО', wPto.some((w) => w.name === stamp));
 check('ПТО видит суммы (есть money.view)', wPto.some((w) => w.plan_amount !== null));
 check('прораб не видит ни одной суммы', wFor.length > 0 && wFor.every((w) => w.plan_amount === null));
 check('администратор не видит ни одной суммы', wAdm.length > 0 && wAdm.every((w) => w.plan_amount === null));
 const aud = async (k, p) => (await (await rpc('pf_list_audit', { p_project: p }, tok[k])).json());
-const audAdm = await aud('alfaAdmin', pA);
+const audAdm = await aud('alfaAdmin', pR);
 check('админ видит в журнале запись: кто=alfa-pto, что=INSERT', audAdm.some((r) => r.actor_email === 'alfa-pto@test.invalid' && r.action === 'INSERT' && r.new_data?.name === stamp));
 check('в журнале у админа нет сумм', audAdm.every((r) => !r.new_data || !('plan_amount' in r.new_data)));
-check('ПТО не видит журнал', (await aud('alfaPto', pA)).length === 0);
-check('прораб не видит журнал', (await aud('alfaForeman', pA)).length === 0);
+check('ПТО не видит журнал', (await aud('alfaPto', pR)).length === 0);
+check('прораб не видит журнал', (await aud('alfaForeman', pR)).length === 0);
 check('ПТО Беты не видит журнал Альфы', (await aud('betaPto', pA)).length === 0);
 const tamper = await fetch(`${URL_}/rest/v1/audit_log`, { method: 'DELETE', headers: { apikey: ANON, Authorization: `Bearer ${tok.alfaAdmin}`, 'Content-Profile': 'planfact' } });
 check('журнал не удалить через REST', !tamper.ok, `статус ${tamper.status}`);
 // --- P2-0004b: конструктор ролей (миграция 005) ---
-const j = async (r) => { const t = await r.text(); try { return JSON.parse(t); } catch { return t; } };
 const probe = await rpc('pf_my_admin_companies', {}, tok.alfaAdmin);
 if (probe.status === 404) { console.log('NOT RUN: миграция 005 не применена — проверки конструктора ролей пропущены'); fails++; }
 else {
@@ -95,17 +159,17 @@ else {
     const fUser = members.find((m) => m.email === 'alfa-foreman@test.invalid')?.user_id;
     const aUser = members.find((m) => m.email === 'alfa-admin@test.invalid')?.user_id;
     check('в «Сотрудниках» есть alfa-foreman', !!fUser);
-    check('самоназначение отклонено', !(await rpc('pf_assign_role', { p_user: aUser, p_role: newRole, p_project: pA }, tok.alfaAdmin)).ok);
-    const ar = await rpc('pf_assign_role', { p_user: fUser, p_role: newRole, p_project: pA }, tok.alfaAdmin);
+    check('самоназначение отклонено', !(await rpc('pf_assign_role', { p_user: aUser, p_role: newRole, p_project: pR }, tok.alfaAdmin)).ok);
+    const ar = await rpc('pf_assign_role', { p_user: fUser, p_role: newRole, p_project: pR }, tok.alfaAdmin);
     asg = await j(ar);
     check('роль назначена прорабу на проект', ar.ok, `статус ${ar.status}`);
-    check('прораб сразу получил works.edit (без повторного входа)', (await perms('alfaForeman', pA)).includes('planfact.works.edit'));
-    check('прораб добавил работу', (await rpc('pf_add_work', { p_project: pA, p_name: 'REST-прораб ' + roleName }, tok.alfaForeman)).ok);
+    check('прораб сразу получил works.edit (без повторного входа)', (await perms('alfaForeman', pR)).includes('planfact.works.edit'));
+    check('прораб добавил работу', (await rpc('pf_add_work', { p_project: pR, p_name: 'REST-прораб ' + roleName }, tok.alfaForeman)).ok);
     check('роль с назначением не удалить', !(await rpc('pf_delete_role', { p_role: newRole }, tok.alfaAdmin)).ok);
     const rv = await rpc('pf_revoke_assignment', { p_assignment: asg }, tok.alfaAdmin); asg = rv.ok ? null : asg;
     check('назначение отозвано', rv.ok, `статус ${rv.status}`);
-    check('после отзыва works.edit нет', !(await perms('alfaForeman', pA)).includes('planfact.works.edit'));
-    check('после отзыва добавление отклонено сервером', !(await rpc('pf_add_work', { p_project: pA, p_name: 'ВЗЛОМ-после-отзыва' }, tok.alfaForeman)).ok);
+    check('после отзыва works.edit нет', !(await perms('alfaForeman', pR)).includes('planfact.works.edit'));
+    check('после отзыва добавление отклонено сервером', !(await rpc('pf_add_work', { p_project: pR, p_name: 'ВЗЛОМ-после-отзыва' }, tok.alfaForeman)).ok);
   } finally {
     if (asg) await rpc('pf_revoke_assignment', { p_assignment: asg }, tok.alfaAdmin);
     check('роль удалена', (await rpc('pf_delete_role', { p_role: newRole }, tok.alfaAdmin)).ok);
@@ -113,7 +177,7 @@ else {
   const ca = await j(await rpc('pf_list_company_audit', { p_company: cA, p_limit: 20 }, tok.alfaAdmin));
   check('журнал: создание роли — автор alfa-admin', ca.some((r) => r.action === 'ROLE_CREATE' && r.actor_email === 'alfa-admin@test.invalid' && r.new_data?.name === roleName));
   check('журнал: назначение и отзыв для alfa-foreman', ['ASSIGN', 'REVOKE'].every((a) => ca.some((r) => r.action === a && r.subject_email === 'alfa-foreman@test.invalid')));
-  check('журнал проекта «План/Факт» — только работы (без назначений)', (await aud('alfaAdmin', pA)).every((r) => ['INSERT', 'UPDATE', 'DELETE'].includes(r.action)));
+  check('журнал проекта «План/Факт» — только работы (без назначений)', (await aud('alfaAdmin', pR)).every((r) => ['INSERT', 'UPDATE', 'DELETE'].includes(r.action)));
   check('ПТО не читает журнал компании', !(await rpc('pf_list_company_audit', { p_company: cA }, tok.alfaPto)).ok);
 }
 // --- P2-0005: проекты, локации, единицы (миграция 006) ---
@@ -194,7 +258,8 @@ else {
     if (unitId) check('своя единица удалена', (await rpc('pf_delete_unit', { p_unit: unitId }, tok.alfaAdmin)).ok);
   }
 }
-// --- P2-0006: ВОР (миграция 007) — права, изоляция компаний, подтверждение, неизменяемость. Данные помечены «REST-ВОР …». ---
+// --- P2-0006: ВОР (миграция 007) — права, изоляция компаний, подтверждение, неизменяемость. Данные помечены «REST-ВОР …».
+//     P2-0075: всё — в проекте прогона (ПТО и прораб на него уже назначены); вид работ и словарь — постоянные, цены — пометкой в finally. ---
 const vorProbe = await rpc('pf_vor_list_imports', { p_project: pA }, tok.alfaPto);
 if (vorProbe.status === 404) { console.log('NOT RUN: миграция 007 не применена — проверки ВОР пропущены'); fails++; }
 else {
@@ -202,23 +267,14 @@ else {
   const accV = await j(await rpc('pf_my_company_access', {}, tok.alfaAdmin));
   const cV = accV[0]?.company_id;
   const stampV = 'REST-ВОР ' + new Date().toISOString();
-  let pv = null, imp = null; const asgV = [];
-  const actNo = (n) => 'R' + Date.now().toString(36) + '-' + n;   // номера актов прогона — свои: черновики прошлых прогонов не мешают
+  const pv = pR;
+  let imp = null, wt = null, brigId = null; const priceIds = [];
+  const actNo = (n) => 'R' + Date.now().toString(36) + '-' + n;   // номера актов прогона — свои
   try {
-    pv = (await j(await rpc('pf_company_projects', { p_company: cV }, tok.alfaAdmin))).find((x) => x.name === REST_PROJECT && !x.archived_at)?.id ?? null;
-    check('постоянный объект автопроверок найден', typeof pv === 'string');
-    const roots = await j(await rpc('pf_list_locations', { p_project: pv, p_parent: null }, tok.alfaAdmin));
-    const sec = roots.find((x) => x.name === 'Секция 1')?.id
-      ?? await j(await rpc('pf_add_location', { p_project: pv, p_parent: null, p_type: 'section', p_name: 'Секция 1' }, tok.alfaAdmin));
-    // Тестовые ПТО и прораб назначены на основной проект Альфы — на время теста назначаем их и на объект автопроверок (в конце — отзыв).
-    const rolesV = await j(await rpc('pf_list_company_roles', { p_company: cV }, tok.alfaAdmin));
-    const membersV = await j(await rpc('pf_list_company_members', { p_company: cV }, tok.alfaAdmin));
-    for (const [email, tpl] of [['alfa-pto@test.invalid', 'pto'], ['alfa-foreman@test.invalid', 'foreman']]) {
-      const u = membersV.find((m) => m.email === email)?.user_id, r = rolesV.find((x) => x.template_code === tpl)?.id;
-      const a = await rpc('pf_assign_role', { p_user: u, p_role: r, p_project: pv }, tok.alfaAdmin);
-      check(`назначение ${tpl} на объект автопроверок`, a.ok, `статус ${a.status}`);
-      if (a.ok) asgV.push(await j(a));
-    }
+    check('проект прогона для ВОР есть', typeof pv === 'string');
+    // верхний уровень мест — корпус (P2-0047), в нём «Секция 1»
+    const bldV = await j(await rpc('pf_add_location', { p_project: pv, p_parent: null, p_type: 'building', p_name: 'Корпус 1' }, tok.alfaAdmin));
+    const sec = await j(await rpc('pf_add_location', { p_project: pv, p_parent: bldV, p_type: 'section', p_name: 'Секция 1' }, tok.alfaAdmin));
     check('ПТО: право planfact.vor.manage в проекте', (await perms('alfaPto', pv)).includes('planfact.vor.manage'));
     check('прораб: права planfact.vor.manage нет', !(await perms('alfaForeman', pv)).includes('planfact.vor.manage'));
     const sha = 'e'.repeat(64);
@@ -246,11 +302,13 @@ else {
     check('Бета-ПТО не пишет строки в загрузку Альфы', !(await rpc('pf_vor_add_rows', { p_import: imp, p_rows: [{ row_no: 50, kind: 'work', name: 'ВЗЛОМ' }] }, tok.betaPto)).ok);
     const units = await j(await rpc('pf_list_units', { p_company: cV }, tok.alfaPto));
     const m2 = units.find((u) => u.code === 'м²')?.id;
-    const wt = await j(await rpc('pf_vor_add_work_type', { p_project: pv, p_name: stampV + ' Устройство пола', p_unit: m2, p_code: null }, tok.alfaPto));
-    check('ПТО создал вид работ', typeof wt === 'string');
+    // P2-0075: вид работ — постоянный: есть — берём, нет — ПТО создаёт (повтор имени сервер отклоняет)
+    wt = (await j(await rpc('pf_vor_list_work_types', { p_project: pv }, tok.alfaPto))).find?.((x) => x.name === WT_NAME)?.id
+      ?? await j(await rpc('pf_vor_add_work_type', { p_project: pv, p_name: WT_NAME, p_unit: m2, p_code: null }, tok.alfaPto));
+    check('ПТО: вид работ есть (создан или взят прежний)', typeof wt === 'string');
     check('прораб не создаёт вид работ', !(await rpc('pf_vor_add_work_type', { p_project: pv, p_name: 'ВЗЛОМ', p_unit: m2, p_code: null }, tok.alfaForeman)).ok);
     check('Бета-ПТО не видит виды работ Альфы', !(await rpc('pf_vor_list_work_types', { p_project: pv }, tok.betaPto)).ok);
-    check('словарь пополнен', (await rpc('pf_vor_learn', { p_project: pv, p_items: [{ name: stampV + ' устройство пола', unit_text: 'м2', work_type_id: wt }] }, tok.alfaPto)).ok);
+    check('словарь пополнен', (await rpc('pf_vor_learn', { p_project: pv, p_items: [{ name: DICT_NAME, unit_text: 'м2', work_type_id: wt }] }, tok.alfaPto)).ok);
     check('Бета-ПТО не читает словарь Альфы', !(await rpc('pf_vor_dictionary', { p_project: pv }, tok.betaPto)).ok);
     check('нельзя подтвердить неразобранный ВОР', !(await rpc('pf_vor_confirm', { p_import: imp }, tok.alfaPto)).ok);
     check('решения строки сохранены', (await rpc('pf_vor_resolve_rows', { p_import: imp, p_items: [{ row_no: 11, location_id: sec, work_type_id: wt, unit_id: m2, match: 'green' }] }, tok.alfaPto)).ok);
@@ -258,7 +316,7 @@ else {
     const cf = await rpc('pf_vor_confirm', { p_import: imp }, tok.alfaPto);
     check('ВОР подтверждён: 1 позиция', cf.ok && (await j(cf)) === 1, `статус ${cf.status}`);
     const pos = (await j(await rpc('pf_vor_positions', { p_project: pv, p_location: null }, tok.alfaForeman))).filter((x) => x.import_id === imp);
-    check('прораб видит позицию «Секция 1 · вид работ · м² · 399,89 · кв.»', pos.length === 1 && pos[0].location_path === 'Секция 1' && pos[0].unit_code === 'м²' && Number(pos[0].qty) === 399.89 && pos[0].apartments_note === 'кв. 3, 16');
+    check('прораб видит позицию «Корпус 1 · Секция 1 · вид работ · м² · 399,89 · кв.»', pos.length === 1 && pos[0].location_path === 'Корпус 1 · Секция 1' && pos[0].unit_code === 'м²' && Number(pos[0].qty) === 399.89 && pos[0].apartments_note === 'кв. 3, 16');
     check('подтверждённый: строки не дописать', !(await rpc('pf_vor_add_rows', { p_import: imp, p_rows: [{ row_no: 60, kind: 'work', name: 'x' }] }, tok.alfaPto)).ok);
     check('подтверждённый: не удалить', !(await rpc('pf_vor_delete_import', { p_import: imp }, tok.alfaPto)).ok);
     check('Бета-ПТО не видит позиции Альфы', !(await rpc('pf_vor_positions', { p_project: pv, p_location: null }, tok.betaPto)).ok);
@@ -275,6 +333,9 @@ else {
         { kind: 'material', name: stampV + ' смесь', unit_text: 'кг', price_material: 2 }] }, tok.alfaPto);
       const upJ = await j(up);
       check('ПТО записал цены (работа + материал) с источником «загрузка ВОР»', up.ok && upJ.created + upJ.updated === 2, `статус ${up.status}`);
+      // P2-0075: цены прогона — в finally пометкой «удалено» (следующий прогон создаёт заново)
+      for (const x of await j(await rpc('pf_price_list', { p_company: cV }, tok.alfaPto)))
+        if (x.work_type_id === wt || x.name === stampV + ' смесь') priceIds.push(x.id);
       check('прораб не читает цены', !(await rpc('pf_price_list', { p_company: cV }, tok.alfaForeman)).ok);
       check('прораб не пишет цены', !(await rpc('pf_price_upsert', { p_company: cV, p_items: [], p_source: 'manual' }, tok.alfaForeman)).ok);
       check('Бета-ПТО не читает цены Альфы', !(await rpc('pf_price_list', { p_company: cV }, tok.betaPto)).ok);
@@ -312,7 +373,6 @@ else {
     }
     // --- P2-0007: бригады и факт прораба (миграция 009) — права, допуск перебора, подтверждение РП, изоляция компаний. ---
     const fProbe = await rpc('pf_brigade_list', { p_company: cV }, tok.alfaPto);
-    let brigId = null;
     if (fProbe.status === 404) { console.log('NOT RUN: миграция 009 не применена — проверки бригад и факта пропущены'); fails++; }
     else {
       const stampB = 'REST-бригада ' + new Date().toISOString();
@@ -549,8 +609,6 @@ else {
           }
         }
       }
-      // бригаду REST-теста отправляем в архив — активные имена не накапливаются
-      check('бригада REST-теста отправлена в архив', (await rpc('pf_brigade_archive', { p_brigade: brigId, p_archived: true }, tok.alfaPto)).ok);
     }
     // --- P2-0006b (046): редакции ВОР — своя загрузка №1 → черновик №2 → принятие; права и изоляция. Данные «REST-ВОР … ред.» ---
     const revProbe = await rpc('pf_vor_revision_changes', { p_import: imp }, tok.alfaPto);
@@ -600,7 +658,9 @@ else {
     check('таблицы ВОР не открыты через REST напрямую', !directV.ok, `статус ${directV.status}`);
     check('anon: pf_vor_list_imports закрыт', !(await rpc('pf_vor_list_imports', { p_project: pv })).ok);
   } finally {
-    for (const a of asgV) check('назначение на объект автопроверок отозвано', (await rpc('pf_revoke_assignment', { p_assignment: a }, tok.alfaAdmin)).ok);
+    // P2-0075: бригада прогона — в архив, цены прогона — пометкой «удалено» (видимые «REST…» не копятся)
+    if (brigId) check('бригада REST-теста отправлена в архив', (await rpc('pf_brigade_archive', { p_brigade: brigId, p_archived: true }, tok.alfaPto)).ok);
+    for (const id of priceIds) check('цена прогона помечена удалённой', (await rpc('pf_price_delete', { p_item: id }, tok.alfaPto)).ok);
   }
 }
 // --- P2-0013 (014): кто я и администрирование платформы — только чтение и отказы, сервер не меняется ---
@@ -645,6 +705,12 @@ else {
     const stampQ = 'REST-018-' + Date.now();
     await setMods(true);
     let asgQ = null;
+    // P2-0075: строки справочника подрядчиков «REST…» и контрагенты «REST…» до блока: что появилось за блок (в т. ч. созданное
+    // триггерами Качества при «туда-обратно»), в finally удаляется / уходит в архив
+    const dirRest = async () => { const r = await q('contractor_directory?select=id,display_name&display_name=like.REST*&deleted_at=is.null', 'alfaAdmin', cA);
+      return r.ok ? await r.json() : []; };
+    const cpRest = async () => ((await j(await rpc('pf_counterparties_list', { p_company: cA, p_include_archived: false }, tok.alfaAdmin))) || []).filter?.((c) => isRest(c.name)) || [];
+    const dirBefore = new Set((await dirRest()).map((x) => x.id)), cpBefore = new Set((await cpRest()).map((x) => x.id));
     try {
       const pRest = (await j(await rpc('pf_company_projects', { p_company: cA }, tok.alfaAdmin))).find((p) => p.name === REST_PROJECT)?.id;
       check('018: объект автопроверок Альфы найден', !!pRest);
@@ -876,6 +942,10 @@ else {
       }
     } finally {
       if (asgQ) check('018: назначение ПТО на объект автопроверок отозвано', (await rpc('pf_revoke_assignment', { p_assignment: asgQ }, tok.alfaAdmin)).ok);
+      for (const c of (await cpRest()).filter((x) => !cpBefore.has(x.id))) await rpc('pf_counterparties_archive', { p_id: c.id, p_archived: true }, tok.alfaAdmin);
+      for (const d of (await dirRest()).filter((x) => !dirBefore.has(x.id))) await q(`contractor_directory?id=eq.${d.id}`, 'alfaAdmin', cA, { method: 'DELETE' });
+      const dirLeft = (await dirRest()).filter((x) => !dirBefore.has(x.id)).length;
+      check('P2-0075: справочник подрядчиков Качества — строк «REST…» не прибавилось', dirLeft === 0, `новых осталось ${dirLeft}`);
       await setMods(false);
     }
   }
@@ -992,6 +1062,18 @@ else {
       check('0047: объект удалён вместе с местами', rm.ok);
     }
   }
+}
+} finally {   // P2-0075: конец прогона — назначения на проект прогона отозвать, проект в архив
+  for (const a of asgR) check('P2-0075: назначение на проект прогона отозвано', (await rpc('pf_revoke_assignment', { p_assignment: a }, tok.alfaAdmin)).ok);
+  if (pR) check('P2-0075: проект прогона в архиве', (await rpc('pf_update_project', { p_project: pR, p_name: RUN, p_code: 'REST', p_archived: true }, tok.alfaAdmin)).ok);
+}
+// --- P2-0075: видимых «REST…» не прибавилось (постоянные записи теста — не больше одной каждая) ---
+{
+  const after = await restVisible();
+  const grew = Object.keys(after.n).filter((k) => after.n[k] > (restBefore.n[k] ?? 0)).map((k) => `${k} ${restBefore.n[k] ?? 0} → ${after.n[k]}`);
+  check('P2-0075: видимых «REST…» в Альфе и Бете не прибавилось', grew.length === 0, grew.join('; ') || JSON.stringify(after.n));
+  const twice = Object.entries(after.once).filter(([, v]) => v > 1).map(([k, v]) => `${k} × ${v}`);
+  check('P2-0075: постоянные записи теста — по одной', twice.length === 0, twice.join('; ') || JSON.stringify(after.once));
 }
 console.log(fails ? `ИТОГ: FAIL (${fails})` : 'ИТОГ: PASS');
 process.exit(fails ? 1 : 0);
