@@ -1841,7 +1841,7 @@ async function saveCustomTemplate() {
     if (!isValid) return showToast("Заполните все пустые поля и пункты!");
 
     // Если мы редактируем старый шаблон - берем его ключ, иначе создаем новый
-    const slug = window.currentEditingTemplateSlug || ("cstm_" + Date.now().toString(36));
+    const slug = window.currentEditingTemplateSlug || window.RbiIds.newId();
     window.currentEditingTemplateSlug = null; // сбрасываем
 
     newTemplate.id = slug; // Дублируем ключ в id для синхронизатора
@@ -2129,7 +2129,7 @@ async function handleExcelImport(event) {
             if (newTemplate.groups.length === 0) throw new Error("Не удалось найти данные в таблице. Проверьте формат по инструкции (Кнопка '?').");
 
             // Генерируем уникальный ключ
-            const slug = "cstm_" + Date.now().toString(36);
+            const slug = window.RbiIds.newId();
 
             // Сохраняем через сервис (мутация window.userTemplates + dbPut единой точкой)
             var templatesSvc3 = _templatesService();
@@ -2240,7 +2240,7 @@ async function handleFileUpload(event) {
                 throw new Error("Неверный формат чек-листа. Ожидается объект с полем groups.");
             }
 
-            const slug = parsedData.key || parsedData.slug || ("cstm_" + Date.now().toString(36));
+            const slug = parsedData.key || parsedData.slug || window.RbiIds.newId();
             parsedData.id = parsedData.id || slug;
 
             // Вызываем owner-сервис (эмитит templates:changed для подписчиков).

@@ -484,7 +484,7 @@ function gameCalculateAllProfiles() {
       const logs = window.gameActionLogs || [];
       if (logs.some(l => l.action === action && l.target === target && l.inspector === p.name)) return;
       logs.push({
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        id: window.RbiIds.newId(),
         date: new Date().toISOString(),
         inspector: p.name,
         action,

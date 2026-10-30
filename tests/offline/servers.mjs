@@ -70,7 +70,8 @@ function session(user, ttl = 3600) {
 /** P2-0060: второму пользователю стенда тоже дать компанию (План/Факт), его Сводка — с ошибкой сервера (копии у него нет). */
 /** P2-0061: names — ФИО пользователей стенда по id (смена ФИО в «Сотрудниках»); по умолчанию «Иванов Иван» / «Петров Пётр». */
 // P2-0070: rpc — ответы RPC сценария поверх стандартных (снимки экранов «Компании» на данных локальной копии сервера)
-export const stand = { user2Planfact: false, quality: null, names: {}, rpc: null };
+// P2-0072: serve — что сервер отдаёт на чтение таблицы (таблица → строки; по умолчанию — пусто), для проверки загрузки на телефон
+export const stand = { user2Planfact: false, quality: null, names: {}, rpc: null, serve: null };
 const hasPf = (u) => u.id === USER.id || stand.user2Planfact;
 /** P2-0060: Сводка План/Факта первого пользователя (один объект) — по ней стенд сверяет цифры с сетью и без сети. */
 export const SUMMARY = { project_id: 'p-1', name: 'ЖК Тестовый', code: 'ЖКТ', planned_start: '2026-06-01', planned_finish: '2027-03-31',
@@ -213,6 +214,8 @@ function respond(req, res, u, body) {
       if (lost) { lost.left--; return req.socket.destroy(); }
       return v && v.__status ? json(res, v.__status, { message: v.message || 'Internal error', ...(v.code ? { code: v.code } : {}) }) : json(res, 200, v); }
     if (u.pathname.startsWith('/rest/v1/')) {
+      const served = stand.serve && stand.serve[u.pathname.slice(9)];
+      if (req.method === 'GET' && served) return json(res, 200, served, { 'Content-Range': `0-${Math.max(served.length - 1, 0)}/${served.length}` });
       if (req.method === 'GET' || req.method === 'HEAD') return json(res, 200, [], { 'Content-Range': '*/0' });
       return json(res, 201, []);
     }

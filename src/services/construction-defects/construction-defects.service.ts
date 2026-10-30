@@ -10,6 +10,7 @@ import type {
   DefectStatusV2
 } from './types';
 import { DEFECT_STATUSES_V2 } from './types';
+import type { RbiIds as RecordIds } from '../../../js/services/record-id.service.js';
 
 /** YYYY-MM-DD / ISO → date-string YYYY-MM-DD, иначе null. */
 function _normalizeDeadline(value: unknown): string | null {
@@ -122,11 +123,10 @@ function _now() {
   return new Date().toISOString();
 }
 
-function _uuid() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `cdef_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+/** P2-0072: номер записи — общий сервис номеров платформы со страницы (window.RbiIds, js/services/record-id.service.js;
+ *  загружается раньше модулей), своей копии кода в сборке нет. */
+function _uuid(): string {
+  return (globalThis as { RbiIds?: typeof RecordIds }).RbiIds!.newId();
 }
 
 function _active() {

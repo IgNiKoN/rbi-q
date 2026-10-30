@@ -313,7 +313,7 @@ async function _saveFeedbackText(text) {
     const currentEng = _getSetting('engineerName') || 'Инженер';
 
     const fb = {
-        id: 'fb_' + Date.now().toString(36),
+        id: window.RbiIds.newId(),
         text: text,
         normalized_text: normalizedText,
         author: currentEng,
@@ -654,7 +654,7 @@ async function rbi_addRoadmapItem() {
     if (!text) return showToast("⚠️ Введите текст плана!");
 
     const rb = {
-        id: 'rm_' + Date.now().toString(36),
+        id: window.RbiIds.newId(),
         text: text,
         normalized_text: text,
         author: 'Разработчик',

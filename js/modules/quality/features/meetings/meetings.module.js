@@ -494,7 +494,7 @@ let _manualAgendaSeq = 0;
 /** Уникальный id для вручную добавленного пункта повестки (используется и как основа sourceKey). */
 function _makeManualAgendaId() {
     _manualAgendaSeq += 1;
-    return `ag_manual_${Date.now()}_${_manualAgendaSeq}`;
+    return 'ag_manual_' + window.RbiIds.newId();
 }
 
 /** Пересчитать disabled-состояние кнопок ▲/▼ на границах каждой agenda-группы. */
@@ -2519,7 +2519,7 @@ export async function saveMeetingMemo() {
             ? window._meetingSetupProjects.filter(p => p && p !== '__ALL__')
             : projectName.split(',').map(s => s.trim()).filter(Boolean));
     const meet = {
-        id: 'meet_' + Date.now().toString(36),
+        id: window.RbiIds.newId(),
         date: meetDate,
         author: author,
         engineer_name: author,

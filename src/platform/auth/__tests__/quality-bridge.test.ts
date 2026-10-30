@@ -3,7 +3,7 @@
  *  объект из ядра, роль из прав компании, локальное состояние компаний не смешивается. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyQualityBridge, companyConflict, deviceUserKey, parseAccess, pinAccess, qualityCompanyFor, roleFor, switchDeviceCompany,
+import { applyQualityBridge, companyConflict, deviceUserKey, withoutServerIds, SERVER_ID_FIELDS, parseAccess, pinAccess, qualityCompanyFor, roleFor, switchDeviceCompany,
   QUALITY_ACCESS_EVENT, QUALITY_COMPANY_KEY, QUALITY_DROP_DB_KEY, QUALITY_LEGACY_OWNER_KEY, QUALITY_USER_KEY } from '../quality-bridge.ts';
 import type { PlatformState } from '../platform.service.ts';
 
@@ -269,6 +269,26 @@ test('ключи по компании (021): цель upsert старого к�
   assert.deepEqual(calls.map((c) => [c.t, c.o]), [['rbi_inspections', { onConflict: 'core_company_id,id', ignoreDuplicates: false }],
     ['project_settings', { onConflict: 'core_company_id,project_code' }], ['rbi_tasks', undefined]]);
   assert.equal(win.supabaseClient.from('rbi_tasks').select(), 'sel');
+});
+
+test('P2-0072: номер core_id и связи по uuid ставит сервер — upsert / insert / update Качества уходят без них, прочее не меняется', async () => {
+  const row = { id: 'task_man_1', title: 'т', core_id: '11111111-1111-4111-8111-111111111111', core_inspection_id: null, core_parent_id: 'x' };
+  assert.deepEqual(withoutServerIds(row), { id: 'task_man_1', title: 'т' });
+  assert.deepEqual(withoutServerIds([row, { id: 'b' }]), [{ id: 'task_man_1', title: 'т' }, { id: 'b' }]);
+  const plain = { id: 'c', core_company_id: A, core_project_id: B, core_object_id: B, core_counterparty_id: B, core_created_by: B };
+  assert.equal(withoutServerIds(plain), plain);   // служебные поля прав и объекта — как раньше (их правило не меняется)
+  assert.equal(SERVER_ID_FIELDS.length, 9);
+  const { d, win } = deps();
+  const calls: N[] = [];
+  d.createClient = (_u: string, _k: string, opts: N) => ({ opts, rpc: async () => ({ data: {}, error: null }), storage: { from: () => ({}) },
+    from: (t: string) => ({ t, upsert: (v: N, o: N) => { calls.push(['upsert', v, o]); return 'u'; }, insert: (v: N, o: N) => { calls.push(['insert', v, o]); return 'i'; },
+      update: (v: N) => { calls.push(['update', v]); return { eq: () => 'e' }; } }) });
+  await applyQualityBridge(st(), d);
+  win.supabaseClient.from('rbi_tasks').upsert([row], { onConflict: 'id' });
+  win.supabaseClient.from('location_nodes').insert({ ...row, id: 'n1' }, { count: 'exact' });
+  assert.equal(win.supabaseClient.from('rbi_tasks').update({ title: 'н', core_id: row.core_id }).eq('id', 'task_man_1'), 'e');
+  assert.deepEqual(calls, [['upsert', [{ id: 'task_man_1', title: 'т' }], { onConflict: 'core_company_id,id' }],
+    ['insert', { id: 'n1', title: 'т' }, { count: 'exact' }], ['update', { title: 'н' }]]);
 });
 
 test('поля доступа экрана — из моста: загрузка старых настроек устройства (Object.assign) их не перетирает', async () => {

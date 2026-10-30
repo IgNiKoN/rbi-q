@@ -690,7 +690,7 @@
 
       if (elements.length === 0) return showToast(_t('quality.etalon.toast.required_element', '⚠️ Добавьте хотя бы один элемент эталона!'));
 
-      let etalonId = window.currentEditingEtalonId || String(Date.now() + Math.floor(Math.random() * 1000));
+      let etalonId = window.currentEditingEtalonId || window.RbiIds.newId();
 
       const etalonRecord = {
         id: etalonId,

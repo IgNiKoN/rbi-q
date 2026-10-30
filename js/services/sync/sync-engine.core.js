@@ -1748,6 +1748,7 @@ async function rbiSyncPass(mode = 'silent') {
                     inspectorName: h.engineer_name || '',
                     authorId: h.core_created_by || '',   // P2-0061: автор — id учётной записи (сервер ставит сам)
                     core_counterparty_id: h.core_counterparty_id || '',   // P2-0061 (Б2): фирма — id контрагента ядра (сервер)
+                    core_id: h.core_id || (existingLocal && existingLocal.core_id) || '',   // P2-0072: номер по стандарту (ставит сервер, не отправляется)
                     contractorName: h.contractor_name || '',
                     contractorId: h.contractorId || h.contractor_id || '',
                     templateKey: h.template_key || '',
@@ -1981,6 +1982,7 @@ async function rbiSyncPass(mode = 'silent') {
                         // P2-0061 (Б3): автор — id, который поставил сервер (core_created_by), а не присланный клиентом в task_data
                         t.authorId = row.core_created_by || '';
                         t.core_counterparty_id = row.core_counterparty_id || '';   // Б2: фирма — id контрагента ядра
+                        t.core_id = row.core_id || t.core_id || '';   // P2-0072: номер по стандарту (ставит сервер, не отправляется)
                         t.cloudKnown = true;   // З5: сервер уже знает задачу — в начале прохода её правку не слать
                         t.status = row.status || t.status;
                         t.updatedAt = row.updated_at;
@@ -3443,7 +3445,7 @@ async function rbiSyncPass(mode = 'silent') {
                                 // Если конструктор шаблона/практики/отчета не поставил служебные поля,
                                 // синхронизатор сам доводит объект до отправляемого состояния.
                                 if (!obj.id) {
-                                    obj.id = `${objectType}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                                    obj.id = window.RbiIds.newId();
                                 }
 
                                 if (!obj.updatedAt && !obj.updated_at) {

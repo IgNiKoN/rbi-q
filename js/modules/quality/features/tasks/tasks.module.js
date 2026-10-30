@@ -482,7 +482,7 @@ async function _saveManualTask() {
     var assigneeRef = _engineerRefFromName(assignee);
     var creatorRef = _getCurrentEngineerRef();
     var newTask = {
-        id: 'task_man_' + Date.now().toString(36),
+        id: window.RbiIds.newId(),
         type: 'manual',
         taskType: 'Поручение',
         category: 'other',
@@ -2042,7 +2042,7 @@ async function _finishWorkshop(taskId) {
     var myName = document.getElementById('inp-inspector') ? document.getElementById('inp-inspector').value.trim() : '';
     if (typeof window.rbi_interventionsData !== 'undefined') {
         var item = {
-            id: 'int_' + Date.now().toString(36),
+            id: window.RbiIds.newId(),
             date: new Date().toISOString(),
             inspector: myName,
             contractor: task.contractor,
@@ -2174,7 +2174,7 @@ async function _generateAutoTasks(silent) {
                     if (hasEtalonInDb) return;
                 }
                 var task = {
-                    id: 'tsk_sch_' + Date.now().toString(36) + Math.floor(Math.random() * 1000),
+                    id: window.RbiIds.newId(),
                     source: 'schedule',
                     engineerName: document.getElementById('inp-inspector') ? document.getElementById('inp-inspector').value.trim() : 'Инженер',
                     stageId: stage.id,

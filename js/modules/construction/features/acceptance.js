@@ -463,7 +463,7 @@ window.ConstAcceptance = {
         }
 
         const newReq = {
-            id: 'acc_' + Date.now().toString(36),
+            id: window.RbiIds.newId(),
             objectId: objId,
             floorId: flrId, 
             zone: zoneInfo, // Сохраняем прямоугольник: x, y, w, h

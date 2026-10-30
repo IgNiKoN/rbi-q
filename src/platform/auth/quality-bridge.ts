@@ -242,14 +242,32 @@ export function companyConflict(onConflict: string | undefined): string | undefi
   const cols = onConflict.split(',').map((c) => c.trim()).filter(Boolean);
   return (cols.includes('core_company_id') ? cols : ['core_company_id', ...cols]).join(',');
 }
-/** Таблица Качества: старый код пишет upsert(…, { onConflict: 'id' }) — уходит onConflict 'core_company_id,id'. */
+/** P2-0072 (054): номер записи core_id и связи по uuid ставит сервер — телефон хранит их у загруженных записей, но не отправляет
+ *  (правка или копия записи не затрёт и не перепутает номер; пакет строк — с одинаковым набором полей). */
+export const SERVER_ID_FIELDS = ['core_id', 'core_inspection_id', 'core_report_id', 'core_parent_id', 'core_construction_object_id',
+  'core_building_id', 'core_floor_id', 'core_location_node_id', 'core_contractor_id'];
+export function withoutServerIds(values: unknown): unknown {
+  if (Array.isArray(values)) return values.map(withoutServerIds);
+  if (!values || typeof values !== 'object') return values;
+  const row = values as Record<string, unknown>;
+  if (!SERVER_ID_FIELDS.some((k) => k in row)) return values;
+  const out = { ...row };
+  for (const k of SERVER_ID_FIELDS) delete out[k];
+  return out;
+}
+/** Таблица Качества: старый код пишет upsert(…, { onConflict: 'id' }) — уходит onConflict 'core_company_id,id'; строки — без
+ *  служебных номеров моста (P2-0072). */
 function companyKeys<T extends Record<string, unknown>>(builder: T): T {
   return new Proxy(builder, {
     get(target, prop, receiver) {
       const v = Reflect.get(target, prop, receiver);
-      if (prop !== 'upsert' || typeof v !== 'function') return v;
-      return (values: unknown, opts?: { onConflict?: string } & Record<string, unknown>) =>
-        v.call(target, values, opts?.onConflict ? { ...opts, onConflict: companyConflict(opts.onConflict) } : opts);
+      if (typeof v !== 'function') return v;
+      if (prop === 'upsert') {
+        return (values: unknown, opts?: { onConflict?: string } & Record<string, unknown>) =>
+          v.call(target, withoutServerIds(values), opts?.onConflict ? { ...opts, onConflict: companyConflict(opts.onConflict) } : opts);
+      }
+      if (prop === 'insert' || prop === 'update') return (values: unknown, ...rest: unknown[]) => v.call(target, withoutServerIds(values), ...rest);
+      return v;
     }
   });
 }

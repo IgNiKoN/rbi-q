@@ -107,7 +107,7 @@ window.SyncQueueManager = {
             if (!window.syncConfig || !window.syncConfig.enabled) return;
 
             const queueItem = {
-                id: 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5),
+                id: window.RbiIds.newId(),
                 action_type: actionType,
                 payload: payload,
                 project_code: window.syncConfig?.projectCode || 'LOCAL',

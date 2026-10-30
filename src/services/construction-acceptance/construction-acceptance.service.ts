@@ -12,6 +12,7 @@ import type {
   ConstructionAcceptanceV2
 } from './types';
 import { ACCEPTANCE_STATUSES_V2 } from './types';
+import type { RbiIds as RecordIds } from '../../../js/services/record-id.service.js';
 
 const CHECKLIST_ITEM_STATUSES: ChecklistItemStatusV2[] = ['ok', 'fail', 'na', 'fail_escalated'];
 
@@ -142,11 +143,10 @@ function _now() {
   return new Date().toISOString();
 }
 
-function _uuid() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `cacc_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+/** P2-0072: номер записи — общий сервис номеров платформы со страницы (window.RbiIds, js/services/record-id.service.js;
+ *  загружается раньше модулей), своей копии кода в сборке нет. */
+function _uuid(): string {
+  return (globalThis as { RbiIds?: typeof RecordIds }).RbiIds!.newId();
 }
 
 function _active() {

@@ -451,8 +451,84 @@ async function qualityIds(out) {
   } finally { stand.quality = null; await stop().catch(() => {}); }
 }
 
+/** P2-0072 этап 3: остальные номера на телефоне. Загруженная задача хранит core_id сервера; новая задача (экран «Поручение»),
+ *  замечание, помещение и приёмка Стройконтроля 2.0 — с номером-uuid; правка старой записи и новые записи уходят без core_id
+ *  (номер ставит сервер — не затирается), core_id на телефоне после отправки на месте. */
+async function qualityIdsOther(out) {
+  const tag = 'q-ids-other';
+  note(`== ${tag}: загрузка задачи с core_id → без сети: поручение, замечание / помещение / приёмка СК 2.0, правка старой задачи → сеть`);
+  freshProfile(out, tag); resetNet(); stand.quality = null; stand.names = {};
+  const C = '72000000-0000-4000-8000-0000000000c1', OLD = 'task_man_old72';
+  const at = new Date(Date.now() - 3600e3).toISOString();
+  stand.serve = { rbi_tasks: [{ id: OLD, core_id: C, status: 'pending', project_code: '', project_canonical_key: '', updated_at: at, created_at: at,
+    core_created_by: USER.id, is_deleted: false, task_data: { id: OLD, type: 'manual', title: 'IDS-MARK старая', engineerName: 'Иванов Иван',
+      inspectorName: 'Иванов Иван', createdBy: 'Иванов Иван', status: 'pending', date: at } }] };
+  const task = (page, id) => page.evaluate(async (i) => { const r = (await window.RBI.services.storage.getAll('rbi_tasks')).find((x) => String(x.id) === i);
+    return r ? { core_id: r.core_id || '', title: r.title, st: r.syncStatus || r.sync_status } : null; }, id).catch((e) => ({ err: e.message }));
+  try {
+    await start();
+    const { ctx, page } = await launch(out, tag);
+    await signIn(page);
+    for (let i = 0; i < 6; i++) { const t = await task(page, OLD); if (t && t.core_id) break;
+      await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    const t0 = await task(page, OLD);
+    ok(t0 && t0.core_id === C, `${tag}: загруженная задача хранит core_id сервера`, JSON.stringify(t0));
+    await ctx.setOffline(true);
+    // поручение — функцией экрана «Задачи»
+    await page.evaluate(() => { location.hash = '#/tasks'; }).catch(() => {});
+    await page.waitForTimeout(2500);
+    const made = await page.evaluate(async () => {
+      const out = {};
+      try {
+        window.rbi_openTaskModal();
+        document.getElementById('manual-task-title').value = 'IDS-MARK поручение';
+        await window.rbi_saveManualTask();
+        const r = (await window.RBI.services.storage.getAll('rbi_tasks')).find((x) => x.title === 'IDS-MARK поручение');
+        out.task = r ? r.id : 'нет';
+      } catch (e) { out.task = 'ошибка ' + e.message; }
+      for (const [svc, file, input] of [['constructionDefects', 'rbi-construction-defects', { locationId: 'loc-ids', description: 'IDS-MARK замечание' }],
+        ['constructionUnits', 'rbi-construction-units', { locationId: 'loc-ids', name: 'IDS-MARK кв. 1' }],
+        ['constructionAcceptance', 'rbi-construction-acceptance', { locationId: 'loc-ids', work_type: 'IDS-MARK', template_key: 'x', zone: { x: 0, y: 0, w: 100, h: 100 } }]]) {
+        try {
+          if (!window.RBI.services[svc]) await import('/js/dist/' + file + '.js');
+          const S = window.RBI.services[svc];
+          if (S.init) await S.init();
+          out[svc] = (await S.create(input)).id;
+        } catch (e) { out[svc] = 'ошибка ' + e.message; }
+      }
+      // правка старой задачи (с core_id) без сети
+      const S = window.RBI.services.storage;
+      const old = (await S.getAll('rbi_tasks')).find((x) => String(x.id) === 'task_man_old72');
+      if (old) await S.put('rbi_tasks', { ...old, title: 'IDS-MARK старая (правка)', source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', cloudKnown: false,
+        updatedAt: new Date().toISOString() });
+      return out;
+    }).catch((e) => ({ err: e.message }));
+    note('создано: ' + JSON.stringify(made));
+    ok(isUuid(made.task), `${tag}: поручение с экрана — номер-uuid`, String(made.task));
+    ok(isUuid(made.constructionDefects) && isUuid(made.constructionUnits) && isUuid(made.constructionAcceptance),
+      `${tag}: замечание, помещение и приёмка СК 2.0 — номера-uuid`, JSON.stringify(made));
+    await ctx.setOffline(false);
+    const want = [['rbi_tasks', OLD], ['rbi_tasks', made.task], ['construction_defects_v2', made.constructionDefects],
+      ['construction_units_v2', made.constructionUnits], ['construction_acceptance_v2', made.constructionAcceptance]];
+    for (let i = 0; i < 10 && !want.every(([t, id]) => sendsAll.get(`${t}:${id}`)); i++) {
+      await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {});
+      await page.waitForTimeout(4000);
+    }
+    await page.waitForTimeout(2000);
+    const sent = want.map(([t, id]) => [t, sendsAll.get(`${t}:${id}`) || 0, rows.get(t) && rows.get(t).get(String(id))]);
+    note('отправлено: ' + JSON.stringify(sent.map(([t, n]) => [t, n])));
+    ok(sent.every(([, n]) => n >= 1), `${tag}: правка старой задачи и новые записи ушли`, JSON.stringify(sent.map(([t, n]) => t + ':' + n)));
+    ok(sent.every(([, , r]) => r && !('core_id' in r)), `${tag}: строки ушли без core_id (номер ставит сервер — не затирается)`,
+      JSON.stringify(sent.map(([t, , r]) => t + ':' + (r ? ('core_id' in r ? 'с core_id' : 'без') : 'нет'))));
+    ok(sent[0][2] && sent[0][2].task_data && /правка/.test(JSON.stringify(sent[0][2])), `${tag}: правка старой задачи дошла`);
+    const t1 = await task(page, OLD);
+    ok(t1 && t1.core_id === C, `${tag}: после отправки core_id на телефоне на месте`, JSON.stringify(t1));
+    await ctx.close();
+  } finally { stand.quality = null; stand.serve = null; await stop().catch(() => {}); }
+}
+
 export function syncScenarios(out) {
   return { 's-module-off': () => moduleOff(out), 's-new-kind': () => newKind(out), 's-pull-scope': pullScopeScenario(out), 's-reject-retry': () => rejectRetry(out), 's-reject-retry-1440-dark': () => rejectRetry(out, 1440, 'dark'), 's-own-first': () => ownFirst(out),
     's-contractor': () => contractor(out), 's-kinds': () => kinds(out), 's-rename': () => rename(out), 's-foreign': () => foreignAndLeader(out, 's-foreign'), 's-leader': () => foreignAndLeader(out, 's-leader'),
-    'q-ids': () => qualityIds(out) };
+    'q-ids': () => qualityIds(out), 'q-ids-other': () => qualityIdsOther(out) };
 }

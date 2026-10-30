@@ -419,10 +419,7 @@ function _now() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
 function _uuid() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `loc_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return globalThis.RbiIds.newId();
 }
 function _activeNodes() {
   return _nodes.filter((n) => n && !n.is_deleted && !n._deleted);

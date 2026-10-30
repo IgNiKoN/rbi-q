@@ -271,7 +271,7 @@ window.TransferManager = {
                 else if (statusRand > 0.50) st = 'accepted';
 
                 const newUnit = {
-                    id: 'unit_' + Date.now().toString(36) + '_' + count,
+                    id: window.RbiIds.newId(),
                     building_id: this.currentBldId,
                     floor_id: f.id,
                     name: String(count),

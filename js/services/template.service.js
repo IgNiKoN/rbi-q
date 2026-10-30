@@ -99,7 +99,7 @@
                 window.userTemplates = {};
             }
 
-            var slug = data.slug || data.key || data.id || ('cstm_' + Date.now().toString(36));
+            var slug = data.slug || data.key || data.id || window.RbiIds.newId();
             data.slug = slug;
             data.id = slug;
 

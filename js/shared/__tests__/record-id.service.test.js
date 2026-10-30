@@ -62,3 +62,48 @@ test('isUuid', () => {
   assert.equal(isUuid('task_man_abc'), false);
   assert.equal(isUuid(null), false);
 });
+
+// Сторож кода (карточка P2-0072 §3а): номер записи — только из сервиса номеров. «Приставка + время» вне dist/ и тестов — только
+// служебные метки устройства и экрана из списка ниже (на сервер записью таблицы не уходят), у каждой — причина.
+const ALLOWED = [
+  ['js/modules/quality/features/etalon/etalon-v18.actions.js', "'etv18_control_' + Date.now()", 'имя группы переключателей на экране'],
+  ['js/modules/construction/features/admin.js', '`plan_${Date.now()}.pdf`', 'имя файла плана в хранилище'],
+  ['src/services/locations/locations.service.ts', '`plan_${Date.now()}.pdf`', 'имя файла плана в хранилище'],
+  ['src/services/construction-units/construction-units.service.ts', '`plan_${Date.now()}.pdf`', 'имя файла плана в хранилище'],
+  ['js/services/sync/sync-engine.core.js', 'String(Date.now() + delay)', 'время следующей попытки, не номер'],
+  ['js/modules/knowledge/features/reference.js', 'Date.now() % 100000', 'номер пункта чек-листа — число по устройству чек-листа (audit.render: parseInt)'],
+  ['js/services/sync/sync-core.state.js', "'dev_' + Date.now().toString(36)", 'номер устройства'],
+  ['js/services/storage/storage-file-queue.actions.js', "'cacheq_' + Date.now().toString(36)", 'очередь кэша файлов на устройстве'],
+  ['js/services/storage/storage-photo-manager.js', "'local://' + prefix + '_' + Date.now().toString(36)", 'ключ фото в памяти телефона (local://)'],
+  ['js/services/storage/storage-photo-manager.js', "'localreg_' + Date.now().toString(36)", 'реестр файлов на устройстве (с сервера — только чтение)'],
+  ['js/services/storage/storage-cache-manager.js', "'localreg_' + Date.now().toString(36)", 'реестр файлов на устройстве (с сервера — только чтение)'],
+  ['js/services/storage/storage-cache-manager.js', "'storage_event_' + Date.now().toString(36)", 'журнал событий хранилища на устройстве'],
+  ['src/modules/planfact/estimate/OverheadsEditor.ts', "'l' + Date.now().toString(36)", 'План/Факт: ключ строки формы накладных, не запись']
+];
+const PATTERN = /['"][\w:/.-]*_['"]\s*\+\s*Date\.now\(\)|`[\w:/.-]*_\$\{Date\.now\(\)|String\(Date\.now\(\)\s*\+|Date\.now\(\)\.toString\(36\)|Date\.now\(\) % /;
+
+test('сторож кода: генераторов номеров «приставка + время» вне dist/ и тестов нет (кроме служебных меток устройства с причиной)', async () => {
+  const { readdirSync, readFileSync, statSync } = await import('node:fs');
+  const { join, relative } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const root = fileURLToPath(new URL('../../../', import.meta.url));
+  const found = [];
+  const walk = (dir) => {
+    for (const f of readdirSync(dir)) {
+      const p = join(dir, f);
+      if (f === 'dist' || f === '__tests__' || f === 'node_modules') continue;
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.(js|ts|tsx)$/.test(f) && !/\.d\.ts$/.test(f) && !/record-id\.service\.js$/.test(f)) {
+        readFileSync(p, 'utf8').split('\n').forEach((line, i) => {
+          if (!PATTERN.test(line)) return;
+          const rel = relative(root, p);
+          if (!ALLOWED.some(([file, snippet]) => file === rel && line.includes(snippet))) found.push(`${rel}:${i + 1}: ${line.trim().slice(0, 120)}`);
+        });
+      }
+    }
+  };
+  walk(join(root, 'js'));
+  walk(join(root, 'src'));
+  assert.deepEqual(found, [], 'номер записи — window.RbiIds.newId() / stableId() (js/services/record-id.service.js)');
+  assert.ok(ALLOWED.every(([, , why]) => why), 'у каждого исключения — причина');
+});

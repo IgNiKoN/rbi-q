@@ -461,7 +461,7 @@
         photos: photos
       };
 
-      var etalonId = _v18b.editingId || String(Date.now() + Math.floor(Math.random() * 1000));
+      var etalonId = _v18b.editingId || window.RbiIds.newId();
       var myName = 'Инженер';
       if (window.RBI && window.RBI.services && window.RBI.services.settings) {
         myName = window.RBI.services.settings.get('engineerName') || myName;
