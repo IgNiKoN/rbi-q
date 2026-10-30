@@ -4,7 +4,8 @@
 -- чужом объекте), в том числе upsert-ом в обход экрана; исполнитель выполняет порученную задачу, но не переназначает;
 -- подрядчик — только своя фирма; «без объектов» — общие разделы без записей объектов; запись без объекта — автор и назначенные
 -- на всю компанию; пункты проверки — по своей проверке; совещания и внешний СК (этап 2) — по объекту и своей группе действий; назначение: «объекты Качества» не принимаются, роль Качества
--- назначается на объект; изоляция: чужая компания, модуль выключен. Всё откатывается; отчёт — ERROR P0001 «FAIL всего: N».
+-- назначается на объект; изоляция: чужая компания, модуль выключен; доработка №1 — «своя фирма» и сопоставление подрядчиков, row_exists,
+-- служебные поля, удаление задачи исполнителем, «…manage» на контейнере. Всё откатывается; отчёт — ERROR P0001 «FAIL всего: N».
 -- Запуск: после 053_quality_rights_up.sql.
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
@@ -45,7 +46,7 @@ do $$
 declare
   ca uuid := gen_random_uuid(); cb uuid := gen_random_uuid(); cq uuid := gen_random_uuid(); cont uuid := gen_random_uuid();
   p1 uuid := gen_random_uuid(); p2 uuid := gen_random_uuid(); k1 uuid := gen_random_uuid(); f1 uuid := gen_random_uuid(); f2 uuid := gen_random_uuid();
-  uadm uuid; ueng uuid; uown uuid; usec uuid; uctr uuid; unone uuid; ucomp uuid; ub uuid; uq uuid; uboss uuid;
+  uadm uuid; ueng uuid; uown uuid; usec uuid; uctr uuid; uctr2 uuid; unone uuid; ucomp uuid; ub uuid; uq uuid; uboss uuid;
   r_adm uuid; r_eng uuid; r_own uuid; r_ctr uuid; r_boss uuid; s1loc uuid; po1 text; res text := ''; e text;
   v_new text[] := array['quality.inspections.view', 'quality.inspections.create', 'quality.inspections.edit_any', 'quality.inspections.delete',
     'quality.tasks.view', 'quality.tasks.create', 'quality.tasks.work', 'quality.tasks.edit_any', 'quality.tasks.delete',
@@ -248,6 +249,33 @@ begin
   insert into core.company_role_permissions(role_id, company_id, action) values (r_ctr, ca, 'quality.sk.view');
   perform pg_temp.as_user(uctr, ca);
   res := res || pg_temp.t(pg_temp.vis('sk_records') = 'k1', 'подрядчик F1: внешний СК своей фирмы — ' || pg_temp.vis('sk_records'));
+  reset role;
+
+  -- 9б. Доработка №1 (ревью): «своя фирма» не правит сопоставление подрядчиков внешнего СК (024); чужая компания не узнаёт о
+  -- записи по id; служебные поля чужой записи — только с «Редактирование чужих»; исполнитель не удаляет чужую задачу; действия
+  -- «…manage» на записях контейнера — только у назначенных на всю компанию
+  insert into quality.sk_contractor_map(id, project_code, data, core_company_id) values ('cm1-m71', cont::text, '{}', ca);
+  uctr2 := pg_temp.member(ca, pg_temp.role(ca, 'Подрядчик с загрузкой 053т', array['quality.view', 'quality.edit', 'quality.scope.contractor',
+                                                                                  'quality.sk.view', 'quality.sk.import']), null, null, f1);
+  perform pg_temp.as_user(uctr2, ca);
+  perform pg_temp.err('update quality.sk_contractor_map set data = ''{"x": 1}'' where id = ''cm1-m71''');
+  reset role;
+  res := res || pg_temp.t((select data from quality.sk_contractor_map where id = 'cm1-m71') = '{}', '«своя фирма» не правит сопоставление подрядчиков (024)');
+  perform pg_temp.as_user(uboss, ca);
+  perform pg_temp.err('update quality.sk_contractor_map set data = ''{"x": 2}'' where id = ''cm1-m71''');
+  res := res || pg_temp.t(not quality.can(ca, cont, '{quality.manage}') and quality.can(ca, cont, '{quality.view}'),
+                          'назначен на объект: контейнер — видеть да, «Полный доступ» на записях компании — нет');
+  reset role;
+  res := res || pg_temp.t((select data from quality.sk_contractor_map where id = 'cm1-m71') = '{"x": 2}', 'руководитель объекта правит сопоставление');
+  perform pg_temp.as_user(ub, cb);
+  res := res || pg_temp.t(not quality.row_exists('rbi_inspections', 'a1-m71', ca), 'чужая компания не узнаёт о записи по id');
+  reset role;
+  perform pg_temp.as_user(ueng, ca);
+  e := pg_temp.err('update quality.rbi_inspections set sync_status = ''x'' where id = ''a2-m71''');
+  res := res || pg_temp.t(e like '42501%Проверки: редактирование чужих%', 'служебные поля чужой проверки — отказ — ' || e);
+  e := pg_temp.err('delete from quality.rbi_tasks where id = ''t1-m71''');
+  res := res || pg_temp.t(e like '42501%Задачи: редактирование чужих%' and exists (select 1 from quality.rbi_tasks where id = 't1-m71'),
+                          'исполнитель не удаляет порученную чужую задачу — ' || e);
   reset role;
 
   -- 9. Назначение: «объекты Качества» не принимаются, роль Качества — на объект

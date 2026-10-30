@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.30-c0bf5bbe',
+  version: '2026.10.30-84cbccef',
   date: '2026-10-30',
-  digest: 'c0bf5bbe',
+  digest: '84cbccef',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -258,7 +258,7 @@ const APP_RELEASE = {
     "js/services/storage/storage-photo-loader.js": ["50e85e40a2287622",12852,""],
     "js/services/storage/storage-photo-manager.js": ["59967b9fafc9a9a6",38296,""],
     "js/services/sync.service.js": ["a1d0efd8d9b20a2c",2859,""],
-    "js/services/sync/sync-access.policy.js": ["67387ba85039907b",35708,""],
+    "js/services/sync/sync-access.policy.js": ["cfcbc5a9f9d58490",36026,""],
     "js/services/sync/sync-auth.js": ["d2dfa72b55853417",10971,""],
     "js/services/sync/sync-cloud-prepare.utils.js": ["5d1e40c5615b7aec",26251,""],
     "js/services/sync/sync-connection.actions.js": ["c03e9fb129de969e",33859,""],

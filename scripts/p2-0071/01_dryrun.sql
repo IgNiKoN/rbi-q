@@ -19,12 +19,14 @@ select c.name as "компания", coalesce(up.full_name, u.email::text) as "�
            'объекты: ' || coalesce((select string_agg(distinct p.name, ', ' order by p.name) from quality.project_objects po
                                      join core.projects p on p.id = po.core_object_id and not p.quality_container
                                     where po.core_company_id = a.company_id and po.id = any (a.quality_objects) and quality.object_alive(po)),
-                                   '— не найдены → «без объектов»')
+                                   '— не найдены → «без объектов» (записей объектов не видит ни в одном модуле)')
          when 'quality.edit' = any(a.acts) and not (a.acts && array['quality.manage', 'quality.scope.company', 'quality.scope.contractor'])
-           then 'без объектов (сейчас видит только свои записи)'
+           then 'без объектов (сейчас видит только свои записи; после — записей объектов ни в одном модуле роли)'
        end as "после 053",
+       -- доработка №1: что человек теряет при «без объектов» — модули роли (во всех модулях — только общие разделы)
+       (select string_agg(distinct split_part(x, '.', 1), ', ') from unnest(a.acts) x where x not like 'quality.scope.%') as "модули роли",
        case when not exists (select 1 from core.projects p where p.company_id = a.company_id and p.quality_container and p.archived_at is null)
-            then 'нет контейнера — назначение не изменится' end as "внимание"
+            then 'контейнера нет — 053 создаст «Качество — общие разделы»' end as "внимание"
   from a
   join core.companies c on c.id = a.company_id
   join core.company_roles cr on cr.id = a.role_id and cr.company_id = a.company_id

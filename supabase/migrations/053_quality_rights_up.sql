@@ -217,7 +217,7 @@ create function quality.row_exists(p_table text, p_id text, p_company uuid)
 returns boolean language plpgsql stable security definer set search_path = pg_catalog as $$
 declare v boolean;
 begin
-  if p_table not in ('rbi_inspections', 'rbi_tasks') then return false; end if;
+  if p_table not in ('rbi_inspections', 'rbi_tasks') or p_company is distinct from quality.request_company() then return false; end if;
   execute format('select exists (select 1 from quality.%I where id = $1 and core_company_id = $2)', p_table) into v using p_id, p_company;
   return v;
 end $$;
@@ -230,10 +230,10 @@ returns trigger language plpgsql security invoker set search_path = pg_catalog a
 declare
   v_task constant boolean := tg_table_name = 'rbi_tasks';
   p constant text := case when v_task then 'quality.tasks.' else 'quality.inspections.' end;
-  v_skip constant text[] := array['updated_at', 'sync_status', 'sync_block_reason', 'source', 'updated_by_auth_user_id',
+  v_skip constant text[] := array['updated_at', 'updated_by_auth_user_id',
                                   'core_company_id', 'core_project_id', 'core_object_id', 'core_created_by', 'core_counterparty_id'];
   v_del constant text[] := array['is_deleted', '_deleted', 'deleted_at', '_deleted_at', 'deleted_by_auth_user_id'];
-  r jsonb; n jsonb; o jsonb; v_c uuid; v_pr uuid; v_obj0 uuid; v_obj uuid; v_cp uuid; v_author uuid; v_assignee uuid; v_own boolean;
+  r jsonb; n jsonb; o jsonb; v_c uuid; v_pr uuid; v_obj0 uuid; v_obj uuid; v_cp uuid; v_author uuid; v_assignee uuid; v_own boolean; v_own_del boolean;
   v_own_edit text[];
 begin
   if current_user not in ('authenticated', 'anon') or quality.is_platform_admin() then
@@ -256,15 +256,17 @@ begin
   v_author := coalesce(old.core_created_by, quality.member_by_email(v_c, o ->> 'engineer_name'));
   v_assignee := case when v_task then (o ->> 'assigned_to_auth_user_id')::uuid end;
   v_own := coalesce(auth.uid() = v_author or auth.uid() = v_assignee, false);
+  -- удалить задачу как свою может её автор; исполнитель чужую — только с «Редактирование чужих» (как и переназначить)
+  v_own_del := coalesce(auth.uid() = v_author, false);
   v_own_edit := case when v_task then array[p || 'create', p || 'work'] else array[p || 'create'] end;
   if tg_op = 'UPDATE' then n := to_jsonb(new); end if;
   -- удаление (и пометка удаления): «Удаление»; чужая запись — ещё и «Редактирование чужих»
   if tg_op = 'DELETE' or (select bool_or((n -> k) is distinct from (o -> k)) from unnest(v_del) k) then
-    if not quality.rec_ok(v_c, v_pr, v_obj0, case when v_own then '{}'::text[] else array[p || 'delete'] end,
-                          array[p || 'delete'], v_author, v_assignee, v_cp) then
+    if not quality.rec_ok(v_c, v_pr, v_obj0, case when v_own_del then '{}'::text[] else array[p || 'delete'] end,
+                          array[p || 'delete'], v_author, case when v_task then null else v_assignee end, v_cp) then
       perform quality.deny(v_obj, p || 'delete');
     end if;
-    if not v_own and not quality.rec_ok(v_c, v_pr, v_obj0, array[p || 'edit_any'], '{}', v_author, v_assignee, v_cp) then
+    if not v_own_del and not quality.rec_ok(v_c, v_pr, v_obj0, array[p || 'edit_any'], '{}', v_author, v_assignee, v_cp) then
       perform quality.deny(v_obj, p || 'edit_any');
     end if;
     if tg_op = 'DELETE' then return old; end if;
@@ -353,7 +355,8 @@ end $$;
 
 -- 5. Мост «объекты Качества» снят.
 -- Общие таблицы Качества и прежние правила (Стройконтроль 1, черновики, очередь): запись контейнера видна при участии
--- на любой объект (прежде такие назначения были «на компанию с объектами»).
+-- на любой объект (прежде такие назначения были «на компанию с объектами»); действия «…manage» на записях контейнера (настройки
+-- компании, справочник объектов) — только у назначенных на всю компанию (доработка №1, ревью п. 6).
 create or replace function quality.has_actions(p_company uuid, p_project uuid, p_actions text[])
  RETURNS boolean
  LANGUAGE sql
@@ -368,7 +371,7 @@ AS $function$
       select 1 from core.role_assignments a
       join core.company_role_permissions rp on rp.role_id = a.role_id and rp.company_id = a.company_id and rp.action = act
       where a.company_id = p_company and a.user_id = auth.uid()
-        and (p_project is null or a.project_id is null or a.project_id = p_project or quality.is_container(p_project))
+        and (p_project is null or a.project_id is null or a.project_id = p_project or (quality.is_container(p_project) and act not like '%manage'))
         and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())));
 $function$;
 create or replace function quality.assigned_with(p_company uuid, p_project uuid, p_actions text[])
@@ -381,7 +384,7 @@ AS $function$
     select 1 from core.role_assignments a
     join core.company_role_permissions rp on rp.role_id = a.role_id and rp.company_id = a.company_id and rp.action = any(p_actions)
     where a.company_id = p_company and a.user_id = auth.uid()
-      and (p_project is null or a.project_id is null or a.project_id = p_project or quality.is_container(p_project))
+      and (p_project is null or a.project_id is null or a.project_id = p_project or (quality.is_container(p_project) and rp.action not like '%manage'))
       and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now()));
 $function$;
 create or replace function quality.contractor_limited(p_company uuid, p_project uuid)
@@ -599,11 +602,25 @@ begin
   return v_id;
 end $function$;
 
--- 6. Перенос назначений (решения владельца 30.10.2026). Журнал — для отката.
+-- 6. Перенос назначений (решения владельца 30.10.2026). Журнал — для отката. Ни одно назначение с «объектами Качества» и ни одна
+-- роль «только свои» не остаются на всю компанию: нет действующего контейнера — он создаётся (доработка №1, ревью п. 2–3).
 create table p2_backup.m053_assignments (
   old_id uuid not null, new_id uuid, kind text not null, created_at timestamptz not null default now());
 comment on table p2_backup.m053_assignments is 'P2-0071 (053): перенос назначений с «объектов Качества» на участие; откат — 053_down';
 revoke all on p2_backup.m053_assignments from public, anon, authenticated;
+
+-- Проект-контейнер Качества компании («Без объектов»): действующий; нет — создаётся (в журнал — для отката).
+create function pg_temp.m053_container(p_company uuid) returns uuid language plpgsql as $f$
+declare v uuid;
+begin
+  select p.id into v from core.projects p where p.company_id = p_company and p.quality_container and p.archived_at is null
+   order by p.created_at, p.id limit 1;
+  if v is null then
+    insert into core.projects(company_id, name, quality_container) values (p_company, 'Качество — общие разделы', true) returning id into v;
+    insert into p2_backup.m053_assignments(old_id, new_id, kind) values (v, v, 'container');
+  end if;
+  return v;
+end $f$;
 
 do $$
 declare a record; o uuid; v_new uuid; v_cont uuid; v_n int;
@@ -636,13 +653,8 @@ begin
       v_new := null; v_n := v_n + 1;
     end loop;
     if v_n = 0 then
-      -- ни одного объекта не нашлось — «без объектов»
-      select p.id into v_cont from core.projects p where p.company_id = a.company_id and p.quality_container and p.archived_at is null
-       order by p.created_at, p.id limit 1;
-      if v_cont is null then
-        insert into p2_backup.m053_assignments(old_id, new_id, kind) values (a.id, null, 'no_container');
-        continue;
-      end if;
+      -- ни одного объекта не нашлось — «без объектов» (контейнер — действующий или новый)
+      v_cont := pg_temp.m053_container(a.company_id);
       insert into core.role_assignments(company_id, user_id, role_id, project_id, valid_from, valid_to, created_by, counterparty_id)
       values (a.company_id, a.user_id, a.role_id, v_cont, a.valid_from, a.valid_to, a.created_by, a.counterparty_id)
       returning id into v_new;
@@ -660,12 +672,7 @@ begin
               and not exists (select 1 from core.company_role_permissions rp where rp.role_id = ra.role_id and rp.company_id = ra.company_id
                                 and rp.action in ('quality.manage', 'quality.scope.company', 'quality.scope.contractor'))
             order by ra.id loop
-    select p.id into v_cont from core.projects p where p.company_id = a.company_id and p.quality_container and p.archived_at is null
-     order by p.created_at, p.id limit 1;
-    if v_cont is null then
-      insert into p2_backup.m053_assignments(old_id, new_id, kind) values (a.id, null, 'no_container');
-      continue;
-    end if;
+    v_cont := pg_temp.m053_container(a.company_id);
     insert into core.role_assignments(company_id, user_id, role_id, project_id, valid_from, valid_to, created_by, counterparty_id)
     values (a.company_id, a.user_id, a.role_id, v_cont, a.valid_from, a.valid_to, a.created_by, a.counterparty_id)
     returning id into v_new;
@@ -673,6 +680,7 @@ begin
     update core.role_assignments set revoked_at = now() where id = a.id;
   end loop;
 end $$;
+drop function pg_temp.m053_container(uuid);
 
 -- 7. Остальные записи Качества на объекте — по действиям своей группы: видеть — «Видеть …» или своя запись; править — «Вести …»
 -- (участник части объекта — только своя, признак unplaced). Совещания и мероприятия, FMEA и этапы графика, отчёты, внешний СК.
@@ -707,7 +715,9 @@ begin
       ('sk_category_map', 'quality.sk.view', 'quality.sk.import'), ('sk_contractor_map', 'quality.sk.view', 'quality.sk.import'),
       ('shared_report_templates', 'quality.reports.view', 'quality.reports.edit')) v(t, a_view, a_edit) loop
     v_view := format('quality.can(core_company_id, core_project_id, %L)', array[r.a_view]);
-    v_edit := format('quality.can(core_company_id, core_project_id, %L)', array[r.a_edit]);
+    v_edit := format('quality.can(core_company_id, core_project_id, %L)', array[r.a_edit])
+      -- 024 (P2-0018): «своя фирма» сопоставления подрядчиков только читает — иначе переписала бы чужую фирму под свою
+      || case when r.t = 'sk_contractor_map' then ' and not quality.contractor_only(core_company_id, core_project_id)' else '' end;
     execute format('drop policy %I on quality.%I', r.t || '_select', r.t);
     execute format('drop policy %I on quality.%I', r.t || '_insert', r.t);
     execute format('drop policy %I on quality.%I', r.t || '_update', r.t);

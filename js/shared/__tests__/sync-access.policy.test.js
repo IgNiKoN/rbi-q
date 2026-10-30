@@ -284,4 +284,7 @@ test('удаление (P2-0071): своё — «Удаление»; чужое 
   const boss = eng({ areas: qArea([[P1, null, [...QA, 'quality.inspections.edit_any']]]) });
   assert.equal(canRemove(rec({ inspectorName: 'Петров' }), K, boss).ok, true, 'руководитель — чужое');
   assert.equal(canRemove({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Север' }, kindOf('meeting'), me).ok, true, 'совещание объекта — по «Редактирование»');
+  const task = { id: 't', engineerName: 'Петров', assignedToId: U1, project_canonical_key: 'ЖК Север' };
+  assert.equal(canChange(task, kindOf('task'), me).ok, true, 'порученную задачу выполнить — да');
+  assert.equal(canRemove(task, kindOf('task'), me).ok, false, 'порученную чужую задачу удалить — нет (доработка №1)');
 });

@@ -198,5 +198,24 @@ begin
   perform set_config('request.jwt.claim.sub', '', false);
 end $$;
 
+-- Доработка №1: компания Б без проекта-контейнера — инженер «только свои» на компанию и инженер, у которого выбраны только
+-- удалённые объекты Качества; после 053 оба — «без объектов» (контейнер создаётся), на компанию — никто.
+do $$
+declare cb uuid := gen_random_uuid(); r uuid; u1 uuid := gen_random_uuid(); u2 uuid := gen_random_uuid();
+begin
+  perform set_config('m53.cb', cb::text, false);
+  insert into core.companies(id, name, is_test) values (cb, 'Бета 053', true);
+  insert into core.company_modules(company_id, module, enabled) values (cb, 'quality', true) on conflict (company_id, module) do update set enabled = true;
+  perform set_config('quality.object_sync', '1', false);   -- объект Качества без объекта ядра
+  insert into quality.project_objects(id, canonical_key, display_name, synonyms, core_company_id, is_deleted) values
+    ('gone-m53', 'снесён 053', 'Снесён 053', '{}', cb, true);
+  perform set_config('quality.object_sync', '', false);
+  insert into core.company_roles(company_id, name) values (cb, 'Инженер Б 053') returning id into r;
+  insert into core.company_role_permissions(role_id, company_id, action) select r, cb, a from unnest(array['quality.view', 'quality.edit']) a;
+  insert into auth.users(id, email) values (u1, u1 || '@test.invalid'), (u2, u2 || '@test.invalid');
+  insert into core.company_members(company_id, user_id) values (cb, u1), (cb, u2);
+  insert into core.role_assignments(company_id, user_id, role_id, quality_objects) values (cb, u1, r, null), (cb, u2, r, array['gone-m53']);
+end $$;
+
 select pg_temp.capture('до');
 select phase, count(*) n, count(*) filter (where ok) yes from public.t053 group by phase;

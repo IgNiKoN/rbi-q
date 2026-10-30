@@ -362,14 +362,16 @@ export function canChange(rec, kind, me) {
     if (isMine(rec, kind, me) || has(me, mod + '.manage') || has(me, 'quality.scope.company')) return d;
     return foreign(rec, kind);
 }
-/** Удалить на экране (P2-0071, как сторож сервера): своя — «Удаление» группы (у совещаний и др. — их «Редактирование»); чужая —
- *  ещё и «Редактирование чужих». Виды без own — как canChange. */
+/** Удалить на экране (P2-0071, как сторож сервера): своя (у задачи — только автор) — «Удаление» группы (у совещаний и др. — их
+ *  «Редактирование»); чужая — ещё и «Редактирование чужих». Виды без own — как canChange. */
 export function canRemove(rec, kind, me) {
     if (!kind || kind.mode !== 'area' || !kind.own) return canChange(rec, kind, me);
     const d = canSend(rec, kind, me);
     if (!d.ok) return d;
     const del = kind.own.remove || kind.own.change || [];
-    if (isMineById(rec, kind, me)) return decideArea(rec, kind, me, [], del);
+    // удалить как свою может автор; исполнитель чужую задачу — только с «Редактирование чужих» (как сторож сервера)
+    const own = kind.assignee ? isAuthor(rec, kind, me) : isMineById(rec, kind, me);
+    if (own) return decideArea(rec, kind, me, [], del);
     const any = decideArea(rec, kind, me, kind.editAny || [], []);
     if (!any.ok) return any.code === 'right' ? foreign(rec, kind) : any;
     return decideArea(rec, kind, me, del, []);

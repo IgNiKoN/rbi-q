@@ -12,10 +12,26 @@ begin
   end if;
 end $$;
 
--- 1. Назначения — как до 053.
-delete from core.role_assignments where id in (select new_id from p2_backup.m053_assignments where new_id is not null);
+-- 1. Назначения — как до 053. Прежнее назначение снова действует, только если ни одно из перенесённых не отозвано вручную после
+-- 053 (администратор снял доступ — откат его не возвращает); перенесённые удаляются; созданный контейнер — удаляется (есть
+-- ссылки — в архив).
 update core.role_assignments set revoked_at = null, revoked_by = null
- where id in (select old_id from p2_backup.m053_assignments where kind <> 'no_container');
+ where id in (select j.old_id from p2_backup.m053_assignments j where j.kind <> 'container')
+   and not exists (select 1 from p2_backup.m053_assignments j join core.role_assignments n on n.id = j.new_id
+                    where j.old_id = core.role_assignments.id and j.kind <> 'container' and n.revoked_by is not null);
+delete from core.role_assignments
+ where id in (select new_id from p2_backup.m053_assignments where kind <> 'container' and new_id is not null);
+do $$
+declare c uuid;
+begin
+  for c in select new_id from p2_backup.m053_assignments where kind = 'container' loop
+    begin
+      delete from core.projects where id = c;
+    exception when foreign_key_violation then
+      update core.projects set archived_at = coalesce(archived_at, now()) where id = c;
+    end;
+  end loop;
+end $$;
 drop table p2_backup.m053_assignments;
 
 -- 2. Правила строк, сторож, функции Качества.

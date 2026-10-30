@@ -1,6 +1,6 @@
 {
  "about": "P2-0069: схема сервера после всех миграций (PGlite). Пересоздаётся: node scripts/schema-inventory.mjs. Не править руками.",
- "migrationsHash": "7f34bc6af8c0e055",
+ "migrationsHash": "4aab7496c5ed2cab",
  "counts": {
   "auth": 4,
   "core": 22,
