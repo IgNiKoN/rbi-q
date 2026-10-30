@@ -204,6 +204,9 @@ begin
   res := res || pg_temp.t(j -> 'projects' = 'null'::jsonb and j #>> '{contractor,name}' = 'ООО «Альфа-Строй»'
     and j #> '{contractor,keys}' ? 'alfa_sinonim' and j -> 'templates' = '["contractor_rep"]', 'экран: подрядчик К1 — вся компания и фирма: ' || j::text);
   perform pg_temp.as_user(upm, ca); j := quality.my_access(null);
+  -- после 052 (P2-0070): прежние ключи — без тонких действий Стройконтроля (их проверяет 052_rights_mechanism.sql)
+  j := j || jsonb_build_object('actions', coalesce((select jsonb_agg(x order by x) from jsonb_array_elements_text(j -> 'actions') x
+                                                    where x not like 'construction.defects.%' and x not like 'construction.acceptance.%' and x <> 'construction.transfer.edit'), '[]'::jsonb));
   res := res || pg_temp.t(j -> 'projects' = jsonb_build_array(p1) and j -> 'contractor' = 'null'::jsonb
     and j -> 'actions' = '["construction.view", "quality.view"]', 'экран: РП — объект 1, только просмотр: ' || j::text);
   perform pg_temp.as_user(umg, ca); j := quality.my_access(null);
@@ -211,8 +214,10 @@ begin
 
   -- 4. Шаблоны ролей
   reset role;
+  -- после 052 (P2-0070): тонкие действия Стройконтроля по прежним ключам проверяет 052_rights_mechanism.sql; здесь — прежние ключи
   select string_agg(template_code || ':' || action, ' ' order by template_code, action) into s from core.role_template_permissions
-   where action like 'quality.%' or action like 'construction.%';
+   where (action like 'quality.%' or action like 'construction.%') and action not like 'construction.defects.%'
+     and action not like 'construction.acceptance.%' and action <> 'construction.transfer.edit';
   -- после 033c: + справочник объектов и дерево локаций у шаблона «Администратор компании»
   s := replace(replace(s, 'company_admin:construction.objects.manage ', ''), 'company_admin:quality.objects.manage ', '');
   s := replace(replace(s, 'company_admin:quality.ai ', ''), 'qc_engineer:quality.ai ', '');  -- после 034

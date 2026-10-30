@@ -70,6 +70,14 @@ begin
   insert into core.company_role_permissions(role_id, company_id, action)
   select r_eng, ca, a from unnest(array['quality.view', 'construction.view', 'construction.edit']) a
   union all select r_con, ca, a from unnest(array['quality.view', 'construction.view', 'construction.edit', 'quality.scope.contractor']) a;
+  -- P2-0070 (052): роли получают новые действия Стройконтроля по прежним — как перенос ролей в 052 (инженер — все, подрядчик — свои)
+  if exists (select 1 from core.permission_catalog where action = 'construction.defects.view') then
+    insert into core.company_role_permissions(role_id, company_id, action)
+    select r_eng, ca, pc.action from core.permission_catalog pc
+     where pc.action like 'construction.defects.%' or pc.action like 'construction.acceptance.%' or pc.action = 'construction.transfer.edit'
+    union all select r_con, ca, a from unnest(array['construction.defects.view', 'construction.defects.start', 'construction.defects.fix',
+                                                    'construction.acceptance.view', 'construction.acceptance.book']) a;
+  end if;
   insert into core.role_assignments(company_id, user_id, role_id, counterparty_id) values
     (ca, ueng, r_eng, null), (ca, uc1, r_con, f1), (ca, uc2, r_con, f2);
   perform set_config('request.headers', json_build_object('x-company-id', ca)::text, true);

@@ -55,7 +55,7 @@ begin
   -- схема
   res := res || pg_temp.t((select count(*) from information_schema.columns where table_schema = 'core' and table_name = 'role_assignments'
                            and column_name in ('location_id', 'fact_owner')) = 2, 'у назначения есть место и «ответственный за факт»');
-  res := res || pg_temp.t((select array_agg(action order by action) from core.permission_catalog where area_scoped)
+  res := res || pg_temp.t((select array_agg(action order by action) from core.permission_catalog where area_scoped and action like 'planfact.%')
                           = array['planfact.checklist.create', 'planfact.checklist.view', 'planfact.fact.approve', 'planfact.fact.create',
                                   'planfact.fact.view', 'planfact.works.view'], 'права «по местам» — данные каталога');
   res := res || pg_temp.t(not has_function_privilege('anon', 'public.pf_set_participation(uuid[],uuid,uuid,uuid[],boolean,timestamptz,text[],uuid)', 'execute')
