@@ -305,12 +305,11 @@ window.AppRouter = {
         });
 
         let startHash = window.location.hash || '';
-        // Пустой hash → последний модульный экран или Осмотр.
+        // Пустой hash → экран по правилу платформы (P2-0074: приветствие / последний раздел / по роли).
         // Settings hash оставляем как есть (chrome); фоновый увод на settings
         // чинится в settings.render (_renderSettingsTab fromRouter).
         if (!startHash || startHash === '#/') {
-            const restored = this._readLastModuleHash() || '#/quality/audit';
-            this.navigate(restored, true);
+            this._startFromHome();
         } else {
             this._rememberModuleHash(startHash);
             this.renderRoute();
@@ -340,14 +339,20 @@ window.AppRouter = {
         return /^#\/settings(\/|$)/i.test(p) || /^#\/quality\/settings(\/|$)/i.test(p);
     },
 
-    _readLastModuleHash() {
-        try {
-            const h = localStorage.getItem('rbi_last_module_hash') || '';
-            if (!h || h === '#/' || this._isSettingsPath(h)) return '';
-            return h;
-        } catch (_) {
-            return '';
-        }
+    /**
+     * P2-0074: открыли без адреса — куда вести решает одно правило платформы (src/platform/auth/platform.service.ts homePathFor),
+     * его отдаёт вход платформы после запуска (права — по копии на устройстве или ответу сервера). Пока решает — адрес не меняется
+     * (поверх — «Вход» или загрузка); человек за это время ушёл по ссылке или меню — не перехватывать. Вход не загрузился —
+     * своего запасного правила нет: оболочка показывает «Вход» (app-shell.showAuthGate).
+     */
+    _startFromHome() {
+        const self = this;
+        const shell = window.RBI && window.RBI.services && window.RBI.services.shell;
+        const still = () => { const h = window.location.hash || ''; return !h || h === '#/'; };
+        const load = shell && typeof shell.loadPlatformEntry === 'function' ? shell.loadPlatformEntry() : Promise.reject(new Error('нет входа платформы'));
+        load.then((api) => api.start().then(() => api.homePath()))
+            .then((p) => { if (p && still()) self.navigate(p, true); })
+            .catch((e) => console.error('[Router] первый экран: вход платформы не ответил', e));
     },
 
     _rememberModuleHash(path) {

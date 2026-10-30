@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.30-5b3ac324',
+  version: '2026.10.30-f89a5ed6',
   date: '2026-10-30',
-  digest: '5b3ac324',
+  digest: 'f89a5ed6',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -67,7 +67,7 @@ const APP_RELEASE = {
     "js/core/bootstrap.js": ["1f1e8661eaef47a8",20650,""],
     "js/core/module-loader.js": ["4a52c35b42b6c3b6",6148,""],
     "js/core/rbi-core.js": ["9a09aa0085549130",7006,""],
-    "js/core/router.js": ["9e092662775bb98a",26181,""],
+    "js/core/router.js": ["edb038156b72f6e4",27364,""],
     "js/core/views.js": ["2aee99732cc01597",31332,""],
     "js/dist/company/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"company"],
     "js/dist/company/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"company"],
@@ -78,7 +78,7 @@ const APP_RELEASE = {
     "js/dist/planfact/chunks/xlsx-writer-C1YpHX_s.js": ["70ba43f300adeb4d",12722,"planfact"],
     "js/dist/planfact/planfact.js": ["131103ead255fd8e",1704486,"planfact"],
     "js/dist/platform-admin/platform-admin.js": ["ce93570c6c17f382",26360,"platform-admin"],
-    "js/dist/platform/platform.js": ["3e63e85cb319ee35",800995,""],
+    "js/dist/platform/platform.js": ["e1d328914ba03553",802655,""],
     "js/dist/rbi-construction-acceptance.js": ["ea4a7f059ca0367b",14449,"construction"],
     "js/dist/rbi-construction-defects.js": ["4f86f24809f9ba0b",12130,"construction"],
     "js/dist/rbi-construction-units.js": ["b7010db3ee53912f",16918,"construction"],

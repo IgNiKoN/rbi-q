@@ -3,8 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
-import { createPlatform, accessFor, parsePlatform, homePathFor, ENTRY_KEY, COMPANY_KEY } from '../platform.service.ts';
-import type { PlatformDeps } from '../platform.service.ts';
+import { createPlatform, accessFor, parsePlatform, homePathFor, readWorkActions, welcomeSeen, markWelcomeSeen, WELCOME_PATH, ENTRY_KEY, COMPANY_KEY } from '../platform.service.ts';
+import type { HomeInput, PlatformDeps } from '../platform.service.ts';
+import { deviceUserKey } from '../quality-bridge.ts';
 import type { AuthApi } from '../auth.service.ts';
 import { renderLoginScreen } from '../login-screen.ts';
 
@@ -171,16 +172,51 @@ test('экран «Вход»: «Посмотреть без входа (дем�
   assert.equal(demo, 1);
 });
 
-test('P2-0030: после входа почтой — последний открытый модуль, если он доступен; иначе как раньше', () => {
-  const both = { planfact: true, quality: true };
-  assert.equal(homePathFor(both, '#/quality/analytics/contractors'), '#/quality/analytics/contractors');
-  assert.equal(homePathFor(both, '#/planfact/fact'), '#/planfact/fact');
-  assert.equal(homePathFor({ quality: true, construction: true }, '#/construction-v2'), '#/construction-v2');
-  // модуль отключён у компании (или чужое устройство) — первый доступный
-  assert.equal(homePathFor({ planfact: true }, '#/quality/audit'), '#/planfact');
-  assert.equal(homePathFor({ quality: true }, '#/planfact'), '#/settings');
-  // первый вход / мусор в ключе — как раньше
-  assert.equal(homePathFor(both, null), '#/planfact');
-  assert.equal(homePathFor(both, '#/qualityx'), '#/planfact');
-  assert.equal(homePathFor({}, '#/planfact'), '#/settings');
+test('P2-0074: одно правило первого экрана — приветствие, последний раздел, раздел по работе', () => {
+  const email = (o: Partial<HomeInput>): HomeInput => ({ mode: 'email', access: {}, lastHash: null, welcomeSeen: true, actions: null, ...o });
+  const all = { planfact: true, quality: true, construction: true };
+  const insp = { quality: ['quality.inspections.view', 'quality.inspections.create'] };
+  const rows: Array<[string, HomeInput, string | null]> = [
+    ['первый вход учётки на устройстве — приветствие', email({ access: all, lastHash: '#/planfact/vor', welcomeSeen: false }), WELCOME_PATH],
+    ['первый вход, разделов нет — всё равно приветствие', email({ welcomeSeen: false }), WELCOME_PATH],
+    ['последний раздел доступен (P2-0030)', email({ access: all, lastHash: '#/quality/analytics/contractors' }), '#/quality/analytics/contractors'],
+    ['последний — План/Факт', email({ access: all, lastHash: '#/planfact/fact' }), '#/planfact/fact'],
+    ['последний — Стройконтроль 2.0', email({ access: { quality: true, construction: true }, lastHash: '#/construction-v2' }), '#/construction-v2'],
+    ['последний отозван, остался один раздел — он', email({ access: { planfact: true }, lastHash: '#/quality/audit' }), '#/planfact'],
+    ['последний отозван, инженер качества (проводит проверки)', email({ access: { quality: true, planfact: true }, lastHash: '#/construction/defects', actions: insp }), '#/quality/audit'],
+    ['мусор в ключе — как без последнего', email({ access: { quality: true }, lastHash: '#/qualityx' }), '#/quality/audit'],
+    ['Настройки последним не бывают', email({ access: { quality: true }, lastHash: '#/settings/my' }), '#/quality/audit'],
+    ['роль Качества: проверки → Осмотр', email({ access: all, actions: { ...insp, construction: ['construction.defects.view'] } }), '#/quality/audit'],
+    ['роль СК: работает в Стройконтроле → Стройконтроль', email({ access: all, actions: { quality: ['quality.inspections.view'], construction: ['construction.defects.view', 'construction.defects.create'] } }), '#/construction/defects'],
+    ['только СК', email({ access: { construction: true } }), '#/construction/defects'],
+    ['ПТО: только План/Факт', email({ access: { planfact: true } }), '#/planfact'],
+    ['ПТО: в Качестве и СК только смотрит → План/Факт', email({ access: all, actions: { quality: ['quality.inspections.view'], construction: ['construction.defects.view'] } }), '#/planfact'],
+    ['руководитель (администратор компании) — приветствие', email({ access: { ...all, company: true }, actions: insp }), WELCOME_PATH],
+    ['администратор платформы — приветствие', email({ access: { ...all, platformAdmin: true } }), WELCOME_PATH],
+    ['несколько разделов, только смотрит, План/Факта нет — приветствие', email({ access: { quality: true, construction: true }, actions: { quality: ['quality.inspections.view'] } }), WELCOME_PATH],
+    ['без сети, копии действий нет, несколько разделов — приветствие', email({ access: { quality: true, construction: true } }), WELCOME_PATH],
+    ['без модулей — Настройки', email({ access: { company: true } }), '#/settings'],
+    ['без модулей и прав — Настройки', email({}), '#/settings'],
+    ['никто не вошёл — вести некуда (экран «Вход»)', { mode: 'none', access: {}, lastHash: '#/planfact', welcomeSeen: false }, null],
+    ['демо — последний экран', { mode: 'demo', access: {}, lastHash: '#/planfact/vor', welcomeSeen: false }, '#/planfact/vor'],
+    ['демо без последнего — Осмотр (как раньше)', { mode: 'demo', access: {}, lastHash: null, welcomeSeen: false }, '#/quality/audit']
+  ];
+  for (const [label, input, want] of rows) assert.equal(homePathFor(input), want, label);
+});
+
+test('P2-0074: действия для правила — из копии quality.my_access на устройстве; «приветствие было» — по учётке', () => {
+  const st = memStorage({ ['platform2_quality_access_c1:' + deviceUserKey('a@b.ru')]: JSON.stringify({ access: {
+    '*': { quality: { grants: [{ actions: ['quality.inspections.view'] }] }, construction: { grants: [] } },
+    p1: { quality: { grants: [{ actions: ['quality.inspections.create'] }] }, construction: { grants: [{ actions: ['construction.defects.create'] }] } } } }) });
+  const acts = readWorkActions(st, 'c1', 'a@b.ru');
+  assert.deepEqual(acts.quality.sort(), ['quality.inspections.create', 'quality.inspections.view']);
+  assert.deepEqual(acts.construction, ['construction.defects.create']);
+  assert.deepEqual(readWorkActions(st, 'c2', 'a@b.ru'), { quality: [], construction: [] }, 'чужая компания — своей копии нет');
+  assert.deepEqual(readWorkActions(memStorage({ ['platform2_quality_access_c1:' + deviceUserKey('a@b.ru')]: '{битая' }), 'c1', 'a@b.ru'), { quality: [], construction: [] });
+  assert.equal(welcomeSeen(st, 'a@b.ru'), false);
+  markWelcomeSeen(st, 'A@B.ru ');
+  assert.equal(welcomeSeen(st, 'a@b.ru'), true, 'та же учётка (почта без регистра)');
+  assert.equal(welcomeSeen(st, 'c@d.ru'), false, 'другая учётка на том же устройстве — своё приветствие');
+  assert.equal(welcomeSeen(st, null), false);
+  assert.ok(![...st.m.keys()].some((k) => k.includes('@')), 'почта в ключах устройства не хранится');
 });

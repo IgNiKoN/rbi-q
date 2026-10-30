@@ -9,7 +9,7 @@ import { createAuthService, getClient, readAuthConfig, readStoredSession } from 
 import { applyQualityBridge, QUALITY_COMPANY_KEY, QUALITY_USER_KEY } from './quality-bridge.ts';
 import { createProjectsService } from '../core/projects.service.ts';
 import type { QualityProject } from './quality-bridge.ts';
-import { createPlatform, homePathFor, LAST_MODULE_HASH_KEY, readDeviceCopy, revokedHere, shouldNotifyAccess } from './platform.service.ts';
+import { createPlatform, homePathFor, LAST_MODULE_HASH_KEY, readDeviceCopy, readWorkActions, revokedHere, shouldNotifyAccess, welcomeSeen } from './platform.service.ts';
 import type { Platform, PlatformAccess, PlatformState } from './platform.service.ts';
 import { LOGIN_CSS, renderLoginScreen } from './login-screen.ts';
 import { PASSWORD_CSS, renderMyProfile as drawMyProfile, renderPasswordScreen } from './password-screen.ts';
@@ -120,11 +120,20 @@ function hideLogin(): void {
   if (o) o.classList.add('hidden');
 }
 
-/** После входа почтой — последний открытый модуль (P2-0030), если он доступен; иначе первый доступный, без модулей — Настройки. */
-function goHome(): void {
+/** P2-0074: какой экран открыть — одно правило платформы (homePathFor) для входа почтой и для роутера при открытии без адреса.
+ *  null — никто не вошёл (экран «Вход»). */
+function homePath(): string | null {
+  const st = getPlatform().getState();
+  const store = localStore();
   let last: string | null = null;
-  try { last = window.localStorage.getItem(LAST_MODULE_HASH_KEY); } catch { /* нет localStorage — как раньше */ }
-  go(homePathFor(getPlatform().access(), last));
+  try { last = window.localStorage.getItem(LAST_MODULE_HASH_KEY); } catch { /* нет localStorage — без последнего экрана */ }
+  return homePathFor({ mode: st.mode, access: getPlatform().access(), lastHash: last, welcomeSeen: welcomeSeen(store, st.email),
+    actions: readWorkActions(store, st.companyId, st.email) });
+}
+
+function goHome(): void {
+  const p = homePath();
+  if (p) go(p);
 }
 
 function go(path: string): void {
@@ -334,6 +343,8 @@ export function start(): Promise<PlatformState> {
 
 export const api = {
   start,
+  /** P2-0074: роутер оболочки (js/core/router.js) при открытии без адреса — после start(). */
+  homePath,
   getState: (): PlatformState => getPlatform().getState(),
   access: () => getPlatform().access(),
   setCompany: (id: string): void => getPlatform().setCompany(id),

@@ -5,7 +5,7 @@
  * Права здесь не решаются: модули и признаки приходят с сервера; меню и экраны только читают это состояние.
  */
 import type { AuthApi, SessionState, SignInResult } from './auth.service.ts';
-import { deviceUserKey } from './quality-bridge.ts';
+import { deviceUserKey, QUALITY_ACCESS_COPY_PREFIX } from './quality-bridge.ts';
 
 export type EntryMode = 'none' | 'email' | 'pin' | 'demo';
 
@@ -173,15 +173,77 @@ export function revokedHere(prev: PlatformAccess | null, next: PlatformAccess, h
   return !!prev && !!m && prev[m] === true && next[m] !== true;
 }
 
+/** P2-0074: экран приветствия — оболочка платформы, не модуль (src/platform/auth/welcome-screen.ts). */
+export const WELCOME_PATH = '#/welcome';
+/** P2-0074: «приветствие уже было» у этой учётки на этом устройстве (ключ без почты — как копия прав). Сервер не хранит:
+ *  на новом телефоне или после очистки данных приветствие покажется снова. */
+export const WELCOME_SEEN_PREFIX = 'platform2_welcome_seen_';
+/** P2-0074: первый экран раздела (как при нажатии на раздел в меню, app-mode-utils.changeMode). */
+export const MODULE_HOME: Record<string, string> = { quality: '#/quality/audit', construction: '#/construction/defects', planfact: '#/planfact' };
+const WORK_MODULES = ['quality', 'construction', 'planfact'];
+
+/** Что знает устройство, когда решает, какой экран открыть. */
+export interface HomeInput {
+  mode: EntryMode;
+  access: PlatformAccess;
+  /** последний открытый экран модуля (ключ роутера, LAST_MODULE_HASH_KEY) */
+  lastHash: string | null;
+  welcomeSeen: boolean;
+  /** действия человека в Качестве и Стройконтроле — копия последнего ответа сервера (quality.my_access) на устройстве; нет — пусто */
+  actions?: { quality?: string[]; construction?: string[] } | null;
+}
+
 /**
- * P2-0030: куда вести после входа почтой — последний открытый модуль, если он ещё доступен у компании;
- * иначе как раньше: План/Факт, без него — Настройки.
+ * P2-0074: единственное правило «какой экран открыть» — при открытии без адреса (роутер) и после входа почтой (вход платформы).
+ * 1) первый вход этой учётки на устройстве — приветствие (с анимацией);
+ * 2) последний открытый экран модуля, если модуль ещё доступен;
+ * 3) раздел по работе человека — по разрешённым действиям, не по названию роли: один раздел — он; администратор компании
+ *    или платформы — приветствие; проводит проверки Качества — Осмотр; работает в Стройконтроле (не только смотрит) — Стройконтроль;
+ *    иначе есть План/Факт — он; ничего не подошло — приветствие (без анимации); разделов нет — Настройки.
+ * Вне входа почтой (демо) — как раньше: последний экран или Осмотр. Никто не вошёл — null (экран «Вход», вести некуда).
  */
-export function homePathFor(a: PlatformAccess, lastHash: string | null): string {
-  const h = String(lastHash || '');
-  const modules: Array<[RegExp, string]> = [[/^#\/planfact(\/|$)/, 'planfact'], [/^#\/quality(\/|$)/, 'quality'], [/^#\/construction(-v2)?(\/|$)/, 'construction']];
-  for (const [re, id] of modules) if (re.test(h) && a[id] === true) return h;
-  return a.planfact ? '#/planfact' : '#/settings';
+export function homePathFor(h: HomeInput): string | null {
+  const last = String(h.lastHash || '');
+  if (h.mode === 'none') return null;
+  if (h.mode !== 'email') return (moduleOfHash(last) ? last : '') || MODULE_HOME.quality;
+  if (!h.welcomeSeen) return WELCOME_PATH;
+  const a = h.access;
+  const lastModule = moduleOfHash(last);
+  if (lastModule && a[lastModule] === true) return last;
+  const mods = WORK_MODULES.filter((m) => a[m] === true);
+  if (!mods.length) return '#/settings';
+  if (mods.length === 1) return MODULE_HOME[mods[0]];
+  if (a.company || a.platformAdmin) return WELCOME_PATH;
+  const acts = h.actions || {};
+  if (a.quality && (acts.quality || []).includes('quality.inspections.create')) return MODULE_HOME.quality;
+  if (a.construction && (acts.construction || []).some((x) => !/\.view$/.test(x))) return MODULE_HOME.construction;
+  if (a.planfact) return MODULE_HOME.planfact;
+  return WELCOME_PATH;
+}
+
+/** P2-0074: действия человека в Качестве и Стройконтроле из копии ответов quality.my_access этой компании на устройстве
+ *  (все объекты вместе; ключ — как у моста Качества). Копии нет — пусто. */
+export function readWorkActions(s: PlatformDeps['storage'], companyId: string | null, email: string | null): { quality: string[]; construction: string[] } {
+  const out = { quality: new Set<string>(), construction: new Set<string>() };
+  if (companyId && email) {
+    try {
+      const copy = JSON.parse(safeGet(s, QUALITY_ACCESS_COPY_PREFIX + companyId + ':' + deviceUserKey(email)) || '{}') as { access?: Record<string, unknown> };
+      for (const v of Object.values(copy.access || {})) {
+        for (const m of ['quality', 'construction'] as const) {
+          const grants = (v as Record<string, { grants?: unknown }> | null)?.[m]?.grants;
+          if (Array.isArray(grants)) for (const g of grants) for (const x of (g && Array.isArray(g.actions) ? g.actions : [])) out[m].add(String(x));
+        }
+      }
+    } catch { /* испорченная копия — как без неё */ }
+  }
+  return { quality: [...out.quality], construction: [...out.construction] };
+}
+
+export function welcomeSeen(s: PlatformDeps['storage'], email: string | null): boolean {
+  return !!email && safeGet(s, WELCOME_SEEN_PREFIX + deviceUserKey(email)) === '1';
+}
+export function markWelcomeSeen(s: PlatformDeps['storage'], email: string | null): void {
+  if (email) safeSet(s, WELCOME_SEEN_PREFIX + deviceUserKey(email), '1');
 }
 
 export interface Platform {
