@@ -1,0 +1,6 @@
+поток 0: cold375 cache w-slow double-start r-middeploy r-allow m-hang v-summary1440 d-device s-reject-retry s-foreign pf-drop w1440
+поток 1: cold1440 otheruser w-hang double-start-nolocks r-partial r-launch m-hang375 v-other d-quality-only s-reject-retry-1440-dark s-leader pf-batch t375
+поток 2: rescue screen375 w-flap reasons375 r-tabs r-return m-revoke v-prefetch375 d-screens s-own-first q-ids pf-batch1440-dark t1440
+поток 3: expired screen768 w-drop reasons1440-dark r-chunk r-queue m-first v-prefetch1440 s-module-off s-contractor q-ids-other c-who375
+поток 4: stale14 screen1440 w-5xx w-tabs r-requests r-transition m-other f-field s-new-kind s-kinds pf-offline c-who1440
+поток 5: invalid w-offline edit-mid r-deploy r-delta r-size v-summary375 f-manager s-pull-scope s-rename pf-offline1440 w375

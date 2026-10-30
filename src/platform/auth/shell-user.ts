@@ -3,6 +3,8 @@
  * локальный пользователь Quality («Инженер»), а в разделе — прораб. Рисует общая функция оболочки
  * window.RBI.services.shell.renderUserBlock (второй шапки нет); при выходе — прежние надписи возвращаются.
  */
+import { readShowTest, SHOW_TEST_EVENT, visibleCompanies } from './test-companies.ts';
+
 type ShellUser = { name: string; role: string };
 type RbiShell = { RBI?: { services?: { shell?: { renderUserBlock?: (u: ShellUser) => void } } } };
 
@@ -52,7 +54,7 @@ export const PLATFORM_NET_EVENT = 'rbi:platform-net';
 export interface PlatformView {
   email: string;
   isPlatformAdmin: boolean;
-  companies: { id: string; name: string; roles: string[] }[];
+  companies: { id: string; name: string; roles: string[]; is_test?: boolean }[];
   companyId: string | null;
 }
 type Platform2State = { RBI?: { platform2?: { getState?: () => PlatformView & { mode: string }; setCompany?: (id: string) => void } } };
@@ -69,6 +71,14 @@ export function setPlatformCompany(id: string): void {
   if (typeof window === 'undefined') return;
   (window as unknown as Platform2State).RBI?.platform2?.setCompany?.(id);
 }
+
+/** P2-0075: компании для переключателя раздела — у администратора платформы без тестовых, пока не отмечено «Показать тестовые». */
+export function platformCompaniesShown(v: PlatformView): PlatformView['companies'] {
+  let store: Storage | null = null;
+  try { store = window.localStorage; } catch { /* нет localStorage — тестовые скрыты */ }
+  return visibleCompanies(v.companies, { isPlatformAdmin: v.isPlatformAdmin, showTest: readShowTest(store), keepId: v.companyId });
+}
+export { SHOW_TEST_EVENT };
 
 /** «Компания · роль» для полосы раздела: роль в выбранной компании; без роли у администратора платформы — так и пишем. */
 export function platformRoleLabel(v: PlatformView): string {
