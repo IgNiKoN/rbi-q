@@ -2,6 +2,7 @@
 -- на запрос и не на пересылку без изменений; L6 — переименование узла не трогает объект, найденный только по синониму.
 -- Всё откатывается; отчёт — ERROR P0001 с «FAIL всего: N». Запуск: после 039d_quality_review_fixes_up.sql (PGlite — суперпользователь:
 -- число вызовов quality.reresolve — по pg_stat_xact_user_functions).
+-- P2-0071 (053): видимость инженера — по участию на объект (мост «объекты Качества» снят), роль — с тонкими действиями.
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -14,6 +15,25 @@ create or replace function pg_temp.t(c boolean, l text) returns text language sq
   select case when coalesce(c, false) then '' else 'FAIL ' || l || E'\n' end $f$;
 create or replace function pg_temp.calls() returns bigint language sql as $f$
   select coalesce((select calls from pg_stat_xact_user_functions where schemaname = 'quality' and funcname = 'reresolve'), 0) $f$;
+
+-- P2-0071 (053): роли теста получают тонкие действия Качества по прежним ключам — то же правило, что перенос 053
+create or replace function pg_temp.q53(c uuid) returns void language sql as $f$
+  insert into core.company_role_permissions(role_id, company_id, action)
+  select r.role_id, r.company_id, x
+    from (select role_id, company_id, array_agg(action) a from core.company_role_permissions where company_id = c group by 1, 2) r
+    cross join lateral unnest(
+      (case when 'quality.view' = any(r.a) then
+         array['quality.inspections.view', 'quality.tasks.view', 'quality.meetings.view', 'quality.method.view',
+               'quality.reports.view', 'quality.sk.view'] else '{}'::text[] end)
+      || (case when 'quality.edit' = any(r.a) then
+         array['quality.inspections.create', 'quality.inspections.delete', 'quality.tasks.create', 'quality.tasks.work',
+               'quality.tasks.delete', 'quality.meetings.edit', 'quality.method.edit', 'quality.reports.edit', 'quality.sk.import']
+         else '{}'::text[] end)
+      || (case when 'quality.edit' = any(r.a) and ('quality.manage' = any(r.a) or 'quality.scope.company' = any(r.a)
+                                                    or 'quality.scope.contractor' = any(r.a)) then
+         array['quality.inspections.edit_any', 'quality.tasks.edit_any'] else '{}'::text[] end)) x
+  on conflict do nothing
+$f$;
 
 set track_functions = 'all';
 do $$
@@ -29,11 +49,13 @@ begin
     on conflict (company_id, module) do update set enabled = true;
   insert into core.company_roles(company_id, name) values (ca, 'Инженер 039d') returning id into r_eng;
   insert into core.company_role_permissions(role_id, company_id, action) select r_eng, ca, a from unnest(array['quality.view', 'quality.edit']) a;
+  perform pg_temp.q53(ca);
 
   -- M1: объект «Компании» → объект Качества (сервер); инженер закреплён за ним; затем приходит объект с тем же ключом
   insert into core.projects(company_id, name) values (ca, 'ЖК Луч') returning id into v;
   select id into v_auto from quality.project_objects where core_company_id = ca and core_object_id = v;
-  insert into core.role_assignments(company_id, user_id, role_id, quality_objects) values (ca, ue, r_eng, array[v_auto]);
+  -- P2-0071: участие на объект (видимость); список quality_objects — только для проверки переноса 039d (правилами не читается)
+  insert into core.role_assignments(company_id, user_id, role_id, project_id, quality_objects) values (ca, ue, r_eng, v, array[v_auto]);
   insert into quality.rbi_inspections(id, project_code, project_canonical_key, core_company_id) values ('i1-m39d', pa::text, 'луч', ca);
   insert into quality.project_objects(id, canonical_key, display_name, synonyms, core_company_id) values ('obj_real_m39d', 'луч', 'ЖК Луч', '{}', ca)
     on conflict do nothing;

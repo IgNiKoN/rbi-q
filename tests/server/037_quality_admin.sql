@@ -3,6 +3,7 @@
 -- Пользователи и компании — тестовые (@test.invalid, is_test). Роли — как у РБИ (033a/033c/034): Админ (+ справочник объектов),
 -- Зам. руководителя, Директор, Инженер СК (добавляет подрядчика — да, править — нет: решение владельца 25.10.2026); отключённый сотрудник — Админ с отозванным назначением; Бета — свой Админ.
 -- Действие и проверка результата — отдельными операторами (в «a and b» порядок вычисления не гарантирован).
+-- P2-0071 (053): роли теста получают тонкие действия Качества по прежним ключам (как перенос 053).
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -19,6 +20,23 @@ create or replace function pg_temp.t(c boolean, l text) returns text language sq
   select case when coalesce(c, false) then '' else 'FAIL ' || l || E'\n' end $f$;
 create or replace function pg_temp.val(q text) returns text language plpgsql as $f$
 declare v text; begin execute q into v; return v; exception when others then return 'ERR:' || sqlstate; end $f$;
+
+-- P2-0071: тонкие действия Качества по прежним ключам роли — то же правило, что перенос 053 (pg_temp.quality_fine_actions)
+create or replace function pg_temp.quality_fine(r uuid, c uuid) returns void language plpgsql as $f$
+declare a text[] := array(select action from core.company_role_permissions where role_id = r and company_id = c);
+begin
+  insert into core.company_role_permissions(role_id, company_id, action)
+  select r, c, x from unnest(
+      (case when 'quality.view' = any(a) then array['quality.inspections.view', 'quality.tasks.view', 'quality.meetings.view',
+         'quality.method.view', 'quality.reports.view', 'quality.sk.view'] else '{}'::text[] end)
+   || (case when 'quality.edit' = any(a) then array['quality.inspections.create', 'quality.inspections.delete', 'quality.tasks.create',
+         'quality.tasks.work', 'quality.tasks.delete', 'quality.meetings.edit', 'quality.method.edit', 'quality.reports.edit',
+         'quality.sk.import'] else '{}'::text[] end)
+   || (case when 'quality.edit' = any(a) and ('quality.manage' = any(a) or 'quality.scope.company' = any(a)
+              or 'quality.scope.contractor' = any(a)) then array['quality.inspections.edit_any', 'quality.tasks.edit_any'] else '{}'::text[] end)) x
+  where exists (select 1 from core.permission_catalog pc where pc.action = x)
+  on conflict do nothing;
+end $f$;
 
 do $$
 declare
@@ -53,6 +71,7 @@ begin
   union all select r_dir, ca, a from unnest(array['quality.view', 'quality.scope.company', 'construction.view']) a
   union all select r_eng, ca, a from unnest(array['quality.view', 'quality.edit', 'quality.ai', 'construction.view', 'construction.edit']) a
   union all select r_badm, cb, a from unnest(base || array['quality.objects.manage', 'construction.objects.manage']) a;
+  perform pg_temp.quality_fine(x.r, x.c) from (values (r_adm, ca), (r_dep, ca), (r_dir, ca), (r_eng, ca), (r_badm, cb)) x(r, c);
   insert into core.role_assignments(company_id, user_id, role_id) values
     (ca, uadm, r_adm), (ca, udep, r_dep), (ca, udir, r_dir), (ca, ueng, r_eng), (cb, ub, r_badm);
   insert into core.role_assignments(company_id, user_id, role_id, revoked_at) values (ca, uoff, r_adm, now());

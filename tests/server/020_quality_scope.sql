@@ -3,6 +3,9 @@
 -- Записи Альфы: проверки i1 (объект 1, инженер 1, подрядчик К1), i2 (объект 1, инженер 2, К2), i3 (объект 2, инженер 1, К1);
 -- задача t1 (объект 1, автор инженер 2, назначена инженеру 1, К1); пункты it1 (к i1), it2 (к i2);
 -- замечания d1 (объект 1, К1), d2 (объект 1, К2), d3 (объект 2, К1); СК s1 (объект 1, ключ-синоним К1), s2 (объект 1, К2).
+-- P2-0071 (053): инженер видит объект целиком (проверки и пункты объекта), чужое правит только с «Править чужие» — отказ
+-- сервера (0 строк или 42501); своя роль теста получает тонкие действия по прежним ключам (как перенос 053); тонкие действия
+-- Качества в «экране» и шаблонах вычитаются — их проверяет 053_quality_rights.sql.
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -17,6 +20,22 @@ create or replace function pg_temp.rows(q text) returns int language plpgsql as 
 declare n int; begin execute q; get diagnostics n = row_count; return n; exception when others then return -1; end $f$;
 create or replace function pg_temp.t(c boolean, l text) returns text language sql as $f$
   select case when coalesce(c, false) then '' else 'FAIL ' || l || E'\n' end $f$;
+-- P2-0071: тонкие действия Качества по прежним ключам роли — то же правило, что перенос 053 (pg_temp.quality_fine_actions)
+create or replace function pg_temp.quality_fine(r uuid, c uuid) returns void language plpgsql as $f$
+declare a text[] := array(select action from core.company_role_permissions where role_id = r and company_id = c);
+begin
+  insert into core.company_role_permissions(role_id, company_id, action)
+  select r, c, x from unnest(
+      (case when 'quality.view' = any(a) then array['quality.inspections.view', 'quality.tasks.view', 'quality.meetings.view',
+         'quality.method.view', 'quality.reports.view', 'quality.sk.view'] else '{}'::text[] end)
+   || (case when 'quality.edit' = any(a) then array['quality.inspections.create', 'quality.inspections.delete', 'quality.tasks.create',
+         'quality.tasks.work', 'quality.tasks.delete', 'quality.meetings.edit', 'quality.method.edit', 'quality.reports.edit',
+         'quality.sk.import'] else '{}'::text[] end)
+   || (case when 'quality.edit' = any(a) and ('quality.manage' = any(a) or 'quality.scope.company' = any(a)
+              or 'quality.scope.contractor' = any(a)) then array['quality.inspections.edit_any', 'quality.tasks.edit_any'] else '{}'::text[] end)) x
+  where exists (select 1 from core.permission_catalog pc where pc.action = x)
+  on conflict do nothing;
+end $f$;
 -- Метки видимых строк таблицы (id = «метка-…»), через запятую по алфавиту; ошибка — «ERR:код».
 create or replace function pg_temp.vis(tbl text) returns text language plpgsql as $f$
 declare s text;
@@ -80,6 +99,7 @@ begin
   -- пользовательская роль конструктора: просмотр + правка Качества
   insert into core.company_roles(company_id, name) values (ca, 'Своя роль 020') returning id into rcst;
   insert into core.company_role_permissions(role_id, company_id, action) values (rcst, ca, 'quality.view'), (rcst, ca, 'quality.edit');
+  perform pg_temp.quality_fine(rcst, ca);
   insert into core.role_assignments(company_id, user_id, role_id, project_id, counterparty_id)
   select ca, x.u, (select id from core.company_roles where company_id = ca and template_code = x.tpl), x.p, x.k
   from (values (ua, 'company_admin', null::uuid, null::uuid), (umg, 'management', p1, null), (upm, 'project_manager', p1, null),
@@ -116,13 +136,13 @@ begin
     ('прораб объекта 1',            ufor, ca, 'm20i1,m20i2',       'm20t1', 'm20it1,m20it2', 'm20d1,m20d2',       'm20s1,m20s2'),
     ('ПТО объекта 1',               upto, ca, 'm20i1,m20i2',       'm20t1', 'm20it1,m20it2', 'm20d1,m20d2',       'm20s1,m20s2'),
     ('заказчик объекта 1',          ucus, ca, 'm20i1,m20i2',       'm20t1', 'm20it1,m20it2', 'm20d1,m20d2',       'm20s1,m20s2'),
-    ('инженер 1 (свои)',            uq1,  ca, 'm20i1',             'm20t1', 'm20it1',        'm20d1,m20d2',       'm20s1,m20s2'),
-    ('инженер 2 (свои)',            uq2,  ca, 'm20i2',             'm20t1', 'm20it2',        'm20d1,m20d2',       'm20s1,m20s2'),
+    ('инженер 1 (объект 1 целиком)', uq1, ca, 'm20i1,m20i2',       'm20t1', 'm20it1,m20it2', 'm20d1,m20d2',       'm20s1,m20s2'),
+    ('инженер 2 (объект 1 целиком)', uq2, ca, 'm20i1,m20i2',       'm20t1', 'm20it1,m20it2', 'm20d1,m20d2',       'm20s1,m20s2'),
     ('подрядчик К1 (вся компания)', uc1,  ca, 'm20i1,m20i3',       'm20t1', 'm20it1',        'm20d1,m20d3',       'm20s1'),
     ('подрядчик К2 (объект 1)',     uc2,  ca, 'm20i2',             '',      'm20it2',        'm20d2',             'm20s2'),
     ('подрядчик без фирмы',         uc0,  ca, '',                  '',      '',              '',                  ''),
     ('экономист (без Качества)',    ueco, ca, '',                  '',      '',              '',                  ''),
-    ('своя роль: просмотр+правка',  ucst, ca, '',                  '',      '',              '',                  'm20s1,m20s2'),
+    ('своя роль: просмотр+правка',  ucst, ca, 'm20i1,m20i2',       'm20t1', 'm20it1,m20it2', '',                  'm20s1,m20s2'),
     ('админ Беты с заголовком Альфы', ub, ca, '',                  '',      '',              '',                  ''),
     ('подрядчик К1 с заголовком Беты', uc1, cb, '',                '',      '',              '',                  ''),
     ('админ Беты в Бете',           ub,   cb, 'm20ib',             '',      '',              '',                  '')
@@ -141,8 +161,9 @@ begin
   -- 2. Запись
   perform pg_temp.as_user(uq1, ca);
   res := res || pg_temp.t(pg_temp.rows('update quality.rbi_inspections set location = ''x'' where id = ''m20i1-id''') = 1, 'инженер правит свою проверку');
-  res := res || pg_temp.t(pg_temp.rows('update quality.rbi_inspections set location = ''x'' where id = ''m20i2-id''') = 0, 'инженер не правит чужую проверку');
-  res := res || pg_temp.t(pg_temp.rows('delete from quality.rbi_inspections where id = ''m20i2-id''') = 0, 'инженер не удаляет чужую проверку');
+  -- после 053: чужая проверка видна (объект целиком), правка и удаление — отказ сервера (42501 с текстом)
+  res := res || pg_temp.t(pg_temp.rows('update quality.rbi_inspections set location = ''x'' where id = ''m20i2-id''') in (0, -1), 'инженер не правит чужую проверку');
+  res := res || pg_temp.t(pg_temp.rows('delete from quality.rbi_inspections where id = ''m20i2-id''') in (0, -1), 'инженер не удаляет чужую проверку');
   perform pg_temp.rows(format('update quality.rbi_inspections set core_created_by = %L where id = ''m20i1-id''', uq2));
   reset role;
   res := res || pg_temp.t((select core_created_by from quality.rbi_inspections where id = 'm20i1-id') = uq1, 'автора проверки поменять нельзя');
@@ -204,9 +225,11 @@ begin
   res := res || pg_temp.t(j -> 'projects' = 'null'::jsonb and j #>> '{contractor,name}' = 'ООО «Альфа-Строй»'
     and j #> '{contractor,keys}' ? 'alfa_sinonim' and j -> 'templates' = '["contractor_rep"]', 'экран: подрядчик К1 — вся компания и фирма: ' || j::text);
   perform pg_temp.as_user(upm, ca); j := quality.my_access(null);
-  -- после 052 (P2-0070): прежние ключи — без тонких действий Стройконтроля (их проверяет 052_rights_mechanism.sql)
+  -- после 052 (P2-0070): прежние ключи — без тонких действий Стройконтроля (их проверяет 052_rights_mechanism.sql);
+  -- после 053 (P2-0071) — и без тонких действий Качества (053_quality_rights.sql)
   j := j || jsonb_build_object('actions', coalesce((select jsonb_agg(x order by x) from jsonb_array_elements_text(j -> 'actions') x
-                                                    where x not like 'construction.defects.%' and x not like 'construction.acceptance.%' and x <> 'construction.transfer.edit'), '[]'::jsonb));
+                                                    where x not like 'construction.defects.%' and x not like 'construction.acceptance.%' and x <> 'construction.transfer.edit'
+                                                      and x !~ '^quality\.(inspections|tasks|meetings|method|reports|sk)\.'), '[]'::jsonb));
   res := res || pg_temp.t(j -> 'projects' = jsonb_build_array(p1) and j -> 'contractor' = 'null'::jsonb
     and j -> 'actions' = '["construction.view", "quality.view"]', 'экран: РП — объект 1, только просмотр: ' || j::text);
   perform pg_temp.as_user(umg, ca); j := quality.my_access(null);
@@ -217,7 +240,8 @@ begin
   -- после 052 (P2-0070): тонкие действия Стройконтроля по прежним ключам проверяет 052_rights_mechanism.sql; здесь — прежние ключи
   select string_agg(template_code || ':' || action, ' ' order by template_code, action) into s from core.role_template_permissions
    where (action like 'quality.%' or action like 'construction.%') and action not like 'construction.defects.%'
-     and action not like 'construction.acceptance.%' and action <> 'construction.transfer.edit';
+     and action not like 'construction.acceptance.%' and action <> 'construction.transfer.edit'
+     and action !~ '^quality\.(inspections|tasks|meetings|method|reports|sk)\.';   -- после 053: тонкие действия Качества — в 053
   -- после 033c: + справочник объектов и дерево локаций у шаблона «Администратор компании»
   s := replace(replace(s, 'company_admin:construction.objects.manage ', ''), 'company_admin:quality.objects.manage ', '');
   s := replace(replace(s, 'company_admin:quality.ai ', ''), 'qc_engineer:quality.ai ', '');  -- после 034

@@ -3,6 +3,7 @@
 -- Качества и ядра; переименование в обе стороны (прежнее — синоним); «не разобрано» → заявка в очереди → синоним узла → запись
 -- узнана и видна инженеру объекта; связь подрядчика → запись узнана; компания без контейнера; компания без Качества.
 -- Всё откатывается; отчёт — ERROR P0001 с «FAIL всего: N». Запуск: после 039b_quality_one_object_list_up.sql.
+-- P2-0071 (053): инженер — участие на объект «ЖК Север» (мост «объекты Качества» снят), роли — с тонкими действиями.
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -15,6 +16,25 @@ create or replace function pg_temp.err(q text) returns text language plpgsql as 
 begin execute q; return 'OK'; exception when others then return sqlstate; end $f$;
 create or replace function pg_temp.t(c boolean, l text) returns text language sql as $f$
   select case when coalesce(c, false) then '' else 'FAIL ' || l || E'\n' end $f$;
+
+-- P2-0071 (053): роли теста получают тонкие действия Качества по прежним ключам — то же правило, что перенос 053
+create or replace function pg_temp.q53(c uuid) returns void language sql as $f$
+  insert into core.company_role_permissions(role_id, company_id, action)
+  select r.role_id, r.company_id, x
+    from (select role_id, company_id, array_agg(action) a from core.company_role_permissions where company_id = c group by 1, 2) r
+    cross join lateral unnest(
+      (case when 'quality.view' = any(r.a) then
+         array['quality.inspections.view', 'quality.tasks.view', 'quality.meetings.view', 'quality.method.view',
+               'quality.reports.view', 'quality.sk.view'] else '{}'::text[] end)
+      || (case when 'quality.edit' = any(r.a) then
+         array['quality.inspections.create', 'quality.inspections.delete', 'quality.tasks.create', 'quality.tasks.work',
+               'quality.tasks.delete', 'quality.meetings.edit', 'quality.method.edit', 'quality.reports.edit', 'quality.sk.import']
+         else '{}'::text[] end)
+      || (case when 'quality.edit' = any(r.a) and ('quality.manage' = any(r.a) or 'quality.scope.company' = any(r.a)
+                                                    or 'quality.scope.contractor' = any(r.a)) then
+         array['quality.inspections.edit_any', 'quality.tasks.edit_any'] else '{}'::text[] end)) x
+  on conflict do nothing
+$f$;
 
 do $$
 declare
@@ -39,6 +59,8 @@ begin
   select r, c, a from (values (r_adm, ca), (r_n, cn)) x(r, c), unnest(array['quality.view', 'quality.edit', 'quality.manage', 'quality.scope.company',
     'quality.objects.manage', 'construction.view', 'construction.edit', 'construction.manage', 'construction.objects.manage']) a
   union all select r_eng, ca, a from unnest(array['quality.view', 'quality.edit', 'construction.view', 'construction.edit']) a;
+  perform pg_temp.q53(ca);
+  perform pg_temp.q53(cn);
 
   -- 1. Объект ядра → объект Качества и узел дерева
   insert into core.projects(company_id, name) values (ca, 'ЖК Север') returning id into v;
@@ -48,8 +70,8 @@ begin
                             and coalesce("parentId", '') = ''), 'объект ядра → узел-объект дерева (его видит выбор объекта в Качестве)');
   res := res || pg_temp.t(not exists (select 1 from quality.project_objects where core_company_id = ca and display_name = 'Объекты Альфы 039b'),
                           'контейнер — не объект Качества');
-  insert into core.role_assignments(company_id, user_id, role_id, quality_objects) values
-    (ca, uadm, r_adm, null), (ca, ue, r_eng, array[(select id from quality.project_objects where core_object_id = v)]), (cn, un, r_n, null);
+  insert into core.role_assignments(company_id, user_id, role_id, project_id) values
+    (ca, uadm, r_adm, null), (ca, ue, r_eng, v), (cn, un, r_n, null);
 
   -- 2. Контейнер скрыт из списков, Качество работает в нём
   perform pg_temp.as_user(uadm, ca);

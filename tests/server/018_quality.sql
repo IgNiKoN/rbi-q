@@ -1,5 +1,7 @@
 -- P2-0016 этап 1: изоляция хранилища quality (018) на КАЖДОЙ таблице. Всё откатывается; отчёт — ERROR P0001 с «FAIL всего: N».
 -- Запуск: после 018_quality_up.sql. Пользователи и компании — тестовые (@test.invalid, is_test).
+-- P2-0071 (053): сторож прав проверок и задач (*_zzz_rights_guard) и правило пунктов / фото через inspection_child_ok — допустимы;
+-- инженер объекта видит проверки объекта целиком (после 053).
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -89,7 +91,8 @@ begin
      and tg.tgname not like '%_construction_counterparty' -- 043: контрагент замечания/приёмки Стройконтроля
      and tg.tgname <> 'zz_contractor_defect_guard'       -- 043: подрядчик — только «В работу» / «Устранено»
      and tg.tgname <> 'location_nodes_place_sync'        -- 044: место узла → core.locations
-     and tg.tgname not like '%_v2_bind_object';          -- 044: объект замечания/приёмки v2 по месту
+     and tg.tgname not like '%_v2_bind_object'           -- 044: объект замечания/приёмки v2 по месту
+     and tg.tgname not like '%_zzz_rights_guard';        -- 053: сторож действий проверок и задач
   res := res || pg_temp.t(n = 0, 'в quality только триггер привязки к компании (лишние: ' || coalesce(s, '—') || ')');
   select count(*), string_agg(p.proname, ', ') into n, s from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'quality' and has_function_privilege('anon', p.oid, 'execute');
@@ -99,7 +102,7 @@ begin
   for r in select c.relname::text tbl,
                   (select (regexp_match(pg_get_triggerdef(tg.oid), 'bind_company\(''(\w+)'', ''(\d)''\)'))
                      from pg_trigger tg where tg.tgrelid = c.oid and tg.tgname like '%_bind_company') a,
-                  (select regexp_match(qual, '\{([^}]*)\}') from pg_policies p where p.schemaname = 'quality' and p.tablename = c.relname and p.cmd = 'SELECT') m
+                  (select regexp_match(qual, '\{([^}]*)\}|inspection_child_ok\(') from pg_policies p where p.schemaname = 'quality' and p.tablename = c.relname and p.cmd = 'SELECT') m
              from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
             where ns.nspname = 'quality' and c.relkind = 'r' and c.relname <> 'contractor_core_links' order by 1 loop
     t := r.tbl; ntab := ntab + 1;
@@ -193,8 +196,10 @@ begin
   -- 8. Назначение на объект: технадзор Альфы на «Спутнике» видит проверку этого объекта, но не настройки компании
   perform pg_temp.as_user(ua_qc, ca);
   n := pg_temp.cnt('select count(*) from quality.rbi_inspections');
-  -- после 020 инженер СК видит только свои проверки (проверку создал админ)
-  res := res || pg_temp.t(n = case when to_regprocedure('quality.row_visible(uuid,uuid,text[],text,uuid,uuid,text,text)') is not null then 0 else 1 end, 'технадзор объекта видит проверку объекта (' || n || ')');
+  -- после 020 инженер СК видит только свои проверки (проверку создал админ); после 053 — объект целиком («Видеть все проверки»)
+  res := res || pg_temp.t(n = case when to_regprocedure('quality.rec_ok(uuid,uuid,uuid,text[],text[],uuid,uuid,uuid)') is not null then 1
+                                   when to_regprocedure('quality.row_visible(uuid,uuid,text[],text,uuid,uuid,text,text)') is not null then 0 else 1 end,
+                          'технадзор объекта видит проверку объекта (' || n || ')');
   s := pg_temp.err(i_e);
   res := res || pg_temp.t(s <> 'OK', 'технадзор не меняет настройки компании (' || s || ')');
   reset role;

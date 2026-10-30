@@ -1,4 +1,5 @@
 -- P2-0016: права экрана Качества (018c). Всё откатывается; отчёт — ERROR P0001 с «FAIL всего: N». Запуск: после 018c.
+-- P2-0071 (053): тонкие действия Качества (проверки, задачи, совещания, FMEA, отчёты, внешний СК) вычитаются — их проверяет 053.
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -12,8 +13,10 @@ declare j jsonb;
 begin
   execute 'select quality.my_access($1)' into j using p;
   -- после 052 (P2-0070): тонкие действия Стройконтроля и раздел «construction» проверяет 052_rights_mechanism.sql; здесь — прежние ключи
+  -- после 053 (P2-0071): тонкие действия Качества проверяет 053_quality_rights.sql
   return (j - 'construction') || jsonb_build_object('actions', coalesce((select jsonb_agg(x order by x) from jsonb_array_elements_text(j -> 'actions') x
-                                                                         where x not like 'construction.defects.%' and x not like 'construction.acceptance.%' and x <> 'construction.transfer.edit'), '[]'::jsonb));
+                                                                         where x not like 'construction.defects.%' and x not like 'construction.acceptance.%' and x <> 'construction.transfer.edit'
+                                                                           and x !~ '^quality\.(inspections|tasks|meetings|method|reports|sk)\.'), '[]'::jsonb));
 exception when others then return jsonb_build_object('error', sqlstate); end $f$;
 create or replace function pg_temp.t(c boolean, l text) returns text language sql as $f$
   select case when coalesce(c, false) then '' else 'FAIL ' || l || E'\n' end $f$;

@@ -5,6 +5,10 @@
 -- инженер 2; a6 — «Все», инженер 1; a7 — O1 ЗАГЛАВНЫМИ и в кавычках, инженер 2; a8 — только узел объекта n1, инженер 2;
 -- a9 — «ЖК Гений» (синоним с приставкой), инженер 2. Задачи: t1 — O1 (заглавными), автор инженер 2; t2 — O2, автор инженер 2,
 -- назначена инженеру 1. СК: s1 — O1, s2 — O2. Совещания: m1 — O1, m2 — без объекта (автор инженер 2). Пункты: p1 (к a2), p2 (к a3).
+-- P2-0071 (053): мост «объекты Качества» снят — общий объект ядра — контейнер Качества (как у РБИ после 039b), объекты Качества
+-- связаны с объектами ядра; инженеры — участие на объект ядра своего объекта (список quality_objects у инженера 1 оставлен для
+-- проверок признаков и my_access — правилами не читается); инженер без объектов и qc_engineer — «без объектов» (контейнер, как
+-- перенос 053); роли — с тонкими действиями; чужая запись — отказ 42501 сторожа или «0 строк»; pf_assign_role с объектами — отказ.
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -53,6 +57,25 @@ begin
   if p_set is not null then execute format('update quality.%I set %s where id = %L', tbl, p_set, mark || '-m33'); end if;
 end $f$;
 
+-- P2-0071 (053): роли теста получают тонкие действия Качества по прежним ключам — то же правило, что перенос 053
+create or replace function pg_temp.q53(c uuid) returns void language sql as $f$
+  insert into core.company_role_permissions(role_id, company_id, action)
+  select r.role_id, r.company_id, x
+    from (select role_id, company_id, array_agg(action) a from core.company_role_permissions where company_id = c group by 1, 2) r
+    cross join lateral unnest(
+      (case when 'quality.view' = any(r.a) then
+         array['quality.inspections.view', 'quality.tasks.view', 'quality.meetings.view', 'quality.method.view',
+               'quality.reports.view', 'quality.sk.view'] else '{}'::text[] end)
+      || (case when 'quality.edit' = any(r.a) then
+         array['quality.inspections.create', 'quality.inspections.delete', 'quality.tasks.create', 'quality.tasks.work',
+               'quality.tasks.delete', 'quality.meetings.edit', 'quality.method.edit', 'quality.reports.edit', 'quality.sk.import']
+         else '{}'::text[] end)
+      || (case when 'quality.edit' = any(r.a) and ('quality.manage' = any(r.a) or 'quality.scope.company' = any(r.a)
+                                                    or 'quality.scope.contractor' = any(r.a)) then
+         array['quality.inspections.edit_any', 'quality.tasks.edit_any'] else '{}'::text[] end)) x
+  on conflict do nothing
+$f$;
+
 do $$
 declare
   uadm uuid := gen_random_uuid(); udep uuid := gen_random_uuid(); udir uuid := gen_random_uuid();
@@ -70,9 +93,8 @@ begin
   insert into core.company_modules(company_id, module, enabled)
     select c, m, true from unnest(array[ca, cb]) c, unnest(array['quality', 'construction']) m
     on conflict (company_id, module) do update set enabled = true;
-  -- как у РБИ: все объекты Качества — внутри одного объекта ядра
-  perform set_config('quality.object_sync', '1', true);   -- данные «как до 039b»: без синхронизации объектов ядра и Качества
-  insert into core.projects(id, company_id, name) values (pa, ca, 'Объекты Альфы 033'), (pb, cb, 'Объекты Беты 033');
+  -- как у РБИ после 039b: записи Качества — в проекте-контейнере, объекты Качества связаны с объектами ядра (сервер)
+  insert into core.projects(id, company_id, name, quality_container) values (pa, ca, 'Объекты Альфы 033', true), (pb, cb, 'Объекты Беты 033', true);
   perform set_config('m33.pc', pa::text, true);
   insert into quality.project_objects(id, canonical_key, display_name, synonyms, core_company_id) values
     (o1, 'большевиков,22 (гений)', 'ЖК «Большевиков, 22»', array['Гений'], ca),
@@ -80,7 +102,6 @@ begin
     (ob, 'большевиков,22 (гений)', 'Чужой объект', '{}', cb);
   insert into quality.location_nodes(id, canonical_key, "displayName", "nodeType", core_company_id) values
     ('n1-m33', 'Большевиков,22 (гений)', 'Большевиков, 22', 'object', ca);
-  perform set_config('quality.object_sync', '', true);
   -- 4 роли «как в РБИ» (наборы прав — таблица «флаг ROLE_MATRIX → действие», этап 2)
   insert into core.company_roles(company_id, name) values (ca, 'Админ 033') returning id into r_adm;
   insert into core.company_roles(company_id, name) values (ca, 'Зам. руководителя 033') returning id into r_dep;
@@ -93,10 +114,16 @@ begin
   union all select r_dir, ca, a from unnest(array['quality.view', 'quality.scope.company', 'construction.view']) a
   union all select r_eng, ca, a from unnest(array['quality.view', 'quality.edit', 'construction.view', 'construction.edit']) a
   union all select r_bng, cb, a from unnest(array['quality.view', 'quality.edit', 'construction.view', 'construction.edit']) a;
-  insert into core.role_assignments(company_id, user_id, role_id, quality_objects) values
-    (ca, uadm, r_adm, null), (ca, udep, r_dep, null), (ca, udir, r_dir, null),
-    (ca, ue1, r_eng, array[o1]), (ca, ue2, r_eng, array[o2]), (ca, ue0, r_eng, null), (cb, ub, r_bng, array[ob]);
-  insert into core.role_assignments(company_id, user_id, role_id) select ca, uqc, id from core.company_roles where company_id = ca and template_code = 'qc_engineer';
+  perform pg_temp.q53(ca);
+  perform pg_temp.q53(cb);
+  insert into core.role_assignments(company_id, user_id, role_id, project_id, quality_objects) values
+    (ca, uadm, r_adm, null, null), (ca, udep, r_dep, null, null), (ca, udir, r_dir, null, null),
+    (ca, ue1, r_eng, (select core_object_id from quality.project_objects where id = o1 and core_company_id = ca), array[o1]),
+    (ca, ue2, r_eng, (select core_object_id from quality.project_objects where id = o2 and core_company_id = ca), null),
+    (ca, ue0, r_eng, pa, null),
+    (cb, ub, r_bng, (select core_object_id from quality.project_objects where id = ob and core_company_id = cb), null);
+  insert into core.role_assignments(company_id, user_id, role_id, project_id)
+    select ca, uqc, id, pa from core.company_roles where company_id = ca and template_code = 'qc_engineer';
 
   perform pg_temp.mk('rbi_inspections', 'a1', ue1, format('core_company_id = %L, project_canonical_key = %L', ca, 'большевиков,22 (гений)'));
   perform pg_temp.mk('rbi_inspections', 'a2', ue2, format('core_company_id = %L, project_canonical_key = %L', ca, 'большевиков,22 (гений)'));
@@ -125,17 +152,17 @@ begin
   s := pg_temp.vis('sk_records');      res := res || pg_temp.t(s = 's1', 'инженер O1: СК ' || s);
   s := pg_temp.vis('project_meetings'); res := res || pg_temp.t(s = 'm1', 'инженер O1: совещания (m2 — чужая без объекта) ' || s);
   s := pg_temp.vis('rbi_inspection_items'); res := res || pg_temp.t(s = 'p1', 'инженер O1: пункты (p1 — к чужой проверке O1) ' || s);
-  -- Правка: только свои (в своём объекте или без объекта)
+  -- Правка: только свои (в своём объекте или без объекта); чужая — отказ сторожа (42501, -1) или «0 строк»
   res := res || pg_temp.t(pg_temp.rows($q$update quality.rbi_inspections set project_code = project_code where id = 'a1-m33'$q$) = 1, 'инженер: правит свою (O1)');
   res := res || pg_temp.t(pg_temp.rows($q$update quality.rbi_inspections set project_code = project_code where id = 'a4-m33'$q$) = 1, 'инженер: правит свою без объекта');
-  res := res || pg_temp.t(pg_temp.rows($q$update quality.rbi_inspections set project_code = project_code where id = 'a2-m33'$q$) = 0, 'инженер: чужую в своём объекте не правит');
-  res := res || pg_temp.t(pg_temp.rows($q$delete from quality.rbi_inspections where id = 'a2-m33'$q$) = 0, 'инженер: чужую в своём объекте не удаляет');
+  res := res || pg_temp.t(pg_temp.rows($q$update quality.rbi_inspections set template_title = 'x' where id = 'a2-m33'$q$) in (0, -1), 'инженер: чужую в своём объекте не правит');
+  res := res || pg_temp.t(pg_temp.rows($q$delete from quality.rbi_inspections where id = 'a2-m33'$q$) in (0, -1), 'инженер: чужую в своём объекте не удаляет');
   res := res || pg_temp.t(pg_temp.rows($q$delete from quality.rbi_inspections where id = 'a3-m33'$q$) = 0, 'инженер: чужой объект не удаляет');
   res := res || pg_temp.t(pg_temp.rows($q$update quality.rbi_inspections set project_canonical_key = 'школа 400 (крыленко)' where id = 'a1-m33'$q$) = -1,
                           'инженер: свою запись в чужой объект не переносит');
   res := res || pg_temp.t(pg_temp.rows($q$update quality.rbi_inspection_items set core_company_id = core_company_id where id = 'p1-m33'$q$) = 0,
                           'инженер: пункт чужой проверки не правит');
-  res := res || pg_temp.t(pg_temp.rows($q$update quality.rbi_tasks set core_company_id = core_company_id where id = 't1-m33'$q$) = 0,
+  res := res || pg_temp.t(pg_temp.rows($q$update quality.rbi_tasks set title = 'x' where id = 't1-m33'$q$) in (0, -1),
                           'инженер: чужую задачу своего объекта не правит');
   res := res || pg_temp.t(pg_temp.rows($q$update quality.sk_records set core_company_id = core_company_id where id = 's1-m33'$q$) = 1,
                           'инженер: СК своего объекта правит (canManageSK, как раньше у qc_engineer)');
@@ -172,12 +199,12 @@ begin
   res := res || pg_temp.t(pg_temp.err(format('update core.role_assignments set quality_object_keys = array[%L] where user_id = %L', 'школа 400 (крыленко)', ue1)) = 'OK'
                           and (select not ('школа 400 (крыленко)' = any (quality_object_keys)) from core.role_assignments where user_id = ue1),
                           'признаки объектов считает сервер (подставить нельзя)');
-  -- Без закреплённых объектов (null = все): как до 033 — свои проверки и задачи, СК всей компании
+  -- «Без объектов» (P2-0071, перенос 053: «только свои» на компанию → контейнер): записей объектов нет, в т. ч. СК
   perform pg_temp.as_user(ue0, ca);
-  s := pg_temp.vis('rbi_inspections'); res := res || pg_temp.t(s = '', 'инженер без объектов: только свои проверки (своих нет) ' || s);
-  s := pg_temp.vis('sk_records');      res := res || pg_temp.t(s = 's1,s2', 'инженер без объектов: СК всей компании ' || s);
+  s := pg_temp.vis('rbi_inspections'); res := res || pg_temp.t(s = '', 'инженер без объектов: проверок нет ' || s);
+  s := pg_temp.vis('sk_records');      res := res || pg_temp.t(s = '', 'инженер без объектов: СК объектов нет ' || s);
   perform pg_temp.as_user(uqc, ca);
-  s := pg_temp.vis('rbi_inspections'); res := res || pg_temp.t(s = '', 'qc_engineer (шаблон, без объектов): как раньше ' || s);
+  s := pg_temp.vis('rbi_inspections'); res := res || pg_temp.t(s = '', 'qc_engineer (шаблон, без объектов): проверок нет ' || s);
 
   -- Директор: видит всё, ничего не правит и не создаёт
   perform pg_temp.as_user(udir, ca);
@@ -214,17 +241,18 @@ begin
   j := quality.my_access(null);
   res := res || pg_temp.t(j ? 'objects' and jsonb_typeof(j -> 'objects') = 'null', 'my_access: директор — все объекты (null)');
 
-  -- Назначение с объектами (pf_assign_role) и список людей
+  -- Назначение (P2-0071: «объекты Качества» не принимаются — роль назначается на объект) и список людей
   perform pg_temp.as_user(uadm, ca);
   res := res || pg_temp.t(pg_temp.err(format('select public.pf_assign_role(%L, %L, null, null, null, array[%L])', uqc, r_eng, ob)) = '22023',
                           'назначение: объект другой компании — отказ');
-  res := res || pg_temp.t(pg_temp.err(format('select public.pf_assign_role(%L, %L, null, null, null, array[%L])', uqc, r_eng, 'нет-такого')) = '22023',
-                          'назначение: несуществующий объект — отказ');
-  v_id := public.pf_assign_role(uqc, r_eng, null, null, null, array[o2, ' ' || o2, '']);
-  res := res || pg_temp.t((select quality_objects from core.role_assignments where id = v_id) = array[o2], 'назначение: объекты по id, без дублей и пустых');
+  res := res || pg_temp.t(pg_temp.err(format('select public.pf_assign_role(%L, %L, null, null, null, array[%L])', uqc, r_eng, o2)) = '22023',
+                          'назначение: объекты Качества больше не принимаются');
+  v_id := public.pf_assign_role(uqc, r_eng, (select core_object_id from quality.project_objects where id = o2 and core_company_id = ca));
+  res := res || pg_temp.t((select project_id = (select core_object_id from quality.project_objects where id = o2 and core_company_id = ca)
+                                  and quality_objects is null from core.role_assignments where id = v_id), 'назначение: роль Качества — на объект');
   reset role;
-  res := res || pg_temp.t((select new_data -> 'quality_objects' from core.audit_log where record_id = v_id and action = 'ASSIGN') = jsonb_build_array(o2),
-                          'назначение: объекты в журнале');
+  res := res || pg_temp.t((select new_data -> 'quality_objects' from core.audit_log where record_id = v_id and action = 'ASSIGN') = 'null'::jsonb,
+                          'назначение: в журнале объектов Качества нет');
   perform pg_temp.as_user(uadm, ca);
   v_id := public.pf_assign_role(udir, r_eng, null, null, null, '{}');
   res := res || pg_temp.t((select quality_objects from core.role_assignments where id = v_id) is null, 'назначение: пустой список = все объекты');

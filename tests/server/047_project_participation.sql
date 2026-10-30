@@ -1,6 +1,8 @@
 -- P2-0048 (047): участие в проекте — назначение до места, «ответственный за факт», права План/Факта по области, «за кого»,
 -- «Изменить область» без отзыва, привязка и перепривязка инженера Качества, старые назначения — как прежде, изоляция компаний.
 -- Всё откатывается; отчёт — ERROR P0001 «FAIL всего: N». Запуск: после 047_project_participation_up.sql.
+-- P2-0071 (053): мост «объекты Качества» снят — у назначения нет объектов Качества, роль Качества назначается на объект,
+-- объекты Качества при назначении — отказ; проверки План/Факта и области не менялись.
 create or replace function pg_temp.as_user(u uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -115,10 +117,8 @@ begin
   reset role;
   res := res || pg_temp.t((select count(*) from core.audit_log where table_name = 'role_assignments' and new_data ->> 'user_id' = uiv::text
                            and action = 'ASSIGN') = 2, 'журнал: два назначения Иванова');
-  res := res || pg_temp.t((select bool_and(quality_objects is not distinct from (select array_agg(o.id order by o.id) from quality.project_objects o
-                                                where o.core_company_id = ca and o.core_object_id = pa))
-                           from pg_temp.ra() where user_id = uiv),
-                          'мост: у назначения на проект — объекты Качества этого проекта');
+  res := res || pg_temp.t((select bool_and(quality_objects is null) from pg_temp.ra() where user_id = uiv),
+                          'P2-0071: мост снят — у назначения на проект объектов Качества нет');
   perform pg_temp.as_user(uadm);
   -- пакет: 3 сотрудника × 2 места
   j := public.pf_set_participation(array[uiv, upe, uap], r_pto, pa, array[s2, s3]);
@@ -138,7 +138,7 @@ begin
   t := pg_temp.err(format('select public.pf_set_participation(%L, %L, %L)', array[uadm], r_for, pa));
   res := res || pg_temp.t(t like '42501%самому себе%', 'себе — отказ (' || t || ')');
   t := pg_temp.err(format('select public.pf_set_participation(%L, %L, %L)', array[uqe], r_qe, pa));
-  res := res || pg_temp.t(t like '22023%Роль Качества%', 'роль только Качества на проект — отказ (' || t || ')');
+  res := res || pg_temp.t(t = 'OK', 'P2-0071: роль только Качества — на проект (' || t || ')');
   t := pg_temp.err(format('select public.pf_set_participation(%L, %L, %L, %L)', array[uiv], r_for, pa, array[gen_random_uuid()]));
   res := res || pg_temp.t(t like '22023%Место не найдено%', 'чужое место — отказ (' || t || ')');
   -- список сотрудников показывает место и «ответственного»
@@ -239,34 +239,16 @@ begin
   t := pg_temp.err(format('select public.pf_fact_add(%L, %L, %L, 1)', p2, br, today));
   res := res || pg_temp.t(t = 'OK', 'ответственного нет — прораб компании вносит, как раньше');
 
-  -- инженер качества: привязка к объекту и перепривязка без отзыва (назначение на компанию с объектами Качества)
+  -- инженер качества (P2-0071: мост снят): участие на объект; объекты Качества не принимаются
   perform pg_temp.as_user(uadm);
-  j := public.pf_set_participation(array[uqe], r_qe, null, null, false, null, array[o1]);
-  res := res || pg_temp.t((j ->> 'added')::int = 1, 'инженер качества привязан к объекту 1');
-  perform pg_temp.as_user(uqe); perform set_config('request.headers', json_build_object('x-company-id', ca)::text, true);
-  res := res || pg_temp.t((select array_agg(x ->> 'id') from jsonb_array_elements(quality.my_access(null) -> 'objects') x) = array[o1],
-                          'Качество видит у инженера объект 1 (мост: назначение → объекты Качества): ' || coalesce((quality.my_access(null) -> 'objects')::text, 'null'));
-  perform set_config('request.headers', '{}', true); perform pg_temp.as_user(uadm);
-  select id into v_id2 from pg_temp.ra() where user_id = uqe and revoked_at is null;
-  j := public.pf_set_participation(array[uqe], r_qe, null, null, false, null, array[o2]);
-  res := res || pg_temp.t(j = '{"added": 0, "changed": 1, "revoked": 0}', 'перепривязан на объект 2 (' || j::text || ')');
-  perform pg_temp.as_user(uqe); perform set_config('request.headers', json_build_object('x-company-id', ca)::text, true);
-  res := res || pg_temp.t((select array_agg(x ->> 'id') from jsonb_array_elements(quality.my_access(null) -> 'objects') x) = array[o2],
-                          'после перепривязки Качество видит у инженера только объект 2');
-  perform set_config('request.headers', '{}', true); perform pg_temp.as_user(uadm);
-  res := res || pg_temp.t((select quality_objects from pg_temp.ra() where id = v_id2 and revoked_at is null) = array[o2],
-                          'то же назначение, объект 2');
-  reset role;
-  res := res || pg_temp.t((select count(*) from core.audit_log where table_name = 'role_assignments' and record_id = v_id2 and action = 'CHANGE'
-                           and old_data -> 'quality_objects' = to_jsonb(array[o1]) and new_data -> 'quality_objects' = to_jsonb(array[o2])) = 1,
-                          'журнал: объект 1 → объект 2');
-  perform pg_temp.as_user(uadm);
-  j := public.pf_set_participation(array[uqe], r_qe, null, null, false, null, array[o1, o2]);
-  res := res || pg_temp.t((select quality_objects from pg_temp.ra() where id = v_id2) = array[o1, o2], 'добавлен второй объект');
-  t := pg_temp.err(format('select public.pf_set_participation(%L, %L, null, null, false, null, %L)', array[uqe], r_qe, array['нет-такого']));
-  res := res || pg_temp.t(t like '22023%Объект не найден%', 'несуществующий объект — отказ');
+  t := pg_temp.err(format('select public.pf_set_participation(%L, %L, null, null, false, null, %L)', array[uqe], r_qe, array[o1]));
+  res := res || pg_temp.t(t like '22023%Объекты Качества больше не выбираются%', 'объекты Качества — отказ (' || t || ')');
+  res := res || pg_temp.t((select count(*) from pg_temp.ra() where user_id = uqe and project_id = pa and revoked_at is null
+                             and quality_objects is null) = 1, 'инженер качества — участие на объект, без объектов Качества');
+  j := public.pf_set_participation(array[uqe], r_qe, pa);
+  res := res || pg_temp.t(j = '{"added": 0, "changed": 0, "revoked": 0}', 'повтор — без изменений (' || j::text || ')');
   t := pg_temp.err(format('select public.pf_set_participation(%L, %L, %L, null, false, null, %L)', array[uiv], r_for, pa, array[o1]));
-  res := res || pg_temp.t(t like '22023%всю компанию%', 'объекты Качества при назначении на проект — отказ');
+  res := res || pg_temp.t(t like '22023%Объекты Качества больше не выбираются%', 'объекты Качества при назначении на проект — отказ');
 
   -- срок, отзыв
   reset role;

@@ -3,6 +3,7 @@
 -- «не разобрано» (не видно ни одной); подделка id; вторая компания; функции закрыты. Всё откатывается; отчёт — ERROR P0001.
 -- Запуск: после 039a_quality_contractors_by_id_up.sql. Пользователи и компании — тестовые (@test.invalid, is_test).
 -- Альфа: F1 «ООО Ромашка» (связь ключа «romashka-old» из Качества), F2 «Лютик», F3 «Общий» + связь ключа «общий» к F1 (две фирмы).
+-- P2-0071 (053): роли теста получают тонкие действия Качества по прежним ключам (как перенос 053).
 create or replace function pg_temp.as_user(u uuid, company uuid) returns void language plpgsql as $f$
 begin
   reset role;
@@ -52,6 +53,23 @@ begin
   if p_set is not null then execute format('update quality.%I set %s where id = %L', tbl, p_set, mark || '-m39a'); end if;
 end $f$;
 
+-- P2-0071: тонкие действия Качества по прежним ключам роли — то же правило, что перенос 053 (pg_temp.quality_fine_actions)
+create or replace function pg_temp.quality_fine(r uuid, c uuid) returns void language plpgsql as $f$
+declare a text[] := array(select action from core.company_role_permissions where role_id = r and company_id = c);
+begin
+  insert into core.company_role_permissions(role_id, company_id, action)
+  select r, c, x from unnest(
+      (case when 'quality.view' = any(a) then array['quality.inspections.view', 'quality.tasks.view', 'quality.meetings.view',
+         'quality.method.view', 'quality.reports.view', 'quality.sk.view'] else '{}'::text[] end)
+   || (case when 'quality.edit' = any(a) then array['quality.inspections.create', 'quality.inspections.delete', 'quality.tasks.create',
+         'quality.tasks.work', 'quality.tasks.delete', 'quality.meetings.edit', 'quality.method.edit', 'quality.reports.edit',
+         'quality.sk.import'] else '{}'::text[] end)
+   || (case when 'quality.edit' = any(a) and ('quality.manage' = any(a) or 'quality.scope.company' = any(a)
+              or 'quality.scope.contractor' = any(a)) then array['quality.inspections.edit_any', 'quality.tasks.edit_any'] else '{}'::text[] end)) x
+  where exists (select 1 from core.permission_catalog pc where pc.action = x)
+  on conflict do nothing;
+end $f$;
+
 do $$
 declare
   uadm uuid := gen_random_uuid(); uc1 uuid := gen_random_uuid(); uc2 uuid := gen_random_uuid(); ub uuid := gen_random_uuid();
@@ -78,6 +96,7 @@ begin
   select r_adm, ca, a from unnest(array['quality.view', 'quality.edit', 'quality.manage', 'quality.scope.company']) a
   union all select r_con, ca, a from unnest(array['quality.view', 'quality.edit', 'quality.scope.contractor']) a
   union all select r_bcon, cb, a from unnest(array['quality.view', 'quality.edit', 'quality.scope.contractor']) a;
+  perform pg_temp.quality_fine(x.r, x.c) from (values (r_adm, ca), (r_con, ca), (r_bcon, cb)) x(r, c);
   insert into core.role_assignments(company_id, user_id, role_id, counterparty_id) values
     (ca, uadm, r_adm, null), (ca, uc1, r_con, f1), (ca, uc2, r_con, f2), (cb, ub, r_bcon, fb);
 
