@@ -6,6 +6,7 @@
  */
 import type { AuthApi, SessionState, SignInResult } from './auth.service.ts';
 import { deviceUserKey, QUALITY_ACCESS_COPY_PREFIX } from './quality-bridge.ts';
+import { readShowTest, visibleCompanies } from './test-companies.ts';
 
 export type EntryMode = 'none' | 'email' | 'pin' | 'demo';
 
@@ -272,8 +273,11 @@ export function createPlatform(deps: PlatformDeps): Platform {
   function fromParts(email: string, parsed: { isPlatformAdmin: boolean; companies: PlatformCompany[] },
     profile: { fullName: string | null; mustChangePassword: boolean; userId: string | null }): PlatformState {
     const saved = safeGet(deps.storage, COMPANY_KEY);
-    const companyId = parsed.companies.some((c) => c.id === saved) ? saved
-      : (parsed.companies.find((c) => c.modules.length > 0) || parsed.companies[0] || null)?.id || null;
+    // P2-0075: администратору платформы — не скрытая тестовая компания (если такая есть); сохранённая скрытая не выбирается
+    const shown = visibleCompanies(parsed.companies, { isPlatformAdmin: parsed.isPlatformAdmin, showTest: readShowTest(deps.storage) });
+    const pool = shown.length ? shown : parsed.companies;
+    const companyId = pool.some((c) => c.id === saved) ? saved
+      : (pool.find((c) => c.modules.length > 0) || pool[0] || null)?.id || null;
     return { mode: 'email', email, isPlatformAdmin: parsed.isPlatformAdmin, companies: parsed.companies, companyId, ...profile };
   }
 

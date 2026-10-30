@@ -1,37 +1,37 @@
-function V(m) {
-  return m.code === "42501" ? "Только для администратора платформы" : /failed to fetch|network|load failed/i.test(m.message) ? "Нет связи с сервером. Попробуйте позже" : /[а-яё]/i.test(m.message) ? m.message : "Не удалось выполнить. Попробуйте ещё раз";
+function ee(s) {
+  return s.code === "42501" ? "Только для администратора платформы" : /failed to fetch|network|load failed/i.test(s.message) ? "Нет связи с сервером. Попробуйте позже" : /[а-яё]/i.test(s.message) ? s.message : "Не удалось выполнить. Попробуйте ещё раз";
 }
-function se(m) {
-  const f = async (r, u, p) => {
+function ae(s) {
+  const a = async (r, l, m) => {
     try {
-      const { data: h, error: y } = await m(r, u);
-      return y ? { ok: !1, message: V(y) } : { ok: !0, value: p(h) };
-    } catch (h) {
-      return { ok: !1, message: V({ message: h instanceof Error ? h.message : "" }) };
+      const { data: w, error: E } = await s(r, l);
+      return E ? { ok: !1, message: ee(E) } : { ok: !0, value: m(w) };
+    } catch (w) {
+      return { ok: !1, message: ee({ message: w instanceof Error ? w.message : "" }) };
     }
   };
   return {
-    companies: () => f("pf_platform_companies", {}, (r) => (Array.isArray(r) ? r : []).map((u) => ({
-      id: String(u.id),
-      name: String(u.name || ""),
-      is_test: u.is_test === !0,
-      created_at: String(u.created_at || ""),
-      people: Number(u.people) || 0,
-      modules: (Array.isArray(u.modules) ? u.modules : []).map((p) => ({
-        code: String(p.code),
-        name: String(p.name || p.code),
-        managed: p.managed === !0,
-        enabled: p.enabled === null || p.enabled === void 0 ? null : p.enabled === !0
+    companies: () => a("pf_platform_companies", {}, (r) => (Array.isArray(r) ? r : []).map((l) => ({
+      id: String(l.id),
+      name: String(l.name || ""),
+      is_test: l.is_test === !0,
+      created_at: String(l.created_at || ""),
+      people: Number(l.people) || 0,
+      modules: (Array.isArray(l.modules) ? l.modules : []).map((m) => ({
+        code: String(m.code),
+        name: String(m.name || m.code),
+        managed: m.managed === !0,
+        enabled: m.enabled === null || m.enabled === void 0 ? null : m.enabled === !0
       }))
     }))),
-    createCompany: (r, u) => f("pf_platform_create_company", { p_name: r, p_is_test: u }, (p) => String(p)),
-    setModule: (r, u, p) => f("pf_platform_set_module", { p_company: r, p_module: u, p_enabled: p }, () => {
+    createCompany: (r, l) => a("pf_platform_create_company", { p_name: r, p_is_test: l }, (m) => String(m)),
+    setModule: (r, l, m) => a("pf_platform_set_module", { p_company: r, p_module: l, p_enabled: m }, () => {
     }),
-    setCompanyAdmin: (r, u) => f("pf_platform_set_company_admin", { p_company: r, p_email: u }, () => {
+    setCompanyAdmin: (r, l) => a("pf_platform_set_company_admin", { p_company: r, p_email: l }, () => {
     })
   };
 }
-var W = { exports: {} }, i = {};
+var X = { exports: {} }, i = {};
 /**
  * @license React
  * react.production.js
@@ -41,15 +41,15 @@ var W = { exports: {} }, i = {};
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-var F;
-function ae() {
-  if (F) return i;
-  F = 1;
-  var m = Symbol.for("react.transitional.element"), f = Symbol.for("react.portal"), r = Symbol.for("react.fragment"), u = Symbol.for("react.strict_mode"), p = Symbol.for("react.profiler"), h = Symbol.for("react.consumer"), y = Symbol.for("react.context"), P = Symbol.for("react.forward_ref"), M = Symbol.for("react.suspense"), U = Symbol.for("react.memo"), j = Symbol.for("react.lazy"), O = Symbol.for("react.activity"), q = Symbol.for("react.view_transition"), k = Symbol.iterator;
-  function N(e) {
+var te;
+function ue() {
+  if (te) return i;
+  te = 1;
+  var s = Symbol.for("react.transitional.element"), a = Symbol.for("react.portal"), r = Symbol.for("react.fragment"), l = Symbol.for("react.strict_mode"), m = Symbol.for("react.profiler"), w = Symbol.for("react.consumer"), E = Symbol.for("react.context"), N = Symbol.for("react.forward_ref"), M = Symbol.for("react.suspense"), G = Symbol.for("react.memo"), j = Symbol.for("react.lazy"), H = Symbol.for("react.activity"), K = Symbol.for("react.view_transition"), k = Symbol.iterator;
+  function L(e) {
     return e === null || typeof e != "object" ? null : (e = k && e[k] || e["@@iterator"], typeof e == "function" ? e : null);
   }
-  var I = {
+  var Y = {
     isMounted: function() {
       return !1;
     },
@@ -59,65 +59,65 @@ function ae() {
     },
     enqueueSetState: function() {
     }
-  }, B = Object.assign, x = {};
-  function b(e, t, n) {
-    this.props = e, this.context = t, this.refs = x, this.updater = n || I;
+  }, S = Object.assign, A = {};
+  function _(e, t, n) {
+    this.props = e, this.context = t, this.refs = A, this.updater = n || Y;
   }
-  b.prototype.isReactComponent = {}, b.prototype.setState = function(e, t) {
+  _.prototype.isReactComponent = {}, _.prototype.setState = function(e, t) {
     if (typeof e != "object" && typeof e != "function" && e != null)
       throw Error(
         "takes an object of state variables to update or a function which returns an object of state variables."
       );
     this.updater.enqueueSetState(this, e, t, "setState");
-  }, b.prototype.forceUpdate = function(e) {
+  }, _.prototype.forceUpdate = function(e) {
     this.updater.enqueueForceUpdate(this, e, "forceUpdate");
   };
-  function R() {
+  function D() {
   }
-  R.prototype = b.prototype;
-  function A(e, t, n) {
-    this.props = e, this.context = t, this.refs = x, this.updater = n || I;
+  D.prototype = _.prototype;
+  function I(e, t, n) {
+    this.props = e, this.context = t, this.refs = A, this.updater = n || Y;
   }
-  var C = A.prototype = new R();
-  C.constructor = A, B(C, b.prototype), C.isPureReactComponent = !0;
-  var L = Array.isArray;
-  function z() {
+  var U = I.prototype = new D();
+  U.constructor = I, S(U, _.prototype), U.isPureReactComponent = !0;
+  var p = Array.isArray;
+  function v() {
   }
-  var d = { H: null, A: null, T: null, S: null }, $ = Object.prototype.hasOwnProperty;
-  function g(e, t, n) {
+  var u = { H: null, A: null, T: null, S: null }, P = Object.prototype.hasOwnProperty;
+  function R(e, t, n) {
     var o = n.ref;
     return {
-      $$typeof: m,
+      $$typeof: s,
       type: e,
       key: t,
       ref: o !== void 0 ? o : null,
       props: n
     };
   }
-  function _(e, t) {
-    return g(e.type, t, e.props);
+  function V(e, t) {
+    return R(e.type, t, e.props);
   }
-  function T(e) {
-    return typeof e == "object" && e !== null && e.$$typeof === m;
+  function z(e) {
+    return typeof e == "object" && e !== null && e.$$typeof === s;
   }
-  function w(e) {
+  function q(e) {
     var t = { "=": "=0", ":": "=2" };
     return "$" + e.replace(/[=:]/g, function(n) {
       return t[n];
     });
   }
-  var Y = /\/+/g;
-  function S(e, t) {
-    return typeof e == "object" && e !== null && e.key != null ? w("" + e.key) : t.toString(36);
+  var $ = /\/+/g;
+  function g(e, t) {
+    return typeof e == "object" && e !== null && e.key != null ? q("" + e.key) : t.toString(36);
   }
-  function G(e) {
+  function C(e) {
     switch (e.status) {
       case "fulfilled":
         return e.value;
       case "rejected":
         throw e.reason;
       default:
-        switch (typeof e.status == "string" ? e.then(z, z) : (e.status = "pending", e.then(
+        switch (typeof e.status == "string" ? e.then(v, v) : (e.status = "pending", e.then(
           function(t) {
             e.status === "pending" && (e.status = "fulfilled", e.value = t);
           },
@@ -133,87 +133,87 @@ function ae() {
     }
     throw e;
   }
-  function H(e, t, n, o, s) {
-    var c = typeof e;
-    (c === "undefined" || c === "boolean") && (e = null);
-    var l = !1;
-    if (e === null) l = !0;
+  function y(e, t, n, o, c) {
+    var f = typeof e;
+    (f === "undefined" || f === "boolean") && (e = null);
+    var x = !1;
+    if (e === null) x = !0;
     else
-      switch (c) {
+      switch (f) {
         case "bigint":
         case "string":
         case "number":
-          l = !0;
+          x = !0;
           break;
         case "object":
           switch (e.$$typeof) {
-            case m:
-            case f:
-              l = !0;
+            case s:
+            case a:
+              x = !0;
               break;
             case j:
-              return l = e._init, H(
-                l(e._payload),
+              return x = e._init, y(
+                x(e._payload),
                 t,
                 n,
                 o,
-                s
+                c
               );
           }
       }
-    if (l)
-      return s = s(e), l = o === "" ? "." + S(e, 0) : o, L(s) ? (n = "", l != null && (n = l.replace(Y, "$&/") + "/"), H(s, t, n, "", function(ie) {
-        return ie;
-      })) : s != null && (T(s) && (s = _(
-        s,
-        n + (s.key == null || e && e.key === s.key ? "" : ("" + s.key).replace(
-          Y,
+    if (x)
+      return c = c(e), x = o === "" ? "." + g(e, 0) : o, p(c) ? (n = "", x != null && (n = x.replace($, "$&/") + "/"), y(c, t, n, "", function(se) {
+        return se;
+      })) : c != null && (z(c) && (c = V(
+        c,
+        n + (c.key == null || e && e.key === c.key ? "" : ("" + c.key).replace(
+          $,
           "$&/"
-        ) + "/") + l
-      )), t.push(s)), 1;
-    l = 0;
-    var E = o === "" ? "." : o + ":";
-    if (L(e))
-      for (var v = 0; v < e.length; v++)
-        o = e[v], c = E + S(o, v), l += H(
+        ) + "/") + x
+      )), t.push(c)), 1;
+    x = 0;
+    var T = o === "" ? "." : o + ":";
+    if (p(e))
+      for (var h = 0; h < e.length; h++)
+        o = e[h], f = T + g(o, h), x += y(
           o,
           t,
           n,
-          c,
-          s
+          f,
+          c
         );
-    else if (v = N(e), typeof v == "function")
-      for (e = v.call(e), v = 0; !(o = e.next()).done; )
-        o = o.value, c = E + S(o, v++), l += H(
+    else if (h = L(e), typeof h == "function")
+      for (e = h.call(e), h = 0; !(o = e.next()).done; )
+        o = o.value, f = T + g(o, h++), x += y(
           o,
           t,
           n,
-          c,
-          s
+          f,
+          c
         );
-    else if (c === "object") {
+    else if (f === "object") {
       if (typeof e.then == "function")
-        return H(
-          G(e),
+        return y(
+          C(e),
           t,
           n,
           o,
-          s
+          c
         );
       throw t = String(e), Error(
         "Objects are not valid as a React child (found: " + (t === "[object Object]" ? "object with keys {" + Object.keys(e).join(", ") + "}" : t) + "). If you meant to render a collection of children, use an array instead."
       );
     }
-    return l;
+    return x;
   }
-  function K(e, t, n) {
+  function b(e, t, n) {
     if (e == null) return e;
-    var o = [], s = 0;
-    return H(e, o, "", "", function(c) {
-      return t.call(n, c, s++);
+    var o = [], c = 0;
+    return y(e, o, "", "", function(f) {
+      return t.call(n, f, c++);
     }), o;
   }
-  function ne(e) {
+  function Q(e) {
     if (e._status === -1) {
       var t = e._result, n = t();
       n.then(
@@ -228,7 +228,7 @@ function ae() {
     if (e._status === 1) return e._result.default;
     throw e._result;
   }
-  var X = typeof reportError == "function" ? reportError : function(e) {
+  var O = typeof reportError == "function" ? reportError : function(e) {
     if (typeof window == "object" && typeof window.ErrorEvent == "function") {
       var t = new window.ErrorEvent("error", {
         bubbles: !0,
@@ -243,29 +243,29 @@ function ae() {
     }
     console.error(e);
   };
-  function Z(e) {
-    var t = d.T, n = {};
-    n.types = t !== null ? t.types : null, d.T = n;
+  function B(e) {
+    var t = u.T, n = {};
+    n.types = t !== null ? t.types : null, u.T = n;
     try {
-      var o = e(), s = d.S;
-      s !== null && s(n, o), typeof o == "object" && o !== null && typeof o.then == "function" && o.then(z, X);
-    } catch (c) {
-      X(c);
+      var o = e(), c = u.S;
+      c !== null && c(n, o), typeof o == "object" && o !== null && typeof o.then == "function" && o.then(v, O);
+    } catch (f) {
+      O(f);
     } finally {
-      t !== null && n.types !== null && (t.types = n.types), d.T = t;
+      t !== null && n.types !== null && (t.types = n.types), u.T = t;
     }
   }
-  function J(e) {
-    var t = d.T;
+  function F(e) {
+    var t = u.T;
     if (t !== null) {
       var n = t.types;
       n === null ? t.types = [e] : n.indexOf(e) === -1 && n.push(e);
-    } else Z(J.bind(null, e));
+    } else B(F.bind(null, e));
   }
-  var oe = {
-    map: K,
+  var ie = {
+    map: b,
     forEach: function(e, t, n) {
-      K(
+      b(
         e,
         function() {
           t.apply(this, arguments);
@@ -275,29 +275,29 @@ function ae() {
     },
     count: function(e) {
       var t = 0;
-      return K(e, function() {
+      return b(e, function() {
         t++;
       }), t;
     },
     toArray: function(e) {
-      return K(e, function(t) {
+      return b(e, function(t) {
         return t;
       }) || [];
     },
     only: function(e) {
-      if (!T(e))
+      if (!z(e))
         throw Error(
           "React.Children.only expected to receive a single React element child."
         );
       return e;
     }
   };
-  return i.Activity = O, i.Children = oe, i.Component = b, i.Fragment = r, i.Profiler = p, i.PureComponent = A, i.StrictMode = u, i.Suspense = M, i.ViewTransition = q, i.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = d, i.__COMPILER_RUNTIME = {
+  return i.Activity = H, i.Children = ie, i.Component = _, i.Fragment = r, i.Profiler = m, i.PureComponent = I, i.StrictMode = l, i.Suspense = M, i.ViewTransition = K, i.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = u, i.__COMPILER_RUNTIME = {
     __proto__: null,
     c: function(e) {
-      return d.H.useMemoCache(e);
+      return u.H.useMemoCache(e);
     }
-  }, i.addTransitionType = J, i.cache = function(e) {
+  }, i.addTransitionType = F, i.cache = function(e) {
     return function() {
       return e.apply(null, arguments);
     };
@@ -308,113 +308,113 @@ function ae() {
       throw Error(
         "The argument must be a React element, but you passed " + e + "."
       );
-    var o = B({}, e.props), s = e.key;
+    var o = S({}, e.props), c = e.key;
     if (t != null)
-      for (c in t.key !== void 0 && (s = "" + t.key), t)
-        !$.call(t, c) || c === "key" || c === "__self" || c === "__source" || c === "ref" && t.ref === void 0 || (o[c] = t[c]);
-    var c = arguments.length - 2;
-    if (c === 1) o.children = n;
-    else if (1 < c) {
-      for (var l = Array(c), E = 0; E < c; E++)
-        l[E] = arguments[E + 2];
-      o.children = l;
+      for (f in t.key !== void 0 && (c = "" + t.key), t)
+        !P.call(t, f) || f === "key" || f === "__self" || f === "__source" || f === "ref" && t.ref === void 0 || (o[f] = t[f]);
+    var f = arguments.length - 2;
+    if (f === 1) o.children = n;
+    else if (1 < f) {
+      for (var x = Array(f), T = 0; T < f; T++)
+        x[T] = arguments[T + 2];
+      o.children = x;
     }
-    return g(e.type, s, o);
+    return R(e.type, c, o);
   }, i.createContext = function(e) {
     return e = {
-      $$typeof: y,
+      $$typeof: E,
       _currentValue: e,
       _currentValue2: e,
       _threadCount: 0,
       Provider: null,
       Consumer: null
     }, e.Provider = e, e.Consumer = {
-      $$typeof: h,
+      $$typeof: w,
       _context: e
     }, e;
   }, i.createElement = function(e, t, n) {
-    var o, s = {}, c = null;
+    var o, c = {}, f = null;
     if (t != null)
-      for (o in t.key !== void 0 && (c = "" + t.key), t)
-        $.call(t, o) && o !== "key" && o !== "__self" && o !== "__source" && (s[o] = t[o]);
-    var l = arguments.length - 2;
-    if (l === 1) s.children = n;
-    else if (1 < l) {
-      for (var E = Array(l), v = 0; v < l; v++)
-        E[v] = arguments[v + 2];
-      s.children = E;
+      for (o in t.key !== void 0 && (f = "" + t.key), t)
+        P.call(t, o) && o !== "key" && o !== "__self" && o !== "__source" && (c[o] = t[o]);
+    var x = arguments.length - 2;
+    if (x === 1) c.children = n;
+    else if (1 < x) {
+      for (var T = Array(x), h = 0; h < x; h++)
+        T[h] = arguments[h + 2];
+      c.children = T;
     }
     if (e && e.defaultProps)
-      for (o in l = e.defaultProps, l)
-        s[o] === void 0 && (s[o] = l[o]);
-    return g(e, c, s);
+      for (o in x = e.defaultProps, x)
+        c[o] === void 0 && (c[o] = x[o]);
+    return R(e, f, c);
   }, i.createRef = function() {
     return { current: null };
   }, i.forwardRef = function(e) {
-    return { $$typeof: P, render: e };
-  }, i.isValidElement = T, i.lazy = function(e) {
+    return { $$typeof: N, render: e };
+  }, i.isValidElement = z, i.lazy = function(e) {
     return {
       $$typeof: j,
       _payload: { _status: -1, _result: e },
-      _init: ne
+      _init: Q
     };
   }, i.memo = function(e, t) {
     return {
-      $$typeof: U,
+      $$typeof: G,
       type: e,
       compare: t === void 0 ? null : t
     };
-  }, i.startTransition = Z, i.unstable_useCacheRefresh = function() {
-    return d.H.useCacheRefresh();
+  }, i.startTransition = B, i.unstable_useCacheRefresh = function() {
+    return u.H.useCacheRefresh();
   }, i.use = function(e) {
-    return d.H.use(e);
+    return u.H.use(e);
   }, i.useActionState = function(e, t, n) {
-    return d.H.useActionState(e, t, n);
+    return u.H.useActionState(e, t, n);
   }, i.useCallback = function(e, t) {
-    return d.H.useCallback(e, t);
+    return u.H.useCallback(e, t);
   }, i.useContext = function(e) {
-    return d.H.useContext(e);
+    return u.H.useContext(e);
   }, i.useDebugValue = function() {
   }, i.useDeferredValue = function(e, t) {
-    return d.H.useDeferredValue(e, t);
+    return u.H.useDeferredValue(e, t);
   }, i.useEffect = function(e, t) {
-    return d.H.useEffect(e, t);
+    return u.H.useEffect(e, t);
   }, i.useEffectEvent = function(e) {
-    return d.H.useEffectEvent(e);
+    return u.H.useEffectEvent(e);
   }, i.useId = function() {
-    return d.H.useId();
+    return u.H.useId();
   }, i.useImperativeHandle = function(e, t, n) {
-    return d.H.useImperativeHandle(e, t, n);
+    return u.H.useImperativeHandle(e, t, n);
   }, i.useInsertionEffect = function(e, t) {
-    return d.H.useInsertionEffect(e, t);
+    return u.H.useInsertionEffect(e, t);
   }, i.useLayoutEffect = function(e, t) {
-    return d.H.useLayoutEffect(e, t);
+    return u.H.useLayoutEffect(e, t);
   }, i.useMemo = function(e, t) {
-    return d.H.useMemo(e, t);
+    return u.H.useMemo(e, t);
   }, i.useOptimistic = function(e, t) {
-    return d.H.useOptimistic(e, t);
+    return u.H.useOptimistic(e, t);
   }, i.useReducer = function(e, t, n) {
-    return d.H.useReducer(e, t, n);
+    return u.H.useReducer(e, t, n);
   }, i.useRef = function(e) {
-    return d.H.useRef(e);
+    return u.H.useRef(e);
   }, i.useState = function(e) {
-    return d.H.useState(e);
+    return u.H.useState(e);
   }, i.useSyncExternalStore = function(e, t, n) {
-    return d.H.useSyncExternalStore(
+    return u.H.useSyncExternalStore(
       e,
       t,
       n
     );
   }, i.useTransition = function() {
-    return d.H.useTransition();
+    return u.H.useTransition();
   }, i.version = "19.3.1", i;
 }
-var ee;
-function ue() {
-  return ee || (ee = 1, W.exports = ae()), W.exports;
+var re;
+function de() {
+  return re || (re = 1, X.exports = ue()), X.exports;
 }
-ue();
-const de = `
+de();
+const ce = `
 .sui-menu{position:relative;display:inline-flex;flex:none}
 .sui-menu-btn{min-width:40px;min-height:40px;padding:0 10px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main);font-size:18px;font-weight:900;line-height:1;cursor:pointer}
 .sui-menu-btn:hover,.sui-menu-btn[aria-expanded=true]{background:var(--hover-bg)}
@@ -473,7 +473,7 @@ const de = `
 .sui-table td{padding:2px 0;border:0}
 .sui-table td[data-label]::before{content:attr(data-label) ': ';font-size:11px;color:var(--text-muted)}
 }
-`, ce = `
+`, le = `
 .pf-login{max-width:380px;margin:24px auto;padding:20px;display:flex;flex-direction:column;gap:12px}
 .pf-field{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--text-muted)}
 .pf-field input{font-size:14px;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
@@ -484,140 +484,183 @@ const de = `
 .pf-bar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 24px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--card-border)}
 .pf-bar b{color:var(--text-main)}
 .pf-muted{color:var(--text-muted);font-size:13px}
-`, pe = de + ce + `
+`, J = "platform2_show_test_companies", pe = "rbi:platform-show-test";
+function fe(s) {
+  try {
+    return !!s && s.getItem(J) === "1";
+  } catch {
+    return !1;
+  }
+}
+function me(s, a) {
+  try {
+    if (!s) return;
+    a ? s.setItem(J, "1") : s.removeItem(J);
+  } catch {
+  }
+}
+function xe(s, a) {
+  return !!s.is_test && a.isPlatformAdmin && !a.showTest && !(s.roles && s.roles.length) && s.id !== a.keepId;
+}
+function ge(s, a) {
+  return s.filter((r) => !xe(r, a));
+}
+const he = ce + le + `
 .sui-stack .pf-btn{min-height:44px}
-`, te = {
+`, ne = {
   knowledge: "Работает вместе с «Качеством»: документы и чек-листы компании, видят все с доступом к Качеству.",
   ai: "Работает вместе с «Качеством». Кому именно — галочка «ИИ-помощник» в роли (Компания → Роли)."
 };
-function a(m, f, r = {}, u) {
-  const p = m.createElement(f);
-  for (const [h, y] of Object.entries(r)) p.setAttribute(h, y);
-  return u !== void 0 && (p.textContent = u), p;
+function d(s, a, r = {}, l) {
+  const m = s.createElement(a);
+  for (const [w, E] of Object.entries(r)) m.setAttribute(w, E);
+  return l !== void 0 && (m.textContent = l), m;
 }
-function Q(m) {
-  const f = a(m, "div", { class: "sui-msg", role: "status", hidden: "" });
-  return f.show = (r, u) => {
-    f.dataset.kind = r, f.textContent = u, f.hidden = !1;
-  }, f;
+function Z(s) {
+  const a = d(s, "div", { class: "sui-msg", role: "status", hidden: "" });
+  return a.show = (r, l) => {
+    a.dataset.kind = r, a.textContent = l, a.hidden = !1;
+  }, a;
 }
-function le(m, f) {
-  const r = m.ownerDocument, { api: u } = f;
-  let p = !0;
-  const h = a(r, "div", { class: "sui-stack", "data-testid": "pa-root" });
-  m.replaceChildren(h);
-  const y = a(r, "form", { class: "sui-card sui-stack", "data-testid": "pa-create", novalidate: "" }), P = a(r, "input", { class: "sui-input", name: "name", placeholder: "Название компании", "aria-label": "Название компании" }), M = a(r, "input", { type: "checkbox", name: "is_test" }), U = a(r, "label", { class: "sui-check" });
-  U.append(M, r.createTextNode("тестовая"));
-  const j = a(r, "button", { type: "submit", class: "pf-btn" }, "Создать компанию"), O = Q(r), q = a(r, "div", { class: "sui-row" });
-  q.append(P, U, j), y.append(
-    a(r, "h3", { class: "sui-section-title" }, "Новая компания"),
-    a(r, "div", { class: "sui-hint" }, "При создании у компании появляются 9 ролей-шаблонов и включается «План/Факт». Людей заводит администратор компании."),
-    q,
-    O
+function ve(s, a) {
+  const r = s.ownerDocument, { api: l } = a;
+  let m = !0;
+  const w = d(r, "div", { class: "sui-stack", "data-testid": "pa-root" });
+  s.replaceChildren(w);
+  const E = d(r, "form", { class: "sui-card sui-stack", "data-testid": "pa-create", novalidate: "" }), N = d(r, "input", { class: "sui-input", name: "name", placeholder: "Название компании", "aria-label": "Название компании" }), M = d(r, "input", { type: "checkbox", name: "is_test" }), G = d(r, "label", { class: "sui-check" });
+  G.append(M, r.createTextNode("тестовая"));
+  const j = d(r, "button", { type: "submit", class: "pf-btn" }, "Создать компанию"), H = Z(r), K = d(r, "div", { class: "sui-row" });
+  K.append(N, G, j), E.append(
+    d(r, "h3", { class: "sui-section-title" }, "Новая компания"),
+    d(r, "div", { class: "sui-hint" }, "При создании у компании появляются 9 ролей-шаблонов и включается «План/Факт». Людей заводит администратор компании."),
+    K,
+    H
   );
-  const k = a(r, "div", { class: "sui-stack", "data-testid": "pa-list" }), N = Q(r);
-  h.append(
-    a(r, "div", { class: "sui-hint" }, "Компании платформы и их модули. Раздел видит только администратор платформы; каждое изменение пишется в журнал."),
-    y,
-    N,
+  const k = d(r, "div", { class: "sui-stack", "data-testid": "pa-list" }), L = Z(r), Y = a.storage !== void 0 ? a.storage : (() => {
+    var p;
+    try {
+      return ((p = r.defaultView) == null ? void 0 : p.localStorage) ?? null;
+    } catch {
+      return null;
+    }
+  })(), S = d(r, "input", { type: "checkbox", "data-testid": "pa-show-test" });
+  S.checked = fe(Y);
+  const A = d(r, "label", { class: "sui-check", hidden: "" });
+  A.append(S, r.createTextNode("Показать тестовые")), w.append(
+    d(r, "div", { class: "sui-hint" }, "Компании платформы и их модули. Раздел видит только администратор платформы; каждое изменение пишется в журнал."),
+    E,
+    A,
+    L,
     k
   );
+  let _ = [];
+  function D() {
+    const p = _.filter((u) => u.is_test).length;
+    A.hidden = p === 0, A.lastChild.textContent = `Показать тестовые (${p})`;
+    const v = ge(_, { isPlatformAdmin: !0, showTest: S.checked });
+    k.replaceChildren(...v.map(U)), _.length ? v.length || k.appendChild(d(r, "div", { class: "sui-hint" }, "Есть только тестовые компании — отметьте «Показать тестовые».")) : k.appendChild(d(r, "div", { class: "sui-hint" }, "Компаний пока нет."));
+  }
+  S.addEventListener("change", () => {
+    me(Y, S.checked), D();
+    const p = r.defaultView;
+    p && p.dispatchEvent(new p.Event(pe));
+  });
   async function I() {
-    const x = await u.companies();
-    if (p) {
-      if (!x.ok) {
-        k.replaceChildren(), N.show("error", x.message);
+    const p = await l.companies();
+    if (m) {
+      if (!p.ok) {
+        k.replaceChildren(), L.show("error", p.message);
         return;
       }
-      k.replaceChildren(...x.value.map(B)), x.value.length || k.appendChild(a(r, "div", { class: "sui-hint" }, "Компаний пока нет."));
+      _ = p.value, D();
     }
   }
-  function B(x) {
-    const b = a(r, "section", { class: "sui-card sui-stack", "data-company": x.id }), R = a(r, "div", { class: "sui-card-head" }), A = a(r, "div", { class: "sui-row" });
-    A.appendChild(a(r, "span", { class: "sui-title" }, x.name)), x.is_test && A.appendChild(a(r, "span", { class: "sui-badge" }, "тестовая")), R.append(A, a(r, "span", { class: "sui-hint" }, "людей: " + x.people));
-    const C = Q(r), L = a(r, "div", { class: "sui-list" });
-    for (const g of x.modules) {
-      const _ = a(r, "div", { class: "sui-list-row", "data-module": g.code });
-      if (_.appendChild(a(r, "span", { class: "sui-title" }, g.name)), g.managed) {
-        const T = a(r, "label", { class: "sui-check" }), w = a(r, "input", { type: "checkbox", "aria-label": `${g.name} у компании ${x.name}` });
-        w.checked = g.enabled === !0;
-        const Y = a(r, "span", {}, w.checked ? "включён" : "выключен");
-        w.addEventListener("change", () => {
-          const S = w.checked;
-          w.disabled = !0, u.setModule(x.id, g.code, S).then((G) => {
-            if (w.disabled = !1, !G.ok) {
-              w.checked = !S, C.show("error", G.message);
+  function U(p) {
+    const v = d(r, "section", { class: "sui-card sui-stack", "data-company": p.id }), u = d(r, "div", { class: "sui-card-head" }), P = d(r, "div", { class: "sui-row" });
+    P.appendChild(d(r, "span", { class: "sui-title" }, p.name)), p.is_test && P.appendChild(d(r, "span", { class: "sui-badge" }, "тестовая")), u.append(P, d(r, "span", { class: "sui-hint" }, "людей: " + p.people));
+    const R = Z(r), V = d(r, "div", { class: "sui-list" });
+    for (const g of p.modules) {
+      const C = d(r, "div", { class: "sui-list-row", "data-module": g.code });
+      if (C.appendChild(d(r, "span", { class: "sui-title" }, g.name)), g.managed) {
+        const y = d(r, "label", { class: "sui-check" }), b = d(r, "input", { type: "checkbox", "aria-label": `${g.name} у компании ${p.name}` });
+        b.checked = g.enabled === !0;
+        const Q = d(r, "span", {}, b.checked ? "включён" : "выключен");
+        b.addEventListener("change", () => {
+          const O = b.checked;
+          b.disabled = !0, l.setModule(p.id, g.code, O).then((B) => {
+            if (b.disabled = !1, !B.ok) {
+              b.checked = !O, R.show("error", B.message);
               return;
             }
-            Y.textContent = S ? "включён" : "выключен", C.show("ok", `«${g.name}» ${S ? "включён" : "выключен"}. Люди компании увидят изменение после обновления страницы.`), f.onChanged && f.onChanged();
+            Q.textContent = O ? "включён" : "выключен", R.show("ok", `«${g.name}» ${O ? "включён" : "выключен"}. Люди компании увидят изменение после обновления страницы.`), a.onChanged && a.onChanged();
           });
-        }), T.append(w, Y), _.appendChild(T);
+        }), y.append(b, Q), C.appendChild(y);
       }
-      te[g.code] && _.appendChild(a(r, "div", { class: "sui-hint", "data-testid": "pa-mod-hint" }, te[g.code])), L.appendChild(_);
+      ne[g.code] && C.appendChild(d(r, "div", { class: "sui-hint", "data-testid": "pa-mod-hint" }, ne[g.code])), V.appendChild(C);
     }
-    const z = a(r, "form", { class: "sui-row", "data-testid": "pa-admin", novalidate: "" }), d = a(r, "input", { class: "sui-input", type: "email", name: "email", inputmode: "email", placeholder: "почта существующей учётки", "aria-label": `Почта администратора компании ${x.name}` }), $ = a(r, "button", { type: "submit", class: "pf-btn" }, "Назначить администратора");
-    return z.append(d, $), z.addEventListener("submit", (g) => {
+    const z = d(r, "form", { class: "sui-row", "data-testid": "pa-admin", novalidate: "" }), q = d(r, "input", { class: "sui-input", type: "email", name: "email", inputmode: "email", placeholder: "почта существующей учётки", "aria-label": `Почта администратора компании ${p.name}` }), $ = d(r, "button", { type: "submit", class: "pf-btn" }, "Назначить администратора");
+    return z.append(q, $), z.addEventListener("submit", (g) => {
       g.preventDefault();
-      const _ = d.value.trim();
-      if (!_) {
-        C.show("error", "Введите почту");
+      const C = q.value.trim();
+      if (!C) {
+        R.show("error", "Введите почту");
         return;
       }
-      $.disabled = !0, u.setCompanyAdmin(x.id, _).then((T) => {
-        if ($.disabled = !1, !T.ok) {
-          C.show("error", T.message);
+      $.disabled = !0, l.setCompanyAdmin(p.id, C).then((y) => {
+        if ($.disabled = !1, !y.ok) {
+          R.show("error", y.message);
           return;
         }
-        d.value = "", I().then(() => N.show("ok", `${_} — администратор компании «${x.name}».`));
+        q.value = "", I().then(() => L.show("ok", `${C} — администратор компании «${p.name}».`));
       });
-    }), b.append(R, L, a(r, "div", { class: "sui-hint" }, "Администратор компании"), z, C), b;
+    }), v.append(u, V, d(r, "div", { class: "sui-hint" }, "Администратор компании"), z, R), v;
   }
-  return y.addEventListener("submit", (x) => {
-    x.preventDefault();
-    const b = P.value.trim();
-    if (!b) {
-      O.show("error", "Введите название компании");
+  return E.addEventListener("submit", (p) => {
+    p.preventDefault();
+    const v = N.value.trim();
+    if (!v) {
+      H.show("error", "Введите название компании");
       return;
     }
-    j.disabled = !0, u.createCompany(b, M.checked).then((R) => {
-      if (j.disabled = !1, !R.ok) {
-        O.show("error", R.message);
+    j.disabled = !0, l.createCompany(v, M.checked).then((u) => {
+      if (j.disabled = !1, !u.ok) {
+        H.show("error", u.message);
         return;
       }
-      P.value = "", M.checked = !1, O.show("ok", `Компания «${b}» создана.`), f.onChanged && f.onChanged(), I();
+      N.value = "", M.checked = !1, H.show("ok", `Компания «${v}» создана.`), a.onChanged && a.onChanged(), I();
     });
-  }), k.appendChild(a(r, "div", { class: "sui-hint" }, "Загрузка…")), I(), () => {
-    p = !1, m.replaceChildren();
+  }), k.appendChild(d(r, "div", { class: "sui-hint" }, "Загрузка…")), I(), () => {
+    m = !1, s.replaceChildren();
   };
 }
-const re = "platform-admin-style";
-let D = null;
-function me(m) {
-  var u;
-  fe();
-  const f = m.ownerDocument;
-  if (!f.getElementById(re)) {
-    const p = f.createElement("style");
-    p.id = re, p.textContent = pe, f.head.appendChild(p);
+const oe = "platform-admin-style";
+let W = null;
+function ye(s) {
+  var l;
+  be();
+  const a = s.ownerDocument;
+  if (!a.getElementById(oe)) {
+    const m = a.createElement("style");
+    m.id = oe, m.textContent = he, a.head.appendChild(m);
   }
-  const r = (u = window.RBI) == null ? void 0 : u.platform2;
+  const r = (l = window.RBI) == null ? void 0 : l.platform2;
   if (!r || typeof r.rpc != "function") {
-    m.textContent = "Вход платформы не загружен.";
+    s.textContent = "Вход платформы не загружен.";
     return;
   }
-  D = le(m, { api: se(r.rpc), onChanged: () => {
+  W = ve(s, { api: ae(r.rpc), onChanged: () => {
     r.refresh && r.refresh();
   } });
 }
-function fe() {
-  D && D(), D = null;
+function be() {
+  W && W(), W = null;
 }
-function xe() {
-  return D !== null;
+function we() {
+  return W !== null;
 }
 export {
-  xe as isMounted,
-  me as mount,
-  fe as unmount
+  we as isMounted,
+  ye as mount,
+  be as unmount
 };
 //# sourceMappingURL=platform-admin.js.map

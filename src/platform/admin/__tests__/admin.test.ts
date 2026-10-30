@@ -12,8 +12,8 @@ type N = any;
 const win = new Window({ url: 'http://localhost/' });
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
-function company(id: string, name: string, planfact: boolean): AdminCompany {
-  return { id, name, is_test: true, created_at: '', people: 3, modules: [
+function company(id: string, name: string, planfact: boolean, isTest = false): AdminCompany {
+  return { id, name, is_test: isTest, created_at: '', people: 3, modules: [
     { code: 'planfact', name: 'План/Факт', managed: true, enabled: planfact },
     { code: 'quality', name: 'Качество', managed: true, enabled: true },
     { code: 'construction', name: 'Стройконтроль', managed: true, enabled: true },
@@ -35,16 +35,23 @@ function fakeApi(over: Partial<AdminApi> = {}) {
   return { api, calls };
 }
 
+function mem(init: Record<string, string> = {}) {
+  const m = new Map(Object.entries(init));
+  return { getItem: (k: string) => (m.has(k) ? m.get(k)! : null), setItem: (k: string, v: string) => { m.set(k, v); }, removeItem: (k: string) => { m.delete(k); }, m };
+}
 function host(): N { const el = win.document.createElement('div'); win.document.body.appendChild(el); return el; }
 function submit(form: N): void { form.dispatchEvent(new win.Event('submit', { cancelable: true })); }
 
 test('список компаний: название, тестовая, людей; 5 выключателей модулей (P2-0031), у Базы знаний и ИИ — пояснение', async () => {
   const el = host();
-  renderAdminScreen(el, { api: fakeApi().api });
+  // P2-0075: Альфа — тестовая, видна с отмеченной «Показать тестовые»
+  renderAdminScreen(el, { api: fakeApi({ async companies() { return { ok: true, value: [company('a', 'Альфа', true, true), company('d', 'Демо-компания', false)] }; } }).api,
+    storage: mem({ platform2_show_test_companies: '1' }) });
   await tick();
   const cards = el.querySelectorAll('[data-company]');
   assert.equal(cards.length, 2);
   assert.match(cards[0].textContent, /Альфа.*тестовая.*людей: 3/s);
+  assert.doesNotMatch(cards[1].textContent, /тестовая/);
   const pf = cards[0].querySelector('[data-module=planfact] input[type=checkbox]');
   assert.equal(pf.checked, true);
   assert.equal(cards[1].querySelector('[data-module=planfact] input[type=checkbox]').checked, false);
@@ -140,6 +147,46 @@ test('назначить администратора компании: успе
   await tick(); await tick();
   assert.ok(calls.includes('admin:d:boss@x.ru'));
   assert.match(el.textContent, /boss@x\.ru — администратор компании «Демо-компания»/);
+});
+
+// P2-0075: тестовые компании скрыты, пока не отмечено «Показать тестовые»; выбор запоминается на устройстве
+const withTests = (): AdminApi => fakeApi({ async companies() {
+  return { ok: true, value: [company('r', 'РБИ', true), company('a', 'Альфа', true, true), company('b', 'Бета', true, true)] }; } }).api;
+
+test('P2-0075: тестовые компании скрыты по умолчанию; «Показать тестовые (2)» показывает и запоминается', async () => {
+  const el = host(); const store = mem();
+  renderAdminScreen(el, { api: withTests(), storage: store });
+  await tick();
+  const ids = (): string => [...el.querySelectorAll('[data-company]')].map((c: N) => c.getAttribute('data-company')).join(',');
+  assert.equal(ids(), 'r', 'без галочки — только РБИ');
+  const box = el.querySelector('[data-testid=pa-show-test]');
+  assert.ok(box && !box.checked && !box.parentElement.hidden);
+  assert.match(box.parentElement.textContent, /Показать тестовые \(2\)/);
+  let fired = 0; win.addEventListener('rbi:platform-show-test', () => { fired++; });
+  box.checked = true; box.dispatchEvent(new win.Event('change'));
+  assert.equal(ids(), 'r,a,b', 'с галочкой — и тестовые');
+  assert.equal(store.m.get('platform2_show_test_companies'), '1');
+  assert.equal(fired, 1, 'переключатели компании узнают о галочке');
+  // повторное открытие экрана — галочка запомнена
+  const el2 = host();
+  renderAdminScreen(el2, { api: withTests(), storage: store });
+  await tick();
+  assert.equal([...el2.querySelectorAll('[data-company]')].length, 3);
+  box.checked = false; box.dispatchEvent(new win.Event('change'));
+  assert.equal(ids(), 'r');
+  assert.equal(store.m.has('platform2_show_test_companies'), false);
+});
+
+test('P2-0075: тестовых нет — галочки нет; только тестовые — подсказка вместо пустоты', async () => {
+  const el = host();
+  renderAdminScreen(el, { api: fakeApi().api, storage: mem() });
+  await tick();
+  assert.equal(el.querySelector('[data-testid=pa-show-test]').parentElement.hidden, true);
+  const el2 = host();
+  renderAdminScreen(el2, { api: fakeApi({ async companies() { return { ok: true, value: [company('a', 'Альфа', true, true)] }; } }).api, storage: null });
+  await tick();
+  assert.equal(el2.querySelectorAll('[data-company]').length, 0);
+  assert.match(el2.textContent, /Есть только тестовые компании — отметьте «Показать тестовые»/);
 });
 
 test('не администратор: сервер отказал — понятное сообщение вместо списка', async () => {

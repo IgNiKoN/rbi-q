@@ -8,6 +8,7 @@ import type { HomeInput, PlatformDeps } from '../platform.service.ts';
 import { deviceUserKey } from '../quality-bridge.ts';
 import type { AuthApi } from '../auth.service.ts';
 import { renderLoginScreen } from '../login-screen.ts';
+import { readShowTest, SHOW_TEST_KEY, visibleCompanies, writeShowTest } from '../test-companies.ts';
 
 const ALFA = { id: 'a', name: 'Альфа', is_test: true, roles: ['Прораб / мастер'], modules: ['planfact'], can_manage_company: false };
 const BETA = { id: 'b', name: 'Бета', is_test: true, roles: ['Администратор компании'], modules: [], can_manage_company: true };
@@ -219,4 +220,32 @@ test('P2-0074: действия для правила — из копии qualit
   assert.equal(welcomeSeen(st, 'c@d.ru'), false, 'другая учётка на том же устройстве — своё приветствие');
   assert.equal(welcomeSeen(st, null), false);
   assert.ok(![...st.m.keys()].some((k) => k.includes('@')), 'почта в ключах устройства не хранится');
+});
+
+// --- P2-0075: тестовые компании у администратора платформы — скрыты, пока не отмечено «Показать тестовые» ---
+test('P2-0075: правило показа — скрыта только тестовая без роли у администратора платформы при снятой галочке (выбранная — видна)', () => {
+  const list = [{ id: 'r', is_test: false, roles: [] }, { id: 'a', is_test: true, roles: [] }, { id: 'b', is_test: true, roles: ['Прораб / мастер'] }];
+  const ids = (o: Parameters<typeof visibleCompanies>[1]): string => visibleCompanies(list, o).map((c) => c.id).join(',');
+  assert.equal(ids({ isPlatformAdmin: true, showTest: false }), 'r,b', 'Альфа без роли скрыта, Бета с ролью видна');
+  assert.equal(ids({ isPlatformAdmin: true, showTest: true }), 'r,a,b', 'галочка — видны все');
+  assert.equal(ids({ isPlatformAdmin: false, showTest: false }), 'r,a,b', 'не администратор платформы — без изменений');
+  assert.equal(ids({ isPlatformAdmin: true, showTest: false, keepId: 'a' }), 'r,a,b', 'выбранная сейчас не пропадает');
+  const s = memStorage();
+  assert.equal(readShowTest(s), false);
+  writeShowTest(s, true); assert.equal(s.m.get(SHOW_TEST_KEY), '1'); assert.equal(readShowTest(s), true);
+  writeShowTest(s, false); assert.equal(s.m.has(SHOW_TEST_KEY), false);
+  assert.equal(readShowTest(null), false);
+});
+
+test('P2-0075: администратор платформы — по умолчанию нетестовая компания, сохранённая скрытая тестовая не выбирается; с галочкой — выбирается', async () => {
+  const RBI = { id: 'r', name: 'РБИ', is_test: false, roles: ['Директор'], modules: ['planfact'], can_manage_company: true };
+  const ALFA0 = { ...ALFA, roles: [] };
+  const data = { is_platform_admin: true, companies: [ALFA0, RBI] };
+  const st1 = await createPlatform(deps({ auth: fakeAuth({ signedIn: true }), data, storage: memStorage({ [COMPANY_KEY]: 'a' }) })).boot();
+  assert.equal(st1.companyId, 'r', 'сохранённая Альфа скрыта — выбрана РБИ');
+  assert.equal(st1.companies.length, 2, 'состояние входа хранит все компании (скрытие — только в списках)');
+  const st2 = await createPlatform(deps({ auth: fakeAuth({ signedIn: true }), data, storage: memStorage({ [COMPANY_KEY]: 'a', [SHOW_TEST_KEY]: '1' }) })).boot();
+  assert.equal(st2.companyId, 'a', 'с галочкой — сохранённый выбор');
+  const st3 = await createPlatform(deps({ auth: fakeAuth({ signedIn: true }), data: { is_platform_admin: false, companies: [ALFA, RBI] }, storage: memStorage({ [COMPANY_KEY]: 'a' }) })).boot();
+  assert.equal(st3.companyId, 'a', 'сотрудник тестовой компании — как раньше');
 });
