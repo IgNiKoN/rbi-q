@@ -288,3 +288,11 @@ test('удаление (P2-0071): своё — «Удаление»; чужое 
   assert.equal(canChange(task, kindOf('task'), me).ok, true, 'порученную задачу выполнить — да');
   assert.equal(canRemove(task, kindOf('task'), me).ok, false, 'порученную чужую задачу удалить — нет (доработка №1)');
 });
+
+test('P2-0072: у видов записей Качества (41 таблица карты К1) в описании `sync` — номер по стандарту coreId: core_id', async () => {
+  const { ModulesManifest } = await import('../../modules/modules.manifest.js');
+  const all = Object.values(kindsFrom(ModulesManifest));
+  const quality = all.filter((k) => k.table && !/^sk_/.test(k.table));
+  assert.ok(quality.length >= 14, 'виды Качества, базы знаний и Стройконтроля 2.0: ' + quality.map((k) => k.kind).join(', '));
+  assert.deepEqual(quality.filter((k) => k.coreId !== 'core_id').map((k) => k.kind), []);
+});

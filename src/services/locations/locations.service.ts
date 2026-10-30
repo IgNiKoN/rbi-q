@@ -5,6 +5,7 @@
 
 import type { FloorPlan, LocationNode, NodeType } from './types';
 import { CHILD_OF, NODE_TYPES } from './types';
+import type { RbiIds as RecordIds } from '../../../js/services/record-id.service.js';
 import { attachObjectBridge } from './object-bridge';
 import { migrateOdCatalogToLocations as runOdMigrate, type OdMigrateReport } from './od-migrate';
 
@@ -63,11 +64,10 @@ function _now() {
   return new Date().toISOString();
 }
 
-function _uuid() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `loc_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+/** P2-0072: номер записи — общий сервис номеров платформы со страницы (window.RbiIds, js/services/record-id.service.js;
+ *  загружается раньше модулей), своей копии кода в сборке нет. */
+function _uuid(): string {
+  return (globalThis as { RbiIds?: typeof RecordIds }).RbiIds!.newId();
 }
 
 function _activeNodes() {

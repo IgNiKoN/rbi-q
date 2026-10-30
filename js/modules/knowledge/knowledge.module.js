@@ -821,7 +821,7 @@ async function duplicateTwiCard(id) {
     const card = customTwiCards.find(c => c.id === id);
     if (!card) return;
     const newCard = JSON.parse(JSON.stringify(card));
-    newCard.id = 'twi_' + Date.now().toString(36);
+    newCard.id = window.RbiIds.newId();
     newCard.owner = rbi_getCurrentUserNameSafe();
     newCard.source = 'local';
     newCard.syncStatus = 'not_synced';
@@ -2476,7 +2476,7 @@ window.saveNodeCard = async function () {
     if (firstImg) imgData = firstImg.url;
 
     const nodeData = {
-        id: window.currentEditingNodeId || 'node_' + Date.now().toString(36),
+        id: window.currentEditingNodeId || window.RbiIds.newId(),
         category: document.getElementById('node-category-input').value,
         title: title,
         desc: document.getElementById('node-desc-input').value.trim(),
@@ -3277,7 +3277,7 @@ window.saveTwiCard = async function () {
     }
 
     var cardData = {
-        id: window.currentEditingTwiId || 'twi_' + Date.now().toString(36),
+        id: window.currentEditingTwiId || window.RbiIds.newId(),
         title: title, checklistKey: checklistKey, checklistName: checklistName, type: window.currentTwiType,
         owner: _getSetting('engineerName') || 'Инженер',
         linkedNodeId: document.getElementById('twi-linked-node-id').value || null,
@@ -3981,7 +3981,7 @@ async function saveCustomDoc() {
     }
 
     const newDoc = {
-        id: 'usr_doc_' + Date.now().toString(36),
+        id: window.RbiIds.newId(),
         type: type,
         code: code,
         title: title,

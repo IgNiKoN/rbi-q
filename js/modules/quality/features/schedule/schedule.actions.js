@@ -273,7 +273,7 @@
                 const dEndISO = rbi_safeDateISO(row[3]);
 
                 const newRow = {
-                    id: 'sch_' + Date.now().toString(36) + i,
+                    id: window.RbiIds.newId(),
                     workTitle: wTitle,
                     contractor: contr,
                     startDate: dStartISO,

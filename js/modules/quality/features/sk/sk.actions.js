@@ -711,7 +711,7 @@ async function sk_finalizeImport() {
     var projectCode = _syncConfig().projectCode || 'LOCAL';
     var currentUser = sk_getCurrentUserName();
     var nowIso = new Date().toISOString();
-    var importBatchId = 'sk_batch_' + Date.now().toString(36);
+    var importBatchId = window.RbiIds.newId();
     var newRecordsCount = 0, updatedRecordsCount = 0, skippedRecordsCount = 0, aiCandidateCount = 0;
     var recordsToSaveBatch = [];
     var pendingProjectRequestsMap = new Map();
@@ -1039,7 +1039,7 @@ async function sk_saveContractorLink() {
             }
             if (updatedQueue === 0) {
                 var request = {
-                    id: 'contractor_queue_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+                    id: window.RbiIds.newId(),
                     project_code: projectCode, raw_name: rawName, cleaned_name: rawName.toLowerCase().trim(),
                     suggested_canonical_key: canonicalKey, source_table: 'sk_records', source_record_id: '',
                     created_by: currentUser, status: 'pending',

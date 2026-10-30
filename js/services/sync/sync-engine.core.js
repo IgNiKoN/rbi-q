@@ -1141,7 +1141,7 @@ async function rbiSyncPass(mode = 'silent') {
                             if (path) storagePathsToRemove.push(path);
                             if (oldPhoto && isHttpUrl(oldPhoto)) {
                                 photosBatch.push({
-                                    id: `${inspectionId}_${itemId}_${photoIndex}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
+                                    id: window.RbiIds.childId(inspectionId, `${inspectionId}_${itemId}_${photoIndex}`, 'photo', itemId, photoIndex), inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
                                     source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), photo_index: photoIndex, photo_type: 'inspection',
                                     bucket_name: 'inspection-photos', storage_path: path, public_url: oldPhoto, updated_at: new Date().toISOString()
                                 });
@@ -1169,7 +1169,7 @@ async function rbiSyncPass(mode = 'silent') {
                         if (publicUrl && isHttpUrl(publicUrl)) {
                             const photoStoragePath = getStoragePathFromPublicUrl(publicUrl, 'inspection-photos');
                             photosBatch.push({
-                                id: `${inspectionId}_${itemId}_${photoIndex}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
+                                id: window.RbiIds.childId(inspectionId, `${inspectionId}_${itemId}_${photoIndex}`, 'photo', itemId, photoIndex), inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
                                 source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), photo_index: photoIndex, photo_type: 'inspection',
                                 bucket_name: 'inspection-photos', storage_path: photoStoragePath, public_url: publicUrl, updated_at: new Date().toISOString()
                             });
@@ -1256,7 +1256,7 @@ async function rbiSyncPass(mode = 'silent') {
                     const info = getChecklistItem(c.templateKey || '', itemId);
                     const d = (c.details || {})[itemId] || {};
                     itemsBatch.push({
-                        id: `${inspectionId}_${itemId}`, inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
+                        id: window.RbiIds.childId(inspectionId, `${inspectionId}_${itemId}`, 'item', itemId), inspection_id: inspectionId, project_code: pCode, project_canonical_key: c.project_canonical_key || c.projectName || '',
                         source: 'cloud', sync_status: 'synced', sync_block_reason: '', item_id: String(itemId), item_name: info?.n || d.name || '', item_weight: info?.w || d.weight || null,
                         status: c.state[itemId], comment: d.comment || d.text || '', cause_code: d.causeCode || '', fact_value: d.fact || d.factValue || '', tolerance_value: d.tolerance || d.toleranceValue || '',
                         details: d, updated_at: new Date().toISOString()
@@ -1748,6 +1748,7 @@ async function rbiSyncPass(mode = 'silent') {
                     inspectorName: h.engineer_name || '',
                     authorId: h.core_created_by || '',   // P2-0061: автор — id учётной записи (сервер ставит сам)
                     core_counterparty_id: h.core_counterparty_id || '',   // P2-0061 (Б2): фирма — id контрагента ядра (сервер)
+                    core_id: h.core_id || (existingLocal && existingLocal.core_id) || '',   // P2-0072: номер по стандарту (ставит сервер, не отправляется)
                     contractorName: h.contractor_name || '',
                     contractorId: h.contractorId || h.contractor_id || '',
                     templateKey: h.template_key || '',
@@ -1828,7 +1829,8 @@ async function rbiSyncPass(mode = 'silent') {
                 draftQuery = draftQuery.gt('updated_at', lastPullAt);
             }
 
-            draftQuery = draftQuery.limit(1);
+            // P2-0072: у инженера рядом может лежать прежний черновик `draft_…` (старая версия) — берём самый свежий
+            draftQuery = draftQuery.order('updated_at', { ascending: false }).limit(1);
             const { data: draftRows } = await draftQuery;
 
             if (draftRows && draftRows.length > 0 && typeof dbGet === 'function' && typeof dbPut === 'function') {
@@ -1980,6 +1982,7 @@ async function rbiSyncPass(mode = 'silent') {
                         // P2-0061 (Б3): автор — id, который поставил сервер (core_created_by), а не присланный клиентом в task_data
                         t.authorId = row.core_created_by || '';
                         t.core_counterparty_id = row.core_counterparty_id || '';   // Б2: фирма — id контрагента ядра
+                        t.core_id = row.core_id || t.core_id || '';   // P2-0072: номер по стандарту (ставит сервер, не отправляется)
                         t.cloudKnown = true;   // З5: сервер уже знает задачу — в начале прохода её правку не слать
                         t.status = row.status || t.status;
                         t.updatedAt = row.updated_at;
@@ -2947,7 +2950,7 @@ async function rbiSyncPass(mode = 'silent') {
                     await window.supabaseClient
                         .from('rbi_draft_sessions')
                         .upsert({
-                            id: `draft_${stableInspectorId}`,
+                            id: window.RbiIds.stableId('draft', stableInspectorId),   // P2-0072: устойчивый uuid v5 от инженера (было `draft_${stableInspectorId}`)
                             project_code: pCode,
                             engineer_name: iName,
                             template_key: currentSession.templateKey || '',
@@ -3442,7 +3445,7 @@ async function rbiSyncPass(mode = 'silent') {
                                 // Если конструктор шаблона/практики/отчета не поставил служебные поля,
                                 // синхронизатор сам доводит объект до отправляемого состояния.
                                 if (!obj.id) {
-                                    obj.id = `${objectType}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                                    obj.id = window.RbiIds.newId();
                                 }
 
                                 if (!obj.updatedAt && !obj.updated_at) {

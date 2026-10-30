@@ -82,3 +82,36 @@ test('сторож таблиц: исключения прежнего линт�
     assert.notEqual(t.rules.company.s, 'red', `${id}: компания`);
   }
 });
+
+test('P2-0072: правило 10 — сумма в строке без валюты: валюта у родителя по внешнему ключу — зелёный, без неё — красный', async () => {
+  const { evaluate } = await lint();
+  const T = 'timestamp with time zone';
+  const base: Col[] = [['id', 'uuid', true], ['company_id', 'uuid', true], ['created_by', 'uuid', false], ['created_at', T, true], ['updated_at', T, true],
+    ['deleted_at', T, false]];
+  const parent = (name: string, currency: boolean): Table => ({ schema: 'planfact', name, rls: true, pk: ['id'], fk: { company_id: ['core.companies'] },
+    cols: [...base, ...(currency ? [['currency', 'text', true] as Col] : [])] });
+  const row = (name: string, to: string): Table => ({ schema: 'planfact', name, rls: true, pk: ['id'], fk: { company_id: ['core.companies'], doc_id: [to] },
+    cols: [...base, ['doc_id', 'uuid', true], ['amount', 'numeric(18,2)', true]] });
+  const e = evaluate([...tables, parent('m72_docs', true), parent('m72_nocur', false), row('m72_rows', 'planfact.m72_docs'), row('m72_bad', 'planfact.m72_nocur')]);
+  const money = (id: string) => e.find((x) => x.id === id)!.rules.money;
+  assert.deepEqual(money('planfact.m72_rows'), { s: 'green', n: 0, note: 'валюта у родителя planfact.m72_docs' });
+  assert.equal(money('planfact.m72_bad').s, 'red');
+  assert.match(money('planfact.m72_bad').note, /нет валюты ни в строке, ни у родителя \(суммы: amount\)/);
+});
+
+test('P2-0072: мост номеров Качества (054) — ключ id text + core_id uuid и ссылки текстом рядом со связью по uuid — жёлтые с причиной', async () => {
+  const { evaluate } = await lint();
+  const e = evaluate(tables);
+  const rule = (id: string, code: string) => e.find((x) => x.id === id)!.rules[code];
+  const k = rule('quality.rbi_inspections', 'key');
+  assert.equal(k.s, 'yellow');
+  assert.match(k.note, /мост: core_id uuid рядом со старым ключом \(core_company_id uuid, id text\)/);
+  const r = rule('quality.shared_report_snapshots', 'refs');
+  assert.equal(r.s, 'yellow');
+  assert.match(r.note, /report_id → core_report_id/);
+  assert.equal(rule('quality.location_nodes', 'refs').s, 'yellow');
+  // без моста — по-прежнему красный: ключ id text без core_id
+  const noBridge = byId('quality.rbi_tasks');
+  noBridge.cols = noBridge.cols.filter(([n]) => n !== 'core_id');
+  assert.equal(evaluate([noBridge])[0].rules.key.s, 'red');
+});

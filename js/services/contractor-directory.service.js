@@ -1006,7 +1006,7 @@
             }
 
             const queueItem = {
-                id: 'contractor_queue_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+                id: window.RbiIds.newId(),
                 project_code: pCode,
                 raw_name: rawTrimmed,
                 cleaned_name: clean,

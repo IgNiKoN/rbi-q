@@ -591,7 +591,7 @@ window.rbi_saveIntervention = async function () {
     }
 
     const item = {
-        id: 'int_' + Date.now().toString(36),
+        id: window.RbiIds.newId(),
         date: new Date().toISOString(),
         inspector: myName,
         contractor: cName,
@@ -1282,7 +1282,7 @@ window.rbi_savePractice = async function () {
     const st = window._manPracState || { photosBefore: [], photosProcess: [], photosAfter: [], docs: [] };
 
     const practice = {
-        id: 'prac_' + Date.now().toString(36),
+        id: window.RbiIds.newId(),
         interventionId: intId,
         date: new Date().toISOString(),
         author: document.getElementById('inp-inspector')?.value.trim() || 'Инженер',
@@ -1667,7 +1667,7 @@ window.rbi_saveManualPractice = async function () {
     }
 
     const practice = {
-        id: 'prac_' + Date.now().toString(36),
+        id: window.RbiIds.newId(),
         interventionId: null, // Нет привязки к авто-детектору
         date: new Date().toISOString(),
         author: document.getElementById('inp-inspector')?.value.trim() || 'Инженер',

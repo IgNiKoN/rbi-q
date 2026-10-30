@@ -780,7 +780,7 @@ async function askAppAssistant() {
     inputEl.value = '';
     inputEl.focus();
 
-    const loaderId = 'loader_' + Date.now();
+    const loaderId = 'loader_' + window.RbiIds.newId();
     const loaderHtml = `
         <div id="${loaderId}" class="flex gap-2 w-full max-w-[85%] mb-4">
             <div class="w-6 h-6 bg-indigo-200 rounded-full flex items-center justify-center text-[10px] shrink-0">🤖</div>

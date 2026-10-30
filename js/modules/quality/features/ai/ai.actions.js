@@ -2688,7 +2688,7 @@ async function askAiDocQuestion() {
     inputEl.value = '';
     inputEl.focus();
 
-    const loaderId = 'loader_' + Date.now();
+    const loaderId = 'loader_' + window.RbiIds.newId();
     chatHistory.insertAdjacentHTML('beforeend', `
         <div id="${loaderId}" class="flex gap-2 w-full max-w-[95%]">
  <div class="w-7 h-7 bg-brand-soft rounded-full flex items-center justify-center text-rbi-label shrink-0"></div>
@@ -2703,7 +2703,7 @@ async function askAiDocQuestion() {
         if (node) node.remove();
         const related = relatedExtra || { html: '', plain: '' };
         const sourcesHtml = _renderAiDocSourcesHtml(sources || []);
-        const plainId = 'aidoc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        const plainId = 'aidoc_' + window.RbiIds.newId();
         _aiDocPlainById[plainId] = String(plainText || '') + (related.plain || '');
         chatHistory.insertAdjacentHTML('beforeend', `
             <div class="flex gap-2 w-full max-w-[95%]" data-ai-doc-id="${plainId}">
@@ -3236,7 +3236,7 @@ async function rbi_fillFmeaWithAi() {
             }
         });
 
-        _gameLogAction('fmea_master', 'fmea_' + Date.now().toString(36));
+        _gameLogAction('fmea_master', window.RbiIds.newId());
         showToast(_t('quality.ai.toast.fmea_filled', '✅ Мега-таблица FMEA заполнена нейросетью!'));
     } catch (e) {
         showToast(_t('quality.ai.error.ai_retry', '❌ Ошибка ИИ (попробуйте еще раз): {message}', { message: e.message }));

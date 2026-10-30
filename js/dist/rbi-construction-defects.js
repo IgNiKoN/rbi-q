@@ -106,10 +106,7 @@ function _now() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
 function _uuid() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `cdef_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return globalThis.RbiIds.newId();
 }
 function _active() {
   return _items.filter((d) => d && !d.is_deleted && !d._deleted);

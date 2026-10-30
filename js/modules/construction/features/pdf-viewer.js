@@ -538,7 +538,7 @@ window.UniversalPdfViewer = {
 
     async massCopyDefect(x, y) {
         const orig = this.copyTemplateDefect;
-        const newId = 'def_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+        const newId = 'def_' + window.RbiIds.newId();
         
         const newDefect = JSON.parse(JSON.stringify(orig));
         newDefect.id = newId;

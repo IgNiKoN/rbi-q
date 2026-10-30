@@ -286,7 +286,7 @@ window.ConstAdmin = {
                     return showToast("⚠️ Объект с таким названием уже существует!");
                 }
                 const newObj = {
-                    id: 'obj_' + Date.now().toString(36),
+                    id: window.RbiIds.newId(),
                     canonical_key: canonical,
                     display_name: name.trim(),
                     synonyms: [],
@@ -353,7 +353,7 @@ window.ConstAdmin = {
         if (!name) return;
 
         const newBld = {
-            id: 'c_bld_' + Date.now().toString(36),
+            id: window.RbiIds.newId(),
             object_id: objId,
             name: name,
             sort_order: window.ConstManager.buildings.filter(b => b.object_id === objId).length + 1,
@@ -377,7 +377,7 @@ window.ConstAdmin = {
         if (!name) return;
 
         const newFlr = {
-            id: 'c_flr_' + Date.now().toString(36),
+            id: window.RbiIds.newId(),
             building_id: bldId,
             name: name,
             sort_order: window.ConstManager.floors.filter(f => f.building_id === bldId).length + 1,

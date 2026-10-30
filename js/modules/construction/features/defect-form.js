@@ -608,7 +608,7 @@ window.ConstDefectForm = {
     // --- Открыть форму для нового дефекта ---
     openNew(xPercent, yPercent) {
         // Генерируем постоянный ID для нового дефекта
-        const newId = 'def_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+        const newId = 'def_' + window.RbiIds.newId();
 
         this.populateDropdowns();
 
@@ -1243,7 +1243,7 @@ window.ConstDefectForm = {
         let defectId = document.getElementById('const-defect-id').value;
         if (!defectId) {
             // Защита: если ID нет (не должно случиться, но на всякий случай)
-            defectId = 'def_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+            defectId = 'def_' + window.RbiIds.newId();
             document.getElementById('const-defect-id').value = defectId;
         }
         // Запоминаем ID для переноса (на случай, если он изменится, но у нас постоянный)

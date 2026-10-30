@@ -274,7 +274,7 @@
   // Добавление строки без перерисовки всей страницы
   window.rbi_addScheduleRow = function () {
     if (!window.rbi_scheduleData) window.rbi_scheduleData = [];
-    const newId = 'sch_' + Date.now().toString(36);
+    const newId = window.RbiIds.newId();
 
     // Получаем список чек-листов для выпадающего списка
     const unboundOpt = _t('quality.schedule.option.unbound', '-- Не привязан --');

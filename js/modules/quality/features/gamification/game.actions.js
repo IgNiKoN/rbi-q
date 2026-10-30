@@ -291,7 +291,7 @@ function emit(eventName, detail) {
     if (gameIsDuplicateActionLog(gameActionLogs, actionType, currentInspector, targetId, nowIso)) return;
 
     gameActionLogs.push({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      id: window.RbiIds.newId(),
       date: nowIso,
       inspector: currentInspector,
       action: actionType,
@@ -1482,7 +1482,7 @@ function emit(eventName, detail) {
       });
     });
 
-    let fmeaId = currentEditingFmeaId || ('fmea_' + Date.now().toString(36));
+    let fmeaId = currentEditingFmeaId || window.RbiIds.newId();
 
     // Получаем привязку к объекту
     const projectInput = document.getElementById('inp-project')?.value || '';
@@ -2824,7 +2824,7 @@ function emit(eventName, detail) {
     const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
 
     const record = {
-      id: editId || 'kb_' + Date.now().toString(36),
+      id: editId || window.RbiIds.newId(),
       project_code: window.syncConfig?.projectCode || 'local',
       question: q,
       answer: a,

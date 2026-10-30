@@ -741,7 +741,7 @@ window.RbiStorageManager = {
 
             const localRow = {
                 ...(cloudRow || payload),
-                id: cloudRow?.id || meta.id || ('file_' + Date.now().toString(36)),
+                id: cloudRow?.id || meta.id || window.RbiIds.newId(),
                 cacheStatus: payload.cache_status,
                 cache_status: payload.cache_status,
                 publicUrl: payload.public_url,

@@ -12072,11 +12072,13 @@ const ex = {
   // counterparty — id фирмы, mode — как в серверной политике (author / owner / contractor; P2-0071 — area: единый механизм прав, quality.rec_ok),
   // view / edit — действия (видеть все / любое действие правки), own — действия над своей записью (автор / исполнитель), editAny —
   // «Редактирование чужих», noObject — запись на уровне объекта (без места; без объекта — назначенные на всю компанию и автор), ownFirst — «своё первым» (уходит до скачивания чужого: осмотры, задачи, замечания Стройконтроля 2.0)
+  // P2-0072: coreId — номер записи по стандарту (uuid, ставит сервер 054): телефон хранит его у загруженных записей, не отправляет
   sync: [
     {
       kind: "inspection",
       store: "app_history",
       table: "rbi_inspections",
+      coreId: "core_id",
       title: "Осмотр",
       author: { id: "authorId", name: ["inspectorName", "inspector_name"] },
       object: ["project_canonical_key", "projectName", "projectId"],
@@ -12100,6 +12102,7 @@ const ex = {
       kind: "task",
       store: "rbi_tasks",
       table: "rbi_tasks",
+      coreId: "core_id",
       title: "Задача",
       assignee: "assignedToId",
       author: { id: "authorId", name: ["engineerName", "inspectorName", "engineer_name", "inspector_name"] },
@@ -12127,6 +12130,7 @@ const ex = {
       memory: "rbi_meetingsData",
       store: "rbi_meetings",
       table: "project_meetings",
+      coreId: "core_id",
       title: "Совещание",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
@@ -12145,6 +12149,7 @@ const ex = {
       memory: "rbi_interventionsData",
       store: "rbi_interventions",
       table: "project_interventions",
+      coreId: "core_id",
       title: "Вмешательство",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
@@ -12163,6 +12168,7 @@ const ex = {
       memory: "rbi_fmeaRecords",
       store: "rbi_fmea",
       table: "project_fmea",
+      coreId: "core_id",
       title: "FMEA",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
@@ -12181,6 +12187,7 @@ const ex = {
       memory: "rbi_scheduleData",
       store: "rbi_schedule_stages",
       table: "project_schedule_stages",
+      coreId: "core_id",
       title: "Этап графика",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
@@ -12197,6 +12204,7 @@ const ex = {
       kind: "report",
       store: "app_reports",
       table: "shared_reports",
+      coreId: "core_id",
       title: "Отчёт",
       author: { id: "authorId", name: ["created_by", "owner", "author"] },
       object: ["project_canonical_key", "projectName", "projectId", "project"],
@@ -12216,6 +12224,7 @@ const ex = {
       memory: "etalonActsArray",
       store: "rbi_etalon_acts",
       table: "shared_etalons",
+      coreId: "core_id",
       title: "Акт эталона",
       author: { id: "authorId", name: ["owner", "author", "inspectorName", "engineerName"] },
       mode: "shared",
@@ -12228,6 +12237,7 @@ const ex = {
       memory: "customDocs",
       store: "custom_docs",
       table: "shared_docs",
+      coreId: "core_id",
       title: "Документ",
       author: { id: "authorId", name: ["owner", "author"] },
       mode: "shared",
@@ -12313,8 +12323,8 @@ const ex = {
   offline: { view: !0, input: [], files: !0 },
   // P2-0061: виды записей для общего правила синхронизации (библиотека компании — quality.can на сервере)
   sync: [
-    { kind: "practice", objectType: "practice", memory: "rbi_practicesData", store: "rbi_practices", table: "shared_practices", title: "Практика", author: { id: "authorId", name: ["owner", "author"] }, mode: "shared", view: ["quality.view"], edit: ["quality.edit"] },
-    { kind: "twi", objectType: "custom_twi_card", memory: "customTwiCards", store: "twi_cards", table: "shared_twi_cards", title: "Карта TWI", author: { id: "authorId", name: ["owner", "author"] }, mode: "shared", view: ["quality.view"], edit: ["quality.edit"] }
+    { kind: "practice", objectType: "practice", memory: "rbi_practicesData", store: "rbi_practices", table: "shared_practices", coreId: "core_id", title: "Практика", author: { id: "authorId", name: ["owner", "author"] }, mode: "shared", view: ["quality.view"], edit: ["quality.edit"] },
+    { kind: "twi", objectType: "custom_twi_card", memory: "customTwiCards", store: "twi_cards", table: "shared_twi_cards", coreId: "core_id", title: "Карта TWI", author: { id: "authorId", name: ["owner", "author"] }, mode: "shared", view: ["quality.view"], edit: ["quality.edit"] }
   ],
   routes: ["/knowledge", "/knowledge/twi", "/knowledge/docs", "/knowledge/nodes", "/knowledge/etalons"],
   defaultRoute: "/knowledge"
@@ -12350,6 +12360,7 @@ const ex = {
       kind: "defect_v2",
       store: "construction_defects_v2",
       table: "construction_defects_v2",
+      coreId: "core_id",
       title: "Замечание",
       author: { id: "authorId", name: ["owner", "created_by", "author"] },
       counterparty: ["core_counterparty_id"],
@@ -12372,6 +12383,7 @@ const ex = {
       kind: "acceptance_v2",
       store: "construction_acceptance_v2",
       table: "construction_acceptance_v2",
+      coreId: "core_id",
       title: "Приёмка",
       author: { id: "authorId", name: ["owner", "created_by", "author"] },
       counterparty: ["core_counterparty_id"],
@@ -12385,6 +12397,7 @@ const ex = {
       kind: "unit_v2",
       store: "construction_units_v2",
       table: "construction_units_v2",
+      coreId: "core_id",
       title: "Помещение",
       author: { id: "authorId", name: ["owner", "created_by", "author"] },
       mode: "shared",

@@ -868,7 +868,7 @@ function _t(key, fallback, vars) {
       }
 
       var newItem = {
-        id: String(Date.now() + Math.floor(Math.random() * 1000)),
+        id: window.RbiIds.newId(),   // P2-0072: номер проверки — uuid (сервис номеров платформы)
         date: new Date().toISOString(),
         projectName: projectDisplayName,
         project_canonical_key: projectCanonicalKey,
@@ -955,7 +955,7 @@ function _t(key, fallback, vars) {
             if (stateVal === 'fail_escalated' || itemInfo.w === 3) category = 'B3';
             else if (itemInfo.w === 1) category = 'B1';
 
-            var newDefectId = 'def_auto_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+            var newDefectId = 'def_auto_' + window.RbiIds.newId();
 
             // Дефект СК — своя однофото-семантика (не входит в этот блок): берём
             // первое фото пункта чек-листа из массива (mergedPhotos[itemId]).

@@ -2,7 +2,8 @@
 // s-rename — смена ФИО при неотправленных осмотрах (новом с id автора и старом без id) → оба уходят ровно 1 раз;
 // s-foreign — у вошедшего на телефоне осмотры другого сотрудника (по ФИО и по id) → 0 отправок, «Не отправлено: запись другого сотрудника (ФИО)»;
 // s-leader — руководитель отправляет такие осмотры ровно 1 раз. Боевой сервер не используется.
-import { start, stop, stand, sends, sendsAll, resetNet, net, flow, log as apiLog, USER, USER2, COMPANY, constructionAccess } from './servers.mjs';
+import { start, stop, stand, sends, sendsAll, rows, resetNet, net, flow, log as apiLog, USER, USER2, COMPANY, constructionAccess } from './servers.mjs';
+import { stableId, isUuid } from '../../js/services/record-id.service.js';
 import { freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
 import { pullScopeScenario } from './pull-scope.mjs';
 
@@ -384,7 +385,150 @@ async function newKind(out) {
   } finally { stand.quality = null; await stop().catch(() => {}); }
 }
 
+/** P2-0072 этап 1: номера проверки на телефоне. Новая проверка (номер — uuid) с фото без сети → сеть: на сервере одна проверка,
+ *  пункты и фото с uuid v5 от проверки; повторная отправка и обрыв ответа → дублей 0. Проверка старой версии в очереди (номер —
+ *  число-время) уходит со старыми составными номерами пунктов и фото. Черновик — uuid v5 от инженера. */
+async function qualityIds(out) {
+  const tag = 'q-ids';
+  note(`== ${tag}: проверка с фото без сети (новый номер) + проверка старой версии в очереди → сеть → повтор и обрыв → дублей 0`);
+  freshProfile(out, tag); resetNet(); stand.quality = null; stand.names = {};
+  const cnt = (t) => (rows.get(t) ? rows.get(t).size : 0);
+  const ids = (t) => [...(rows.get(t) || new Map()).keys()];
+  try {
+    await start();
+    const { ctx, page } = await launch(out, tag);
+    await signIn(page);
+    await ctx.setOffline(true);
+    const made = await page.evaluate(async () => {
+      const S = window.RBI.services, t = Date.now();
+      const ph = async (n) => { const ref = 'local://q-ids-' + n + '-' + t; await S.storage.put('app_photos', { id: ref, data: new Uint8Array(2048).buffer, mimeType: 'image/jpeg', sizeBytes: 2048 }); return ref; };
+      const base = { date: new Date().toISOString(), object: 'IDS-MARK', template: 'Земляные работы', status: 'done', inspectorName: 'Иванов Иван', projectName: '', project_canonical_key: '' };
+      // как экран «Проверка» (audit.actions.js): номер — из сервиса номеров платформы
+      const fresh = await S.inspections.save({ ...base, id: window.RbiIds.newId(), state: { '1': 'ok', '2': 'bad', '3': 'ok' }, details: { '2': { comment: 'стенд' } },
+        photos: { '1': [await ph(1), await ph(2)], '2': [await ph(3)] } });
+      // старая версия приложения: номер — число-время, запись уже лежала в очереди без сети
+      const legacyId = String(1730000000000 + (t % 100000));
+      await S.storage.put('app_history', { ...base, id: legacyId, state: { '1': 'ok', '2': 'bad' }, details: {}, photos: { '2': [await ph(4)] },
+        source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() });
+      // незавершённая проверка (черновик) — уходит отдельной строкой rbi_draft_sessions
+      await S.storage.put('app_state', { key: 'current_session', timestamp: Date.now(), templateKey: 'Земляные работы', templateTitle: 'Земляные работы', state: { '1': 'ok' }, details: {}, photos: {} });
+      return { fresh: fresh && fresh.id, legacy: legacyId };
+    }).catch((e) => ({ err: e.message }));
+    ok(!made.err && isUuid(made.fresh), `${tag}: новая проверка на телефоне получила номер-uuid`, JSON.stringify(made));
+    await ctx.setOffline(false);
+    // обрыв: сервер записал пункты, ответ потерян — телефон отправит их ещё раз
+    net.drops.push({ re: /^POST \/rest\/v1\/rbi_inspection_items$/, left: 1 });
+    await pushUntil(page, [made.fresh, made.legacy], 10);
+    const wantItems = [...['1', '2', '3'].map((k) => stableId(made.fresh, 'item', k)), `${made.legacy}_1`, `${made.legacy}_2`].sort();
+    const wantPhotos = [stableId(made.fresh, 'photo', '1', 0), stableId(made.fresh, 'photo', '1', 1), stableId(made.fresh, 'photo', '2', 0), `${made.legacy}_2_0`].sort();
+    const s1 = { insp: cnt('rbi_inspections'), items: ids('rbi_inspection_items').sort(), photos: ids('rbi_inspection_photos').sort() };
+    ok(s1.insp === 2 && (sends.get(made.fresh) || 0) >= 1 && (sends.get(made.legacy) || 0) >= 1, `${tag}: обе проверки на сервере, по одной строке`, `проверок ${s1.insp}`);
+    ok(JSON.stringify(s1.items) === JSON.stringify(wantItems), `${tag}: пункты — 5 строк: новой проверки uuid v5 от (проверка, пункт), старой — прежние «номер_пункт»`, JSON.stringify(s1.items));
+    ok(JSON.stringify(s1.photos) === JSON.stringify(wantPhotos), `${tag}: фото — 4 строки: новой проверки uuid v5 от (проверка, пункт, номер фото), старой — «номер_пункт_фото»`, JSON.stringify(s1.photos));
+    const itemSends = [...sendsAll.entries()].filter(([k]) => k.startsWith('rbi_inspection_items:')).reduce((a, [, v]) => a + v, 0);
+    note(`отправок строк пунктов: ${itemSends} (с обрывом ответа)`);
+    // повторная отправка обеих проверок (правка после отправки / восстановление после сбоя)
+    await page.evaluate(async (list) => {
+      const S = window.RBI.services;
+      for (const id of list) { const r = (await S.storage.getAll('app_history')).find((x) => String(x.id) === id);
+        await S.storage.put('app_history', { ...r, source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() }); }
+    }, [made.fresh, made.legacy]);
+    const before = sends.get(made.fresh) || 0;
+    for (let i = 0; i < 8 && (sends.get(made.fresh) || 0) === before; i++) {
+      await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {});
+      await page.waitForTimeout(4000);
+    }
+    await page.waitForTimeout(2500);
+    const s2 = { insp: cnt('rbi_inspections'), items: ids('rbi_inspection_items').sort(), photos: ids('rbi_inspection_photos').sort(), resent: (sends.get(made.fresh) || 0) - before };
+    ok(s2.resent >= 1, `${tag}: повторная отправка состоялась`, String(s2.resent));
+    ok(s2.insp === 2 && JSON.stringify(s2.items) === JSON.stringify(wantItems) && JSON.stringify(s2.photos) === JSON.stringify(wantPhotos),
+      `${tag}: после повтора и обрыва дублей 0 (проверок 2, пунктов 5, фото 4 — те же номера)`, `${s2.insp}/${s2.items.length}/${s2.photos.length}`);
+    // черновик текущей проверки — uuid v5 от инженера (повтор — та же строка)
+    note(`черновиков на сервере: ${cnt('rbi_draft_sessions')} ${ids('rbi_draft_sessions').join(', ')}`);
+    const drafts = ids('rbi_draft_sessions'), draftSends = [...sendsAll.entries()].filter(([k]) => k.startsWith('rbi_draft_sessions:')).reduce((a, [, v]) => a + v, 0);
+    ok(drafts.length === 1 && isUuid(drafts[0]) && draftSends >= 2, `${tag}: черновик — одна строка с номером-uuid v5 от инженера, повтор — та же строка`, `${drafts.join(', ')}; отправок ${draftSends}`);
+    await ctx.close();
+  } finally { stand.quality = null; await stop().catch(() => {}); }
+}
+
+/** P2-0072 этап 3: остальные номера на телефоне. Загруженная задача хранит core_id сервера; новая задача (экран «Поручение»),
+ *  замечание, помещение и приёмка Стройконтроля 2.0 — с номером-uuid; правка старой записи и новые записи уходят без core_id
+ *  (номер ставит сервер — не затирается), core_id на телефоне после отправки на месте. */
+async function qualityIdsOther(out) {
+  const tag = 'q-ids-other';
+  note(`== ${tag}: загрузка задачи с core_id → без сети: поручение, замечание / помещение / приёмка СК 2.0, правка старой задачи → сеть`);
+  freshProfile(out, tag); resetNet(); stand.quality = null; stand.names = {};
+  const C = '72000000-0000-4000-8000-0000000000c1', OLD = 'task_man_old72';
+  const at = new Date(Date.now() - 3600e3).toISOString();
+  stand.serve = { rbi_tasks: [{ id: OLD, core_id: C, status: 'pending', project_code: '', project_canonical_key: '', updated_at: at, created_at: at,
+    core_created_by: USER.id, is_deleted: false, task_data: { id: OLD, type: 'manual', title: 'IDS-MARK старая', engineerName: 'Иванов Иван',
+      inspectorName: 'Иванов Иван', createdBy: 'Иванов Иван', status: 'pending', date: at } }] };
+  const task = (page, id) => page.evaluate(async (i) => { const r = (await window.RBI.services.storage.getAll('rbi_tasks')).find((x) => String(x.id) === i);
+    return r ? { core_id: r.core_id || '', title: r.title, st: r.syncStatus || r.sync_status } : null; }, id).catch((e) => ({ err: e.message }));
+  try {
+    await start();
+    const { ctx, page } = await launch(out, tag);
+    await signIn(page);
+    for (let i = 0; i < 6; i++) { const t = await task(page, OLD); if (t && t.core_id) break;
+      await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {}); await page.waitForTimeout(4000); }
+    const t0 = await task(page, OLD);
+    ok(t0 && t0.core_id === C, `${tag}: загруженная задача хранит core_id сервера`, JSON.stringify(t0));
+    await ctx.setOffline(true);
+    // поручение — функцией экрана «Задачи»
+    await page.evaluate(() => { location.hash = '#/tasks'; }).catch(() => {});
+    await page.waitForTimeout(2500);
+    const made = await page.evaluate(async () => {
+      const out = {};
+      try {
+        window.rbi_openTaskModal();
+        document.getElementById('manual-task-title').value = 'IDS-MARK поручение';
+        await window.rbi_saveManualTask();
+        const r = (await window.RBI.services.storage.getAll('rbi_tasks')).find((x) => x.title === 'IDS-MARK поручение');
+        out.task = r ? r.id : 'нет';
+      } catch (e) { out.task = 'ошибка ' + e.message; }
+      for (const [svc, file, input] of [['constructionDefects', 'rbi-construction-defects', { locationId: 'loc-ids', description: 'IDS-MARK замечание' }],
+        ['constructionUnits', 'rbi-construction-units', { locationId: 'loc-ids', name: 'IDS-MARK кв. 1' }],
+        ['constructionAcceptance', 'rbi-construction-acceptance', { locationId: 'loc-ids', work_type: 'IDS-MARK', template_key: 'x', zone: { x: 0, y: 0, w: 100, h: 100 } }]]) {
+        try {
+          if (!window.RBI.services[svc]) await import('/js/dist/' + file + '.js');
+          const S = window.RBI.services[svc];
+          if (S.init) await S.init();
+          out[svc] = (await S.create(input)).id;
+        } catch (e) { out[svc] = 'ошибка ' + e.message; }
+      }
+      // правка старой задачи (с core_id) без сети
+      const S = window.RBI.services.storage;
+      const old = (await S.getAll('rbi_tasks')).find((x) => String(x.id) === 'task_man_old72');
+      if (old) await S.put('rbi_tasks', { ...old, title: 'IDS-MARK старая (правка)', source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', cloudKnown: false,
+        updatedAt: new Date().toISOString() });
+      return out;
+    }).catch((e) => ({ err: e.message }));
+    note('создано: ' + JSON.stringify(made));
+    ok(isUuid(made.task), `${tag}: поручение с экрана — номер-uuid`, String(made.task));
+    ok(isUuid(made.constructionDefects) && isUuid(made.constructionUnits) && isUuid(made.constructionAcceptance),
+      `${tag}: замечание, помещение и приёмка СК 2.0 — номера-uuid`, JSON.stringify(made));
+    await ctx.setOffline(false);
+    const want = [['rbi_tasks', OLD], ['rbi_tasks', made.task], ['construction_defects_v2', made.constructionDefects],
+      ['construction_units_v2', made.constructionUnits], ['construction_acceptance_v2', made.constructionAcceptance]];
+    for (let i = 0; i < 10 && !want.every(([t, id]) => sendsAll.get(`${t}:${id}`)); i++) {
+      await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {});
+      await page.waitForTimeout(4000);
+    }
+    await page.waitForTimeout(2000);
+    const sent = want.map(([t, id]) => [t, sendsAll.get(`${t}:${id}`) || 0, rows.get(t) && rows.get(t).get(String(id))]);
+    note('отправлено: ' + JSON.stringify(sent.map(([t, n]) => [t, n])));
+    ok(sent.every(([, n]) => n >= 1), `${tag}: правка старой задачи и новые записи ушли`, JSON.stringify(sent.map(([t, n]) => t + ':' + n)));
+    ok(sent.every(([, , r]) => r && !('core_id' in r)), `${tag}: строки ушли без core_id (номер ставит сервер — не затирается)`,
+      JSON.stringify(sent.map(([t, , r]) => t + ':' + (r ? ('core_id' in r ? 'с core_id' : 'без') : 'нет'))));
+    ok(sent[0][2] && sent[0][2].task_data && /правка/.test(JSON.stringify(sent[0][2])), `${tag}: правка старой задачи дошла`);
+    const t1 = await task(page, OLD);
+    ok(t1 && t1.core_id === C, `${tag}: после отправки core_id на телефоне на месте`, JSON.stringify(t1));
+    await ctx.close();
+  } finally { stand.quality = null; stand.serve = null; await stop().catch(() => {}); }
+}
+
 export function syncScenarios(out) {
   return { 's-module-off': () => moduleOff(out), 's-new-kind': () => newKind(out), 's-pull-scope': pullScopeScenario(out), 's-reject-retry': () => rejectRetry(out), 's-reject-retry-1440-dark': () => rejectRetry(out, 1440, 'dark'), 's-own-first': () => ownFirst(out),
-    's-contractor': () => contractor(out), 's-kinds': () => kinds(out), 's-rename': () => rename(out), 's-foreign': () => foreignAndLeader(out, 's-foreign'), 's-leader': () => foreignAndLeader(out, 's-leader') };
+    's-contractor': () => contractor(out), 's-kinds': () => kinds(out), 's-rename': () => rename(out), 's-foreign': () => foreignAndLeader(out, 's-foreign'), 's-leader': () => foreignAndLeader(out, 's-leader'),
+    'q-ids': () => qualityIds(out), 'q-ids-other': () => qualityIdsOther(out) };
 }

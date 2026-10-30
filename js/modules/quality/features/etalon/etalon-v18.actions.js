@@ -690,7 +690,7 @@
         photos: _v18.photos.map(function (p) { return { desc: p.desc, date: p.date, photo: p.photo }; }).filter(function (p) { return p.photo || p.desc; })
       };
 
-      var etalonId = _v18.editingId || String(Date.now() + Math.floor(Math.random() * 1000));
+      var etalonId = _v18.editingId || window.RbiIds.newId();
       var myName = 'Инженер';
       if (window.RBI && window.RBI.services && window.RBI.services.settings) {
         myName = window.RBI.services.settings.get('engineerName') || myName;

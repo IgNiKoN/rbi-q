@@ -738,7 +738,7 @@ async function renderReportFromTemplate(data, template, reportType, mode) {
 
     // Брендированная шапка (проверяем галочки из шаблона)
     let qrDataUrl = null;
-    const reportId = 'rep_' + Date.now().toString(36);
+    const reportId = window.RbiIds.newId();
     const publicToken = generatePublicReportToken();
 
     if (template.show_qr) {
@@ -1307,7 +1307,7 @@ async function printPdfShell(title, content, formatSize = 'A4', orientation = 'p
     const HIGH_QUALITY_SCALE = 2.5;
 
     // === НОВОЕ: Генерируем ID отчета, QR-код и Брендированную шапку ===
-    const reportId = exportMeta?.forcedId || ('rep_' + Date.now().toString(36));
+    const reportId = exportMeta?.forcedId || window.RbiIds.newId();
     // Один токен на отчёт: если шапка собрана снаружи (skipShellHeader) — передайте meta.publicToken,
     // иначе QR на листе и public_token в архиве разъедутся.
     const publicToken = exportMeta?.publicToken || generatePublicReportToken();
@@ -2147,7 +2147,7 @@ function generatePublicReportToken() {
             .map(b => b.toString(16).padStart(2, '0'))
             .join('');
     } catch (e) {
-        return 'rpt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 12);
+        return 'rpt_' + window.RbiIds.newId().replace(/-/g, '');
     }
 }
 
@@ -2384,7 +2384,7 @@ async function urlToDataUrl(url) {
 // Универсальное сохранение отчета в IndexedDB и облако.
 // Перенесено из export.js:saveReportToLocal (группа G4-helpers).
 async function saveReportToLocal(reportData, htmlContent) {
-    const reportId = reportData.forcedId || 'rep_' + Date.now().toString(36);
+    const reportId = reportData.forcedId || window.RbiIds.newId();
     const publicToken = reportData.publicToken || generatePublicReportToken();
 
     // Пытаемся найти системный ключ объекта для правильной синхронизации
@@ -6957,7 +6957,7 @@ function collectRecurringDefectCards(inspections, opts = {}) {
             : (descFromChecklist || g.defectName));
 
         cards.push({
-            id: `dr_${cards.length}_${Date.now().toString(36)}`,
+            id: 'dr_' + window.RbiIds.newId(),
             key: g.key,
             contractor: g.contractor,
             workType: g.workType,
@@ -8637,7 +8637,7 @@ function processDataImport(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const importBatchId = 'import_' + Date.now().toString(36);
+    const importBatchId = window.RbiIds.newId();
 
     showToast(_t('quality.reports.toast.reading_import', 'Чтение файла и безопасный импорт...'));
     const reader = new FileReader();
@@ -10876,7 +10876,7 @@ export const ReportsActions = {
         if (activeBlocks.length === 0) return showToast(_t('quality.reports.toast.template_need_block', '⚠️ Добавьте хотя бы один блок в отчет!'));
 
         const templateData = {
-            id: currentEditingPdfTemplateId || 'tmpl_' + Date.now().toString(36),
+            id: currentEditingPdfTemplateId || window.RbiIds.newId(),
             project_code: window.syncConfig?.projectCode || 'local',
             report_type: document.getElementById('pdf-tmpl-type').value,
             name: name,

@@ -49,14 +49,9 @@
             return true;
         },
 
-        // Генерирует уникальный ID с префиксом типа сущности.
-        // Формат: <prefix>_<timestamp_base36><random_base36>
-        // Пример: defect_lxk3r2a9f04m
-        generateId: function (entityType) {
-            var prefix = (entityType || 'entity').toLowerCase().replace(/[^a-z0-9]/g, '');
-            var ts = Date.now().toString(36);
-            var rand = Math.random().toString(36).slice(2, 8);
-            return prefix + '_' + ts + rand;
+        // P2-0072: номер записи — сервис номеров платформы (uuid); тип сущности в номер больше не входит.
+        generateId: function () {
+            return window.RbiIds.newId();
         },
 
         // Мягкое удаление: выставляет is_deleted, _deleted, deleted_at,
