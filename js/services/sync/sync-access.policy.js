@@ -4,6 +4,10 @@
  * автор — по id учётной записи (authorId ↔ core_created_by), объект — по ключу объекта Качества, фирма — по id контрагента.
  * Переходное правило (решение владельца 29.10.2026): запись без authorId — моя, если подпись = моё текущее или прежнее ФИО
  * (или почта — как member_by_email на сервере); stampAuthor дописывает authorId. Модули подключаются описанием `sync` в манифесте.
+ * P2-0070: режим `area` — единый механизм прав (зеркало core.row_allowed / core.assignment_allows, миграция 052) для любого
+ * модуля: действие роли в области участия в проекте (место участия и всё под ним; без места — весь проект), запись без места
+ * участник части проекта только видит, и только свою. Участие модуля — с сервера (core.my_grants: Стройконтроль — в
+ * quality.my_access → construction, План/Факт — в pf_my_area → grants).
  * Чистые функции; unit — js/shared/__tests__/sync-access.policy.test.js, зеркало сервера — tests/server/sync-access.mirror.mjs.
  */
 'use strict';
@@ -60,7 +64,36 @@ export function meFrom(src) {
         // модули, включённые у компании (null — неизвестно: решает сервер); выключенный — записи на телефоне, причина видна
         modules: Array.isArray(s.modules) ? s.modules.map(String) : null,
         // как запись узнаёт свой объект: на устройстве — справочник объектов (по id, ключу, синонимам), как record_keys сервера
-        inObject: typeof s.inObject === 'function' ? s.inObject : null
+        inObject: typeof s.inObject === 'function' ? s.inObject : null,
+        // P2-0070: участие × действия по модулям ({ construction, planfact, … } — core.my_grants); area — прежнее имя для
+        // Стройконтроля; нет модуля — сервер ещё не ответил
+        areas: areasFrom(s.areas, s.area),
+        // объект и место записи, созданной на телефоне (ещё без core_project_id / core_location_id) — по дереву мест устройства
+        placeOf: typeof s.placeOf === 'function' ? s.placeOf : null
+    };
+}
+
+/** Участие по модулям: { модуль: участие }; `area` без карты — участие Стройконтроля (ответ quality.my_access). */
+export function areasFrom(map, construction) {
+    const out = {};
+    if (map && typeof map === 'object') for (const [m, v] of Object.entries(map)) { const a = areaFrom(v); if (a) out[m] = a; }
+    const c = areaFrom(construction);
+    if (c && !out.construction) out.construction = c;
+    return out;
+}
+
+/** Участие из ответа сервера: { admin, enabled, grants: [{ project, place, places: Set | null, actions: Set, counterparty }] }. */
+export function areaFrom(src) {
+    if (!src || typeof src !== 'object' || !Array.isArray(src.grants)) return null;
+    return {
+        admin: src.admin === true,
+        enabled: src.enabled !== false,
+        grants: src.grants.filter((g) => g && typeof g === 'object').map((g) => ({
+            project: clean(g.project), place: clean(g.place),
+            places: Array.isArray(g.places) ? new Set(g.places.map(clean)) : null,
+            actions: new Set(Array.isArray(g.actions) ? g.actions.map(String) : []),
+            counterparty: clean(g.counterparty)
+        }))
     };
 }
 
@@ -114,16 +147,84 @@ function ownFirm(rec, kind, me) {
 /** Модуль вида — по его действиям (quality / construction). */
 const moduleOf = (kind) => String(((kind.edit || kind.view || [])[0]) || 'quality.').split('.')[0];
 
+/** Объект и место записи: поля сервера (core_project_id / core_location_id), у созданной на телефоне — по дереву мест. */
+function placeOfRec(rec, kind, me) {
+    const pf = kind.place || {};
+    let project = clean(get(rec, pf.project || 'core_project_id'));
+    let location = clean(get(rec, pf.location || 'core_location_id'));
+    if (!project && me.placeOf) {
+        const p = me.placeOf(rec) || {};
+        project = clean(p.project);
+        if (!location) location = clean(p.location);
+    }
+    return { project, location };
+}
+/** Одно участие и одно действие — как core.assignment_allows (052). */
+function grantAllows(g, act, rec, kind, me, pl) {
+    if (!g.actions.has(act)) return false;
+    if (g.actions.has('quality.scope.company')) return true;
+    if (pl.project && g.project && g.project !== pl.project) return false;
+    if (g.place) {
+        // запись без места участник части проекта только видит, и только свою (по id автора, как сервер)
+        if (!pl.location) return /\.view$/.test(act) && !!authorIdOf(rec, kind) && authorIdOf(rec, kind) === me.userId;
+        if (!g.places || !g.places.has(pl.location)) return false;
+    }
+    if (g.actions.has(String(act).split('.')[0] + '.manage')) return true;
+    if (g.actions.has('quality.scope.contractor')) {
+        let cp = '';
+        for (const f of [].concat(kind.counterparty || [])) { cp = clean(get(rec, f)); if (cp) break; }
+        if (cp) return !!g.counterparty && cp === g.counterparty;
+        // запись без id контрагента (создана на телефоне, ещё не отправлена) — по карточке справочника своей фирмы
+        const card = clean(get(rec, kind.contractorCard));
+        return !!card && me.contractorCards.includes(card);
+    }
+    return true;
+}
+/** Новые действия Стройконтроля по прежним — то же правило, что перенос ролей в 052.
+ *  Нужно, когда сервер ещё без 052 (или 052 откачена): прежние ключи есть, новых нет — кнопки и отправка как раньше. */
+export function fineFromLegacy(actions) {
+    const a = new Set(actions || []);
+    if ([...a].some((x) => /^construction\.(defects|acceptance|transfer)\./.test(x))) return [...a];
+    if (!a.has('construction.view') && !a.has('construction.edit')) return [...a];
+    const add = !a.has('construction.edit') ? ['construction.defects.view', 'construction.acceptance.view']
+        : a.has('quality.scope.contractor') ? ['construction.defects.view', 'construction.defects.start', 'construction.defects.fix',
+            'construction.acceptance.view', 'construction.acceptance.book']
+        : ['construction.defects.view', 'construction.defects.create', 'construction.defects.assign', 'construction.defects.start',
+            'construction.defects.fix', 'construction.defects.close', 'construction.defects.reject', 'construction.defects.delete',
+            'construction.acceptance.view', 'construction.acceptance.book', 'construction.acceptance.schedule',
+            'construction.acceptance.conduct', 'construction.transfer.edit'];
+    return [...a, ...add];
+}
+/** Режим `area` (P2-0070): одно из действий acts в области участия. Сервер ещё не прислал участие (или он без 052) — одно
+ *  участие на всю компанию из моих действий и фирмы назначения (как до P2-0070); остальное решит сервер. */
+function decideArea(rec, kind, me, acts) {
+    const A = (me.areas || {})[moduleOf(kind)]
+        || { admin: false, grants: [{ project: '', place: '', places: null, actions: new Set(fineFromLegacy(me.actions)), counterparty: me.contractorId }] };
+    if (A.admin) return { ok: true };
+    const pl = placeOfRec(rec, kind, me);
+    if (acts.some((a) => A.grants.some((g) => grantAllows(g, a, rec, kind, me, pl)))) return { ok: true };
+    if (!acts.some((a) => A.grants.some((g) => g.actions.has(a)))) {
+        return { ok: false, code: 'right', reason: 'Не отправлено: нет права на эти записи', hint: 'Попросите администратора компании дать право' };
+    }
+    if (A.grants.some((g) => g.actions.has('quality.scope.contractor') && acts.some((a) => g.actions.has(a)))
+        && !A.grants.some((g) => !g.actions.has('quality.scope.contractor') && acts.some((a) => g.actions.has(a)))) {
+        return { ok: false, code: 'contractor', reason: 'Не отправлено: запись другой фирмы', hint: 'Отправит сотрудник этой фирмы или руководитель' };
+    }
+    return { ok: false, code: 'area', reason: 'Не отправлено: место записи вне вашего участия в проекте',
+        hint: 'Попросите администратора добавить участие на это место («Компания → Сотрудники»)' };
+}
+
 /** Решение по действию view / edit: { ok, code, reason, hint }. Порядок — как assignment_sees_id сервера. */
-function decide(rec, kind, me, what) {
+function decide(rec, kind, me, what, only) {
     if (!kind) return { ok: false, code: 'kind', reason: 'Не отправлено: неизвестный вид записи', hint: 'Обновите приложение' };
     if (!me) return { ok: false, code: 'login', reason: 'Не отправлено: нужно войти', hint: 'Войдите на этом телефоне — запись уйдёт сама' };
-    const acts = (what === 'view' ? kind.view : kind.edit) || [];
+    const acts = only ? [only] : (what === 'view' ? kind.view : kind.edit) || [];
     const modKey = String(acts[0] || '').split('.')[0];
     if (me.modules && modKey && !me.modules.includes(modKey)) {
         return { ok: false, code: 'module', reason: 'Не отправлено: модуль «' + (MODULE_TITLES[modKey] || modKey) + '» выключен у компании',
             hint: 'Запись сохранена на телефоне; уйдёт, когда администратор компании включит модуль' };
     }
+    if (kind.mode === 'area') return decideArea(rec, kind, me, acts);
     if (!acts.some((a) => has(me, a))) {
         return { ok: false, code: 'right', reason: 'Не отправлено: нет права на эти записи', hint: 'Попросите администратора компании дать право' };
     }
@@ -158,11 +259,14 @@ function foreign(rec, kind) {
 
 /** Можно ли отправить (правка на сервере). */
 export const canSend = (rec, kind, me) => decide(rec, kind, me, 'edit');
+/** Можно ли одно действие над записью (кнопка экрана: «Закрыть», «В работу», «Записаться» …) — то же правило, что у сервера. */
+export const canAct = (rec, kind, me, action) => decide(rec || {}, kind, me, 'edit', action);
 /** Изменить / удалить на экране: можно отправить И (запись моя или я управляю модулем / вся компания). Строже сервера для
  *  режимов «команда объекта» и «библиотека» — чужое меняет только руководитель (как было на экранах до P2-0061, ТД 238). */
 export function canChange(rec, kind, me) {
     const d = canSend(rec, kind, me);
     if (!d.ok || !kind || !me) return d;
+    if (kind.mode === 'area') return d;   // P2-0070: что можно — решают действия роли в области участия (кнопки — canAct)
     const mod = moduleOf(kind);   // З9: Стройконтроль 2.0 — construction.manage
     if (isMine(rec, kind, me) || has(me, mod + '.manage') || has(me, 'quality.scope.company')) return d;
     return foreign(rec, kind);
@@ -185,7 +289,9 @@ function personalApplies(kind, me) {
 /** Отпечаток доступа: изменился с прошлой попытки — «Не отправлено» перепроверяется (ТД 313). */
 export function accessStamp(me) {
     if (!me) return '';
-    return [me.userId, me.actions.slice().sort().join(','), me.objects === null ? '*' : me.objects.slice().sort().join(','), me.contractorId].join('|');
+    const area = Object.keys(me.areas || {}).sort().map((m) => m + '=' + me.areas[m].grants
+        .map((g) => [g.project, g.place, [...g.actions].sort().join('+'), g.counterparty].join(':')).sort().join(';')).join('/');
+    return [me.userId, me.actions.slice().sort().join(','), me.objects === null ? '*' : me.objects.slice().sort().join(','), me.contractorId, area].join('|');
 }
 
 /** Карточки справочника подрядчиков своей фирмы: по ключам фирмы из my_access (contractor.keys) и по названию назначения. */
@@ -198,6 +304,19 @@ function myContractorCards(w, qs) {
     const name = clean((w.appSettings || {}).assignedContractor || (w.appSettings || {}).contractorName);
     if (name) add(C.resolveIdFromNormalized({ display_name: name, contractor_name: name }));
     return out;
+}
+/** Объект и место записи по дереву мест устройства (узлы Качества): место — core_location_id узла "locationId", объект —
+ *  по корневому узлу-объекту (my_access → construction.object_nodes). Нужно записям, созданным на телефоне до отправки. */
+function placeResolver(w, qs) {
+    const L = w.RBI && w.RBI.services && w.RBI.services.locations;
+    const map = (qs.construction && qs.construction.object_nodes) || {};
+    if (!L || typeof L.getPath !== 'function') return null;
+    return (rec) => {
+        const path = L.getPath(clean(rec && rec.locationId)) || [];
+        if (!path.length) return null;
+        const node = path[path.length - 1];
+        return { project: clean(map[clean(path[0].id)]), location: node === path[0] ? '' : clean(node.core_location_id) };
+    };
 }
 /** «Кто я» на этом устройстве — из моста Качества (ответ сервера quality.my_access, P2-0035b/P2-0061), не из названия роли.
  *  Нет моста (не вошли почтой) — null: ничего не уходит, причина «нужно войти». */
@@ -223,9 +342,10 @@ function computeDeviceMe(w) {
         names: qs.names || c.previousNames, actions: qs.actions, objects: qs.objects === undefined ? null : qs.objects,
         contractorId: st.assignedCounterpartyId,
         contractorCards: myContractorCards(w, qs),
+        areas: { construction: qs.construction }, placeOf: placeResolver(w, qs),
         inObject: P && typeof P.isRecordInAssignedProjects === 'function' ? (rec) => !!P.isRecordInAssignedProjects(rec, P.getAssignedProjects()) : null });
 }
 
 if (typeof window !== 'undefined') {
-    window.RbiSyncAccess = { kindsFrom, objectKinds, kindOf, meFrom, deviceMe, isMine, stampAuthor, canSend, canChange, visible, keepPulled, accessStamp, KINDS };
+    window.RbiSyncAccess = { kindsFrom, objectKinds, kindOf, meFrom, areaFrom, areasFrom, fineFromLegacy, deviceMe, isMine, stampAuthor, canSend, canAct, canChange, visible, keepPulled, accessStamp, KINDS };
 }

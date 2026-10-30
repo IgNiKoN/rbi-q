@@ -66,6 +66,39 @@ function filterDefectsForRole(list) {
 function filterAcceptancesForRole(list) {
   return _filterForRole(list);
 }
+const ACTION_LABELS = {
+  "construction.defects.create": "Выдать замечание",
+  "construction.defects.assign": "Назначить подрядчика и срок",
+  "construction.defects.start": "Взять замечание в работу",
+  "construction.defects.fix": "Отметить «Устранено»",
+  "construction.defects.close": "Закрыть замечание",
+  "construction.defects.reject": "Вернуть замечание на доработку",
+  "construction.defects.delete": "Удалить замечание",
+  "construction.acceptance.book": "Записаться на приёмку",
+  "construction.acceptance.schedule": "Подтвердить или перенести время приёмки",
+  "construction.acceptance.conduct": "Провести приёмку",
+  "construction.transfer.edit": "Вести передачу квартир"
+};
+function access() {
+  const w = typeof window !== "undefined" ? window : globalThis;
+  return w.RbiSyncAccess || null;
+}
+function allowed(action, rec) {
+  const A = access();
+  if (!(A == null ? void 0 : A.deviceMe) || !A.kindOf || !A.canAct) return null;
+  const me = A.deviceMe();
+  if (!me) return null;
+  const kind = A.kindOf(action.startsWith("construction.acceptance.") ? "acceptance_v2" : "defect_v2");
+  if (!kind) return null;
+  return !!A.canAct(rec || {}, kind, me, action).ok;
+}
+function can(action, rec, legacy) {
+  const a = allowed(action, rec);
+  return a === null ? legacy : a;
+}
+function noRightText(action) {
+  return "Нет права «" + (ACTION_LABELS[action] || action) + "»";
+}
 function _knowledgeSvc() {
   var _a, _b;
   return (_b = (_a = window.RBI) == null ? void 0 : _a.services) == null ? void 0 : _b.knowledge;
@@ -526,7 +559,12 @@ function _historyHtml(history) {
   </div>`;
 }
 function openCreateDefectForm(coords, onSave, onCancel, prefill) {
-  var _a, _b;
+  var _a, _b, _c;
+  if (allowed("construction.defects.create", { locationId: coords.locationId }) === false) {
+    (_a = window.showToast) == null ? void 0 : _a.call(window, "⚠️ " + noRightText("construction.defects.create") + " на этом месте");
+    onCancel == null ? void 0 : onCancel();
+    return;
+  }
   const root = _ensureOverlay();
   const panel = root.querySelector("[data-c2-defect-panel]");
   const photosRef = { current: [] };
@@ -600,7 +638,7 @@ function openCreateDefectForm(coords, onSave, onCancel, prefill) {
   _bindHelpActions(panel);
   _bindGallery(panel, photosRef, () => {
   });
-  (_a = panel.querySelector("[data-c2-photo-add]")) == null ? void 0 : _a.addEventListener("click", () => {
+  (_b = panel.querySelector("[data-c2-photo-add]")) == null ? void 0 : _b.addEventListener("click", () => {
     var _a2;
     (_a2 = panel.querySelector("[data-c2-photo-input]")) == null ? void 0 : _a2.click();
   });
@@ -614,8 +652,8 @@ function openCreateDefectForm(coords, onSave, onCancel, prefill) {
   root.onclick = (ev) => {
     if (ev.target === root) cancel();
   };
-  (_b = panel.querySelector("[data-c2-defect-save]")) == null ? void 0 : _b.addEventListener("click", async () => {
-    var _a2, _b2, _c, _d;
+  (_c = panel.querySelector("[data-c2-defect-save]")) == null ? void 0 : _c.addEventListener("click", async () => {
+    var _a2, _b2, _c2, _d;
     const fields = _readCommonFields(panel);
     if (!fields.template_key) {
       (_a2 = window.showToast) == null ? void 0 : _a2.call(window, _t$k("construction.form.toast_select_work", "Выберите вид работ (чек-лист)"));
@@ -627,7 +665,7 @@ function openCreateDefectForm(coords, onSave, onCancel, prefill) {
     }
     const description = fields.description || fields.item_name || "";
     if (!description) {
-      (_c = window.showToast) == null ? void 0 : _c.call(window, _t$k("construction.form.toast_desc_required", "Укажите описание замечания"));
+      (_c2 = window.showToast) == null ? void 0 : _c2.call(window, _t$k("construction.form.toast_desc_required", "Укажите описание замечания"));
       return;
     }
     try {
@@ -655,37 +693,39 @@ function openCreateDefectForm(coords, onSave, onCancel, prefill) {
 function _actionButtonsHtml(defect) {
   const { isEngineer, isContractor } = _roleInfo$1();
   const st = String(defect.status || "issued");
+  const start = can("construction.defects.start", defect, isContractor);
+  const fix = can("construction.defects.fix", defect, isContractor);
+  const close = can("construction.defects.close", defect, isEngineer);
+  const reject = can("construction.defects.reject", defect, isEngineer);
+  const del = can("construction.defects.delete", defect, isEngineer);
+  const save = _canEditDefect(defect, isEngineer);
+  const btnStart = `<button type="button" data-c2-status="in_progress" class="flex-1 bg-blue-50 text-blue-600 border border-blue-200 py-2.5 rounded-xl text-rbi-label font-bold uppercase">${_escape$h(_t$k("construction.form.action_in_progress", "В работу"))}</button>`;
+  const btnDel = `<button type="button" data-c2-defect-delete class="bg-danger-soft text-danger py-2.5 px-3 rounded-xl text-rbi-label font-bold uppercase border border-danger-soft">🗑️</button>`;
+  const btnSave = `<button type="button" data-c2-defect-save class="flex-1 bg-brand text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_update", "💾 Обновить"))}</button>`;
+  const out = [];
   if (st === "issued") {
-    if (isContractor) {
-      return `<button type="button" data-c2-status="in_progress" class="flex-1 bg-blue-50 text-blue-600 border border-blue-200 py-2.5 rounded-xl text-rbi-label font-bold uppercase">${_escape$h(_t$k("construction.form.action_in_progress", "В работу"))}</button>
-        <button type="button" data-c2-status="fixed" class="flex-[1.5] bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_fixed_photo", "Устранено (Фото)"))}</button>`;
-    }
-    if (isEngineer) {
-      return `<button type="button" data-c2-defect-delete class="bg-danger-soft text-danger py-2.5 px-3 rounded-xl text-rbi-label font-bold uppercase border border-danger-soft">🗑️</button>
-        <button type="button" data-c2-defect-save class="flex-1 bg-brand text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_update", "💾 Обновить"))}</button>`;
-    }
+    if (start) out.push(btnStart);
+    if (fix) out.push(`<button type="button" data-c2-status="fixed" class="flex-[1.5] bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_fixed_photo", "Устранено (Фото)"))}</button>`);
+    if (del) out.push(btnDel);
+    if (save) out.push(btnSave);
   } else if (st === "in_progress") {
-    if (isContractor) {
-      return `<button type="button" data-c2-status="fixed" class="w-full bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_fixed_attach", "Устранено (Приложить фото)"))}</button>`;
-    }
-    return `<div class="text-center w-full text-rbi-label font-bold text-blue-500 py-2">${_escape$h(_t$k("construction.form.contractor_working", "Подрядчик взял в работу"))}</div>`;
+    if (fix) out.push(`<button type="button" data-c2-status="fixed" class="w-full bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_fixed_attach", "Устранено (Приложить фото)"))}</button>`);
+    else return `<div class="text-center w-full text-rbi-label font-bold text-blue-500 py-2">${_escape$h(_t$k("construction.form.contractor_working", "Подрядчик взял в работу"))}</div>`;
   } else if (st === "fixed") {
-    if (isEngineer) {
-      return `<button type="button" data-c2-status="rejected" class="flex-1 bg-danger-soft text-danger border border-danger-soft py-2.5 rounded-xl text-rbi-label font-bold uppercase">${_escape$h(_t$k("construction.form.action_reject", "❌ Отклонить"))}</button>
-        <button type="button" data-c2-status="closed" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_accept", "✅ Принять"))}</button>`;
-    }
-    return `<div class="text-center w-full text-rbi-label font-bold text-green-500 py-2">${_escape$h(_t$k("construction.form.awaiting_review", "Ожидает проверки инженером"))}</div>`;
+    if (reject) out.push(`<button type="button" data-c2-status="rejected" class="flex-1 bg-danger-soft text-danger border border-danger-soft py-2.5 rounded-xl text-rbi-label font-bold uppercase">${_escape$h(_t$k("construction.form.action_reject", "❌ Отклонить"))}</button>`);
+    if (close) out.push(`<button type="button" data-c2-status="closed" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_accept", "✅ Принять"))}</button>`);
+    if (!out.length) return `<div class="text-center w-full text-rbi-label font-bold text-green-500 py-2">${_escape$h(_t$k("construction.form.awaiting_review", "Ожидает проверки инженером"))}</div>`;
   } else if (st === "closed") {
     return `<div class="text-center w-full text-rbi-label font-black text-green-600 py-2">${_escape$h(_t$k("construction.form.defect_closed", "Дефект закрыт"))}</div>`;
   } else if (st === "rejected") {
-    if (isContractor) {
-      return `<button type="button" data-c2-status="fixed" class="w-full bg-orange-500 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.resubmit_photo", "Повторно предъявить (Фото)"))}</button>`;
-    }
-    if (isEngineer) {
-      return `<button type="button" data-c2-defect-save class="flex-1 bg-brand text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.action_update", "💾 Обновить"))}</button>`;
-    }
+    if (fix) out.push(`<button type="button" data-c2-status="fixed" class="w-full bg-orange-500 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape$h(_t$k("construction.form.resubmit_photo", "Повторно предъявить (Фото)"))}</button>`);
+    if (save) out.push(btnSave);
   }
+  if (out.length) return out.join("\n        ");
   return `<button type="button" data-c2-defect-close class="px-3 py-2 rounded-xl text-rbi-label font-bold uppercase text-muted">${_escape$h(_t$k("construction.form.close", "Закрыть"))}</button>`;
+}
+function _canEditDefect(defect, isEngineer) {
+  return can("construction.defects.create", defect, isEngineer) || can("construction.defects.assign", defect, isEngineer);
 }
 function openViewDefectForm(defect, onDelete, onSave, onChangeStatus) {
   var _a, _b, _c, _d;
@@ -706,8 +746,9 @@ function openViewDefectForm(defect, onDelete, onSave, onChangeStatus) {
     return `<option value="${c}"${sel}>${_escape$h(_catLabel(c))}</option>`;
   }).join("");
   const deadlineVal = _deadlineInputValue(defect.deadline);
-  const canEditFields = isEngineer;
+  const canEditFields = can("construction.defects.create", defect, isEngineer);
   const disabled = canEditFields ? "" : " disabled";
+  const disabledAssign = can("construction.defects.assign", defect, isEngineer) ? "" : " disabled";
   panel.innerHTML = `
     <div class="flex items-center justify-between mb-3">
       <h3 class="text-rbi-body font-black uppercase tracking-tight">${_escape$h(_t$k("construction.form.defect_title", "Замечание"))}</h3>
@@ -742,11 +783,11 @@ function openViewDefectForm(defect, onDelete, onSave, onChangeStatus) {
       <div>
         <label class="block text-rbi-caption font-bold uppercase text-muted mb-1">${_escape$h(_t$k("construction.form.deadline", "Срок"))}</label>
         <input type="date" data-c2-defect-deadline value="${_escape$h(deadlineVal)}"
-          class="w-full rounded-xl border border-surface bg-transparent px-3 py-2 text-rbi-body"${disabled} />
+          class="w-full rounded-xl border border-surface bg-transparent px-3 py-2 text-rbi-body"${disabledAssign} />
       </div>
     </div>
     <label class="block text-rbi-caption font-bold uppercase text-muted mb-1">${_escape$h(_t$k("construction.form.contractor", "Подрядчик"))}</label>
-    <select data-c2-defect-contractor class="w-full rounded-xl border border-surface bg-transparent px-3 py-2 text-rbi-body mb-3"${disabled}>
+    <select data-c2-defect-contractor class="w-full rounded-xl border border-surface bg-transparent px-3 py-2 text-rbi-body mb-3"${disabledAssign}>
       ${_contractorOptionsHtml(defect.contractorId)}
     </select>
     <label class="block text-rbi-caption font-bold uppercase text-muted mb-1">${_escape$h(_t$k("construction.form.description", "Описание"))}</label>
@@ -2540,17 +2581,22 @@ function _zoneCenter(zone) {
   };
 }
 function openCreateAcceptanceForm(ctx, onSave, onCancel) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e;
   const { role } = _roleInfo();
   if (role === "guest") {
     (_a = window.showToast) == null ? void 0 : _a.call(window, _t$e("construction.v2.acc.guest_blocked", "⚠️ Гости не могут предъявлять работы"));
     onCancel == null ? void 0 : onCancel();
     return;
   }
+  if (allowed("construction.acceptance.book", { locationId: ctx.locationId }) === false) {
+    (_b = window.showToast) == null ? void 0 : _b.call(window, "⚠️ " + noRightText("construction.acceptance.book") + " на этом месте");
+    onCancel == null ? void 0 : onCancel();
+    return;
+  }
   const isContractor = role === "contractor" || isContractorRole();
   const myContractorId = isContractor ? resolveMyContractorId() : null;
   if (isContractor && !myContractorId) {
-    (_b = window.showToast) == null ? void 0 : _b.call(window, _t$e("construction.v2.acc.contractor_unbound", "⚠️ Подрядчик не привязан к профилю — заявку создать нельзя"));
+    (_c = window.showToast) == null ? void 0 : _c.call(window, _t$e("construction.v2.acc.contractor_unbound", "⚠️ Подрядчик не привязан к профилю — заявку создать нельзя"));
     onCancel == null ? void 0 : onCancel();
     return;
   }
@@ -2613,7 +2659,7 @@ function openCreateAcceptanceForm(ctx, onSave, onCancel) {
         </div>
       </div>
     </div>`;
-  (_c = document.getElementById("c2-acc-request-modal")) == null ? void 0 : _c.remove();
+  (_d = document.getElementById("c2-acc-request-modal")) == null ? void 0 : _d.remove();
   document.body.insertAdjacentHTML("beforeend", html);
   const modal = document.getElementById("c2-acc-request-modal");
   if (!modal) return;
@@ -2625,11 +2671,11 @@ function openCreateAcceptanceForm(ctx, onSave, onCancel) {
     if (ev.target === modal) close();
   });
   modal.querySelectorAll("[data-c2-acc-close]").forEach((btn) => btn.addEventListener("click", close));
-  (_d = modal.querySelector("[data-c2-acc-save]")) == null ? void 0 : _d.addEventListener("click", () => {
-    var _a2, _b2, _c2, _d2, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+  (_e = modal.querySelector("[data-c2-acc-save]")) == null ? void 0 : _e.addEventListener("click", () => {
+    var _a2, _b2, _c2, _d2, _e2, _f, _g, _h, _i, _j, _k, _l, _m, _n;
     const workKey = ((_a2 = document.getElementById("c2-acc-work")) == null ? void 0 : _a2.value) || "";
     const room = isApartment ? "" : ((_c2 = (_b2 = document.getElementById("c2-acc-room")) == null ? void 0 : _b2.value) == null ? void 0 : _c2.trim()) || "";
-    const vol = ((_e = (_d2 = document.getElementById("c2-acc-vol")) == null ? void 0 : _d2.value) == null ? void 0 : _e.trim()) || "";
+    const vol = ((_e2 = (_d2 = document.getElementById("c2-acc-vol")) == null ? void 0 : _d2.value) == null ? void 0 : _e2.trim()) || "";
     const dateStr = ((_f = document.getElementById("c2-acc-date")) == null ? void 0 : _f.value) || "";
     const timeStr = ((_g = document.getElementById("c2-acc-time")) == null ? void 0 : _g.value) || "";
     let contractorId = isContractor ? myContractorId : ((_i = (_h = document.getElementById("c2-acc-contractor")) == null ? void 0 : _h.value) == null ? void 0 : _i.trim()) || null;
@@ -2674,12 +2720,14 @@ function openAcceptanceDetails(item, handlers) {
   const { isEngineer, role } = _roleInfo();
   const path = _floorLabel(item.locationId);
   const status = String(item.status || "pending");
-  const editable = isEngineer && status === "pending";
+  const conduct = can("construction.acceptance.conduct", item, isEngineer);
+  const revoke = can("construction.acceptance.book", item, !isEngineer && role !== "guest");
+  const editable = conduct && status === "pending";
   const defectsForLoc = _listDefectsForLocation(item.locationId);
   const batchCandidates = listFailBatchCandidates(item, defectsForLoc);
   let actions = "";
   if (status === "pending") {
-    if (isEngineer) {
+    if (conduct) {
       actions = `
         <div class="flex flex-col gap-2 mt-4 pt-4 border-t border-[var(--card-border)]">
           <button type="button" data-c2-acc-focus class="w-full bg-slate-100 text-ink border border-surface py-3 rounded-xl font-black text-rbi-label uppercase">${_escape$d(_t$e("construction.v2.acc.show_on_plan", "🗺️ Показать на плане"))}</button>
@@ -2687,15 +2735,16 @@ function openAcceptanceDetails(item, handlers) {
             <button type="button" data-c2-acc-status="accepted" class="flex-1 bg-green-50 text-green-600 border border-green-200 py-3 rounded-xl font-bold text-rbi-caption uppercase">${_escape$d(_t$e("construction.form.action_accept", "✅ Принять"))}</button>
             <button type="button" data-c2-acc-status="rejected" class="flex-1 bg-danger-soft text-danger border border-danger-soft py-3 rounded-xl font-bold text-rbi-caption uppercase">${_escape$d(_t$e("construction.form.action_reject", "❌ Отклонить"))}</button>
           </div>
+          ${revoke ? `<button type="button" data-c2-acc-revoke class="w-full bg-danger-soft text-danger py-3 rounded-xl font-bold text-rbi-caption uppercase border border-danger-soft">${_escape$d(_t$e("construction.v2.acc.revoke", "Отозвать заявку"))}</button>` : ""}
         </div>`;
-    } else if (role !== "guest") {
+    } else if (role !== "guest" || revoke) {
       actions = `
         <div class="mt-4 pt-4 border-t border-[var(--card-border)] text-center">
           <div class="text-rbi-label font-bold text-blue-500 uppercase tracking-widest mb-3">${_escape$d(_t$e("construction.v2.acc.engineer_reviewing", "⏳ Инженер проверяет заявку..."))}</div>
-          <button type="button" data-c2-acc-revoke class="w-full bg-danger-soft text-danger py-3 rounded-xl font-bold text-rbi-caption uppercase border border-danger-soft">${_escape$d(_t$e("construction.v2.acc.revoke", "Отозвать заявку"))}</button>
+          ${revoke ? `<button type="button" data-c2-acc-revoke class="w-full bg-danger-soft text-danger py-3 rounded-xl font-bold text-rbi-caption uppercase border border-danger-soft">${_escape$d(_t$e("construction.v2.acc.revoke", "Отозвать заявку"))}</button>` : ""}
         </div>`;
     }
-  } else if (isEngineer) {
+  } else if (conduct) {
     actions = `
       <div class="mt-4 pt-4 border-t border-[var(--card-border)]">
         <button type="button" data-c2-acc-focus class="w-full bg-slate-100 text-ink border border-surface py-3 rounded-xl font-black text-rbi-label uppercase mb-2">${_escape$d(_t$e("construction.v2.acc.show_on_plan", "🗺️ Показать на плане"))}</button>
@@ -3319,7 +3368,7 @@ function closeUnitCard() {
   (_a = document.getElementById("c2-unit-card")) == null ? void 0 : _a.remove();
 }
 function openUnitCard(unit, deps) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e, _f;
   closeUnitCard();
   unit.id;
   const guest = deps.cb.isGuest();
@@ -3352,7 +3401,7 @@ function openUnitCard(unit, deps) {
           <span class="text-rbi-caption font-black uppercase tracking-widest text-muted">${_escape$b(_t$c("construction.v2.unit.transfer_status", "Статус передачи"))}</span>
           <select id="c2-unit-card-status" data-c2-unit-id="${_escape$b(unit.id)}"
             class="mt-1 w-full rounded-xl border border-surface bg-surface px-3 py-2.5 text-rbi-body font-bold"
-            ${guest ? "disabled" : ""}>
+            ${guest || ((_b = (_a = deps.cb).canTransfer) == null ? void 0 : _b.call(_a)) === false ? "disabled" : ""}>
             ${statusOpts}
           </select>
         </label>
@@ -3405,7 +3454,7 @@ function openUnitCard(unit, deps) {
       }
     })();
   });
-  (_a = wrap.querySelector("[data-c2-unit-apt-plan]")) == null ? void 0 : _a.addEventListener("click", (ev) => {
+  (_c = wrap.querySelector("[data-c2-unit-apt-plan]")) == null ? void 0 : _c.addEventListener("click", (ev) => {
     ev.preventDefault();
     const id = ev.currentTarget.getAttribute("data-c2-unit-apt-plan");
     if (!id) return;
@@ -3416,7 +3465,7 @@ function openUnitCard(unit, deps) {
     }
     void deps.cb.onOpenApartmentPlan(fresh);
   });
-  (_b = wrap.querySelector("[data-c2-unit-acceptance]")) == null ? void 0 : _b.addEventListener("click", (ev) => {
+  (_d = wrap.querySelector("[data-c2-unit-acceptance]")) == null ? void 0 : _d.addEventListener("click", (ev) => {
     ev.preventDefault();
     if (guest) return;
     const id = ev.currentTarget.getAttribute("data-c2-unit-acceptance");
@@ -3428,8 +3477,8 @@ function openUnitCard(unit, deps) {
     }
     void deps.cb.onOpenAcceptance(fresh);
   });
-  (_c = wrap.querySelector("[data-c2-unit-core-places]")) == null ? void 0 : _c.addEventListener("click", () => closeUnitCard());
-  (_d = wrap.querySelector("[data-c2-unit-delete]")) == null ? void 0 : _d.addEventListener("click", (ev) => {
+  (_e = wrap.querySelector("[data-c2-unit-core-places]")) == null ? void 0 : _e.addEventListener("click", () => closeUnitCard());
+  (_f = wrap.querySelector("[data-c2-unit-delete]")) == null ? void 0 : _f.addEventListener("click", (ev) => {
     ev.preventDefault();
     if (guest) return;
     const id = ev.currentTarget.getAttribute("data-c2-unit-delete");
@@ -3788,6 +3837,7 @@ function _openUnit$1(u) {
     cb: {
       onChanged: _refreshBoard$1,
       isGuest: _isGuest$1,
+      canTransfer: () => can("construction.transfer.edit", null, !_isGuest$1()),
       canSoftDelete: _canSoftDelete$1,
       toast: _toast$1,
       onOpenApartmentPlan: async (unit) => {
@@ -4237,6 +4287,7 @@ function _openUnit(u) {
     cb: {
       onChanged: _refreshBoard,
       isGuest: _isGuest,
+      canTransfer: () => can("construction.transfer.edit", null, !_isGuest()),
       canSoftDelete: _canSoftDelete,
       toast: _toast,
       onOpenApartmentPlan: async (unit) => {

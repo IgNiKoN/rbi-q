@@ -121,9 +121,14 @@ export function roleFor(actions: string[]): string {
 
 /** Доступ из quality.my_access: projects — назначенные объекты ядра (null — вся компания), contractor — фирма назначения,
  *  objects — ключи закреплённых объектов Качества (P2-0033, 033; null — все объекты). */
-export interface QualityAccess { actions: string[]; templates: string[]; projects: string[] | null; contractor: string; contractorId: string; contractorKeys: string[]; objects: string[] | null; container: string | null }
+export interface QualityAccess { actions: string[]; templates: string[]; projects: string[] | null; contractor: string; contractorId: string; contractorKeys: string[]; objects: string[] | null; container: string | null; construction: ConstructionAccess | null }
+/** P2-0070 (052): участие × действия Стройконтроля 2.0 для правила устройства (sync-access.policy.js, режим `area`). */
+export interface ConstructionAccess {
+  admin: boolean; enabled: boolean; object_nodes: Record<string, string>;
+  grants: { project: string | null; place: string | null; places: string[] | null; actions: string[]; counterparty: string | null }[];
+}
 export function parseAccess(data: unknown): QualityAccess {
-  const d = (data && typeof data === 'object' ? data : {}) as { actions?: unknown; templates?: unknown; projects?: unknown; contractor?: unknown; objects?: unknown; container?: unknown };
+  const d = (data && typeof data === 'object' ? data : {}) as { actions?: unknown; templates?: unknown; projects?: unknown; contractor?: unknown; objects?: unknown; container?: unknown; construction?: unknown };
   const c = (d.contractor && typeof d.contractor === 'object' ? d.contractor : {}) as { id?: unknown; name?: unknown; keys?: unknown };
   return {
     actions: Array.isArray(d.actions) ? d.actions.map(String) : [],
@@ -137,7 +142,28 @@ export function parseAccess(data: unknown): QualityAccess {
     objects: Array.isArray(d.objects)
       ? d.objects.map((o) => (o && typeof o === 'object' ? String((o as { key?: unknown }).key ?? '') : '')).filter(Boolean) : null,
     // P2-0035 (039b): служебный объект-контейнер компании (как «Объекты RBI») — Качество работает в нём
-    container: typeof d.container === 'string' && d.container ? d.container : null
+    container: typeof d.container === 'string' && d.container ? d.container : null,
+    construction: parseConstruction(d.construction)
+  };
+}
+
+/** Участие Стройконтроля из ответа сервера; сервер без 052 (нет поля) — null: правило устройства решает по действиям. */
+export function parseConstruction(v: unknown): ConstructionAccess | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as { admin?: unknown; enabled?: unknown; grants?: unknown; object_nodes?: unknown };
+  if (!Array.isArray(o.grants)) return null;
+  const str = (x: unknown): string | null => (typeof x === 'string' && x ? x : null);
+  const nodes: Record<string, string> = {};
+  if (o.object_nodes && typeof o.object_nodes === 'object') {
+    for (const [k, val] of Object.entries(o.object_nodes as Record<string, unknown>)) if (typeof val === 'string') nodes[k] = val;
+  }
+  return {
+    admin: o.admin === true, enabled: o.enabled !== false, object_nodes: nodes,
+    grants: o.grants.filter((g) => g && typeof g === 'object').map((g) => {
+      const x = g as { project?: unknown; place?: unknown; places?: unknown; actions?: unknown; counterparty?: unknown };
+      return { project: str(x.project), place: str(x.place), places: Array.isArray(x.places) ? x.places.map(String) : null,
+        actions: Array.isArray(x.actions) ? x.actions.map(String) : [], counterparty: str(x.counterparty) };
+    })
   };
 }
 
@@ -264,6 +290,8 @@ export interface QualitySync {
   names?: string[];
   objects?: string[] | null;
   contractorKeys?: string[];
+  /** P2-0070: участие × действия Стройконтроля 2.0 (quality.my_access → construction); null — сервер без 052. */
+  construction?: ConstructionAccess | null;
   selectProject(id: string): Promise<void>;
 }
 
@@ -403,6 +431,7 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
     sync.actions = a.actions;
     sync.objects = a.objects;   // P2-0061: null — все объекты (как сервер), иначе ключи закреплённых
     sync.contractorKeys = a.contractorKeys;
+    sync.construction = a.construction;   // P2-0070: участие × действия Стройконтроля (правило устройства, кнопки)
     sync.role = roleFor(a.actions);
     // Фирма подрядчика — из назначения роли (020). Закреплённые объекты Качества (033) — экрану ключами объектов, как в старом
     // профиле (assignedProjects): старые фильтры и выбор объекта работают как раньше; что видно — решает сервер. Все объекты — [].

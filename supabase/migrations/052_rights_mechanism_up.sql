@@ -11,7 +11,9 @@
 --     прежние ключи остаются (их читают Стройконтроль 1 и Качество); место записи по id ядра (core_location_id, поле рядом,
 --     шаг С1 P2-0069); правила строк — core.row_allowed; сторож действий — core.require_action; «кто я» для телефона;
 --  4) План/Факт — на проверку ядра без смены поведения: planfact.my_area / my_area_nodes / in_area / has_permission /
---     has_company_permission — обёртки над core.* (прежние вызовы в функциях и правилах 047–051 не меняются).
+--     has_company_permission — обёртки над core.* (прежние вызовы в функциях и правилах 047–051 не меняются);
+--  5) телефон: core.my_grants — участие × действия модуля для правила устройства (quality.my_access → construction.grants,
+--     pf_my_area → grants).
 -- Стройконтроль 1 (construction_* без _v2), Качество и помещения (construction_units_v2) не меняются.
 -- Применять после 051, одним запросом, ДО выкладки приложения. Откат — 052_rights_mechanism_down.sql.
 begin;
@@ -303,12 +305,35 @@ begin
     using errcode = '42501';
 end $$;
 
+-- Участие × действия модуля для правила устройства (то же, что core.row_allowed / can_at): по назначению — проект, место
+-- участия, место и всё под ним, действия роли модуля (на часть проекта — только area_scoped) и признаки видимости, фирма.
+-- Проект задан — назначения на него и на всю компанию.
+create function core.my_grants(p_company uuid, p_project uuid, p_module text)
+returns jsonb language sql stable security definer set search_path = pg_catalog as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'project', g.project_id, 'place', g.location_id,
+           'places', case when g.location_id is not null then to_jsonb(core.place_subtree(g.location_id)) end,
+           'actions', g.acts, 'counterparty', g.counterparty_id) order by g.project_id nulls first, g.location_id nulls first), '[]'::jsonb)
+    from (select a.project_id, a.location_id, a.counterparty_id,
+                 array(select rp.action from core.company_role_permissions rp
+                        join core.permission_catalog pc on pc.action = rp.action
+                       where rp.role_id = a.role_id and rp.company_id = a.company_id
+                         and (rp.action like p_module || '.%' or rp.action like 'quality.scope.%')
+                         and (a.location_id is null or pc.area_scoped or rp.action like 'quality.scope.%')
+                       order by rp.action) acts
+            from core.role_assignments a
+           where a.company_id = p_company and a.user_id = auth.uid()
+             and (p_project is null or a.project_id is null or a.project_id = p_project)
+             and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())) g
+   where exists (select 1 from unnest(g.acts) x where x like p_module || '.%')
+$$;
+
 -- Функции ядра клиент не вызывает (ТД №104, 017a), кроме проверки для правил строк модулей: правило RLS выполняется от имени
 -- клиента. row_allowed отвечает только о правах самого вошедшего.
 revoke all on function core.place_up(uuid), core.place_subtree(uuid), core.my_area(uuid), core.my_area_nodes(uuid),
   core.in_area(uuid, uuid[]), core.has_grant(uuid, uuid, uuid, text), core.can_at(uuid, uuid, uuid, text),
   core.assignment_allows(core.role_assignments, text, uuid, uuid[], uuid, uuid), core.row_allowed(uuid, uuid, uuid, text[], uuid, uuid),
-  core.require_action(uuid, uuid, uuid, text, uuid, uuid)
+  core.require_action(uuid, uuid, uuid, text, uuid, uuid), core.my_grants(uuid, uuid, text)
   from public, anon, authenticated;
 grant execute on function core.row_allowed(uuid, uuid, uuid, text[], uuid, uuid) to authenticated;
 
@@ -492,19 +517,7 @@ returns jsonb language sql stable security definer set search_path = pg_catalog,
       'admin', planfact.is_platform_admin(),
       'enabled', exists (select 1 from core.company_modules cm where cm.company_id = quality.request_company()
                                                               and cm.module = 'construction' and cm.enabled),
-      'grants', coalesce((select jsonb_agg(jsonb_build_object(
-                    'project', g.project_id, 'place', g.location_id,
-                    'places', case when g.location_id is not null then to_jsonb(core.place_subtree(g.location_id)) end,
-                    'actions', g.acts, 'counterparty', g.counterparty_id) order by g.project_id nulls first, g.location_id nulls first)
-                  from (select a.project_id, a.location_id, a.counterparty_id,
-                               array(select rp.action from core.company_role_permissions rp
-                                      join core.permission_catalog pc on pc.action = rp.action
-                                     where rp.role_id = a.role_id and rp.company_id = a.company_id
-                                       and (rp.action like 'construction.%' or rp.action like 'quality.scope.%')
-                                       and (a.location_id is null or pc.area_scoped or rp.action like 'quality.scope.%')
-                                     order by rp.action) acts
-                          from asg a) g
-                 where exists (select 1 from unnest(g.acts) x where x like 'construction.%')), '[]'::jsonb),
+      'grants', core.my_grants(quality.request_company(), null, 'construction'),
       'object_nodes', coalesce((select jsonb_object_agg(n.id, quality.node_root_project(n)) from quality.location_nodes n
                                  where n.core_company_id = quality.request_company() and n."nodeType" = 'object'
                                    and not coalesce(n.is_deleted, false) and coalesce(n."parentId", '') = ''
@@ -547,5 +560,25 @@ returns boolean language sql stable security definer set search_path = pg_catalo
     select 1 from core.company_modules cm
     where cm.company_id = p_company and cm.module = 'planfact' and cm.enabled and core.has_grant(p_company, null, null, p_action));
 $$;
+
+-- «Моя область» План/Факта для телефона: + участие × действия План/Факта (core.my_grants — то же, что у Стройконтроля).
+create or replace function public.pf_my_area(p_project uuid)
+returns jsonb language plpgsql stable security definer set search_path = pg_catalog, planfact, core as $$
+declare v_uid uuid := auth.uid();
+begin
+  if p_project is null or v_uid is null or not planfact.is_project_member(p_project) then
+    raise exception 'Нет доступа к проекту' using errcode = '42501';
+  end if;
+  return jsonb_build_object(
+    'full', planfact.my_area(p_project) is null,
+    'locations', coalesce((select jsonb_agg(distinct a.location_id) from core.role_assignments a
+                            where a.user_id = v_uid and a.project_id = p_project and a.location_id is not null
+                              and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())), '[]'::jsonb),
+    'fact_owner', coalesce((select jsonb_agg(distinct coalesce(a.location_id::text, 'project')) from core.role_assignments a
+                             where a.user_id = v_uid and a.project_id = p_project and a.fact_owner
+                               and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())), '[]'::jsonb),
+    'can_on_behalf', planfact.has_permission(p_project, 'planfact.fact.approve'),
+    'grants', core.my_grants((select company_id from core.projects where id = p_project), p_project, 'planfact'));
+end $$;
 
 commit;

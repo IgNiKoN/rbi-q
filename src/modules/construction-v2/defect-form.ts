@@ -10,6 +10,7 @@ import type {
 } from '../../services/construction-defects/types';
 import { DEFECT_CATEGORIES_V2 } from '../../services/construction-defects/types';
 import { isContractorRole, isMyRecord } from './contractor-scope';
+import { allowed, can, noRightText } from './rights';
 
 export type DefectFormCreateInput = {
   locationId: string;
@@ -626,6 +627,12 @@ export function openCreateDefectForm(
     description?: string | null;
   }
 ): void {
+  // P2-0070: «Выдать замечание» на этом месте (участие в проекте); без права — форма не открывается, сервер всё равно откажет
+  if (allowed('construction.defects.create', { locationId: coords.locationId }) === false) {
+    window.showToast?.('⚠️ ' + noRightText('construction.defects.create') + ' на этом месте');
+    onCancel?.();
+    return;
+  }
   const root = _ensureOverlay();
   const panel = root.querySelector('[data-c2-defect-panel]') as HTMLElement;
   const photosRef = { current: [] as string[] };
@@ -760,39 +767,44 @@ export function openCreateDefectForm(
 }
 
 function _actionButtonsHtml(defect: ConstructionDefectV2): string {
+  // P2-0070: кнопки — по действиям роли в области участия (rights.ts); без входа почтой — как раньше, по роли профиля
   const { isEngineer, isContractor } = _roleInfo();
   const st = String(defect.status || 'issued');
+  const start = can('construction.defects.start', defect, isContractor);
+  const fix = can('construction.defects.fix', defect, isContractor);
+  const close = can('construction.defects.close', defect, isEngineer);
+  const reject = can('construction.defects.reject', defect, isEngineer);
+  const del = can('construction.defects.delete', defect, isEngineer);
+  const save = _canEditDefect(defect, isEngineer);
+  const btnStart = `<button type="button" data-c2-status="in_progress" class="flex-1 bg-blue-50 text-blue-600 border border-blue-200 py-2.5 rounded-xl text-rbi-label font-bold uppercase">${_escape(_t('construction.form.action_in_progress', 'В работу'))}</button>`;
+  const btnDel = `<button type="button" data-c2-defect-delete class="bg-danger-soft text-danger py-2.5 px-3 rounded-xl text-rbi-label font-bold uppercase border border-danger-soft">🗑️</button>`;
+  const btnSave = `<button type="button" data-c2-defect-save class="flex-1 bg-brand text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_update', '💾 Обновить'))}</button>`;
+  const out: string[] = [];
   if (st === 'issued') {
-    if (isContractor) {
-      return `<button type="button" data-c2-status="in_progress" class="flex-1 bg-blue-50 text-blue-600 border border-blue-200 py-2.5 rounded-xl text-rbi-label font-bold uppercase">${_escape(_t('construction.form.action_in_progress', 'В работу'))}</button>
-        <button type="button" data-c2-status="fixed" class="flex-[1.5] bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_fixed_photo', 'Устранено (Фото)'))}</button>`;
-    }
-    if (isEngineer) {
-      return `<button type="button" data-c2-defect-delete class="bg-danger-soft text-danger py-2.5 px-3 rounded-xl text-rbi-label font-bold uppercase border border-danger-soft">🗑️</button>
-        <button type="button" data-c2-defect-save class="flex-1 bg-brand text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_update', '💾 Обновить'))}</button>`;
-    }
+    if (start) out.push(btnStart);
+    if (fix) out.push(`<button type="button" data-c2-status="fixed" class="flex-[1.5] bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_fixed_photo', 'Устранено (Фото)'))}</button>`);
+    if (del) out.push(btnDel);
+    if (save) out.push(btnSave);
   } else if (st === 'in_progress') {
-    if (isContractor) {
-      return `<button type="button" data-c2-status="fixed" class="w-full bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_fixed_attach', 'Устранено (Приложить фото)'))}</button>`;
-    }
-    return `<div class="text-center w-full text-rbi-label font-bold text-blue-500 py-2">${_escape(_t('construction.form.contractor_working', 'Подрядчик взял в работу'))}</div>`;
+    if (fix) out.push(`<button type="button" data-c2-status="fixed" class="w-full bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_fixed_attach', 'Устранено (Приложить фото)'))}</button>`);
+    else return `<div class="text-center w-full text-rbi-label font-bold text-blue-500 py-2">${_escape(_t('construction.form.contractor_working', 'Подрядчик взял в работу'))}</div>`;
   } else if (st === 'fixed') {
-    if (isEngineer) {
-      return `<button type="button" data-c2-status="rejected" class="flex-1 bg-danger-soft text-danger border border-danger-soft py-2.5 rounded-xl text-rbi-label font-bold uppercase">${_escape(_t('construction.form.action_reject', '❌ Отклонить'))}</button>
-        <button type="button" data-c2-status="closed" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_accept', '✅ Принять'))}</button>`;
-    }
-    return `<div class="text-center w-full text-rbi-label font-bold text-green-500 py-2">${_escape(_t('construction.form.awaiting_review', 'Ожидает проверки инженером'))}</div>`;
+    if (reject) out.push(`<button type="button" data-c2-status="rejected" class="flex-1 bg-danger-soft text-danger border border-danger-soft py-2.5 rounded-xl text-rbi-label font-bold uppercase">${_escape(_t('construction.form.action_reject', '❌ Отклонить'))}</button>`);
+    if (close) out.push(`<button type="button" data-c2-status="closed" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_accept', '✅ Принять'))}</button>`);
+    if (!out.length) return `<div class="text-center w-full text-rbi-label font-bold text-green-500 py-2">${_escape(_t('construction.form.awaiting_review', 'Ожидает проверки инженером'))}</div>`;
   } else if (st === 'closed') {
     return `<div class="text-center w-full text-rbi-label font-black text-green-600 py-2">${_escape(_t('construction.form.defect_closed', 'Дефект закрыт'))}</div>`;
   } else if (st === 'rejected') {
-    if (isContractor) {
-      return `<button type="button" data-c2-status="fixed" class="w-full bg-orange-500 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.resubmit_photo', 'Повторно предъявить (Фото)'))}</button>`;
-    }
-    if (isEngineer) {
-      return `<button type="button" data-c2-defect-save class="flex-1 bg-brand text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.action_update', '💾 Обновить'))}</button>`;
-    }
+    if (fix) out.push(`<button type="button" data-c2-status="fixed" class="w-full bg-orange-500 text-white py-2.5 rounded-xl text-rbi-label font-black uppercase">${_escape(_t('construction.form.resubmit_photo', 'Повторно предъявить (Фото)'))}</button>`);
+    if (save) out.push(btnSave);
   }
+  if (out.length) return out.join('\n        ');
   return `<button type="button" data-c2-defect-close class="px-3 py-2 rounded-xl text-rbi-label font-bold uppercase text-muted">${_escape(_t('construction.form.close', 'Закрыть'))}</button>`;
+}
+
+/** P2-0070: поля замечания правит тот, кто выдаёт замечания (текст, вид работ, фото) или назначает подрядчика и срок. */
+function _canEditDefect(defect: ConstructionDefectV2, isEngineer: boolean): boolean {
+  return can('construction.defects.create', defect, isEngineer) || can('construction.defects.assign', defect, isEngineer);
 }
 
 export function openViewDefectForm(
@@ -822,8 +834,10 @@ export function openViewDefectForm(
     return `<option value="${c}"${sel}>${_escape(_catLabel(c))}</option>`;
   }).join('');
   const deadlineVal = _deadlineInputValue(defect.deadline);
-  const canEditFields = isEngineer;
+  // P2-0070: текст, вид работ, фото — «Выдать замечание»; подрядчик и срок — «Назначить подрядчика и срок»
+  const canEditFields = can('construction.defects.create', defect, isEngineer);
   const disabled = canEditFields ? '' : ' disabled';
+  const disabledAssign = can('construction.defects.assign', defect, isEngineer) ? '' : ' disabled';
 
   panel.innerHTML = `
     <div class="flex items-center justify-between mb-3">
@@ -859,11 +873,11 @@ export function openViewDefectForm(
       <div>
         <label class="block text-rbi-caption font-bold uppercase text-muted mb-1">${_escape(_t('construction.form.deadline', 'Срок'))}</label>
         <input type="date" data-c2-defect-deadline value="${_escape(deadlineVal)}"
-          class="w-full rounded-xl border border-surface bg-transparent px-3 py-2 text-rbi-body"${disabled} />
+          class="w-full rounded-xl border border-surface bg-transparent px-3 py-2 text-rbi-body"${disabledAssign} />
       </div>
     </div>
     <label class="block text-rbi-caption font-bold uppercase text-muted mb-1">${_escape(_t('construction.form.contractor', 'Подрядчик'))}</label>
-    <select data-c2-defect-contractor class="w-full rounded-xl border border-surface bg-transparent px-3 py-2 text-rbi-body mb-3"${disabled}>
+    <select data-c2-defect-contractor class="w-full rounded-xl border border-surface bg-transparent px-3 py-2 text-rbi-body mb-3"${disabledAssign}>
       ${_contractorOptionsHtml(defect.contractorId)}
     </select>
     <label class="block text-rbi-caption font-bold uppercase text-muted mb-1">${_escape(_t('construction.form.description', 'Описание'))}</label>

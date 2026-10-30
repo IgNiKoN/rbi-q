@@ -20,8 +20,12 @@ export const PlanfactManifest = {
     // P2-0064: вид записи для общей отправки сервиса платформы (standards/SYNC_AND_ACCESS.md, «Вид, который уходит функцией сервера»):
     // запись лежит на устройстве (база записей устройства, src/platform/services/offline/device-records.ts) и уходит функцией rpc
     // с id с телефона — повтор без дубля. Права и область (место, «за кого», перебор → «на проверку») проверяет сервер.
+    // P2-0070: единый механизм прав — то же описание, что у Стройконтроля: действия каталога и место записи (объект — project,
+    // место — location_id: место позиции ВОР). Отправку факта решает сервер (pf_fact_submit: область, «за кого», перебор);
+    // правило устройства по этому описанию сверяет зеркальный тест (телефон = сервер), участие — pf_my_area → grants.
     sync: [
-        { kind: 'pf_fact', store: 'device_records', rpc: 'pf_fact_submit', title: 'Факт' }
+        { kind: 'pf_fact', store: 'device_records', rpc: 'pf_fact_submit', title: 'Факт',
+          mode: 'area', place: { project: 'project', location: 'location_id' }, view: ['planfact.fact.view'], edit: ['planfact.fact.create'] }
     ],
     /** Подвкладки модуля: нижний таббар (телефон/планшет) и nav2 (≥1280) — как у Quality. Новые разделы добавляются сюда.
      *  requiresAccess — пункт виден, когда сервер подтвердил доступ: true — к компании, 'estimate' — право на цены и сметы, 'ks2' — право на КС-2.

@@ -17,6 +17,7 @@ import {
 import { openCreateDefectForm } from './defect-form';
 import { resolveMyContractorId, isContractorRole } from './contractor-scope';
 import { isSlotTaken, slotTimeOptionsHtml } from './acceptance-slots';
+import { allowed, can, noRightText } from './rights';
 
 /** Full-rect zone для приёмки квартиры (без zone-picker). */
 export const APARTMENT_FULL_ZONE: AcceptanceZoneV2 = { x: 0, y: 0, w: 100, h: 100 };
@@ -394,6 +395,12 @@ export function openCreateAcceptanceForm(
     onCancel?.();
     return;
   }
+  // P2-0070: «Записаться на приёмку» на этом месте (участие в проекте)
+  if (allowed('construction.acceptance.book', { locationId: ctx.locationId }) === false) {
+    window.showToast?.('⚠️ ' + noRightText('construction.acceptance.book') + ' на этом месте');
+    onCancel?.();
+    return;
+  }
 
   const isContractor = role === 'contractor' || isContractorRole();
   const myContractorId = isContractor ? resolveMyContractorId() : null;
@@ -549,13 +556,16 @@ export function openAcceptanceDetails(
   const { isEngineer, role } = _roleInfo();
   const path = _floorLabel(item.locationId);
   const status = String(item.status || 'pending');
-  const editable = isEngineer && status === 'pending';
+  // P2-0070: кнопки — по действиям роли в области участия (rights.ts); без входа почтой — как раньше, по роли профиля
+  const conduct = can('construction.acceptance.conduct', item, isEngineer);
+  const revoke = can('construction.acceptance.book', item, !isEngineer && role !== 'guest');
+  const editable = conduct && status === 'pending';
   const defectsForLoc = _listDefectsForLocation(item.locationId);
   const batchCandidates = listFailBatchCandidates(item, defectsForLoc);
   let actions = '';
 
   if (status === 'pending') {
-    if (isEngineer) {
+    if (conduct) {
       actions = `
         <div class="flex flex-col gap-2 mt-4 pt-4 border-t border-[var(--card-border)]">
           <button type="button" data-c2-acc-focus class="w-full bg-slate-100 text-ink border border-surface py-3 rounded-xl font-black text-rbi-label uppercase">${_escape(_t('construction.v2.acc.show_on_plan', '🗺️ Показать на плане'))}</button>
@@ -563,15 +573,16 @@ export function openAcceptanceDetails(
             <button type="button" data-c2-acc-status="accepted" class="flex-1 bg-green-50 text-green-600 border border-green-200 py-3 rounded-xl font-bold text-rbi-caption uppercase">${_escape(_t('construction.form.action_accept', '✅ Принять'))}</button>
             <button type="button" data-c2-acc-status="rejected" class="flex-1 bg-danger-soft text-danger border border-danger-soft py-3 rounded-xl font-bold text-rbi-caption uppercase">${_escape(_t('construction.form.action_reject', '❌ Отклонить'))}</button>
           </div>
+          ${revoke ? `<button type="button" data-c2-acc-revoke class="w-full bg-danger-soft text-danger py-3 rounded-xl font-bold text-rbi-caption uppercase border border-danger-soft">${_escape(_t('construction.v2.acc.revoke', 'Отозвать заявку'))}</button>` : ''}
         </div>`;
-    } else if (role !== 'guest') {
+    } else if (role !== 'guest' || revoke) {
       actions = `
         <div class="mt-4 pt-4 border-t border-[var(--card-border)] text-center">
           <div class="text-rbi-label font-bold text-blue-500 uppercase tracking-widest mb-3">${_escape(_t('construction.v2.acc.engineer_reviewing', '⏳ Инженер проверяет заявку...'))}</div>
-          <button type="button" data-c2-acc-revoke class="w-full bg-danger-soft text-danger py-3 rounded-xl font-bold text-rbi-caption uppercase border border-danger-soft">${_escape(_t('construction.v2.acc.revoke', 'Отозвать заявку'))}</button>
+          ${revoke ? `<button type="button" data-c2-acc-revoke class="w-full bg-danger-soft text-danger py-3 rounded-xl font-bold text-rbi-caption uppercase border border-danger-soft">${_escape(_t('construction.v2.acc.revoke', 'Отозвать заявку'))}</button>` : ''}
         </div>`;
     }
-  } else if (isEngineer) {
+  } else if (conduct) {
     actions = `
       <div class="mt-4 pt-4 border-t border-[var(--card-border)]">
         <button type="button" data-c2-acc-focus class="w-full bg-slate-100 text-ink border border-surface py-3 rounded-xl font-black text-rbi-label uppercase mb-2">${_escape(_t('construction.v2.acc.show_on_plan', '🗺️ Показать на плане'))}</button>

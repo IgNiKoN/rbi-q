@@ -163,7 +163,30 @@ AS $function$
   select p_area is null or p_location = any (p_area)
 $function$;
 
+CREATE OR REPLACE FUNCTION public.pf_my_area(p_project uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'planfact', 'core'
+AS $function$
+declare v_uid uuid := auth.uid();
+begin
+  if p_project is null or v_uid is null or not planfact.is_project_member(p_project) then
+    raise exception 'Нет доступа к проекту' using errcode = '42501';
+  end if;
+  return jsonb_build_object(
+    'full', planfact.my_area(p_project) is null,
+    'locations', coalesce((select jsonb_agg(distinct a.location_id) from core.role_assignments a
+                            where a.user_id = v_uid and a.project_id = p_project and a.location_id is not null
+                              and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())), '[]'::jsonb),
+    'fact_owner', coalesce((select jsonb_agg(distinct coalesce(a.location_id::text, 'project')) from core.role_assignments a
+                             where a.user_id = v_uid and a.project_id = p_project and a.fact_owner
+                               and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())), '[]'::jsonb),
+    'can_on_behalf', planfact.has_permission(p_project, 'planfact.fact.approve'));
+end $function$;
+
 drop function core.require_action(uuid, uuid, uuid, text, uuid, uuid);
+drop function core.my_grants(uuid, uuid, text);
 drop function core.row_allowed(uuid, uuid, uuid, text[], uuid, uuid);
 drop function core.assignment_allows(core.role_assignments, text, uuid, uuid[], uuid, uuid);
 drop function core.can_at(uuid, uuid, uuid, text);

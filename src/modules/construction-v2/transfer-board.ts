@@ -19,6 +19,7 @@ import {
 import { closeApartmentPlan, openApartmentPlan } from './apartment-plan';
 import { closeUnitCard, openUnitCard } from './unit-card';
 import { apartmentCellName, corePlacesHintHtml, floorApartmentCells, isCoreLed } from './core-places';
+import { can } from './rights';
 
 type LocSvc = {
   init: () => Promise<boolean>;
@@ -446,6 +447,7 @@ function _openUnit(u: ConstructionUnitV2): void {
     cb: {
       onChanged: _refreshBoard,
       isGuest: _isGuest,
+      canTransfer: () => can('construction.transfer.edit', null, !_isGuest()),
       canSoftDelete: _canSoftDelete,
       toast: _toast,
       onOpenApartmentPlan: async (unit) => {

@@ -2,7 +2,7 @@
 // s-rename — смена ФИО при неотправленных осмотрах (новом с id автора и старом без id) → оба уходят ровно 1 раз;
 // s-foreign — у вошедшего на телефоне осмотры другого сотрудника (по ФИО и по id) → 0 отправок, «Не отправлено: запись другого сотрудника (ФИО)»;
 // s-leader — руководитель отправляет такие осмотры ровно 1 раз. Боевой сервер не используется.
-import { start, stop, stand, sends, sendsAll, resetNet, net, flow, log as apiLog, USER, USER2, COMPANY } from './servers.mjs';
+import { start, stop, stand, sends, sendsAll, resetNet, net, flow, log as apiLog, USER, USER2, COMPANY, constructionAccess } from './servers.mjs';
 import { freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
 import { pullScopeScenario } from './pull-scope.mjs';
 
@@ -153,8 +153,12 @@ async function contractor(out) {
   const tag = 's-contractor';
   note(`== ${tag}: подрядчик «Фирма 1» — замечание и приёмка своей фирмы уходят 1 раз, чужой фирмы — нет, причина «запись другой фирмы»; инженер — свои уходят`);
   freshProfile(out, tag); resetNet(); stand.names = {};
-  stand.quality = { actions: ['construction.view', 'construction.edit', 'quality.view', 'quality.scope.contractor'], templates: [], projects: null,
-    contractor: { id: CP_OWN, name: 'Фирма 1', keys: [] }, objects: null, container: null };
+  // P2-0070: роль-подрядчик после 052 — видеть, в работу, устранено, записаться; участие — вся компания, своя фирма
+  const ctrActs = ['construction.view', 'construction.edit', 'construction.defects.view', 'construction.defects.start', 'construction.defects.fix',
+    'construction.acceptance.view', 'construction.acceptance.book'];
+  stand.quality = { actions: [...ctrActs, 'quality.view', 'quality.scope.contractor'], templates: [], projects: null,
+    contractor: { id: CP_OWN, name: 'Фирма 1', keys: [] }, objects: null, container: null,
+    construction: constructionAccess([...ctrActs, 'quality.scope.contractor'], CP_OWN) };
   try {
     await start();
     let { ctx, page } = await launch(out, tag);

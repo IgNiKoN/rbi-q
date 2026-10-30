@@ -69,7 +69,8 @@ function session(user, ttl = 3600) {
 }
 /** P2-0060: второму пользователю стенда тоже дать компанию (План/Факт), его Сводка — с ошибкой сервера (копии у него нет). */
 /** P2-0061: names — ФИО пользователей стенда по id (смена ФИО в «Сотрудниках»); по умолчанию «Иванов Иван» / «Петров Пётр». */
-export const stand = { user2Planfact: false, quality: null, names: {} };
+// P2-0070: rpc — ответы RPC сценария поверх стандартных (снимки экранов «Компании» на данных локальной копии сервера)
+export const stand = { user2Planfact: false, quality: null, names: {}, rpc: null };
 const hasPf = (u) => u.id === USER.id || stand.user2Planfact;
 /** P2-0060: Сводка План/Факта первого пользователя (один объект) — по ней стенд сверяет цифры с сетью и без сети. */
 export const SUMMARY = { project_id: 'p-1', name: 'ЖК Тестовый', code: 'ЖКТ', planned_start: '2026-06-01', planned_finish: '2027-03-31',
@@ -90,7 +91,15 @@ const VOR_POSITIONS = POSITIONS.map((p) => ({ id: p.position_id, location_id: p.
 const IMPORTS = [{ id: 'imp-1', file_name: 'ВОР корпус 1.xlsx', sheet_name: 'Лист1', status: 'confirmed', row_count: 12, works: 1, positions: 3,
   created_at: '2026-10-01T10:00:00Z', created_by_email: 'test@stand.local', confirmed_at: '2026-10-01T11:00:00Z', profile_id: null, revision_no: 1,
   previous_import_id: null, root_import_id: 'imp-1', is_current: true, confirmed_by_email: 'test@stand.local' }];
-const ACCESS = { actions: ['quality.manage', 'quality.edit', 'quality.view', 'construction.manage', 'construction.view', 'construction.edit'], templates: [], projects: null, contractor: null, objects: null, container: null };
+// P2-0070: как сервер после 052 — новые действия Стройконтроля 2.0 (перенос ролей) и участие (вся компания)
+export const CONSTRUCTION_ALL = ['construction.defects.view', 'construction.defects.create', 'construction.defects.assign', 'construction.defects.start',
+  'construction.defects.fix', 'construction.defects.close', 'construction.defects.reject', 'construction.defects.delete', 'construction.acceptance.view',
+  'construction.acceptance.book', 'construction.acceptance.schedule', 'construction.acceptance.conduct', 'construction.transfer.edit'];
+export const constructionAccess = (actions, counterparty = null) => ({ admin: false, enabled: true, object_nodes: {},
+  grants: [{ project: null, place: null, places: null, actions, counterparty }] });
+const ACCESS_ACTIONS = ['quality.manage', 'quality.edit', 'quality.view', 'construction.manage', 'construction.view', 'construction.edit', ...CONSTRUCTION_ALL];
+const ACCESS = { actions: ACCESS_ACTIONS, templates: [], projects: null, contractor: null, objects: null, container: null,
+  construction: constructionAccess(ACCESS_ACTIONS.filter((a) => a.startsWith('construction.'))) };
 const RPC = {
   pf_my_platform: (u) => ({ is_platform_admin: false, companies: hasPf(u) ? [COMPANY] : [] }),
   pf_my_profile: (u) => ({ full_name: stand.names[u.id] || (u.id === USER.id ? 'Иванов Иван' : 'Петров Пётр'), must_change_password: false, user_id: u.id }),
@@ -198,7 +207,7 @@ function respond(req, res, u, body) {
     if (u.pathname === '/auth/v1/user') return json(res, 200, user);
     if (u.pathname === '/auth/v1/logout') { res.writeHead(204); return res.end(); }
     const m = u.pathname.match(/^\/rest\/v1\/rpc\/([a-z_0-9]+)/);
-    if (m) { let a = {}; try { a = JSON.parse(body || '{}') || {}; } catch { /* не JSON */ } const v = RPC[m[1]] ? RPC[m[1]](user, a) : null;
+    if (m) { let a = {}; try { a = JSON.parse(body || '{}') || {}; } catch { /* не JSON */ } const own = stand.rpc && stand.rpc[m[1]]; const v = own ? own(user, a) : RPC[m[1]] ? RPC[m[1]](user, a) : null;
       // P2-0064: обрыв после того, как сервер выполнил функцию (запись есть, ответ потерян) — drops с re по «RPC имя»
       const lost = net.drops.find((d) => d.left > 0 && d.re.test('RPC ' + m[1]));
       if (lost) { lost.left--; return req.socket.destroy(); }

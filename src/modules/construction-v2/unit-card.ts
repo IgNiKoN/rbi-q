@@ -23,6 +23,8 @@ type UnitsSvc = {
 export type UnitCardCallbacks = {
   onChanged: () => void | Promise<void>;
   isGuest: () => boolean;
+  /** P2-0070: «Вести передачу квартир» (статус передачи) — по действию роли; нет — как раньше (не гость). */
+  canTransfer?: () => boolean;
   canSoftDelete: (u: ConstructionUnitV2) => boolean;
   toast: (msg: string) => void;
   /** Открыть pin-UI на PDF квартиры (блок B). */
@@ -125,7 +127,7 @@ export function openUnitCard(
           <span class="text-rbi-caption font-black uppercase tracking-widest text-muted">${_escape(_t('construction.v2.unit.transfer_status', 'Статус передачи'))}</span>
           <select id="c2-unit-card-status" data-c2-unit-id="${_escape(unit.id)}"
             class="mt-1 w-full rounded-xl border border-surface bg-surface px-3 py-2.5 text-rbi-body font-bold"
-            ${guest ? 'disabled' : ''}>
+            ${guest || deps.cb.canTransfer?.() === false ? 'disabled' : ''}>
             ${statusOpts}
           </select>
         </label>

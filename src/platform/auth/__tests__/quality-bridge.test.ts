@@ -40,12 +40,21 @@ test('роль экрана Качества — из прав компании 
   assert.equal(roleFor([]), 'guest');
 });
 
+test('P2-0070: участие Стройконтроля из my_access (052); сервер без 052 — null', () => {
+  const a = parseAccess({ actions: [], construction: { admin: false, enabled: true, object_nodes: { n1: P1, bad: 5 },
+    grants: [{ project: P1, place: 'L1', places: ['L1', 'L2'], actions: ['construction.defects.view'], counterparty: null }, null] } });
+  assert.deepEqual(a.construction, { admin: false, enabled: true, object_nodes: { n1: P1 },
+    grants: [{ project: P1, place: 'L1', places: ['L1', 'L2'], actions: ['construction.defects.view'], counterparty: null }] });
+  assert.equal(parseAccess({ actions: [] }).construction, null);
+  assert.equal(parseAccess({ construction: { admin: true } }).construction, null, 'без списка участия — null');
+});
+
 test('доступ из my_access: объекты (null — вся компания) и фирма подрядчика', () => {
   assert.deepEqual(parseAccess({ actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: null }),
-    { actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null });
+    { actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null, construction: null });
   assert.deepEqual(parseAccess({ actions: [], projects: null, contractor: { id: 'k', name: 'ООО «Альфа-Строй»', keys: ['альфа-строй'] } }),
-    { actions: [], templates: [], projects: null, contractor: 'ООО «Альфа-Строй»', contractorId: 'k', contractorKeys: ['альфа-строй'], objects: null, container: null });   // P2-0061: ключи карточек фирмы
-  assert.deepEqual(parseAccess(null), { actions: [], templates: [], projects: null, contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null });
+    { actions: [], templates: [], projects: null, contractor: 'ООО «Альфа-Строй»', contractorId: 'k', contractorKeys: ['альфа-строй'], objects: null, container: null, construction: null });   // P2-0061: ключи карточек фирмы
+  assert.deepEqual(parseAccess(null), { actions: [], templates: [], projects: null, contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null, construction: null });
   assert.deepEqual(parseAccess({ actions: [], objects: [{ id: 'obj_1', key: 'большевиков,22 (гений)', name: 'Большевиков,22 (Гений)' }, { id: 'x' }] }).objects,
     ['большевиков,22 (гений)'], 'P2-0033: ключи закреплённых объектов Качества');
   assert.deepEqual(parseAccess({ actions: [], objects: [] }).objects, [], 'пустой список — не «все»');

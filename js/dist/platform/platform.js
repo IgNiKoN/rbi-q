@@ -18024,7 +18024,31 @@ function ar(t) {
     contractorKeys: Array.isArray(r.keys) ? r.keys.map(String).filter(Boolean) : [],
     objects: Array.isArray(e.objects) ? e.objects.map((n) => n && typeof n == "object" ? String(n.key ?? "") : "").filter(Boolean) : null,
     // P2-0035 (039b): служебный объект-контейнер компании (как «Объекты RBI») — Качество работает в нём
-    container: typeof e.container == "string" && e.container ? e.container : null
+    container: typeof e.container == "string" && e.container ? e.container : null,
+    construction: zl(e.construction)
+  };
+}
+function zl(t) {
+  if (!t || typeof t != "object") return null;
+  const e = t;
+  if (!Array.isArray(e.grants)) return null;
+  const r = (s) => typeof s == "string" && s ? s : null, n = {};
+  if (e.object_nodes && typeof e.object_nodes == "object")
+    for (const [s, i] of Object.entries(e.object_nodes)) typeof i == "string" && (n[s] = i);
+  return {
+    admin: e.admin === !0,
+    enabled: e.enabled !== !1,
+    object_nodes: n,
+    grants: e.grants.filter((s) => s && typeof s == "object").map((s) => {
+      const i = s;
+      return {
+        project: r(i.project),
+        place: r(i.place),
+        places: Array.isArray(i.places) ? i.places.map(String) : null,
+        actions: Array.isArray(i.actions) ? i.actions.map(String) : [],
+        counterparty: r(i.counterparty)
+      };
+    })
   };
 }
 function rs(t, e) {
@@ -18032,19 +18056,19 @@ function rs(t, e) {
     Object.defineProperty(t, r, { configurable: !0, enumerable: !0, get: () => n, set: () => {
     } });
 }
-const zl = 15e3, Kl = (t, e) => {
+const Kl = 15e3, Wl = (t, e) => {
   var n;
   const r = (n = globalThis.RbiSyncNet) == null ? void 0 : n.fetch;
   return r ? r(t, e) : fetch(t, e);
 };
-function Wl(t, e, r, n) {
+function Vl(t, e, r, n) {
   const s = t(e.url, e.anonKey, {
     // P2-0059 доработка (З2): пропуск — не дольше 15 с (обновление входа на слабой сети), иначе запрос — «нет ответа», а не «без входа»
     accessToken: async () => {
       var l;
       let o;
       const a = new Promise((c, u) => {
-        o = setTimeout(() => u(Object.assign(new Error("Нет ответа сервера (вход) за 15 с"), { code: "RBI_REQUEST_TIMEOUT" })), zl);
+        o = setTimeout(() => u(Object.assign(new Error("Нет ответа сервера (вход) за 15 с"), { code: "RBI_REQUEST_TIMEOUT" })), Kl);
       });
       try {
         return ((l = (await Promise.race([n.auth.getSession(), a])).data.session) == null ? void 0 : l.access_token) ?? null;
@@ -18053,35 +18077,35 @@ function Wl(t, e, r, n) {
       }
     },
     db: { schema: "quality" },
-    global: { headers: { "x-company-id": r }, fetch: Kl }
-  }), i = Xl(s.storage, r);
+    global: { headers: { "x-company-id": r }, fetch: Wl }
+  }), i = Ql(s.storage, r);
   return new Proxy(s, {
     get(o, a, l) {
-      return a === "auth" ? n.auth : a === "storage" ? i : a === "from" ? (c) => Gl(o.from(c)) : Reflect.get(o, a, l);
+      return a === "auth" ? n.auth : a === "storage" ? i : a === "from" ? (c) => Jl(o.from(c)) : Reflect.get(o, a, l);
     }
   });
 }
-function Vl(t) {
+function Gl(t) {
   if (!t) return t;
   const e = t.split(",").map((r) => r.trim()).filter(Boolean);
   return (e.includes("core_company_id") ? e : ["core_company_id", ...e]).join(",");
 }
-function Gl(t) {
+function Jl(t) {
   return new Proxy(t, {
     get(e, r, n) {
       const s = Reflect.get(e, r, n);
-      return r !== "upsert" || typeof s != "function" ? s : (i, o) => s.call(e, i, o != null && o.onConflict ? { ...o, onConflict: Vl(o.onConflict) } : o);
+      return r !== "upsert" || typeof s != "function" ? s : (i, o) => s.call(e, i, o != null && o.onConflict ? { ...o, onConflict: Gl(o.onConflict) } : o);
     }
   });
 }
-function Jl(t) {
+function Yl(t) {
   return t.startsWith("quality-") ? t : "quality-" + t;
 }
 function lr(t, e) {
   const r = String(e || "").replace(/^\/+/, "");
   return r === t || r.startsWith(t + "/") ? r : t + "/" + r;
 }
-const Yl = {
+const Xl = {
   upload: "first",
   update: "first",
   download: "first",
@@ -18097,13 +18121,13 @@ const Yl = {
   remove: "list",
   createSignedUrls: "list"
 };
-function Xl(t, e) {
+function Ql(t, e) {
   return {
     from(r) {
-      const n = t.from(Jl(r));
+      const n = t.from(Yl(r));
       return new Proxy(n, {
         get(s, i, o) {
-          const a = Reflect.get(s, i, o), l = typeof i == "string" ? Yl[i] : void 0;
+          const a = Reflect.get(s, i, o), l = typeof i == "string" ? Xl[i] : void 0;
           return typeof a != "function" || !l ? typeof a == "function" ? a.bind(s) : a : (...c) => {
             const u = c.slice();
             return l === "list" ? u[0] = Array.isArray(u[0]) ? u[0].map((d) => lr(e, d)) : u[0] : (u[0] = lr(e, u[0] ?? ""), l === "two" && (u[1] = lr(e, u[1]))), a.apply(s, u);
@@ -18113,9 +18137,9 @@ function Xl(t, e) {
     }
   };
 }
-const Ql = "rbi:quality-access";
+const Zl = "rbi:quality-access";
 let ns = !1;
-function Zl(t) {
+function ec(t) {
   const e = t.serviceWorker, r = t.platformClient;
   if (!e || !r || ns) return;
   ns = !0;
@@ -18132,7 +18156,7 @@ function Zl(t) {
   }), n();
 }
 const cr = /* @__PURE__ */ new WeakMap();
-async function ec(t, e) {
+async function tc(t, e) {
   var H;
   if (t.mode === "none" && !e.store.getItem(me)) return null;
   const r = ql(t), n = r && t.email ? lt(t.email) : "", s = !!t.offline || !!t.checking;
@@ -18160,8 +18184,8 @@ async function ec(t, e) {
     }
     return a;
   }
-  Zl(e);
-  const l = Wl(e.createClient, e.cfg, r, e.platformClient);
+  ec(e);
+  const l = Vl(e.createClient, e.cfg, r, e.platformClient);
   e.win.supabaseClient = l;
   const c = Bl + r + ":" + n;
   let u = { access: {}, projects: null };
@@ -18187,7 +18211,7 @@ async function ec(t, e) {
     const { data: _e, error: ft } = await M;
     return ar(ft ? C in u.access ? u.access[C] : null : _e);
   }, f = await h(null), m = f.projects, g = t.companies.find((x) => x.id === r), v = () => e.listProjects(r).then((x) => (u.projects = x, d(), x), () => u.projects || []), _ = !f.container && !!t.checking && !!u.projects, y = f.container ? null : t.offline || _ ? u.projects || [] : await v(), w = f.container ? [{ id: f.container, name: g ? g.name : "" }] : (y || []).filter((x) => m === null || m.includes(x.id)), k = e.store.getItem(es + r), E = f.container ? f.container : w.some((x) => x.id === k) ? k : w.length === 1 ? w[0].id : null, A = t.email, R = (t.fullName || "").trim() || A, O = (x) => {
-    j.actions = x.actions, j.objects = x.objects, j.contractorKeys = x.contractorKeys, j.role = Hl(x.actions);
+    j.actions = x.actions, j.objects = x.objects, j.contractorKeys = x.contractorKeys, j.construction = x.construction, j.role = Hl(x.actions);
     const C = x.objects || [];
     e.win.appSettings && rs(e.win.appSettings, {
       userRole: j.role,
@@ -18202,7 +18226,7 @@ async function ec(t, e) {
     const M = e.win.syncConfig;
     M && (j.role === "manager" || j.role === "director") && M.syncMode !== "full" && (M.syncMode = "full", e.store.setItem("rbi_sync_config", JSON.stringify(M)));
     const _e = e.win.dispatchEvent;
-    typeof _e == "function" && _e.call(e.win, new Event(Ql));
+    typeof _e == "function" && _e.call(e.win, new Event(Zl));
   }, B = (x) => {
     const C = e.win.syncConfig = e.win.syncConfig || {};
     C.enabled = !!x, C.engineerName = R, C.authUserId = t.userId || null, C.previousNames = j.names || [], C.projectCode = x || "", C.pinHash = null, C.syncMode || (C.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(C));
@@ -18227,8 +18251,8 @@ async function ec(t, e) {
     j.projects = x.filter((C) => m === null || m.includes(C.id));
   })), B(E), O(await h(E)), e.win.initSync && await e.win.initSync(), e.win.renderSyncUI && e.win.renderSyncUI(), j;
 }
-const tc = (t, e, r) => t + "|" + e + "|" + r;
-function rc() {
+const rc = (t, e, r) => t + "|" + e + "|" + r;
+function nc() {
   const t = /* @__PURE__ */ new Map();
   return {
     size: () => t.size,
@@ -18246,11 +18270,11 @@ function rc() {
     }
   };
 }
-const nc = "platform2_offline_copy", ur = "reads";
-function sc(t) {
+const sc = "platform2_offline_copy", ur = "reads";
+function ic(t) {
   let e = null;
   const r = () => e || (e = new Promise((s, i) => {
-    const o = t.open(nc, 1);
+    const o = t.open(sc, 1);
     o.onupgradeneeded = () => {
       o.result.createObjectStore(ur, { keyPath: "id" }).createIndex("slot", "slot", { unique: !1 });
     }, o.onsuccess = () => s(o.result), o.onerror = () => {
@@ -18293,16 +18317,16 @@ function sc(t) {
     }
   };
 }
-const ss = "Нужен интернет для этого экрана", is = "Нет связи с сервером. Попробуйте позже", ic = "Нужен интернет", oc = 14, ac = 8e3, lc = 6e4, cc = 24 * 3600 * 1e3;
+const ss = "Нужен интернет для этого экрана", is = "Нет связи с сервером. Попробуйте позже", oc = "Нужен интернет", ac = 14, lc = 8e3, cc = 6e4, uc = 24 * 3600 * 1e3;
 function oi(t) {
   const e = t && t.offline;
   return !e || typeof e != "object" ? null : { view: e.view === !0, input: Array.isArray(e.input) ? e.input.map(String) : [], files: e.files === !0 };
 }
-function uc(t, e, r) {
+function dc(t, e, r) {
   return r && !(t && (t.input.includes("*") || t.input.includes(e)));
 }
-const os = (t, e) => e - Date.parse(t) > oc * cc, dr = Symbol("timeout"), dc = /нет права|нет доступа/i;
-function hc(t) {
+const os = (t, e) => e - Date.parse(t) > ac * uc, dr = Symbol("timeout"), hc = /нет права|нет доступа/i;
+function fc(t) {
   const e = () => t.now ? t.now() : Date.now();
   let r = 0;
   const n = /* @__PURE__ */ new Map(), s = /* @__PURE__ */ new Map(), i = (u, d, p) => {
@@ -18335,7 +18359,7 @@ function hc(t) {
         const k = await p();
         return k.ok ? { ok: !0, value: k.value, meta: null } : k;
       }
-      const m = tc(f, u, d);
+      const m = rc(f, u, d);
       if (h.allowed === !1) {
         if (await t.store.delete(m), t.offline()) return { ok: !1, message: ss, offline: !0 };
         const k = await p();
@@ -18346,12 +18370,12 @@ function hc(t) {
       const v = await Promise.race([
         p().catch(() => ({ ok: !1, message: is })),
         new Promise((k) => {
-          g = setTimeout(() => k(dr), t.waitMs ?? ac);
+          g = setTimeout(() => k(dr), t.waitMs ?? lc);
         })
       ]);
-      if (clearTimeout(g), v === dr && (r = e() + lc), v === dr || !v.ok && v.message === is) return c(u, d, m, h.quiet);
+      if (clearTimeout(g), v === dr && (r = e() + cc), v === dr || !v.ok && v.message === is) return c(u, d, m, h.quiet);
       if (r = 0, !v.ok)
-        return dc.test(v.message) && (await t.store.delete(m), l(u, d, null)), v;
+        return hc.test(v.message) && (await t.store.delete(m), l(u, d, null)), v;
       const _ = new Date(e()).toISOString();
       let y = 0;
       try {
@@ -18409,26 +18433,26 @@ const Jr = ["mine30", "all30", "all", "none"], ai = {
   all30: "Все за 30 дней",
   all: "Все",
   none: "Не скачивать заранее"
-}, li = /* @__PURE__ */ new Set(["engineer", "contractor"]), fc = 30, pc = 24 * 3600 * 1e3;
+}, li = /* @__PURE__ */ new Set(["engineer", "contractor"]), pc = 30, gc = 24 * 3600 * 1e3;
 function Lr(t) {
   return li.has(t) ? "mine30" : "none";
 }
 function $r(t) {
   return li.has(t) ? "all" : "none";
 }
-function gc(t, e) {
+function mc(t, e) {
   return Jr.includes(t) ? t : Lr(e);
 }
 const hr = (t) => {
   const e = Date.parse(String(t.date || ""));
   return Number.isFinite(e) ? e : 0;
-}, mc = (t) => String(t.project_canonical_key || t.project || t.object || t.projectCode || "");
-function yc(t, e, r, n = fc) {
-  const s = /* @__PURE__ */ new Map(), i = r - n * pc, o = t.filter((l) => l && e(l));
+}, yc = (t) => String(t.project_canonical_key || t.project || t.object || t.projectCode || "");
+function _c(t, e, r, n = pc) {
+  const s = /* @__PURE__ */ new Map(), i = r - n * gc, o = t.filter((l) => l && e(l));
   for (const l of o) hr(l) >= i && s.set(l.id, "all");
   const a = /* @__PURE__ */ new Map();
   for (const l of o) {
-    const c = mc(l) + "|" + String(l.template || "");
+    const c = yc(l) + "|" + String(l.template || "");
     a.has(c) || a.set(c, []), a.get(c).push(l);
   }
   for (const l of a.values()) {
@@ -18455,7 +18479,7 @@ function Xr() {
   return !!t && t.mode === "email" && (!!t.offline || typeof navigator < "u" && navigator.onLine === !1);
 }
 const kt = "__platform2OfflineReader";
-function _c(t) {
+function vc(t) {
   if (typeof window > "u") return;
   const e = window;
   (e.RBI = e.RBI || {}).offlineCopy = t;
@@ -18463,45 +18487,45 @@ function _c(t) {
 function Qt() {
   const t = globalThis;
   if (!t[kt]) {
-    const e = typeof indexedDB < "u" ? sc(indexedDB) : rc();
-    t[kt] = hc({ store: e, slot: se, offline: Xr }), _c(t[kt]);
+    const e = typeof indexedDB < "u" ? ic(indexedDB) : nc();
+    t[kt] = fc({ store: e, slot: se, offline: Xr }), vc(t[kt]);
   }
   return t[kt];
 }
-function vc(t, e, r, n) {
+function wc(t, e, r, n) {
   return Qt().read(t, e, r, n);
 }
-function wc(t) {
+function bc(t) {
   var r;
   const e = (r = Yr()) == null ? void 0 : r.moduleLoader;
   return oi(e && typeof e.getById == "function" ? e.getById(t) : null);
 }
-const bc = /* @__PURE__ */ new Set(["pf_my_permissions", "pf_my_area", "pf_my_admin_companies", "pf_permission_catalog", "pf_my_context"]), Dr = /* @__PURE__ */ new Map(), Sc = /* @__PURE__ */ new Map(), Ur = /* @__PURE__ */ new Set(), kc = ["p_import", "p_position", "p_location", "p_act", "p_revision", "p_estimate", "p_object", "p_parent"], Ec = ["id", "import_id", "position_id", "location_id", "act_id", "estimate_id", "revision_id"];
-function xc(t) {
+const Sc = /* @__PURE__ */ new Set(["pf_my_permissions", "pf_my_area", "pf_my_admin_companies", "pf_permission_catalog", "pf_my_context"]), Dr = /* @__PURE__ */ new Map(), kc = /* @__PURE__ */ new Map(), Ur = /* @__PURE__ */ new Set(), Ec = ["p_import", "p_position", "p_location", "p_act", "p_revision", "p_estimate", "p_object", "p_parent"], xc = ["id", "import_id", "position_id", "location_id", "act_id", "estimate_id", "revision_id"];
+function Ac(t) {
   const e = t || {};
   if (typeof e.p_project == "string") return e.p_project;
-  for (const r of kc) {
+  for (const r of Ec) {
     const n = e[r];
     if (typeof n == "string" && Dr.has(n)) return Dr.get(n);
   }
   return null;
 }
-function Ac(t, e) {
+function Tc(t, e) {
   for (const r of Array.isArray(e) ? e : [e]) {
     if (!r || typeof r != "object") continue;
     const n = r;
-    if (typeof n.id == "string" && typeof n.path == "string" && typeof n.node_type == "string" && (Sc.set(n.id, n.path), Number(n.child_count) === 0 ? Ur.add(n.id) : Ur.delete(n.id)), t) for (const s of Ec) {
+    if (typeof n.id == "string" && typeof n.path == "string" && typeof n.node_type == "string" && (kc.set(n.id, n.path), Number(n.child_count) === 0 ? Ur.add(n.id) : Ur.delete(n.id)), t) for (const s of xc) {
       const i = n[s];
       typeof i == "string" && Dr.set(i, t);
     }
   }
 }
-const Tc = (t) => JSON.stringify(t, (e, r) => r && typeof r == "object" && !Array.isArray(r) ? Object.fromEntries(Object.keys(r).sort().map((n) => [n, r[n]])) : r);
+const Rc = (t) => JSON.stringify(t, (e, r) => r && typeof r == "object" && !Array.isArray(r) ? Object.fromEntries(Object.keys(r).sort().map((n) => [n, r[n]])) : r);
 async function as(t, e, r, n, s, i, o) {
-  if (!e.has(r)) return Xr() ? { ok: !1, message: ic } : s();
-  const a = xc(n), l = bc.has(r) || !!(i && i.has(r)), c = r + ":" + Tc(n || {}), u = await vc(t, c, s, { project: a, quiet: l });
+  if (!e.has(r)) return Xr() ? { ok: !1, message: oc } : s();
+  const a = Ac(n), l = Sc.has(r) || !!(i && i.has(r)), c = r + ":" + Rc(n || {}), u = await wc(t, c, s, { project: a, quiet: l });
   if (u.ok)
-    return Ac(a, u.value), u;
+    return Tc(a, u.value), u;
   if (u.offline && o) {
     const d = await o();
     if (d && d.ok)
@@ -18509,10 +18533,10 @@ async function as(t, e, r, n, s, i, o) {
   }
   return u;
 }
-function Rc(t) {
+function Cc(t) {
   return Ur.has(t);
 }
-const Br = "platform2_offline_keep:", Cc = "platform2_offline_prefetch:", ci = () => {
+const Br = "platform2_offline_keep:", Oc = "platform2_offline_prefetch:", ci = () => {
   try {
     return typeof localStorage > "u" ? null : localStorage;
   } catch {
@@ -18537,22 +18561,22 @@ function Qr(t) {
   const e = se();
   if (!e) return !1;
   const r = Ke(Br + e, {})[t];
-  return typeof r == "boolean" ? r : !!((n = wc(t)) != null && n.view);
+  return typeof r == "boolean" ? r : !!((n = bc(t)) != null && n.view);
 }
 function ls(t, e) {
   const r = se();
   r && ui(Br + r, { ...Ke(Br + r, {}), [t]: e });
 }
-function Oc(t) {
+function Ic(t) {
   const e = se();
-  return e && Ke(Cc + e, {})[t] || null;
+  return e && Ke(Oc + e, {})[t] || null;
 }
 const Ht = "platform2_offline_files:";
 function Mr(t = "quality") {
   const e = se(), r = e ? Ke(Ht + e, {})[t] : void 0;
   return Jr.includes(r) ? r : null;
 }
-function Ic(t, e) {
+function jc(t, e) {
   const r = se();
   if (!r) return;
   const n = Ke(Ht + r, {});
@@ -18563,30 +18587,30 @@ function Zr() {
   return t && t.qualitySync && t.qualitySync.role || "guest";
 }
 function qr() {
-  return Qr("quality") ? gc(Mr("quality"), Zr()) : "none";
+  return Qr("quality") ? mc(Mr("quality"), Zr()) : "none";
 }
 function di() {
   if (!Qr("knowledge")) return "none";
   const t = se(), e = t ? Ke(Ht + t, {}).knowledge : void 0;
   return e === "all" || e === "none" ? e : $r(Zr());
 }
-function jc(t) {
+function Pc(t) {
   var n, s;
   const e = typeof window > "u" || (s = (n = window.RBI) == null ? void 0 : n.services) == null ? void 0 : s.permissions, r = e && typeof e.getAssignedProjects == "function" ? e.getAssignedProjects() || [] : [];
   return !r.length || !!(e && typeof e.isRecordInAssignedProjects == "function" && e.isRecordInAssignedProjects(t, r));
 }
-function Pc() {
+function Nc() {
   if (typeof window > "u") return;
   const t = window;
-  (t.RBI = t.RBI || {}).offlineFiles = { scope: qr, docs: di, select: (e) => yc(e, jc, Date.now()) };
+  (t.RBI = t.RBI || {}).offlineFiles = { scope: qr, docs: di, select: (e) => _c(e, Pc, Date.now()) };
 }
-Pc();
+Nc();
 function cs(t) {
   const e = t && t.message || "";
   return /[А-Яа-яЁё]/.test(e) ? e : /cannot assign a role to yourself/i.test(e) ? "Нельзя назначить роль самому себе" : /failed to fetch|network|load failed/i.test(e) ? "Нет связи с сервером. Попробуйте позже" : t && t.code === "42501" || /forbidden|permission denied/i.test(e) ? "Нет права на это действие" : "Не удалось выполнить. Попробуйте ещё раз";
 }
 const us = /* @__PURE__ */ new Set(["pf_my_company_access", "pf_company_projects", "pf_list_locations", "pf_list_units", "pf_project_catalog", "pf_company_divisions", "pf_project_dicts", "pf_project_places", "pf_location_path"]), ds = /* @__PURE__ */ new Set(["pf_my_company_access"]);
-function Nc(t) {
+function Lc(t) {
   const e = t.created || {}, r = (s) => typeof s == "number" ? s : Number(s) || 0, n = (s) => Array.isArray(s) ? s : [];
   return {
     ok: t.ok === !0,
@@ -18599,7 +18623,7 @@ function Nc(t) {
     roots: n(t.roots)
   };
 }
-function Lc() {
+function $c() {
   const t = dt();
   if (!t) return null;
   async function e(s, i) {
@@ -18629,7 +18653,7 @@ function Lc() {
         { p_project: s, p_parent: i },
         () => n("pf_list_locations", { p_project: s, p_parent: i }),
         ds,
-        i ? async () => Rc(i) ? { ok: !0, value: [] } : null : void 0
+        i ? async () => Cc(i) ? { ok: !0, value: [] } : null : void 0
       );
       return o.ok && Array.isArray(o.value) ? o.value : [];
     },
@@ -18696,7 +18720,7 @@ function Lc() {
     nextBuildNo: (s) => r("pf_next_build_no", { p_location: s }),
     importPlaces: async (s, i, o, a) => {
       const l = await r("pf_import_places", { p_project: s, p_batch: i, p_rows: o, p_dry_run: a });
-      return l.ok ? { ok: !0, value: Nc(l.value || {}) } : l;
+      return l.ok ? { ok: !0, value: Lc(l.value || {}) } : l;
     },
     importUndo: (s) => r("pf_import_undo", { p_batch: s }),
     savePlaceInfo: (s, i, o) => r("pf_save_place_info", { p_location: s, p_area: i, p_rooms: o }),
@@ -18704,7 +18728,7 @@ function Lc() {
     deleteUnit: (s) => r("pf_delete_unit", { p_unit: s })
   };
 }
-const Et = "platform2_entry", fr = "platform2_company", Fr = "platform2_device_access_", $c = 14, Dc = 24 * 3600 * 1e3, Uc = 5e3, Bc = 45e3;
+const Et = "platform2_entry", fr = "platform2_company", Fr = "platform2_device_access_", Dc = 14, Uc = 24 * 3600 * 1e3, Bc = 5e3, Mc = 45e3;
 function Ot(t, e) {
   try {
     const r = JSON.parse(Hr(t, Fr + lt(e)) || "null");
@@ -18721,9 +18745,9 @@ function hs(t) {
   return !!t.error && (!t.status || t.status >= 500);
 }
 function fi(t, e) {
-  return t === null || e - t > $c * Dc;
+  return t === null || e - t > Dc * Uc;
 }
-function Mc(t, e, r) {
+function qc(t, e, r) {
   return !!t && !fi(hi(t, e), r);
 }
 const we = { mode: "none", email: null, isPlatformAdmin: !1, companies: [], companyId: null };
@@ -18763,7 +18787,7 @@ function gr(t) {
     userId: typeof e.user_id == "string" ? e.user_id : null
   };
 }
-function qc(t) {
+function Fc(t) {
   const e = t.companies.find((n) => n.id === t.companyId) || null, r = {
     company: t.mode === "email" && t.companies.some((n) => n.can_manage_company),
     platformAdmin: t.mode === "email" && t.isPlatformAdmin
@@ -18771,8 +18795,8 @@ function qc(t) {
   if (t.mode === "email" && e) for (const n of e.modules) r[n] = !0;
   return r;
 }
-const Fc = "rbi_last_module_hash";
-function Hc(t, e) {
+const Hc = "rbi_last_module_hash";
+function zc(t, e) {
   const r = (n) => JSON.stringify([
     n.mode,
     n.email,
@@ -18786,23 +18810,23 @@ function Hc(t, e) {
   ]);
   return r(t) !== r(e);
 }
-function zc(t, e) {
-  return !t || Hc(t, e) || !!t.offline && !e.offline;
+function Kc(t, e) {
+  return !t || zc(t, e) || !!t.offline && !e.offline;
 }
-function Kc(t) {
+function Wc(t) {
   const e = String(t || "");
   return /^#\/planfact(\/|$)/.test(e) ? "planfact" : /^#\/quality\/settings(\/|$)/.test(e) ? null : /^#\/quality(\/|$)/.test(e) ? "quality" : /^#\/construction(-v2)?(\/|$)/.test(e) ? "construction" : null;
 }
-function Wc(t, e, r) {
-  const n = Kc(r);
+function Vc(t, e, r) {
+  const n = Wc(r);
   return !!t && !!n && t[n] === !0 && e[n] !== !0;
 }
-function Vc(t, e) {
+function Gc(t, e) {
   const r = String(e || ""), n = [[/^#\/planfact(\/|$)/, "planfact"], [/^#\/quality(\/|$)/, "quality"], [/^#\/construction(-v2)?(\/|$)/, "construction"]];
   for (const [s, i] of n) if (s.test(r) && t[i] === !0) return r;
   return t.planfact ? "#/planfact" : "#/settings";
 }
-function Gc(t) {
+function Jc(t) {
   let e = { ...we };
   const r = /* @__PURE__ */ new Set(), n = () => {
     for (const f of r) f(e);
@@ -18829,7 +18853,7 @@ function Gc(t) {
       const B = { data: null, error: "timeout", status: 0 }, j = new Promise((C) => {
         O = setTimeout(() => {
           R == null || R.abort(), C([B, B]);
-        }, t.askLimitMs ?? Bc);
+        }, t.askLimitMs ?? Mc);
       }), H = Promise.all([g("pf_my_platform", void 0, R == null ? void 0 : R.signal), g("pf_my_profile", void 0, R == null ? void 0 : R.signal)].map((C) => C.catch((M) => ({ data: null, error: M || "network", status: 0 })))), x = { email: f, epoch: v, p: Promise.race([H, j]), stop: () => {
         clearTimeout(O), R == null || R.abort();
       } };
@@ -18840,7 +18864,7 @@ function Gc(t) {
     const _ = a.p;
     let y;
     const w = { data: null, error: "timeout", status: 0 }, [k, E] = Ot(t.storage, f) ? await Promise.race([_, new Promise((R) => {
-      y = setTimeout(() => R([w, w]), t.serverWaitMs ?? Uc);
+      y = setTimeout(() => R([w, w]), t.serverWaitMs ?? Bc);
     })]) : await _;
     if (clearTimeout(y), v !== l) return null;
     if (hs(k) || hs(E)) return o(f, m);
@@ -18861,7 +18885,7 @@ function Gc(t) {
     if (!p) {
       p = !0;
       const g = t.storedSession ? t.storedSession() : null, v = g && g.email ? Ot(t.storage, g.email) : null;
-      g && g.email && Mc(v, g.issuedAt, s()) && (e = { ...o(g.email, g.issuedAt), offline: !1, checking: !0 }, n());
+      g && g.email && qc(v, g.issuedAt, s()) && (e = { ...o(g.email, g.issuedAt), offline: !1, checking: !0 }, n());
     }
     const f = l, m = await d();
     if (f !== l) return e;
@@ -18907,7 +18931,7 @@ function Gc(t) {
       e.mode !== "email" || !e.companies.some((m) => m.id === f) || e.companyId === f || (be(t.storage, fr, f), e = { ...e, companyId: f }, n());
     },
     getState: () => e,
-    access: () => qc(e),
+    access: () => Fc(e),
     subscribe(f) {
       return r.add(f), () => {
         r.delete(f);
@@ -18915,7 +18939,7 @@ function Gc(t) {
     }
   };
 }
-const Jc = `
+const Yc = `
 .p2-login{width:100%;max-width:380px;background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:24px;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:14px;max-height:calc(100dvh - 32px);overflow-y:auto}
 .p2-login h2{margin:0;text-align:center;font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
 .p2-login-sub{margin:-8px 0 0;text-align:center;font-size:12px;color:var(--text-muted)}
@@ -18938,7 +18962,7 @@ function fs(t, e, r) {
   const n = Z(t, "label", {}, e);
   return n.appendChild(Z(t, "input", r)), n;
 }
-function Yc(t, e) {
+function Xc(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = Z(r, "div", { class: "p2-login", "data-testid": "p2-login", role: "dialog", "aria-label": "Вход" });
@@ -18967,7 +18991,7 @@ function Yc(t, e) {
   const a = Z(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-login-demo" }, "Посмотреть без входа (демо)");
   return a.addEventListener("click", () => e.onDemo()), n.append(s, a), t.appendChild(n), () => t.replaceChildren();
 }
-const Xc = `
+const Qc = `
 .p2-profile{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .p2-profile [hidden]{display:none!important}
 .p2-profile-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)}
@@ -19012,7 +19036,7 @@ function pi(t, e) {
     });
   }), r;
 }
-function Qc(t, e) {
+function Zc(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = P(r, "div", { class: "p2-login", "data-testid": "p2-new-password", role: "dialog", "aria-label": "Придумайте пароль" });
@@ -19031,7 +19055,7 @@ function Qc(t, e) {
   }), i = P(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-new-password-signout" }, "Выйти");
   return i.addEventListener("click", () => e.signOut()), n.append(s, i), t.appendChild(n), () => t.replaceChildren();
 }
-function Zc(t, e) {
+function eu(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = P(r, "div", { class: "p2-profile", "data-testid": "p2-profile" });
@@ -19086,7 +19110,7 @@ function Zc(t, e) {
 }
 const gi = ["desk-user-name", "desk-user-avatar", "header-user-block"];
 let Te = null;
-function eu(t, e) {
+function tu(t, e) {
   var n, s;
   if (typeof document > "u") return;
   const r = (s = (n = window.RBI) == null ? void 0 : n.services) == null ? void 0 : s.shell;
@@ -19101,7 +19125,7 @@ function eu(t, e) {
     r.renderUserBlock({ name: t, role: e || "нет роли" });
   }
 }
-function tu() {
+function ru() {
   if (!(!Te || typeof document > "u")) {
     for (const t of gi) {
       const e = document.getElementById(t);
@@ -19110,8 +19134,8 @@ function tu() {
     Te = null;
   }
 }
-const ru = "rbi:platform-net", gs = "platform2_legacy_cleanup_v1", nu = "RBI_QUALITY_DB", su = "platform2_quality_state_";
-async function iu(t) {
+const nu = "rbi:platform-net", gs = "platform2_legacy_cleanup_v1", su = "RBI_QUALITY_DB", iu = "platform2_quality_state_";
+async function ou(t) {
   const e = t.store;
   if (!e) return "retry";
   try {
@@ -19122,13 +19146,13 @@ async function iu(t) {
   try {
     if (!e.getItem(me)) {
       for (const r of Nr) e.removeItem(r);
-      e.removeItem(su);
+      e.removeItem(iu);
     }
   } catch {
     return "retry";
   }
   try {
-    t.deleteDatabase && await t.deleteDatabase(nu);
+    t.deleteDatabase && await t.deleteDatabase(su);
   } catch {
     return "retry";
   }
@@ -19139,7 +19163,7 @@ async function iu(t) {
   }
   return "done";
 }
-function ou(t, e, r = 5e3) {
+function au(t, e, r = 5e3) {
   return new Promise((n, s) => {
     let i;
     try {
@@ -19156,7 +19180,7 @@ function ou(t, e, r = 5e3) {
     };
   });
 }
-const au = {
+const lu = {
   id: "quality",
   role: "module",
   title: "Качество",
@@ -19321,7 +19345,7 @@ const au = {
     "/meetings"
   ],
   defaultRoute: "/audit"
-}, lu = {
+}, cu = {
   id: "sk",
   role: "feature-of",
   parentModule: "quality",
@@ -19350,7 +19374,7 @@ const au = {
   ],
   routes: ["/sk", "/sk/:subTab"],
   defaultRoute: "/sk"
-}, cu = {
+}, uu = {
   id: "settings",
   role: "service",
   title: "Настройки",
@@ -19362,7 +19386,7 @@ const au = {
   company: { enabledByDefault: !0 },
   routes: ["/settings"],
   defaultRoute: "/settings"
-}, uu = {
+}, du = {
   id: "knowledge",
   role: "module",
   title: "База знаний",
@@ -19381,7 +19405,7 @@ const au = {
   ],
   routes: ["/knowledge", "/knowledge/twi", "/knowledge/docs", "/knowledge/nodes", "/knowledge/etalons"],
   defaultRoute: "/knowledge"
-}, du = {
+}, hu = {
   id: "construction",
   role: "module",
   title: "Стройконтроль",
@@ -19395,7 +19419,7 @@ const au = {
   offline: { view: !0, input: ["*"], files: !0 },
   routes: ["/construction", "/construction/:subTab"],
   defaultRoute: "/construction"
-}, hu = {
+}, fu = {
   id: "construction-v2",
   role: "module",
   title: "Стройконтроль (новый)",
@@ -19405,8 +19429,9 @@ const au = {
   entry: "./index.js",
   menu: { section: "construction", label: "СК (новый)", order: 11 },
   company: { enabledByDefault: !0 },
-  // P2-0061: виды записей для общего правила синхронизации (standards/SYNC_AND_ACCESS.md). На сервере — row_visible_id (043):
-  // объекты в правах Стройконтроля не участвуют (objects: false), подрядчик — своя фирма по id контрагента; помещения — quality.can
+  // P2-0061: виды записей для общего правила синхронизации (standards/SYNC_AND_ACCESS.md). P2-0070: замечания и приёмки —
+  // режим `area` единого механизма прав (на сервере — core.row_allowed и сторож действий, 052): действия роли в области
+  // участия в проекте (место записи — по id ядра), подрядчик — своя фирма по id контрагента; помещения — quality.can (без изменений)
   sync: [
     {
       kind: "defect_v2",
@@ -19416,10 +19441,18 @@ const au = {
       author: { id: "authorId", name: ["owner", "created_by", "author"] },
       counterparty: ["core_counterparty_id"],
       contractorCard: "contractorId",
-      objects: !1,
-      mode: "contractor",
-      view: ["construction.view"],
-      edit: ["construction.edit"],
+      place: { project: "core_project_id", location: "core_location_id" },
+      mode: "area",
+      view: ["construction.defects.view"],
+      edit: [
+        "construction.defects.create",
+        "construction.defects.assign",
+        "construction.defects.start",
+        "construction.defects.fix",
+        "construction.defects.close",
+        "construction.defects.reject",
+        "construction.defects.delete"
+      ],
       ownFirst: !0
     },
     {
@@ -19430,10 +19463,10 @@ const au = {
       author: { id: "authorId", name: ["owner", "created_by", "author"] },
       counterparty: ["core_counterparty_id"],
       contractorCard: "contractorId",
-      objects: !1,
-      mode: "contractor",
-      view: ["construction.view"],
-      edit: ["construction.edit"]
+      place: { project: "core_project_id", location: "core_location_id" },
+      mode: "area",
+      view: ["construction.acceptance.view"],
+      edit: ["construction.acceptance.book", "construction.acceptance.schedule", "construction.acceptance.conduct"]
     },
     {
       kind: "unit_v2",
@@ -19448,7 +19481,7 @@ const au = {
   ],
   routes: ["/construction-v2", "/construction-v2/:subTab"],
   defaultRoute: "/construction-v2"
-}, fu = {
+}, pu = {
   id: "game",
   role: "feature-of",
   parentModule: "quality",
@@ -19461,7 +19494,7 @@ const au = {
   company: { enabledByDefault: !0 },
   routes: ["/game", "/game/:subTab", "/fmea", "/fmea/:id"],
   defaultRoute: "/game"
-}, pu = {
+}, gu = {
   id: "ai",
   role: "service",
   title: "ИИ-помощник",
@@ -19473,7 +19506,7 @@ const au = {
   company: { enabledByDefault: !0 },
   routes: [],
   defaultRoute: null
-}, gu = {
+}, mu = {
   id: "planfact",
   role: "module",
   title: "План/Факт",
@@ -19490,8 +19523,20 @@ const au = {
   // P2-0064: вид записи для общей отправки сервиса платформы (standards/SYNC_AND_ACCESS.md, «Вид, который уходит функцией сервера»):
   // запись лежит на устройстве (база записей устройства, src/platform/services/offline/device-records.ts) и уходит функцией rpc
   // с id с телефона — повтор без дубля. Права и область (место, «за кого», перебор → «на проверку») проверяет сервер.
+  // P2-0070: единый механизм прав — то же описание, что у Стройконтроля: действия каталога и место записи (объект — project,
+  // место — location_id: место позиции ВОР). Отправку факта решает сервер (pf_fact_submit: область, «за кого», перебор);
+  // правило устройства по этому описанию сверяет зеркальный тест (телефон = сервер), участие — pf_my_area → grants.
   sync: [
-    { kind: "pf_fact", store: "device_records", rpc: "pf_fact_submit", title: "Факт" }
+    {
+      kind: "pf_fact",
+      store: "device_records",
+      rpc: "pf_fact_submit",
+      title: "Факт",
+      mode: "area",
+      place: { project: "project", location: "location_id" },
+      view: ["planfact.fact.view"],
+      edit: ["planfact.fact.create"]
+    }
   ],
   /** Подвкладки модуля: нижний таббар (телефон/планшет) и nav2 (≥1280) — как у Quality. Новые разделы добавляются сюда.
    *  requiresAccess — пункт виден, когда сервер подтвердил доступ: true — к компании, 'estimate' — право на цены и сметы, 'ks2' — право на КС-2.
@@ -19550,7 +19595,7 @@ const au = {
   ],
   routes: ["/planfact"],
   defaultRoute: "/planfact"
-}, mu = {
+}, yu = {
   id: "company",
   role: "module",
   title: "Компания",
@@ -19565,7 +19610,6 @@ const au = {
   routes: ["/company"],
   defaultRoute: "/company"
 }, mi = [
-  au,
   lu,
   cu,
   uu,
@@ -19574,28 +19618,29 @@ const au = {
   fu,
   pu,
   gu,
-  mu
-], en = "p2_moved_to", yu = "p2_moved_at", ms = "platform2_quality_state_";
-function _u(t) {
+  mu,
+  yu
+], en = "p2_moved_to", _u = "p2_moved_at", ms = "platform2_quality_state_";
+function vu(t) {
   const e = {};
   for (const r of t) for (const n of r.sync || []) n && n.store && !n.rpc && !(n.store in e) && (e[n.store] = n.title);
   return e;
 }
 const ye = {
-  ..._u(mi),
+  ...vu(mi),
   // старый Стройконтроль (v1): описания `sync` нет — на сервере фирма по названию (row_visible 020), ТД; записи не теряются
   construction_defects: "Замечание",
   construction_acceptance: "Приёмка",
   construction_units: "Помещение"
-}, vu = ["app_photos", "checklist_snapshots"];
-function wu(t) {
+}, wu = ["app_photos", "checklist_snapshots"];
+function bu(t) {
   return /^demo[_-]/i.test(String(t.id ?? "")) || t.isDemo === !0 || t.is_demo === !0 || t.demo === !0;
 }
-function bu(t) {
+function Su(t) {
   return t.type === "auto" || t.source === "ai" || t.source === "system" || t.contractor === "Системная";
 }
 function tn(t, e, r) {
-  return t in ye ? e.filter((n) => n && n.id != null && !n[en] && !String(n.id).startsWith("sys_") && !wu(n) && !bu(n) && r(n)) : [];
+  return t in ye ? e.filter((n) => n && n.id != null && !n[en] && !String(n.id).startsWith("sys_") && !bu(n) && !Su(n) && r(n)) : [];
 }
 const Re = (t) => typeof t == "string" ? t.trim() : typeof t == "number" ? String(t) : "";
 function rn(t, e) {
@@ -19614,20 +19659,20 @@ function rn(t, e) {
     object: n("object", "objectName", "projectName", "project_display_name", "project", "title", "name")
   };
 }
-function Su(t, e, r) {
+function ku(t, e, r) {
   if (t[en]) return !1;
   const n = String(t.id ?? ""), s = Re(t.entityId) || Re(t.entity_id);
   return !!s && e.has(s) || n.length > 3 && r.includes(n);
 }
-const ku = "Инженер", Eu = ["inspectorName", "engineerName", "engineer_name", "owner", "created_by"];
-function xu(t, e, r = "") {
+const Eu = "Инженер", xu = ["inspectorName", "engineerName", "engineer_name", "owner", "created_by"];
+function Au(t, e, r = "") {
   const n = { ...t }, s = Re(n.project_code);
   if ((!s || s === "LOCAL") && (n.project_code = e), r)
-    for (const i of Eu) i in n && (!Re(n[i]) || Re(n[i]) === ku) && (n[i] = r);
+    for (const i of xu) i in n && (!Re(n[i]) || Re(n[i]) === Eu) && (n[i] = r);
   return n;
 }
-function Au(t, e, r) {
-  return { ...t, [en]: e, [yu]: r };
+function Tu(t, e, r) {
+  return { ...t, [en]: e, [_u]: r };
 }
 function zr(t) {
   return new Promise((e, r) => {
@@ -19646,7 +19691,7 @@ function He(t, e) {
     }, s.onerror = () => r(null), s.onblocked = () => r(null);
   });
 }
-async function Tu(t, e, r) {
+async function Ru(t, e, r) {
   const n = { orphans: [], rows: /* @__PURE__ */ new Map(), attachments: /* @__PURE__ */ new Map() }, s = await He(t, e);
   if (!s) return n;
   try {
@@ -19661,9 +19706,9 @@ async function Tu(t, e, r) {
     }
     if (n.orphans.length) {
       const o = new Set(n.orphans.map((l) => l.id)), a = JSON.stringify([...n.rows.values()]);
-      for (const l of vu) {
+      for (const l of wu) {
         if (!i.includes(l)) continue;
-        const u = (await zr(s.transaction(l, "readonly").objectStore(l).getAll())).filter((d) => Su(d, o, a));
+        const u = (await zr(s.transaction(l, "readonly").objectStore(l).getAll())).filter((d) => ku(d, o, a));
         u.length && n.attachments.set(l, u);
       }
     }
@@ -19672,7 +19717,7 @@ async function Tu(t, e, r) {
   }
   return n.orphans.sort((i, o) => i.date < o.date ? -1 : i.date > o.date ? 1 : 0), n;
 }
-async function Ru(t, e, r) {
+async function Cu(t, e, r) {
   const n = await He(t, e);
   if (!n) return 0;
   let s = 0;
@@ -19694,7 +19739,7 @@ async function Ru(t, e, r) {
 function Kr(t) {
   return String(t.syncStatus ?? t.sync_status ?? "") === "blocked";
 }
-async function Cu(t, e) {
+async function Ou(t, e) {
   const r = await He(t, e);
   if (!r) return 0;
   let n = 0;
@@ -19714,7 +19759,7 @@ async function Cu(t, e) {
   }
   return n;
 }
-async function Ou(t, e, r, n = 200) {
+async function Iu(t, e, r, n = 200) {
   const s = await He(t, e);
   if (!s) return [];
   const i = [], o = (a) => r(a) || Kr(a);
@@ -19734,7 +19779,7 @@ async function Ou(t, e, r, n = 200) {
   }
   return i;
 }
-async function Iu(t, e, r, n, s) {
+async function ju(t, e, r, n, s) {
   const i = s.now || (/* @__PURE__ */ new Date()).toISOString(), o = await He(t, r), a = await He(t, e);
   if (!o || !a)
     throw o == null || o.close(), a == null || a.close(), new Error("База устройства недоступна");
@@ -19748,12 +19793,12 @@ async function Iu(t, e, r, n, s) {
       if (!o.objectStoreNames.contains(u)) continue;
       const h = o.transaction(u, "readwrite"), f = h.objectStore(u), m = f.keyPath, g = [];
       for (const _ of d)
-        await zr(f.getKey(_[m])) === void 0 && f.put(u in ye ? xu(_, s.projectCode, s.author) : _), g.push(_), p && l++;
+        await zr(f.getKey(_[m])) === void 0 && f.put(u in ye ? Au(_, s.projectCode, s.author) : _), g.push(_), p && l++;
       await new Promise((_, y) => {
         h.oncomplete = () => _(), h.onerror = () => y(h.error), h.onabort = () => y(h.error);
       });
       const v = a.transaction(u, "readwrite");
-      for (const _ of g) v.objectStore(u).put(Au(_, s.slot, i));
+      for (const _ of g) v.objectStore(u).put(Tu(_, s.slot, i));
       await new Promise((_, y) => {
         v.oncomplete = () => _(), v.onerror = () => y(v.error), v.onabort = () => y(v.error);
       });
@@ -19763,7 +19808,7 @@ async function Iu(t, e, r, n, s) {
   }
   return l;
 }
-const ju = `
+const Pu = `
 .p2-rescue-wrap{position:fixed;inset:0;z-index:1300}
 .p2-rescue-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
 .p2-rescue{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;
@@ -19785,30 +19830,30 @@ const ju = `
 .p2-rescue__foot button[data-primary]{border:0;background:var(--accent,var(--primary));color:#fff}
 .p2-rescue__foot button:disabled{opacity:.6;cursor:default}
 @media (min-width:768px){.p2-rescue{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:540px;border-radius:20px}
-  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`, mr = 50, Pu = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
-function Nu(t) {
+  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`, mr = 50, Nu = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
+function Lu(t) {
   const e = new Date(t);
   if (!t || Number.isNaN(e.getTime())) return [t || "без даты", ""];
   const r = (n) => String(n).padStart(2, "0");
   return [r(e.getDate()) + "." + r(e.getMonth() + 1) + "." + e.getFullYear(), r(e.getHours()) + ":" + r(e.getMinutes())];
 }
-function Lu(t, e) {
+function $u(t, e) {
   const r = (g, v = {}, _) => {
     const y = t.createElement(g);
     for (const [w, k] of Object.entries(v)) y.setAttribute(w, k);
     return _ !== void 0 && (y.textContent = _), y;
   }, n = r("div", { class: "p2-rescue-wrap", "data-testid": "p2-rescue" }), s = r("div", { class: "p2-rescue-backdrop", "aria-hidden": "true" }), i = r("div", { class: "p2-rescue", role: "dialog", "aria-modal": "true", "aria-label": "Записи, сделанные без связи" }), o = e.orphans.length, a = r("div", { class: "p2-rescue__ico" });
-  a.innerHTML = Pu;
+  a.innerHTML = Nu;
   const l = r("div");
   l.append(
-    r("b", {}, "Найдено " + o + " " + $u(o, "запись", "записи", "записей") + ", " + (o % 10 === 1 && o % 100 !== 11 ? "сделанная" : "сделанные") + " без связи"),
+    r("b", {}, "Найдено " + o + " " + Du(o, "запись", "записи", "записей") + ", " + (o % 10 === 1 && o % 100 !== 11 ? "сделанная" : "сделанные") + " без связи"),
     r("span", {}, (o === 1 ? "Она осталась" : "Они остались") + " на этом телефоне и не отправлены. Перенести в «" + e.companyName + "» и отправить?")
   );
   const c = r("div", { class: "p2-rescue__head" });
   c.append(a, l);
   const u = r("ul", { "data-testid": "p2-rescue-list" });
   for (const g of e.orphans.slice(0, mr)) {
-    const [v, _] = Nu(g.date), y = r("li"), w = r("i", {}, v);
+    const [v, _] = Lu(g.date), y = r("li"), w = r("i", {}, v);
     _ && (w.append(r("br")), w.append(t.createTextNode(_))), y.append(w, r("strong", {}, g.type), r("em", {}, g.object || "без объекта")), u.append(y);
   }
   o > mr && u.append(r("li", {}, "и ещё " + (o - mr)));
@@ -19827,11 +19872,11 @@ function Lu(t, e) {
     });
   }), n;
 }
-function $u(t, e, r, n) {
+function Du(t, e, r, n) {
   const s = t % 10, i = t % 100;
   return s === 1 && i !== 11 ? e : s >= 2 && s <= 4 && (i < 12 || i > 14) ? r : n;
 }
-const ys = "p2-sync-status-css", Du = `
+const ys = "p2-sync-status-css", Uu = `
 .p2s{background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:16px;overflow:hidden}
 .p2s__head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px}
 .p2s__head>div:nth-child(2){flex:1 1 200px;min-width:0}
@@ -19870,7 +19915,7 @@ const ys = "p2-sync-status-css", Du = `
 .p2j__more{padding:10px 16px;font-size:12.5px;color:var(--text-muted);border-top:1px solid var(--card-border)}
 .p2s button:focus-visible,.p2j summary:focus-visible{outline:2px solid var(--warning,#b8844a);outline-offset:2px}
 @media (min-width:768px){.p2s__btn{flex:none;margin-left:auto}}
-@media (min-width:1024px){.p2s__row{grid-template-columns:minmax(0,1fr) 150px minmax(0,1.1fr);align-items:center}}`, Uu = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', _s = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>', Bu = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>', V = (t) => String(t ?? "").replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), zt = (t) => String(t).padStart(2, "0");
+@media (min-width:1024px){.p2s__row{grid-template-columns:minmax(0,1fr) 150px minmax(0,1.1fr);align-items:center}}`, Bu = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', _s = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>', Mu = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>', V = (t) => String(t ?? "").replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), zt = (t) => String(t).padStart(2, "0");
 function qe(t) {
   const e = new Date(t);
   return zt(e.getHours()) + ":" + zt(e.getMinutes());
@@ -19881,20 +19926,20 @@ function yi(t, e) {
   const n = new Date(r), s = new Date(e), i = (a) => new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime(), o = Math.round((i(s) - i(n)) / 864e5);
   return o === 0 ? "сегодня " + qe(r) : o === 1 ? "вчера " + qe(r) : zt(n.getDate()) + "." + zt(n.getMonth() + 1) + " " + qe(r);
 }
-const Mu = [
+const qu = [
   [/RLS|прав доступа|permission/i, "нет прав"],
   [/не назначен/i, "объект не назначен"],
   [/другим инженером/i, "запись другого инженера"],
   [/Роль не подтверждена/i, "роль не подтверждена"],
   [/роль не может/i, "у роли нет права отправки"]
 ];
-function qu(t, e, r) {
+function Fu(t, e, r) {
   const n = String(t.syncStatus ?? t.sync_status ?? ""), s = String(t.syncBlockReason ?? t.sync_block_reason ?? "");
   if (e) {
     const i = String(t.syncBlockHint ?? "");
     if (/^(Не отправлено|Сервер отклонил):/.test(s))
       return { chip: "bad", why: s, hint: i || "запись осталась на телефоне; нажмите «Отправить снова», когда дадут права" };
-    const o = Mu.find(([a]) => a.test(s));
+    const o = qu.find(([a]) => a.test(s));
     return {
       chip: "bad",
       why: "Сервер отклонил: " + (o ? o[1] : s ? s.charAt(0).toLowerCase() + s.slice(1) : "нет прав"),
@@ -19907,67 +19952,67 @@ function qu(t, e, r) {
   }
   return r.offline ? { chip: "net", why: "Нет связи", hint: "отправим сами, как появится" } : r.retryAfter > r.now ? r.retryKind === "server" ? { chip: "wait", why: "Сервер не ответил", hint: "повтор в " + qe(r.retryAfter) } : { chip: "wait", why: "Нет ответа сервера", hint: "проверяем связь каждую минуту — отправим сразу" } : { chip: "queue", why: "Ждёт отправки", hint: "уйдёт в ближайшую минуту" };
 }
-function Fu(t, e) {
+function Hu(t, e) {
   if (typeof e.p2Title == "string" && e.p2Title) return e.p2Title;
   const r = rn(t, e), n = typeof e.templateTitle == "string" ? e.templateTitle : typeof e.template == "string" ? e.template : "", s = [e.section, e.floor].map((i) => typeof i == "string" ? i.trim() : "").filter(Boolean).join(", ");
   return [ye[t] || r.type, n, r.object, s].filter((i, o, a) => i && a.indexOf(i) === o).join(" · ");
 }
-function Hu(t, e) {
+function zu(t, e) {
   return t.map(({ store: r, rec: n, rejected: s }) => ({
     store: r,
     id: String(n.id),
     rejected: s,
-    title: Fu(r, n),
+    title: Hu(r, n),
     when: yi(rn(r, n).date, e.now),
-    reason: qu(n, s, e)
+    reason: Fu(n, s, e)
   })).sort((r, n) => Number(r.rejected) - Number(n.rejected));
 }
-const zu = { online: "есть", offline: "нет ответа", server: "сервер не отвечает" };
-function Ku(t, e) {
+const Ku = { online: "есть", offline: "нет ответа", server: "сервер не отвечает" };
+function Wu(t, e) {
   const r = t.items.filter((f) => !f.rejected), n = t.items.filter((f) => f.rejected), s = t.lastOkAt ? yi(t.lastOkAt, t.now) : "";
   let i;
   if (!r.length && n.length)
     i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + _s + '</div><div><b class="p2s__title">Не ушло: ' + n.length + '</b><span class="p2s__sub">Само не уйдёт — у каждой записи ниже причина и что делать</span></div></div>';
   else if (!r.length)
-    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--ok">' + Bu + '</div><div><b class="p2s__title">Всё отправлено</b><span class="p2s__sub">' + (s ? "Последняя успешная отправка: " + V(s) : "На этом телефоне нет неотправленных записей") + "</span></div></div>";
+    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--ok">' + Mu + '</div><div><b class="p2s__title">Всё отправлено</b><span class="p2s__sub">' + (s ? "Последняя успешная отправка: " + V(s) : "На этом телефоне нет неотправленных записей") + "</span></div></div>";
   else {
     const f = !t.offline && t.retryAfter > t.now && t.retryKind === "server", m = t.offline ? "Всё сохранено на телефоне и уйдёт само, когда появится связь." : f ? "Связь есть, сервер не ответил — отправим сами в " + qe(t.retryAfter) + "." : "Всё сохранено на телефоне и уйдёт само.";
-    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + (t.offline ? Uu : _s) + '</div><div><b class="p2s__title">' + (t.offline ? "Нет связи · " : "") + "не отправлено: " + r.length + '</b><span class="p2s__sub">' + V(m) + '</span></div><button class="p2s__btn" type="button" data-act="sync" data-testid="p2-sync-now">Отправить сейчас</button></div>';
+    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + (t.offline ? Bu : _s) + '</div><div><b class="p2s__title">' + (t.offline ? "Нет связи · " : "") + "не отправлено: " + r.length + '</b><span class="p2s__sub">' + V(m) + '</span></div><button class="p2s__btn" type="button" data-act="sync" data-testid="p2-sync-now">Отправить сейчас</button></div>';
   }
   const o = (f) => '<li class="p2s__row" data-testid="p2-sync-item" data-id="' + V(f.id) + '" data-chip="' + f.reason.chip + '"><div class="p2s__name">' + V(f.title) + '</div><div class="p2s__when">' + (f.when ? "записано " + V(f.when) : "") + '</div><div class="p2s__why"><span class="p2s__chip p2s__chip--' + f.reason.chip + '">' + V(f.reason.why) + '</span><span class="p2s__hint">' + V(f.reason.hint) + "</span>" + (f.reason.act === "drop_photos" && f.store === "app_history" ? '<button class="p2s__act" type="button" data-act="drop" data-id="' + V(f.id) + '">Отправить без этого фото</button>' : "") + "</div></li>", a = r.length ? '<ul class="p2s__list">' + r.map(o).join("") + "</ul>" : "", l = n.length ? '<div class="p2s__group p2s__group--act">Не ушло, нужно действие: ' + n.length + '<button class="p2s__act" type="button" data-act="retry" data-testid="p2-sync-retry">Отправить снова</button></div><ul class="p2s__list">' + n.map(o).join("") + "</ul>" : "", c = [];
-  (r.length || n.length) && c.push("Последняя успешная отправка: " + (s ? V(s) : "ещё не было")), t.probe && t.probeAt && c.push("Проверка связи: " + V(zu[t.probe] || t.probe) + ", " + qe(t.probeAt));
-  const u = c.length ? '<div class="p2s__foot">' + c.map((f) => "<span>" + f + "</span>").join("") + "</div>" : "", d = '<section class="p2s" role="status" data-testid="p2-net-device">' + i + a + l + u + "</section>", p = t.journal.length ? '<ul class="p2j__ev" data-testid="p2-sync-journal-list">' + t.journal.map((f) => '<li><span class="p2j__t">' + V(f.t) + '</span><span class="p2j__k' + (f.tone ? " p2j__k--" + f.tone : "") + '">' + V(f.text) + "</span></li>").join("") + '</ul><div class="p2j__more">Показаны последние ' + t.journal.length + " · хранится до 500 событий на этом телефоне</div>" : '<div class="p2j__more">Событий пока нет</div>', h = '<details class="p2s p2j" data-testid="p2-sync-journal"' + (e ? " open" : "") + '><summary class="p2j__sum">Журнал синхронизации <small>· ' + t.journalTotal + " " + Wu(t.journalTotal, "событие", "события", "событий") + '</small><span class="p2j__chev" aria-hidden="true">▼</span></summary><div class="p2j__tools"><button class="p2j__copy" type="button" data-act="copy" data-testid="p2-sync-copy">Скопировать отчёт для разработчика</button><span class="p2s__hint">В отчёте нет содержимого записей и имён — только время, счётчики и ошибки.</span></div>' + p + "</details>";
+  (r.length || n.length) && c.push("Последняя успешная отправка: " + (s ? V(s) : "ещё не было")), t.probe && t.probeAt && c.push("Проверка связи: " + V(Ku[t.probe] || t.probe) + ", " + qe(t.probeAt));
+  const u = c.length ? '<div class="p2s__foot">' + c.map((f) => "<span>" + f + "</span>").join("") + "</div>" : "", d = '<section class="p2s" role="status" data-testid="p2-net-device">' + i + a + l + u + "</section>", p = t.journal.length ? '<ul class="p2j__ev" data-testid="p2-sync-journal-list">' + t.journal.map((f) => '<li><span class="p2j__t">' + V(f.t) + '</span><span class="p2j__k' + (f.tone ? " p2j__k--" + f.tone : "") + '">' + V(f.text) + "</span></li>").join("") + '</ul><div class="p2j__more">Показаны последние ' + t.journal.length + " · хранится до 500 событий на этом телефоне</div>" : '<div class="p2j__more">Событий пока нет</div>', h = '<details class="p2s p2j" data-testid="p2-sync-journal"' + (e ? " open" : "") + '><summary class="p2j__sum">Журнал синхронизации <small>· ' + t.journalTotal + " " + Vu(t.journalTotal, "событие", "события", "событий") + '</small><span class="p2j__chev" aria-hidden="true">▼</span></summary><div class="p2j__tools"><button class="p2j__copy" type="button" data-act="copy" data-testid="p2-sync-copy">Скопировать отчёт для разработчика</button><span class="p2s__hint">В отчёте нет содержимого записей и имён — только время, счётчики и ошибки.</span></div>' + p + "</details>";
   return '<div class="space-y-3">' + d + h + "</div>";
 }
-function Wu(t, e, r, n) {
+function Vu(t, e, r, n) {
   const s = Math.abs(t) % 100, i = s % 10;
   return s > 10 && s < 20 ? n : i > 1 && i < 5 ? r : i === 1 ? e : n;
 }
-const Vu = [
+const Gu = [
   { id: "quality", name: "Качество и Стройконтроль", what: "Осмотры, замечания, планы СК — одна база на телефоне", offline: null, files: "quality", code: ["quality", "construction", "construction-v2"] },
   { id: "planfact", name: "План/Факт", what: "Сводка, ВОР, Факт, шахматка, журнал, КС-2 и сметы — по моим проектам", offline: null, files: null, code: ["planfact"] },
   { id: "company", name: "Компания", what: "Проекты и объекты, места, сотрудники и роли, контрагенты", offline: null, files: null, code: ["company"] },
   { id: "knowledge", name: "База знаний", what: "Документы, TWI, тех. узлы, эталоны", offline: null, files: "knowledge", code: [] },
   { id: "ai", name: "ИИ-помощник", what: "Вопросы к базе знаний", offline: null, files: null, code: [] }
-], Gu = ["twi_photo", "twi_pdf", "node_file", "custom_doc_pdf", "assistant_kb_file", "etalon_file"];
-function Ju(t, e) {
-  return Vu.filter((r) => r.id === "quality" ? t("quality") || t("construction") : t(r.id)).map((r) => ({ ...r, offline: e(r.id === "quality" ? "quality" : r.id) }));
-}
-function Yu(t) {
-  return !t || !t.view ? { text: "Только онлайн", kind: "on" } : uc(t, "*", !0) ? { text: "Без сети: смотреть", kind: "ro" } : { text: "Без сети: смотреть и вносить", kind: "rw" };
+], Ju = ["twi_photo", "twi_pdf", "node_file", "custom_doc_pdf", "assistant_kb_file", "etalon_file"];
+function Yu(t, e) {
+  return Gu.filter((r) => r.id === "quality" ? t("quality") || t("construction") : t(r.id)).map((r) => ({ ...r, offline: e(r.id === "quality" ? "quality" : r.id) }));
 }
 function Xu(t) {
+  return !t || !t.view ? { text: "Только онлайн", kind: "on" } : dc(t, "*", !0) ? { text: "Без сети: смотреть", kind: "ro" } : { text: "Без сети: смотреть и вносить", kind: "rw" };
+}
+function Qu(t) {
   const e = {};
   for (const r of t.matchAll(/^\s*"[^"]+": \["[0-9a-f]+",(\d+),"([^"]*)"\]/gm)) e[r[2]] = (e[r[2]] || 0) + Number(r[1]);
   return e;
 }
-function Qu(t) {
+function Zu(t) {
   const e = { quality: 0, knowledge: 0 };
   for (const r of t) {
     const n = String(r.cache_status || r.cacheStatus || "");
     if (n !== "cached_cloud" && n !== "cached_local") continue;
     const s = Number(r.size_bytes || r.sizeBytes || 0) || 0;
-    Gu.includes(String(r.entity_type || r.entityType || "")) ? e.knowledge += s : e.quality += s;
+    Ju.includes(String(r.entity_type || r.entityType || "")) ? e.knowledge += s : e.quality += s;
   }
   return e;
 }
@@ -19975,10 +20020,10 @@ const pe = (t) => {
   if (!t) return "0 КБ";
   const e = (r, n) => (r < 10 ? r.toFixed(1) : Math.round(r).toString()).replace(".", ",") + " " + n;
   return t < 1048576 ? e(t / 1024, "КБ") : t < 1073741824 ? e(t / 1048576, "МБ") : e(t / 1073741824, "ГБ");
-}, ge = (t) => t.replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), Zu = (t) => {
+}, ge = (t) => t.replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), ed = (t) => {
   const e = new Date(t), r = /* @__PURE__ */ new Date(), n = String(e.getHours()).padStart(2, "0") + ":" + String(e.getMinutes()).padStart(2, "0"), s = e.toDateString() === r.toDateString(), i = new Date(r);
   return i.setDate(r.getDate() - 1), (s ? "сегодня " : e.toDateString() === i.toDateString() ? "вчера " : String(e.getDate()).padStart(2, "0") + "." + String(e.getMonth() + 1).padStart(2, "0") + " ") + n;
-}, ed = `
+}, td = `
 .p2o{background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:16px;overflow:hidden;margin:12px 0}
 .p2o__head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px}
 .p2o__ico{width:44px;height:44px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--accent,var(--primary,#c49a5f));background:color-mix(in srgb,var(--accent,var(--primary,#c49a5f)) 14%,transparent)}
@@ -20016,26 +20061,26 @@ const pe = (t) => {
 .p2o-dlg__box{width:100%;max-width:440px;background:var(--card-bg);color:var(--text-main);border-radius:18px;border:1px solid var(--card-border);padding:18px;display:flex;flex-direction:column;gap:10px}
 .p2o-dlg__t{font-size:17px;font-weight:800}.p2o-dlg__p{font-size:14px;color:var(--text-muted);line-height:1.45}
 @media (min-width:768px){.p2o-dlg{align-items:center}.p2o__body{grid-column:1/2}}
-@media (max-width:599px){.p2o__total{margin-left:0;text-align:left;flex:1 1 100%}.p2o__sel{max-width:none}}`, td = {
+@media (max-width:599px){.p2o__total{margin-left:0;text-align:left;flex:1 1 100%}.p2o__sel{max-width:none}}`, rd = {
   quality: Jr.map((t) => [t, ai[t]]),
   knowledge: [["all", "Все"], ["none", "Не скачивать заранее"]]
 };
-function rd(t, e, r) {
+function nd(t, e, r) {
   const n = (i) => {
-    const o = Yu(i.row.offline), a = o.kind === "on", l = [
+    const o = Xu(i.row.offline), a = o.kind === "on", l = [
       i.codeBytes ? `<span>Код <b>${pe(i.codeBytes)}</b></span>` : "",
       i.copyBytes || i.row.id === "planfact" || i.row.id === "company" ? `<span>Данные <b>${pe(i.copyBytes)}</b></span>` : "",
       i.row.files ? `<span>${i.row.files === "knowledge" ? "Документы и TWI" : "Фото и PDF"} <b>${pe(i.fileBytes)}</b></span>` : ""
-    ].filter(Boolean).join(""), c = i.row.files ? `<label class="p2o__field">${i.row.files === "knowledge" ? "Документы заранее" : "Фото и PDF заранее"}<select class="p2o__sel" data-act="scope" data-mod="${i.row.files}" id="p2o-scope-${i.row.id}"${i.keep ? "" : " disabled"}>` + td[i.row.files].map(([u, d]) => `<option value="${u}"${u === i.scope ? " selected" : ""}>${ge(d)}${u === i.roleScope ? " · по роли" : ""}</option>`).join("") + "</select></label>" : "";
+    ].filter(Boolean).join(""), c = i.row.files ? `<label class="p2o__field">${i.row.files === "knowledge" ? "Документы заранее" : "Фото и PDF заранее"}<select class="p2o__sel" data-act="scope" data-mod="${i.row.files}" id="p2o-scope-${i.row.id}"${i.keep ? "" : " disabled"}>` + rd[i.row.files].map(([u, d]) => `<option value="${u}"${u === i.scope ? " selected" : ""}>${ge(d)}${u === i.roleScope ? " · по роли" : ""}</option>`).join("") + "</select></label>" : "";
     return `<div class="p2o__mod${a ? " p2o__mod--online" : ""}" data-mod="${i.row.id}" data-testid="p2o-mod-${i.row.id}"><div><span class="p2o__name">${ge(i.row.name)}</span><span class="p2o__what">${ge(i.row.what)}</span><span class="p2o__chip p2o__chip--${o.kind}">${o.text}</span></div>` + (a ? "" : `<label class="p2o__sw"><input type="checkbox" data-act="keep" data-mod="${i.row.id}" id="p2o-keep-${i.row.id}"${i.keep ? " checked" : ""}><span aria-hidden="true"></span>Держать без сети</label><div class="p2o__body"><div class="p2o__size" data-testid="p2o-size-${i.row.id}">${l}</div>${c}<div class="p2o__last">${ge(i.last)}</div><div class="p2o__btns"><button type="button" class="p2o__btn p2o__btn--main" data-act="download" data-mod="${i.row.id}"${i.keep ? "" : " disabled"}>Скачать сейчас</button>` + (i.row.id === "quality" ? '<button type="button" class="p2o__btn" data-act="reports" data-mod="quality">Отчёты на телефон</button>' : "") + `<button type="button" class="p2o__btn p2o__btn--danger" data-act="clear" data-mod="${i.row.id}" data-testid="p2o-clear-${i.row.id}">Очистить скачанное</button></div></div>`) + "</div>";
   }, s = e.used + e.free > 0 ? Math.max(1, Math.round(e.used * 100 / (e.used + e.free))) : 0;
   return `<section class="p2o" data-testid="p2-offline-modules"><div class="p2o__head"><div class="p2o__ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div><div style="flex:1 1 220px;min-width:0"><span class="p2o__title">Офлайн по модулям</span><span class="p2o__sub">Что телефон держит без сети. По умолчанию — по вашей роли: ${ge(r)}. Можно поменять у каждого модуля.</span></div><div class="p2o__total" data-testid="p2o-total">На телефоне <b>${pe(e.used)}</b> · свободно ${pe(e.free)}<div class="p2o__bar"><i style="width:${s}%"></i></div></div></div>` + t.map(n).join("") + '<div class="p2o__foot"><span>Неотправленное («не отправлено: N») не удаляется никогда — ни очисткой, ни правилом по роли. Без сети раздел покажет то, что скачано заранее или открывалось.</span></div></section>';
 }
 let yr = null;
-const nd = { engineer: "инженер качества", contractor: "подрядчик", manager: "руководитель", director: "руководство", guest: "просмотр" };
-async function sd(t) {
+const sd = { engineer: "инженер качества", contractor: "подрядчик", manager: "руководитель", director: "руководство", guest: "просмотр" };
+async function id(t) {
   var f, m;
-  const e = t.RBI || {}, r = (f = e.services) == null ? void 0 : f.shell, n = e.platformMenuAccess || {}, o = Ju((g) => {
+  const e = t.RBI || {}, r = (f = e.services) == null ? void 0 : f.shell, n = e.platformMenuAccess || {}, o = Yu((g) => {
     var v, _;
     return g === "planfact" ? !!((v = r == null ? void 0 : r.isPlatformModuleAllowed) != null && v.call(r, "planfact")) : g === "company" ? n.company === !0 : !!((_ = r == null ? void 0 : r.legacyModuleAllowed) != null && _.call(r, g));
   }, (g) => {
@@ -20044,13 +20089,13 @@ async function sd(t) {
   });
   if (!yr)
     try {
-      yr = Xu(await (await fetch("./sw.js")).text());
+      yr = Qu(await (await fetch("./sw.js")).text());
     } catch {
     }
   const a = yr || {};
   let l = { quality: 0, knowledge: 0 };
   try {
-    t.dbGetAll && ((m = t.STORES) != null && m.FILE_REGISTRY) && (l = Qu(await t.dbGetAll(t.STORES.FILE_REGISTRY)));
+    t.dbGetAll && ((m = t.STORES) != null && m.FILE_REGISTRY) && (l = Zu(await t.dbGetAll(t.STORES.FILE_REGISTRY)));
   } catch {
   }
   let c = 0, u = 0;
@@ -20061,7 +20106,7 @@ async function sd(t) {
   }
   const d = Zr(), p = Qt(), h = [];
   for (const g of o) {
-    const v = Qr(g.id === "quality" ? "quality" : g.id), _ = g.id === "planfact" || g.id === "company" ? await p.size(g.id) : 0, y = g.files === "quality" ? Mr("quality") || Lr(d) : g.files === "knowledge" ? Mr("knowledge") || $r(d) : null, w = g.files === "quality" ? Lr(d) : g.files === "knowledge" ? $r(d) : null, k = Oc(g.id), E = v ? g.files === "quality" ? qr() === "none" ? "Фото заранее не скачиваются — открытые остаются на телефоне" : "Фото и PDF заранее: " + ai[qr()].toLowerCase() : g.files === "knowledge" ? di() === "none" ? "Открытые документы остаются на телефоне" : "Документы заранее: все" : k ? "Скачано заранее: " + Zu(k.at) : "Заранее ещё не скачивалось — скачается, когда будет связь" : "Заранее не скачивается — без сети раздел покажет то, что вы открывали";
+    const v = Qr(g.id === "quality" ? "quality" : g.id), _ = g.id === "planfact" || g.id === "company" ? await p.size(g.id) : 0, y = g.files === "quality" ? Mr("quality") || Lr(d) : g.files === "knowledge" ? Mr("knowledge") || $r(d) : null, w = g.files === "quality" ? Lr(d) : g.files === "knowledge" ? $r(d) : null, k = Ic(g.id), E = v ? g.files === "quality" ? qr() === "none" ? "Фото заранее не скачиваются — открытые остаются на телефоне" : "Фото и PDF заранее: " + ai[qr()].toLowerCase() : g.files === "knowledge" ? di() === "none" ? "Открытые документы остаются на телефоне" : "Документы заранее: все" : k ? "Скачано заранее: " + ed(k.at) : "Заранее ещё не скачивалось — скачается, когда будет связь" : "Заранее не скачивается — без сети раздел покажет то, что вы открывали";
     h.push({
       row: g,
       keep: v,
@@ -20075,10 +20120,10 @@ async function sd(t) {
   }
   return { rows: h, total: { used: c, free: u }, role: d };
 }
-function id(t) {
+function od(t) {
   if (t.getElementById("p2o-css")) return;
   const e = t.createElement("style");
-  e.id = "p2o-css", e.textContent = ed, t.head.appendChild(e);
+  e.id = "p2o-css", e.textContent = td, t.head.appendChild(e);
 }
 function vs(t, e, r, n, s) {
   return new Promise((i) => {
@@ -20094,9 +20139,9 @@ function vs(t, e, r, n, s) {
   });
 }
 let _r = !1, vr = null, ws = 0;
-const od = 1e4;
+const ad = 1e4;
 async function _i(t, e = !1) {
-  if (!t || _r || !e && vr === t && t.firstChild && Date.now() - ws < od) return;
+  if (!t || _r || !e && vr === t && t.firstChild && Date.now() - ws < ad) return;
   const r = t.ownerDocument;
   if (!se()) {
     t.replaceChildren();
@@ -20104,14 +20149,14 @@ async function _i(t, e = !1) {
   }
   _r = !0;
   try {
-    id(r);
-    const n = r.defaultView, s = await sd(n), i = rd(s.rows, s.total, nd[s.role] || "просмотр");
-    t.dataset.p2o !== i && (t.dataset.p2o = i, t.innerHTML = i), vr !== t && (vr = t, ad(t, n)), t.__p2oRows = s.rows, ws = Date.now();
+    od(r);
+    const n = r.defaultView, s = await id(n), i = nd(s.rows, s.total, sd[s.role] || "просмотр");
+    t.dataset.p2o !== i && (t.dataset.p2o = i, t.innerHTML = i), vr !== t && (vr = t, ld(t, n)), t.__p2oRows = s.rows, ws = Date.now();
   } finally {
     _r = !1;
   }
 }
-function ad(t, e) {
+function ld(t, e) {
   const r = t.ownerDocument, n = () => t.__p2oRows || [], s = () => {
     _i(t, !0);
   }, i = (o) => {
@@ -20121,7 +20166,7 @@ function ad(t, e) {
     var p, h, f, m;
     const a = o.target, l = a.dataset.mod || "";
     if (a.dataset.act === "scope") {
-      Ic(l, a.value), s();
+      jc(l, a.value), s();
       return;
     }
     if (a.dataset.act !== "keep") return;
@@ -20177,7 +20222,7 @@ function ad(t, e) {
   });
 }
 const vi = (t, e) => t.createdAt < e.createdAt ? -1 : t.createdAt > e.createdAt ? 1 : t.id < e.id ? -1 : 1;
-function ld() {
+function cd() {
   const t = /* @__PURE__ */ new Map();
   return {
     size: () => t.size,
@@ -20195,11 +20240,11 @@ function ld() {
     }
   };
 }
-const cd = "platform2_device_records", wr = "records";
-function ud(t) {
+const ud = "platform2_device_records", wr = "records";
+function dd(t) {
   let e = null;
   const r = () => e || (e = new Promise((s, i) => {
-    const o = t.open(cd, 1);
+    const o = t.open(ud, 1);
     o.onupgradeneeded = () => {
       o.result.createObjectStore(wr, { keyPath: "id" }).createIndex("slot", "slot", { unique: !1 });
     }, o.onsuccess = () => {
@@ -20245,26 +20290,26 @@ function ud(t) {
     }
   };
 }
-const dd = (t) => t.syncStatus !== "synced" && !t.syncServerRejected;
-function hd(t) {
+const hd = (t) => t.syncStatus !== "synced" && !t.syncServerRejected;
+function fd(t) {
   const e = {};
   for (const r of t || []) for (const n of r.sync || [])
     n && n.kind && n.rpc && !e[n.kind] && (e[n.kind] = { kind: n.kind, module: r.id, rpc: n.rpc, title: n.title || n.kind, store: n.store });
   return e;
 }
-const fd = /failed to fetch|networkerror|network|load failed|aborted|timeout|fetch/i;
-function pd(t, e) {
+const pd = /failed to fetch|networkerror|network|load failed|aborted|timeout|fetch/i;
+function gd(t, e) {
   if (e !== void 0 || !t) return { kind: "net" };
   if (!t.error) return { kind: "ok", value: t.data ?? null };
   const r = Number(t.status || 0), n = String(t.error.message || "");
-  return !r || r >= 500 || r === 401 || r === 408 || r === 429 || fd.test(n) && !/[А-Яа-яЁё]/.test(n) ? { kind: "net" } : { kind: "rejected", message: /[А-Яа-яЁё]/.test(n) ? n.replace(/^\s*ERROR:\s*/i, "").slice(0, 300) : "отказ сервера" + (t.error.code ? " (" + t.error.code + ")" : "") };
+  return !r || r >= 500 || r === 401 || r === 408 || r === 429 || pd.test(n) && !/[А-Яа-яЁё]/.test(n) ? { kind: "net" } : { kind: "rejected", message: /[А-Яа-яЁё]/.test(n) ? n.replace(/^\s*ERROR:\s*/i, "").slice(0, 300) : "отказ сервера" + (t.error.code ? " (" + t.error.code + ")" : "") };
 }
-const gd = { planfact: "План/Факт", quality: "Качество", construction: "Стройконтроль" }, md = "Исправьте условие (бригада, позиция, права) и нажмите «Отправить снова»";
+const md = { planfact: "План/Факт", quality: "Качество", construction: "Стройконтроль" }, yd = "Исправьте условие (бригада, позиция, права) и нажмите «Отправить снова»";
 function bs(t) {
   return [3e4, 6e4, 12e4, 3e5][Math.min(Math.max(t, 1), 4) - 1];
 }
-const yd = 72 * 3600 * 1e3;
-function _d(t, e) {
+const _d = 72 * 3600 * 1e3;
+function vd(t, e) {
   return new Promise((r, n) => {
     const s = setTimeout(() => n(new Error("timeout")), e);
     t.then((i) => {
@@ -20274,16 +20319,16 @@ function _d(t, e) {
     });
   });
 }
-function vd(t) {
+function wd(t) {
   const e = t.callMs ?? 2e4, r = t.passMs ?? 45e3;
   async function n(i, o) {
     let a = null, l;
     try {
-      a = await _d(t.call(o.rpc, { p_client_id: i.id, p_entry: i.payload }), e);
+      a = await vd(t.call(o.rpc, { p_client_id: i.id, p_entry: i.payload }), e);
     } catch (c) {
       l = c ?? "error";
     }
-    return pd(a, l);
+    return gd(a, l);
   }
   async function s(i, o) {
     var p, h, f, m;
@@ -20293,10 +20338,10 @@ function vd(t) {
     let d = !1;
     for (const g of c) {
       if (g.syncStatus === "synced") {
-        l - Date.parse(g.sentAt || g.createdAt) > yd && await t.store.delete(g.id);
+        l - Date.parse(g.sentAt || g.createdAt) > _d && await t.store.delete(g.id);
         continue;
       }
-      if (!dd(g)) {
+      if (!hd(g)) {
         o.rejected++;
         continue;
       }
@@ -20306,7 +20351,7 @@ function vd(t) {
         continue;
       }
       if (u && !u.includes(v.module)) {
-        const w = "Не отправлено: модуль «" + (gd[v.module] || v.module) + "» выключен у компании";
+        const w = "Не отправлено: модуль «" + (md[v.module] || v.module) + "» выключен у компании";
         (g.syncStatus !== "blocked" || g.syncBlockReason !== w) && (await t.store.put({ ...g, syncStatus: "blocked", syncBlockReason: w, syncBlockHint: "Запись сохранена на телефоне; уйдёт, когда администратор компании включит модуль" }), (p = t.changed) == null || p.call(t)), o.blocked++;
         continue;
       }
@@ -20316,7 +20361,7 @@ function vd(t) {
       }
       d || (d = !0, (h = t.journal) == null || h.call(t, { k: "start", mode: i, why: "device_records" }));
       const _ = await n(g, v), y = await t.store.get(g.id) || g;
-      _.kind === "ok" ? (await t.store.put({ ...y, syncStatus: "synced", result: _.value, sentAt: new Date(t.now()).toISOString(), syncBlockReason: "", syncBlockHint: "", syncServerRejected: !1, tries: (y.tries || 0) + 1 }), o.sent++) : _.kind === "rejected" ? (await t.store.put({ ...y, syncStatus: "blocked", syncServerRejected: !0, syncBlockReason: "Сервер отклонил: " + _.message, syncBlockHint: md, tries: (y.tries || 0) + 1 }), o.rejected++) : (await t.store.put({ ...y, syncStatus: "not_synced", syncBlockReason: "", tries: (y.tries || 0) + 1 }), o.net = !0, o.left++), (f = t.changed) == null || f.call(t);
+      _.kind === "ok" ? (await t.store.put({ ...y, syncStatus: "synced", result: _.value, sentAt: new Date(t.now()).toISOString(), syncBlockReason: "", syncBlockHint: "", syncServerRejected: !1, tries: (y.tries || 0) + 1 }), o.sent++) : _.kind === "rejected" ? (await t.store.put({ ...y, syncStatus: "blocked", syncServerRejected: !0, syncBlockReason: "Сервер отклонил: " + _.message, syncBlockHint: yd, tries: (y.tries || 0) + 1 }), o.rejected++) : (await t.store.put({ ...y, syncStatus: "not_synced", syncBlockReason: "", tries: (y.tries || 0) + 1 }), o.net = !0, o.left++), (f = t.changed) == null || f.call(t);
     }
     d && ((m = t.journal) == null || m.call(t, { k: "end", mode: i, why: "device_records", ok: !o.net, pushed: o.sent, rejected: o.rejected, unsent: o.left, ms: t.now() - l, ...o.net ? { err: "нет связи" } : {} }));
   }
@@ -20343,20 +20388,20 @@ function vd(t) {
     }
   };
 }
-const wi = "rbi:device-records", wd = "p2-device-records", nn = () => typeof window > "u" ? void 0 : window, bd = () => {
+const wi = "rbi:device-records", bd = "p2-device-records", nn = () => typeof window > "u" ? void 0 : window, Sd = () => {
   var t, e, r, n;
   return (n = (r = (e = (t = nn()) == null ? void 0 : t.RBI) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r);
 }, xt = "__platform2DeviceSend";
 function We() {
   const t = globalThis;
   if (t[xt]) return t[xt];
-  const e = typeof indexedDB < "u" ? ud(indexedDB) : ld(), r = hd(mi), n = vd({
+  const e = typeof indexedDB < "u" ? dd(indexedDB) : cd(), r = fd(mi), n = wd({
     store: e,
     kinds: r,
     slot: se,
     modules: () => {
       var o;
-      const s = bd(), i = (o = s == null ? void 0 : s.companies) == null ? void 0 : o.find((a) => a.id === s.companyId);
+      const s = Sd(), i = (o = s == null ? void 0 : s.companies) == null ? void 0 : o.find((a) => a.id === s.companyId);
       return i && Array.isArray(i.modules) ? i.modules : null;
     },
     async call(s, i) {
@@ -20368,7 +20413,7 @@ function We() {
     now: () => Date.now(),
     lock: async (s) => {
       const i = typeof navigator < "u" ? navigator.locks : void 0;
-      return !i || typeof i.request != "function" ? (await s(), !0) : i.request(wd, { ifAvailable: !0 }, async (o) => o ? (await s(), !0) : !1);
+      return !i || typeof i.request != "function" ? (await s(), !0) : i.request(bd, { ifAvailable: !0 }, async (o) => o ? (await s(), !0) : !1);
     },
     journal: (s) => {
       var i, o;
@@ -20405,7 +20450,7 @@ async function re(t = "silent") {
   }
 }
 const Kt = (t) => We().sender.pending(t), bi = () => We().sender.resetRejected();
-async function Sd() {
+async function kd() {
   const t = We().kinds;
   return (await Kt().catch(() => [])).map((e) => {
     var r;
@@ -20416,7 +20461,7 @@ async function Sd() {
     };
   });
 }
-function kd() {
+function Ed() {
   const t = We();
   if (t.wired || typeof window > "u") return;
   t.wired = !0, window.addEventListener("online", () => {
@@ -20433,7 +20478,7 @@ function kd() {
     });
   }, 6e4), re();
 }
-const Ed = "rbi:net-status", Ss = "#/settings/my/device", ks = "p2-net-style", xd = 6e3, Ad = `
+const xd = "rbi:net-status", Ss = "#/settings/my/device", ks = "p2-net-style", Ad = 6e3, Td = `
 .p2-offline #desk-sync-status,.p2-offline #header-sync-status{display:none!important}
 .p2-net{display:inline-flex;align-items:center;gap:6px;margin-left:6px;height:26px;padding:0 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;cursor:pointer;
   color:var(--warning,#b8844a);background:color-mix(in srgb,var(--warning,#b8844a) 14%,transparent);border:1px solid color-mix(in srgb,var(--warning,#b8844a) 35%,transparent)}
@@ -20455,19 +20500,19 @@ const Ed = "rbi:net-status", Ss = "#/settings/my/device", ks = "p2-net-style", x
 @media (max-width:767px){.p2-need{margin:16px;padding:24px 16px}.p2-need__btns .p2-nbtn{flex:1 1 100%}}
 .p2-dev-unsent{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:16px;background:var(--card-bg);color:var(--text-main);border:1px solid color-mix(in srgb,var(--warning,#b8844a) 45%,transparent)}
 .p2-dev-unsent .p2-need__ico{width:44px;height:44px;border-radius:12px}
-.p2-dev-unsent b{display:block;font-size:15px}.p2-dev-unsent span{font-size:13px;color:var(--text-muted)}`, sn = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Td = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="M8 17l4-4 4 4"/><path d="M20 16.6A4 4 0 0 0 18 9h-1.3A7 7 0 1 0 4 15.3"/></svg>';
+.p2-dev-unsent b{display:block;font-size:15px}.p2-dev-unsent span{font-size:13px;color:var(--text-muted)}`, sn = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Rd = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="M8 17l4-4 4 4"/><path d="M20 16.6A4 4 0 0 0 18 9h-1.3A7 7 0 1 0 4 15.3"/></svg>';
 function Si(t) {
   if (t.getElementById(ks)) return;
   const e = t.createElement("style");
-  e.id = ks, e.textContent = Ad, t.head.appendChild(e);
+  e.id = ks, e.textContent = Td, t.head.appendChild(e);
 }
 function Es(t, e) {
   const r = (t.offline ? "Нет связи, " : "") + "не отправлено: " + t.unsent;
   if (!t.offline && t.unsent <= 0) return { show: !1, label: r, html: "" };
-  const n = t.offline ? sn : Td;
+  const n = t.offline ? sn : Rd;
   return e ? { show: !0, label: r, html: n + "<b>" + t.unsent + "</b>" } : { show: !0, label: r, html: n + (t.offline ? '<span>Нет связи</span><span class="p2-net__sep">·</span>' : "") + "<span>не отправлено: <b>" + t.unsent + "</b></span>" };
 }
-function Rd(t, e, r) {
+function Cd(t, e, r) {
   const n = t.ownerDocument;
   Si(n);
   const s = n.createElement("div");
@@ -20478,14 +20523,14 @@ function Rd(t, e, r) {
   };
   r.quality && o("Открыть Качество", !0, () => r.go("#/quality")), o("Повторить", !r.quality, () => window.dispatchEvent(new Event("platform2:refresh"))), t.replaceChildren(s);
 }
-function Cd(t, e) {
+function Od(t, e) {
   const r = Date.parse(t || "");
   if (!Number.isFinite(r)) return "";
   const n = new Date(r), s = (o) => String(o).padStart(2, "0");
   return (new Date(e).toDateString() === n.toDateString() ? "" : s(n.getDate()) + "." + s(n.getMonth() + 1) + " ") + s(n.getHours()) + ":" + s(n.getMinutes());
 }
 let xs = !1;
-function Od(t) {
+function Id(t) {
   if (xs || typeof window > "u") return;
   xs = !0;
   const e = window, r = document;
@@ -20522,19 +20567,19 @@ function Od(t) {
         try {
           if (!r.getElementById(ys)) {
             const F = r.createElement("style");
-            F.id = ys, F.textContent = Du, r.head.appendChild(F);
+            F.id = ys, F.textContent = Uu, r.head.appendChild(F);
           }
-          const w = (y = e.RbiSyncMergePolicy) == null ? void 0 : y.isUnsentLocal, k = e.RBI_DB_NAME || "", E = w && k && typeof indexedDB < "u" ? await Ou(indexedDB, k, w).catch(() => []) : [];
-          E.push(...await Sd());
+          const w = (y = e.RbiSyncMergePolicy) == null ? void 0 : y.isUnsentLocal, k = e.RBI_DB_NAME || "", E = w && k && typeof indexedDB < "u" ? await Iu(indexedDB, k, w).catch(() => []) : [];
+          E.push(...await kd());
           const A = Date.now(), R = (F) => {
             try {
               return window.localStorage.getItem(F) || "";
             } catch {
               return "";
             }
-          }, O = e.RbiSyncNet, B = !!O && !!O.lastProbeAt && A - O.lastProbeAt < 12e4, j = { offline: n.offline || B && O.lastProbe === "offline", now: A, retryAfter: Number(R("rbi_sync_retry_after")) || 0, retryKind: R("rbi_sync_retry_kind") }, H = e.RbiSyncJournal, x = e.RbiSyncJournalPolicy, C = H ? H.list() : [], M = x ? C.slice(-20).reverse().map((F) => ({ t: Cd(F.t, A), text: x.eventLine(F), tone: x.eventTone(F) })) : [], _e = Hu(E, j), ft = _e.filter((F) => !F.rejected).length;
+          }, O = e.RbiSyncNet, B = !!O && !!O.lastProbeAt && A - O.lastProbeAt < 12e4, j = { offline: n.offline || B && O.lastProbe === "offline", now: A, retryAfter: Number(R("rbi_sync_retry_after")) || 0, retryKind: R("rbi_sync_retry_kind") }, H = e.RbiSyncJournal, x = e.RbiSyncJournalPolicy, C = H ? H.list() : [], M = x ? C.slice(-20).reverse().map((F) => ({ t: Od(F.t, A), text: x.eventLine(F), tone: x.eventTone(F) })) : [], _e = zu(E, j), ft = _e.filter((F) => !F.rejected).length;
           ft !== n.unsent && (n = { ...n, unsent: ft }, c());
-          const J = Ku({
+          const J = Wu({
             ...j,
             items: _e,
             lastOkAt: H ? H.lastOkAt() : "",
@@ -20557,7 +20602,7 @@ function Od(t) {
     const w = y.dataset.act;
     if (w === "sync" && (re("manual"), typeof e.triggerSync == "function" && e.triggerSync("manual")), w === "drop" && y.dataset.id && ((k = e.HistoryActions) != null && k.resolveSyncAttention) && Promise.resolve(e.HistoryActions.resolveSyncAttention(y.dataset.id)).then(() => p()), w === "copy" && f(y), w === "retry") {
       const E = e.RBI_DB_NAME || "";
-      Promise.all([E && typeof indexedDB < "u" ? Cu(indexedDB, E) : Promise.resolve(0), bi().catch(() => 0)]).then(() => Promise.all([re("manual"), typeof e.triggerSync == "function" ? e.triggerSync("manual") : null])).then(() => p(), () => p());
+      Promise.all([E && typeof indexedDB < "u" ? Ou(indexedDB, E) : Promise.resolve(0), bi().catch(() => 0)]).then(() => Promise.all([re("manual"), typeof e.triggerSync == "function" ? e.triggerSync("manual") : null])).then(() => p(), () => p());
     }
   }
   async function f(_) {
@@ -20602,7 +20647,7 @@ function Od(t) {
     const k = () => {
       _.remove();
     };
-    _.querySelector("button").addEventListener("click", k), r.body.appendChild(_), setTimeout(k, xd);
+    _.querySelector("button").addEventListener("click", k), r.body.appendChild(_), setTimeout(k, Ad);
   }
   function g() {
     c(), p(), m(), (e.RBI = e.RBI || {}).netStatus = {
@@ -20610,9 +20655,9 @@ function Od(t) {
       isOffline: a,
       needInternet: (_, y) => {
         const w = (e.RBI || {}).platformMenuAccess || {};
-        Rd(_, y, { quality: w.quality === !0 || w.construction === !0, go: t.navigate });
+        Cd(_, y, { quality: w.quality === !0 || w.construction === !0, go: t.navigate });
       }
-    }, window.dispatchEvent(new Event(Ed));
+    }, window.dispatchEvent(new Event(xd));
   }
   async function v(_ = !1) {
     var j;
@@ -20624,7 +20669,7 @@ function Od(t) {
       R = !1;
     }
     const O = _ || y || A > 0 || R || Date.now() - s > 6e4;
-    w.mode !== "email" || !k || !E || typeof indexedDB > "u" ? A = 0 : O && (s = Date.now(), A = await Ru(indexedDB, E, k).catch(() => A)), i = A;
+    w.mode !== "email" || !k || !E || typeof indexedDB > "u" ? A = 0 : O && (s = Date.now(), A = await Cu(indexedDB, E, k).catch(() => A)), i = A;
     const B = w.mode === "email" ? (await Kt().catch(() => [])).filter((H) => H.syncStatus === "not_synced").length : 0;
     n = { offline: y, unsent: A + B }, g();
   }
@@ -20646,7 +20691,7 @@ function Od(t) {
     v();
   }, 15e3), setInterval(c, 1500), v(!0);
 }
-const Id = "auth-gate-overlay", As = "p2-login-style";
+const jd = "auth-gate-overlay", As = "p2-login-style";
 let de = null, Pe = null;
 function ct() {
   return window;
@@ -20658,7 +20703,7 @@ function Zt() {
 function ht() {
   if (document.getElementById(As)) return;
   const t = document.createElement("style");
-  t.id = As, t.textContent = Jc + Xc + `
+  t.id = As, t.textContent = Yc + Qc + `
 .p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}`, document.head.appendChild(t);
 }
 function Wt() {
@@ -20671,7 +20716,7 @@ function Wt() {
 function $() {
   if (de) return de;
   const t = si(), e = t ? Ul(t) : null, r = e ? dt() : null;
-  return de = Gc({
+  return de = Jc({
     auth: e,
     rpc: r ? async (n, s, i) => {
       const o = r.rpc(n, s || {}), a = await (i ? o.abortSignal(i) : o);
@@ -20685,7 +20730,7 @@ function $() {
       const n = Mt(Wt());
       return n ? { email: n.email, issuedAt: n.issuedAt } : null;
     }
-  }), de.subscribe(Dd), e && e.onAuthChange && e.onAuthChange(() => {
+  }), de.subscribe(Ud), e && e.onAuthChange && e.onAuthChange(() => {
     de.refresh();
   }), window.addEventListener("platform2:refresh", () => {
     de.refresh();
@@ -20694,16 +20739,16 @@ function $() {
   }), de;
 }
 function er() {
-  return document.getElementById(Id);
+  return document.getElementById(jd);
 }
-const jd = "Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены";
+const Pd = "Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены";
 function on() {
   const t = er();
   if (!t) return;
   ht();
   const e = t.querySelector("[data-p2-login-host]") || t, r = $();
-  Yc(e, {
-    notice: r.getState().loginReason === "stale" ? jd : void 0,
+  Xc(e, {
+    notice: r.getState().loginReason === "stale" ? Pd : void 0,
     signIn: async (n, s) => {
       const i = await r.signIn(n, s);
       return i.ok && an(), i;
@@ -20714,12 +20759,12 @@ function on() {
   }), t.classList.remove("hidden");
 }
 let Vt = !1;
-function Pd(t) {
+function Nd(t) {
   const e = er();
   if (!e) return;
   ht();
   const r = e.querySelector("[data-p2-login-host]") || e, n = $();
-  Vt || (Qc(r, {
+  Vt || (Zc(r, {
     email: t,
     change: async (s) => {
       const i = await n.changePassword(s);
@@ -20730,7 +20775,7 @@ function Pd(t) {
     }
   }), Vt = !0), e.classList.remove("hidden");
 }
-function Nd() {
+function Ld() {
   Vt = !1;
   const t = er();
   t && t.classList.add("hidden");
@@ -20738,16 +20783,16 @@ function Nd() {
 function an() {
   let t = null;
   try {
-    t = window.localStorage.getItem(Fc);
+    t = window.localStorage.getItem(Hc);
   } catch {
   }
-  ln(Vc($().access(), t));
+  ln(Gc($().access(), t));
 }
 function ln(t) {
   const e = ct().AppRouter;
   e && typeof e.navigate == "function" ? e.navigate(t, !0) : window.location.hash = t;
 }
-function Ld(t) {
+function $d(t) {
   if (!t) return;
   const e = $().getState();
   ht();
@@ -20761,35 +20806,35 @@ function Ld(t) {
     return s.value = n.id, s.textContent = "Компания: " + n.name, s;
   })), r.value = e.companyId || "";
 }
-const $d = "Доступ к разделу изменился";
+const Dd = "Доступ к разделу изменился";
 let Ts = null, Rs = null;
-function Dd(t) {
+function Ud(t) {
   var a;
-  const e = Zt(), r = $().access(), n = Wc(Ts, r, window.location.hash);
+  const e = Zt(), r = $().access(), n = Vc(Ts, r, window.location.hash);
   Ts = r;
-  const s = zc(Rs, t);
-  Rs = t, e.platformMenuAccess = r, e.platform2 = Kd, s && window.dispatchEvent(new Event("rbi:platform-access")), window.dispatchEvent(new Event(ru));
+  const s = Kc(Rs, t);
+  Rs = t, e.platformMenuAccess = r, e.platform2 = Wd, s && window.dispatchEvent(new Event("rbi:platform-access")), window.dispatchEvent(new Event(nu));
   const i = (a = e.services) == null ? void 0 : a.shell;
   i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu();
   const o = ct().AppModeManager;
   if (o && typeof o.renderBottomNav == "function" && o.renderBottomNav(), t.mode === "email" && t.email) {
     const l = t.companies.find((c) => c.id === t.companyId);
-    eu(t.fullName || t.email, l ? l.name + (l.roles[0] ? " · " + l.roles[0] : "") : t.isPlatformAdmin ? "администратор платформы" : "");
+    tu(t.fullName || t.email, l ? l.name + (l.roles[0] ? " · " + l.roles[0] : "") : t.isPlatformAdmin ? "администратор платформы" : "");
   } else
-    tu();
+    ru();
   if (t.mode === "email" && t.mustChangePassword && t.email) {
-    Pd(t.email);
+    Nd(t.email);
     return;
   }
-  if (t.mode === "none" ? (Vt = !1, on()) : Nd(), n && t.mode === "email") {
+  if (t.mode === "none" ? (Vt = !1, on()) : Ld(), n && t.mode === "email") {
     an();
     const l = ct().showToast;
-    typeof l == "function" && l($d);
+    typeof l == "function" && l(Dd);
   }
-  (!t.offline || t.companies.length > 0) && qd(), Ud(t), Bd(t);
+  (!t.offline || t.companies.length > 0) && Fd(), Bd(t), Md(t);
 }
 let Je = null;
-function Ud(t) {
+function Bd(t) {
   Je && (clearTimeout(Je), Je = null), t.offline && t.mode === "email" && (Je = setTimeout(() => {
     Je = null, $().refresh();
   }, 6e4));
@@ -20799,11 +20844,11 @@ function Wr() {
   const t = window.localStorage, e = t.getItem(me) || "";
   return e ? e + ":" + (t.getItem(et) || "") : "";
 }
-async function Bd(t) {
+async function Md(t) {
   var e;
   try {
     const r = si(), n = dt();
-    await ec(t, {
+    await tc(t, {
       win: window,
       store: window.localStorage,
       reload: () => window.location.reload(),
@@ -20818,7 +20863,7 @@ async function Bd(t) {
         }
       },
       listProjects: async (o) => {
-        const a = Lc();
+        const a = $c();
         return (a ? await a.listProjects(o) : []).filter((c) => !c.archived_at).map((c) => ({ id: c.id, name: c.name }));
       }
     });
@@ -20831,36 +20876,36 @@ async function Bd(t) {
       }));
     }
     const i = (e = Zt().services) == null ? void 0 : e.shell;
-    i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu(), !t.offline && !t.checking && t.mode === "email" && Md();
+    i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu(), !t.offline && !t.checking && t.mode === "email" && qd();
   } catch (r) {
     console.warn("[Platform2] Качество: подключение к хранилищу компании не удалось", r);
   }
 }
 let Os = !1;
-async function Md() {
+async function qd() {
   var i, o;
   const t = ct(), e = Zt().qualitySync, r = (i = t.RbiSyncMergePolicy) == null ? void 0 : i.isUnsentLocal, n = ((o = t.APP_CONFIG) == null ? void 0 : o.LOCAL_DB_NAME) || "PLATFORM2_DB", s = t.RBI_DB_NAME || "";
   if (!(Os || !e || !e.projectId || !r || !s || s === n || typeof indexedDB > "u")) {
     Os = !0;
     try {
-      const a = await Tu(indexedDB, n, r), l = window.localStorage;
+      const a = await Ru(indexedDB, n, r), l = window.localStorage;
       if (!a.orphans.length) {
         l.removeItem(ms);
         return;
       }
       if (ht(), !document.getElementById("p2-rescue-style")) {
         const u = document.createElement("style");
-        u.id = "p2-rescue-style", u.textContent = ju, document.head.appendChild(u);
+        u.id = "p2-rescue-style", u.textContent = Pu, document.head.appendChild(u);
       }
       const c = e.projectId;
-      document.body.appendChild(Lu(document, {
+      document.body.appendChild($u(document, {
         companyName: e.companyName || "компанию",
         orphans: a.orphans,
         onLater: () => {
         },
         onMove: async () => {
           try {
-            await Iu(indexedDB, n, s, a, { slot: Wr(), projectCode: c, author: e.engineerName || "" });
+            await ju(indexedDB, n, s, a, { slot: Wr(), projectCode: c, author: e.engineerName || "" });
           } catch {
             return "Не удалось перенести. Попробуйте ещё раз";
           }
@@ -20872,7 +20917,7 @@ async function Md() {
     }
   }
 }
-function qd() {
+function Fd() {
   var n;
   const t = (n = Zt().services) == null ? void 0 : n.shell, e = $().access(), r = [];
   t && typeof t.isPlatformModuleAllowed == "function" && t.isPlatformModuleAllowed("planfact") && r.push("planfact"), e.company && r.push("company"), e.platformAdmin && r.push("platform-admin");
@@ -20882,32 +20927,32 @@ function qd() {
   } catch {
   }
 }
-function Fd() {
+function Hd() {
   let t = null;
   try {
     t = window.localStorage;
   } catch {
     t = null;
   }
-  iu({
+  ou({
     store: t,
-    deleteDatabase: typeof indexedDB < "u" ? (e) => ou(indexedDB, e) : null
+    deleteDatabase: typeof indexedDB < "u" ? (e) => au(indexedDB, e) : null
   }).catch(() => {
   });
 }
-function Hd() {
+function zd() {
   const t = Mt(Wt());
   if (!t || !t.email || Ot(Wt(), t.email)) return;
   const e = er();
   e && !e.querySelector("[data-testid=p2-login]") && e.classList.remove("hidden");
 }
-function zd() {
+function Kd() {
   return Pe ? Pe.then((t) => {
     t.mode === "none" && on();
-  }) : (Fd(), Hd(), Pe = $().boot(), Pe.then(() => Od({ platform: () => $().getState(), navigate: (t) => ln(t) })), Pe.then(() => kd())), Pe;
+  }) : (Hd(), zd(), Pe = $().boot(), Pe.then(() => Id({ platform: () => $().getState(), navigate: (t) => ln(t) })), Pe.then(() => Ed())), Pe;
 }
-const Kd = {
-  start: zd,
+const Wd = {
+  start: Kd,
   getState: () => $().getState(),
   access: () => $().access(),
   setCompany: (t) => $().setCompany(t),
@@ -20917,7 +20962,7 @@ const Kd = {
     await $().signOut();
   },
   showLogin: on,
-  renderCompanySwitch: Ld,
+  renderCompanySwitch: $d,
   /** P2-0028: «Настройки → Платформа → Мой профиль» (вызывают Настройки при показе). Не вошёл почтой — пусто. */
   renderMyProfile: (t) => {
     if (!t) return;
@@ -20927,7 +20972,7 @@ const Kd = {
       return;
     }
     const r = e.email + "|" + (e.fullName || "");
-    t.dataset.p2Profile === r && t.firstChild || (t.dataset.p2Profile = r, ht(), Zc(t, {
+    t.dataset.p2Profile === r && t.firstChild || (t.dataset.p2Profile = r, ht(), eu(t, {
       email: e.email,
       fullName: e.fullName || null,
       change: (n) => $().changePassword(n),
@@ -20944,9 +20989,9 @@ const Kd = {
   }
 };
 export {
-  $d as ACCESS_CHANGED_TEXT,
-  jd as STALE_LOGIN_TEXT,
-  Kd as api,
-  zd as start
+  Dd as ACCESS_CHANGED_TEXT,
+  Pd as STALE_LOGIN_TEXT,
+  Wd as api,
+  Kd as start
 };
 //# sourceMappingURL=platform.js.map
