@@ -4,11 +4,12 @@
 // Боевой сервер не используется. Запуск: P2_PGLITE=<папка с @electric-sql/pglite> node scripts/schema-inventory.mjs
 //   --check        сторож по свежей схеме: ничего не пишет, код выхода 1 при нарушении (npm run test:schema)
 //   --update-debt  записать потолок старых нарушений (только если нарушений не стало больше)
+//   --prod <файл>  сверка с боевой: ответ запроса supabase/checks/002_schema_inventory_readonly.sql (Copy as JSON) → раздел в HTML
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serverDb } from '../tests/server/pglite-db.mjs';
-import { readSchema, migrationsHash, moduleOf, evaluate, debtOf, compareDebt, SCOPE, OUT_OF_SCOPE, RULES, RULE_CODES, CLASSES } from '../tests/server/schema-lint.mjs';
+import { readSchema, migrationsHash, moduleOf, evaluate, debtOf, compareDebt, diffSchemas, SCOPE, OUT_OF_SCOPE, RULES, RULE_CODES, CLASSES } from '../tests/server/schema-lint.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const INV = join(ROOT, 'ai-dev/reference/schema-inventory.json');
@@ -16,6 +17,7 @@ const DEBT = join(ROOT, 'ai-dev/reference/schema-debt.json');
 const DIR = join(ROOT, 'ai-dev/reports/P2-0069');
 const HTML = join(DIR, 'inventory.html');
 const args = new Set(process.argv.slice(2));
+const prodFile = process.argv.includes('--prod') ? process.argv[process.argv.indexOf('--prod') + 1] : null;
 
 const db = await serverDb();
 const tables = await readSchema(db);
@@ -57,6 +59,25 @@ writeFileSync(INV, `${JSON.stringify(head, null, 1).slice(0, -2)},\n "tables": [
 
 // ——— HTML для владельца ———
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+if (prodFile) {
+  // «Copy as JSON» из SQL Editor — массив строк [{ schema_inventory: "…" }]; принимаем и сам объект
+  let prod = JSON.parse(readFileSync(prodFile, 'utf8'));
+  if (Array.isArray(prod)) prod = prod[0].schema_inventory;
+  if (typeof prod === 'string') prod = JSON.parse(prod);
+  const diff = diffSchemas(inventory.tables, prod.tables);
+  const groups = new Map();
+  for (const d of diff) (groups.get(d.id) || groups.set(d.id, []).get(d.id)).push(d);
+  writeFileSync(join(DIR, 'prod.html'), `<h2>Сверка с боевой базой</h2>
+<div class="card"><p>Источник: ${esc(prod.source)}; запрос только на чтение <code>supabase/checks/002_schema_inventory_readonly.sql</code> (описание таблиц, без строк данных). Сравнивались разделы core, planfact, quality, public, p2_backup: таблицы, колонки, типы, «может быть пустым», ключ, внешние ключи, RLS.</p>
+<p><b>${diff.length ? `Расхождений: ${diff.length} в ${groups.size} таблицах.` : 'Совпадает: боевая база = миграции.'}</b> Разделы на боевой: ${Object.entries(prod.counts).sort().map(([s, n]) => `${esc(s)} ${n}`).join(' · ')}.</p></div>
+${diff.length ? `<div class="scroll"><table><thead><tr><th>Таблица</th><th>Что</th><th>Расхождение</th></tr></thead><tbody>
+${diff.map((d) => `<tr><td><code>${esc(d.id)}</code></td><td>${esc(d.kind)}</td><td>${esc(d.what)}</td></tr>`).join('\n')}
+</tbody></table></div>` : ''}
+`);
+  writeFileSync(join(DIR, 'prod-diff.md'), `# P2-0069 — боевая ≠ миграции\n\nИсточник: ${prod.source}. Расхождений: ${diff.length}.\n\n${diff.map((d) => `- \`${d.id}\` — ${d.kind}: ${d.what}`).join('\n')}\n`);
+  console.log(`сверка с боевой: расхождений ${diff.length} в ${groups.size} таблицах`);
+}
 const part = (f) => (existsSync(join(DIR, f)) ? readFileSync(join(DIR, f), 'utf8') : '');
 const GLYPH = { green: '✓', yellow: '!', red: '✕', na: '—' };
 const LABEL = { green: 'зелёный', yellow: 'жёлтый', red: 'красный', na: 'не относится' };

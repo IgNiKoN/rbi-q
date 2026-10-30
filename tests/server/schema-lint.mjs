@@ -296,3 +296,30 @@ export function compareDebt(evaluation, ceiling) {
   for (const id of Object.keys(known)) if (!ids.has(id)) lower.push(`${id}: таблицы больше нет — уберите её из потолка`);
   return { fresh, grew, lower };
 }
+
+/** Сравнение двух схем (миграции ↔ боевая) по разделам: таблицы, колонки, типы, not null, ключ, внешние ключи, RLS. */
+export function diffSchemas(mig, prod, schemas = ['core', 'planfact', 'quality', 'public', 'p2_backup']) {
+  const pick = (list) => new Map(list.filter((t) => schemas.includes(t.id.split('.')[0])).map((t) => [t.id, t]));
+  const a = pick(mig), b = pick(prod), out = [];
+  for (const id of a.keys()) if (!b.has(id)) out.push({ id, kind: 'нет на боевой', what: 'таблица есть в миграциях' });
+  for (const id of b.keys()) if (!a.has(id)) out.push({ id, kind: 'нет в миграциях', what: 'таблица есть только на боевой' });
+  for (const [id, m] of a) {
+    const p = b.get(id);
+    if (!p) continue;
+    const mc = new Map(m.cols.map((c) => [c[0], c])), pc = new Map(p.cols.map((c) => [c[0], c]));
+    for (const [n] of mc) if (!pc.has(n)) out.push({ id, kind: 'нет на боевой', what: `колонка ${n}` });
+    for (const [n, c] of pc) if (!mc.has(n)) out.push({ id, kind: 'нет в миграциях', what: `колонка ${n} ${c[1]}` });
+    for (const [n, c] of mc) {
+      const q = pc.get(n);
+      if (q && q[1] !== c[1]) out.push({ id, kind: 'тип', what: `${n}: миграции ${c[1]}, боевая ${q[1]}` });
+      if (q && q[2] !== c[2]) out.push({ id, kind: 'not null', what: `${n}: миграции ${c[2] ? 'not null' : 'может быть пустым'}, боевая ${q[2] ? 'not null' : 'может быть пустым'}` });
+    }
+    if (m.pk.join(',') !== p.pk.join(',')) out.push({ id, kind: 'ключ', what: `миграции (${m.pk.join(', ')}), боевая (${p.pk.join(', ')})` });
+    const fk = (t) => Object.entries(t.fk || {}).flatMap(([c, r]) => r.map((x) => `${c}→${x}`)).sort();
+    const fm = fk(m), fp = fk(p);
+    for (const x of fm) if (!fp.includes(x)) out.push({ id, kind: 'нет на боевой', what: `внешний ключ ${x}` });
+    for (const x of fp) if (!fm.includes(x)) out.push({ id, kind: 'нет в миграциях', what: `внешний ключ ${x}` });
+    if (m.rls !== p.rls) out.push({ id, kind: 'RLS', what: `миграции ${m.rls ? 'вкл' : 'выкл'}, боевая ${p.rls ? 'вкл' : 'выкл'}` });
+  }
+  return out;
+}
