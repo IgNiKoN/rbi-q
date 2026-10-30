@@ -1,0 +1,12 @@
+поток 0: cold375 screen1440 reasons375 r-allow m-other d-screens s-foreign c-who1440 → Итог: PASS 51, FAIL 0
+поток 1: cold1440 w-offline reasons1440-dark r-launch v-summary375 s-module-off s-leader w375 → Итог: PASS 62, FAIL 0
+поток 2: rescue w-slow w-tabs r-return v-summary1440 s-new-kind q-ids w1440 → Итог: PASS 60, FAIL 0
+поток 3: expired w-hang r-deploy r-queue v-other s-pull-scope q-ids-other → Итог: PASS 31, FAIL 0
+поток 4: stale14 w-flap r-middeploy r-transition v-prefetch375 s-reject-retry pf-offline → Итог: PASS 45, FAIL 0
+поток 5: invalid w-drop r-partial r-size v-prefetch1440 s-reject-retry-1440-dark pf-offline1440 → Итог: PASS 43, FAIL 0
+поток 6: cache w-5xx r-tabs m-hang f-field s-own-first pf-drop → Итог: PASS 31, FAIL 2
+поток 7: otheruser edit-mid r-chunk m-hang375 f-manager s-contractor pf-batch → Итог: PASS 37, FAIL 0
+поток 8: screen375 double-start r-requests m-revoke d-device s-kinds pf-batch1440-dark → Итог: PASS 50, FAIL 0
+поток 9: screen768 double-start-nolocks r-delta m-first d-quality-only s-rename c-who375 → Итог: PASS 36, FAIL 0
+перезапуск отдельно: f-field → Итог: PASS 8, FAIL 0
+время: 23:16:36 → 23:25:12 (8 мин 36 с)
