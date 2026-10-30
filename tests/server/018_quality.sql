@@ -93,7 +93,8 @@ begin
      and tg.tgname <> 'location_nodes_place_sync'        -- 044: место узла → core.locations
      and tg.tgname not like '%_v2_bind_object'           -- 044: объект замечания/приёмки v2 по месту
      and tg.tgname not like '%_zzz_rights_guard'         -- 053: сторож действий проверок и задач
-     and tg.tgname not like 'zzzz\_core\_ids%';          -- 054: номер записи core_id и связи по uuid
+     and tg.tgname not like 'zzzz\_core\_ids%'           -- 054: номер записи core_id и связи по uuid
+     and tg.tgname <> 'sk_records_zz_core_links';       -- 056: фирма, вид работ, место внешнего СК по соответствиям
   res := res || pg_temp.t(n = 0, 'в quality только триггер привязки к компании (лишние: ' || coalesce(s, '—') || ')');
   select count(*), string_agg(p.proname, ', ') into n, s from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'quality' and has_function_privilege('anon', p.oid, 'execute');
@@ -105,7 +106,7 @@ begin
                      from pg_trigger tg where tg.tgrelid = c.oid and tg.tgname like '%_bind_company') a,
                   (select regexp_match(qual, '\{([^}]*)\}|inspection_child_ok\(') from pg_policies p where p.schemaname = 'quality' and p.tablename = c.relname and p.cmd = 'SELECT') m
              from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
-            where ns.nspname = 'quality' and c.relkind = 'r' and c.relname <> 'contractor_core_links' order by 1 loop
+            where ns.nspname = 'quality' and c.relkind = 'r' and c.relname not in ('contractor_core_links', 'sk_links') order by 1 loop   -- 056: sk_links — по стандарту P2-0069 (company_id), запись — только функциями
     t := r.tbl; ntab := ntab + 1;
     if r.a is null or r.m is null then res := res || pg_temp.t(false, t || ': нет триггера привязки или политики чтения'); continue; end if;
     cls := r.a[1]; haspc := r.a[2] = '1';

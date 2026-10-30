@@ -81,7 +81,7 @@ begin
   for r in select c.relname t,
                   exists (select 1 from pg_attribute where attrelid = c.oid and attname = 'project_code') haspc
              from pg_class c where c.relnamespace = 'quality'::regnamespace and c.relkind = 'r'
-              and c.relname not in ('contractor_core_links') and c.relname not like 'rbi\_transfer\_%' order by 1 loop   -- P2-0027: служебные таблицы переноса клиенту закрыты
+              and c.relname not in ('contractor_core_links', 'sk_links') and c.relname not like 'rbi\_transfer\_%' order by 1 loop   -- P2-0027: служебные таблицы переноса клиенту закрыты
     ntab := ntab + 1;
     -- одна и та же строка (тот же id и прочие ключи) — сначала в Альфе, затем в Бете
     reset role;
