@@ -868,7 +868,7 @@ function _t(key, fallback, vars) {
       }
 
       var newItem = {
-        id: String(Date.now() + Math.floor(Math.random() * 1000)),
+        id: window.RbiIds.newId(),   // P2-0072: номер проверки — uuid (сервис номеров платформы)
         date: new Date().toISOString(),
         projectName: projectDisplayName,
         project_canonical_key: projectCanonicalKey,

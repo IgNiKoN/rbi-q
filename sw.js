@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.30-84cbccef',
+  version: '2026.10.30-2ee44713',
   date: '2026-10-30',
-  digest: '84cbccef',
+  digest: '2ee44713',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -60,7 +60,7 @@ const APP_RELEASE = {
     "icons/icon-512.png": ["3f52301ac96dcf24",254500,""],
     "icons/icon-maskable-512.png": ["fa2a6ac20c30f623",202332,""],
     "icons/splash-logo.jpg": ["589d20f8f5ee9da6",22872,""],
-    "index.html": ["a473bab8f65ddce2",68885,""],
+    "index.html": ["6f1067c3cf5a031c",68960,""],
     "js/core/app-shell.desktop.js": ["d56e70c14d119cc6",8092,""],
     "js/core/app-shell.js": ["1d8f6011cfe0f647",52671,""],
     "js/core/app.entry.js": ["27ff777222446034",11218,""],
@@ -139,7 +139,7 @@ const APP_RELEASE = {
     "js/modules/quality/features/analytics/schedule.desktop.content.js": ["bb1e1cef3fb0018c",6169,"quality"],
     "js/modules/quality/features/analytics/sk.desktop.content.js": ["53c2f39ffbbcf4e4",39931,"quality"],
     "js/modules/quality/features/analytics/sk.issue-rules.js": ["1667be18123016d9",6090,"quality"],
-    "js/modules/quality/features/audit/audit.actions.js": ["89caecf5f4189d30",68877,"quality"],
+    "js/modules/quality/features/audit/audit.actions.js": ["584f7949900d0065",68945,"quality"],
     "js/modules/quality/features/audit/audit.desktop.render.js": ["81ca781e1d4166aa",34050,"quality"],
     "js/modules/quality/features/audit/audit.module.js": ["b40f223385fde235",10888,"quality"],
     "js/modules/quality/features/audit/audit.render.js": ["436eb918334af8f2",76944,"quality"],
@@ -242,6 +242,8 @@ const APP_RELEASE = {
     "js/services/masterData.service.js": ["d9164c50f3c09dfb",3195,""],
     "js/services/object-directory.service.js": ["2e31ff108a7f1dbc",89272,""],
     "js/services/permission.service.js": ["a8eefcdd32d68eea",44546,""],
+    "js/services/record-id.service.d.ts": ["f75587a354e9efe7",726,""],
+    "js/services/record-id.service.js": ["c124acb7cb95f2b0",6067,""],
     "js/services/report.service.js": ["84ec6c874f93a4e3",7011,""],
     "js/services/session.service.js": ["0af7856bf406ff7f",13966,""],
     "js/services/settings.service.js": ["213f2b38598d8329",12339,""],
@@ -263,7 +265,7 @@ const APP_RELEASE = {
     "js/services/sync/sync-cloud-prepare.utils.js": ["5d1e40c5615b7aec",26251,""],
     "js/services/sync/sync-connection.actions.js": ["c03e9fb129de969e",33859,""],
     "js/services/sync/sync-core.state.js": ["8210205e47f88b84",24463,""],
-    "js/services/sync/sync-engine.core.js": ["02f4a84ba8f6964f",314386,""],
+    "js/services/sync/sync-engine.core.js": ["06b81d1ba721510c",314930,""],
     "js/services/sync/sync-journal.policy.js": ["1ea3d3c7b4f08140",7669,""],
     "js/services/sync/sync-merge.policy.js": ["6cf44faf287a1a1f",7159,""],
     "js/services/sync/sync-net.policy.js": ["8ca918d5aee3540e",9752,""],
