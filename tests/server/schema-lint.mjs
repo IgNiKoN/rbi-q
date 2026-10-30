@@ -18,23 +18,23 @@ export const OUT_OF_SCOPE = {
 
 /** Правила стандарта: код → название и «почему» простым языком (полный текст — DATA_TABLES.md). */
 export const RULES = [
-  { code: 'key', title: 'Ключ id uuid', why: 'запись узнаётся одинаково на телефоне и на сервере; id создаётся на устройстве — повторная отправка не делает дубль' },
-  { code: 'company', title: 'Компания company_id', why: 'граница данных: чужая компания записи не видит' },
-  { code: 'axis', title: 'Проект и место — по id', why: 'поиск и права — только по id; название — подпись, его можно поменять' },
-  { code: 'author', title: 'Автор created_by uuid', why: 'автор — учётная запись; ФИО меняется, поэтому оно только подпись' },
-  { code: 'time', title: 'Время с часовым поясом', why: 'created_at / updated_at одинаково читаются в любом часовом поясе' },
-  { code: 'delete', title: 'Удаление — пометка deleted_at', why: 'ничего не стирается: удалённое можно найти и вернуть' },
-  { code: 'refs', title: 'Ссылки — uuid с внешним ключом', why: 'база сама не даёт сослаться на несуществующую запись; фирма — по id, не по названию' },
-  { code: 'names', title: 'Имена snake_case', why: 'одно написание имён во всех таблицах' },
-  { code: 'rls', title: 'Защита строк (RLS)', why: 'без неё таблица открыта всем учёткам сервера' },
-  { code: 'money', title: 'Деньги — numeric и валюта', why: 'сумма без валюты и с дробной ошибкой — не деньги' }
+  { code: 'key', short: 'Ключ', title: 'Ключ id uuid', why: 'запись узнаётся одинаково на телефоне и на сервере; id создаётся на устройстве — повторная отправка не делает дубль' },
+  { code: 'company', short: 'Компания', title: 'Компания company_id', why: 'граница данных: чужая компания записи не видит' },
+  { code: 'axis', short: 'Проект, место', title: 'Проект и место — по id', why: 'поиск и права — только по id; название — подпись, его можно поменять' },
+  { code: 'author', short: 'Автор', title: 'Автор created_by uuid', why: 'автор — учётная запись; ФИО меняется, поэтому оно только подпись' },
+  { code: 'time', short: 'Время', title: 'Время с часовым поясом', why: 'created_at / updated_at одинаково читаются в любом часовом поясе' },
+  { code: 'delete', short: 'Удаление', title: 'Удаление — пометка deleted_at', why: 'ничего не стирается: удалённое можно найти и вернуть' },
+  { code: 'refs', short: 'Ссылки', title: 'Ссылки — uuid с внешним ключом', why: 'база сама не даёт сослаться на несуществующую запись; фирма — по id, не по названию' },
+  { code: 'names', short: 'Имена', title: 'Имена snake_case', why: 'одно написание имён во всех таблицах' },
+  { code: 'rls', short: 'RLS', title: 'Защита строк (RLS)', why: 'без неё таблица открыта всем учёткам сервера' },
+  { code: 'money', short: 'Деньги', title: 'Деньги — numeric и валюта', why: 'сумма без валюты и с дробной ошибкой — не деньги' }
 ];
 export const RULE_CODES = RULES.map((r) => r.code);
 
 /** Классы исключений: какие правила класс снимает (жёлтый вместо красного) и почему. */
 export const CLASSES = {
-  catalog: { title: 'Каталог платформы', waives: ['key', 'company', 'author', 'delete'], why: 'общий для всех компаний справочник: ключ — код, правит только платформа' },
-  link: { title: 'Связка', waives: ['key', 'author', 'delete'], why: 'пара значений и есть запись: ключ — составной, изменения пишет журнал core.audit_log' },
+  catalog: { title: 'Каталог платформы', waives: ['key', 'company', 'author', 'delete', 'time'], why: 'общий для всех компаний справочник: ключ — код, правит только платформа миграцией (достаточно updated_at)' },
+  link: { title: 'Связка', waives: ['key', 'author', 'delete', 'time'], why: 'пара значений и есть запись: ключ — составной, изменения пишет журнал core.audit_log' },
   journal: { title: 'Журнал / событие', waives: ['key', 'delete'], why: 'только добавление: запись не правится и не удаляется, updated_at не нужен; исправление — новой записью' },
   child: { title: 'Дочерняя строка', waives: ['company', 'author', 'delete', 'time'], why: 'живёт и удаляется вместе с родителем; компания, автор и время — у родителя' },
   single: { title: 'Одна запись на владельца', waives: ['key', 'author', 'delete'], why: 'ключ — владелец (пользователь, проект, компания): профиль или настройки' },
@@ -56,15 +56,16 @@ export const TABLES = {
   'core.project_stages': { classes: ['catalog'], why: 'справочник платформы: стадии проекта (P2-0047)' },
   'core.object_kinds': { classes: ['catalog'], why: 'справочник платформы: виды объектов (P2-0047)' },
   'core.project_roles': { classes: ['catalog'], why: 'справочник платформы: роль компании в проекте (P2-0047)' },
-  'core.platform_admins': { classes: ['single'], why: 'администраторы платформы, ключ — пользователь' },
-  'core.user_profiles': { classes: ['single'], why: 'одно ФИО на учётку во всех компаниях, ключ — пользователь (P2-0028)' },
+  'core.platform_admins': { classes: ['single'], why: 'администраторы платформы, ключ — пользователь', waive: { company: 'учётка платформы, не данные компании' } },
+  'core.user_profiles': { classes: ['single'], why: 'одно ФИО на учётку во всех компаниях, ключ — пользователь (P2-0028)', waive: { company: 'учётка общая для всех компаний; компания-владелец — managed_company_id' } },
+  'core.units': { why: 'единицы измерения', waive: { company: 'пустая компания — общие единицы платформы (м², м³, шт.)' } },
   'core.audit_log': { classes: ['journal'], why: 'журнал изменений, ключ bigint по порядку', waive: { author: 'автор — поле actor', refs: 'журнал хранит id и после удаления записи' } },
   'core.role_assignments': { why: 'назначение не удаляется, а отзывается', waive: { delete: 'отзыв — revoked_at / revoked_by' } },
   'planfact.vor_source_rows': { classes: ['child'], why: 'строки загрузки ВОР — компания через загрузку' },
   'planfact.vor_links': { classes: ['child'], why: 'связи позиций ВОР — компания через загрузку' },
   'planfact.estimate_rows': { classes: ['child'], why: 'строки сметы — компания через смету' },
-  'planfact.estimate_overheads': { classes: ['child'], why: 'надбавки сметы — компания через смету' },
-  'planfact.overhead_lines': { classes: ['child'], why: 'строки шаблона надбавок' },
+  'planfact.estimate_overheads': { classes: ['child'], why: 'надбавки сметы — компания через смету', notAxis: ['section'] },
+  'planfact.overhead_lines': { classes: ['child'], why: 'строки шаблона надбавок', notAxis: ['section'] },
   'planfact.ks2_settings': { classes: ['single'], why: 'настройки КС-2, ключ — проект' },
   'planfact.price_history': { classes: ['journal'], why: 'история цены, ключ bigint', waive: { author: 'автор — поле changed_by' } },
   'planfact.vor_position_events': { classes: ['journal'], why: 'события позиции ВОР' },
@@ -178,6 +179,7 @@ export function evaluateTable(t) {
   // ключ
   out.key = t.pk.length === 1 && t.pk[0] === 'id' && has('id', uuid) ? R('green')
     : R('red', 1, t.pk.length === 0 ? 'нет первичного ключа' : t.pk.length > 1 ? `составной ключ (${t.pk.join(', ')})` : `ключ ${t.pk[0]} ${col.get(t.pk[0])?.ty}`);
+  if (out.key.s === 'red' && t.pk.length > 1) out.key.note = `составной ключ (${t.pk.map((n) => `${n} ${col.get(n)?.ty}`).join(', ')})`;
 
   // компания
   const oldCompany = list(['companyId', 'company_id'], text);
@@ -186,7 +188,8 @@ export function evaluateTable(t) {
   else out.company = R('red', 1, oldCompany.length ? `компания только текстом (${oldCompany.join(', ')})` : 'нет company_id');
 
   // проект / объект / место
-  const pU = list(PROJECT_UUID, uuid), pT = list(PROJECT_TEXT, text), lU = list(PLACE_UUID, uuid), lT = list(PLACE_TEXT, text);
+  const pU = list(PROJECT_UUID, uuid), pT = list(PROJECT_TEXT, text), lU = list(PLACE_UUID, uuid);
+  const lT = list(PLACE_TEXT, text).filter((n) => !(cfg.notAxis || []).includes(n)); // section в смете — раздел сметы, не место
   if (!pU.length && !pT.length && !lU.length && !lT.length) out.axis = R('na');
   else {
     const bad = [];
@@ -241,7 +244,7 @@ export function evaluateTable(t) {
   out.rls = t.rls ? R('green') : R('red', 1, 'RLS выключен');
 
   // деньги
-  const money = t.cols.filter(([n, ty]) => /(price|amount|total|cost|sum|labor|material)/.test(n) && /^(numeric|real|double precision|money|integer|bigint)/.test(ty));
+  const money = t.cols.filter(([n, ty]) => /(price|amount|total|cost|sum|labor|material)/.test(n) && /^(numeric|real|double precision|money)/.test(ty)); // целые — счётчики, не деньги
   if (!money.length) out.money = R('na');
   else {
     const mBad = money.filter(([, ty]) => !ty.startsWith('numeric')).map(([n, ty]) => `${n} ${ty}`);
