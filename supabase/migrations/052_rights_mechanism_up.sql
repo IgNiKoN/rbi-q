@@ -2,14 +2,16 @@
 --  1) каталог действий — данные для экрана: у core.permission_catalog модуль, группа, порядок, подпись (экран «Роли и права»
 --     строит группы из каталога, новое действие любого модуля появляется без правки кода); pf_permission_catalog отдаёт их;
 --  2) ядро — одна проверка (поднята из planfact.my_area / in_area, P2-0048): core.my_area / my_area_nodes / in_area — область
---     человека в проекте; core.can_at(компания, проект, место, действие) — «может ли человек действие на этом месте»;
+--     человека в проекте; core.has_grant — дают ли назначения действие на месте; core.can_at(компания, проект, место,
+--     действие) — то же с включённым модулем: «может ли человек действие на этом месте»;
 --     core.row_allowed(…) — то же для правил строк (автор, своя фирма подрядчика, запись без места); core.require_action —
 --     понятный отказ 42501 «Нет права «…» на объекте «…»» для сторожей модулей;
 --  3) Стройконтроль 2.0 подключён: тонкие действия в каталоге (замечания, приёмка, передача), роли получают их по прежним
 --     (view → видеть; edit → все; edit + quality.scope.contractor → видеть, «в работу», «устранено», записаться на приёмку),
 --     прежние ключи остаются (их читают Стройконтроль 1 и Качество); место записи по id ядра (core_location_id, поле рядом,
 --     шаг С1 P2-0069); правила строк — core.row_allowed; сторож действий — core.require_action; «кто я» для телефона;
---  4) План/Факт — на проверку ядра без смены поведения (этап 2).
+--  4) План/Факт — на проверку ядра без смены поведения: planfact.my_area / my_area_nodes / in_area / has_permission /
+--     has_company_permission — обёртки над core.* (прежние вызовы в функциях и правилах 047–051 не меняются).
 -- Стройконтроль 1 (construction_* без _v2), Качество и помещения (construction_units_v2) не меняются.
 -- Применять после 051, одним запросом, ДО выкладки приложения. Откат — 052_rights_mechanism_down.sql.
 begin;
@@ -214,16 +216,14 @@ returns boolean language sql immutable set search_path = pg_catalog as $$
   select p_area is null or p_location = any (p_area)
 $$;
 
--- Может ли человек действие на месте. Проект null — только назначения на всю компанию; место null — где-то в проекте
--- (назначение на часть проекта считается, если действие area_scoped); место задано — назначение на него или выше.
--- Модуль действия (каталог) должен быть включён у компании; администратор платформы — всё из каталога.
-create function core.can_at(p_company uuid, p_project uuid, p_location uuid, p_action text)
+-- Дают ли назначения человека действие на месте (без проверки модуля). Проект null — только назначения на всю компанию;
+-- место null — где-то в проекте (назначение на часть проекта считается, если действие area_scoped); место задано — назначение
+-- на него или выше. Администратор платформы — всё из каталога.
+create function core.has_grant(p_company uuid, p_project uuid, p_location uuid, p_action text)
 returns boolean language sql stable security definer set search_path = pg_catalog as $$
   select p_company is not null and exists (
     select 1 from core.permission_catalog c
     where c.action = p_action
-      and (c.module is null or exists (select 1 from core.company_modules cm
-                                        where cm.company_id = p_company and cm.module = c.module and cm.enabled))
       and (planfact.is_platform_admin() or exists (
         select 1 from core.role_assignments a
         join core.company_role_permissions rp on rp.role_id = a.role_id and rp.company_id = a.company_id and rp.action = p_action
@@ -231,6 +231,17 @@ returns boolean language sql stable security definer set search_path = pg_catalo
           and (a.project_id is null or a.project_id = p_project)
           and (a.location_id is null or (c.area_scoped and (p_location is null or a.location_id = any (core.place_up(p_location)))))
           and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now()))))
+$$;
+
+-- Может ли человек действие на месте: модуль действия (каталог) включён у компании и назначения его дают.
+create function core.can_at(p_company uuid, p_project uuid, p_location uuid, p_action text)
+returns boolean language sql stable security definer set search_path = pg_catalog as $$
+  select exists (
+    select 1 from core.permission_catalog c
+    where c.action = p_action
+      and (c.module is null or exists (select 1 from core.company_modules cm
+                                        where cm.company_id = p_company and cm.module = c.module and cm.enabled)))
+     and core.has_grant(p_company, p_project, p_location, p_action)
 $$;
 
 -- Одно назначение и одно действие над записью: как quality.assignment_sees_id (039a) + область по месту участия.
@@ -295,7 +306,7 @@ end $$;
 -- Функции ядра клиент не вызывает (ТД №104, 017a), кроме проверки для правил строк модулей: правило RLS выполняется от имени
 -- клиента. row_allowed отвечает только о правах самого вошедшего.
 revoke all on function core.place_up(uuid), core.place_subtree(uuid), core.my_area(uuid), core.my_area_nodes(uuid),
-  core.in_area(uuid, uuid[]), core.can_at(uuid, uuid, uuid, text),
+  core.in_area(uuid, uuid[]), core.has_grant(uuid, uuid, uuid, text), core.can_at(uuid, uuid, uuid, text),
   core.assignment_allows(core.role_assignments, text, uuid, uuid[], uuid, uuid), core.row_allowed(uuid, uuid, uuid, text[], uuid, uuid),
   core.require_action(uuid, uuid, uuid, text, uuid, uuid)
   from public, anon, authenticated;
@@ -498,6 +509,43 @@ returns jsonb language sql stable security definer set search_path = pg_catalog,
                                  where n.core_company_id = quality.request_company() and n."nodeType" = 'object'
                                    and not coalesce(n.is_deleted, false) and coalesce(n."parentId", '') = ''
                                    and quality.node_root_project(n) is not null), '{}'::jsonb)));
+$$;
+
+-- 4. План/Факт — на проверку ядра без смены поведения: прежние функции planfact остаются тонкими обёртками на переходный срок
+-- (их зовут десятки функций и правил 047–051); новое — сразу core.*.
+create or replace function planfact.my_area(p_project uuid)
+returns uuid[] language sql stable security definer set search_path = pg_catalog as $$
+  select core.my_area(p_project)
+$$;
+
+create or replace function planfact.my_area_nodes(p_project uuid)
+returns uuid[] language sql stable security definer set search_path = pg_catalog as $$
+  select core.my_area_nodes(p_project)
+$$;
+
+create or replace function planfact.in_area(p_location uuid, p_area uuid[])
+returns boolean language sql immutable set search_path = pg_catalog as $$
+  select core.in_area(p_location, p_area)
+$$;
+-- in_area — без чтения таблиц, зовётся в правилах строк от имени клиента (исключение ТД №104, как row_allowed)
+grant execute on function core.in_area(uuid, uuid[]) to authenticated;
+
+-- Права План/Факта: модуль План/Факт включён у компании + назначения ядра (проект; назначение на часть проекта — для area_scoped).
+-- Модуль самого действия здесь не проверяется — как прежде (pf_my_permissions отдаёт и чужие ключи каталога).
+create or replace function planfact.has_permission(p_project uuid, p_action text)
+returns boolean language sql stable security definer set search_path = pg_catalog, planfact, core as $$
+  select exists (
+    select 1 from core.projects pr
+    join core.company_modules cm on cm.company_id = pr.company_id and cm.module = 'planfact' and cm.enabled
+    where pr.id = p_project and core.has_grant(pr.company_id, pr.id, null, p_action));
+$$;
+
+-- Права на уровне компании: только назначения на всю компанию (проект не задан) или администратор платформы.
+create or replace function planfact.has_company_permission(p_company uuid, p_action text)
+returns boolean language sql stable security definer set search_path = pg_catalog, planfact, core as $$
+  select exists (
+    select 1 from core.company_modules cm
+    where cm.company_id = p_company and cm.module = 'planfact' and cm.enabled and core.has_grant(p_company, null, null, p_action));
 $$;
 
 commit;

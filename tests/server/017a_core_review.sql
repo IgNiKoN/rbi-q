@@ -9,8 +9,9 @@ begin
   -- №104: ни одна функция core не выполняется клиентом
   select count(*), string_agg(p.proname, ', ') into n, s from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'core' and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))
-     -- P2-0070 (052): исключение — проверка прав для правил строк модулей (RLS выполняется от имени клиента), только authenticated
-     and not (p.oid = to_regprocedure('core.row_allowed(uuid,uuid,uuid,text[],uuid,uuid)') and not has_function_privilege('anon', p.oid, 'execute'));
+     -- P2-0070 (052): исключение — проверки для правил строк модулей (RLS выполняется от имени клиента), только authenticated
+     and not (p.oid in (to_regprocedure('core.row_allowed(uuid,uuid,uuid,text[],uuid,uuid)'), to_regprocedure('core.in_area(uuid,uuid[])'))
+              and not has_function_privilege('anon', p.oid, 'execute'));
   res := res || pg_temp.t(n = 0, 'функции core недоступны authenticated и anon (доступны: ' || coalesce(s, '—') || ')');
   select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace where ns.nspname = 'core';
   res := res || pg_temp.t(n >= 4, 'проверено функций core: ' || n);

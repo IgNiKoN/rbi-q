@@ -142,6 +142,7 @@ begin
   perform pg_temp.as_user(uq, cq); reset role;
   res := res || pg_temp.t(not core.can_at(cq, null, null, 'construction.defects.view') and core.can_at(cq, null, null, 'quality.view'),
                           'can_at: модуль выключен у компании — нет');
+  res := res || pg_temp.t(core.has_grant(cq, null, null, 'construction.defects.view'), 'has_grant: назначение даёт, модуль не проверяется');
   reset role;
 
   -- 1. Записи инженера (под ним — сторож пропускает); место записи по id ядра

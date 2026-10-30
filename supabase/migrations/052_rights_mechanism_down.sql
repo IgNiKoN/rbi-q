@@ -1,5 +1,5 @@
 -- P2-0070: откат 052_rights_mechanism_up.sql — правила строк и «кто я» Стройконтроля как после 043 / 039b, сняты сторож действий,
--- место записи (core_location_id) и проверка ядра (core.*); новые действия Стройконтроля убраны из каталога, шаблонов и ролей
+-- место записи (core_location_id) и проверка ядра (core.*); функции прав План/Факта — прежние определения (047 / 016); новые действия Стройконтроля убраны из каталога, шаблонов и ролей
 -- компаний (вместе с галочками, поставленными после выкладки); у каталога сняты модуль, группа, порядок, подпись.
 -- Прежние ключи construction.view / edit / manage — без изменений.
 -- Телефоны новой версии после отката покажут кнопки по прежним правам — откатывать вместе с приложением.
@@ -71,10 +71,103 @@ returns jsonb language sql stable security definer set search_path = pg_catalog,
     'container', case when exists (select 1 from asg) or planfact.is_platform_admin() then quality.request_container() end);
 $$;
 
+-- План/Факт — прежние определения (047 / 016), до снятия функций ядра
+CREATE OR REPLACE FUNCTION planfact.has_permission(p_project uuid, p_action text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'planfact', 'core'
+AS $function$
+  select exists (
+    select 1 from core.projects pr
+    join core.company_modules cm on cm.company_id = pr.company_id and cm.module = 'planfact' and cm.enabled
+    join core.permission_catalog c on c.action = p_action
+    where pr.id = p_project
+      and (planfact.is_platform_admin() or exists (
+        select 1 from core.role_assignments a
+        join core.company_role_permissions rp on rp.role_id = a.role_id and rp.company_id = a.company_id and rp.action = p_action
+        where a.company_id = pr.company_id and a.user_id = auth.uid()
+          and (a.project_id = pr.id or a.project_id is null)
+          and (a.location_id is null or c.area_scoped)
+          and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now()))));
+$function$;
+
+CREATE OR REPLACE FUNCTION planfact.has_company_permission(p_company uuid, p_action text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'planfact', 'core'
+AS $function$
+  select exists (
+    select 1 from core.company_modules cm
+    join core.permission_catalog c on c.action = p_action
+    where cm.company_id = p_company and cm.module = 'planfact' and cm.enabled
+      and (planfact.is_platform_admin() or exists (
+        select 1 from core.role_assignments a
+        join core.company_role_permissions rp on rp.role_id = a.role_id and rp.company_id = a.company_id and rp.action = p_action
+        where a.company_id = cm.company_id and a.user_id = auth.uid() and a.project_id is null
+          and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now()))));
+$function$;
+
+CREATE OR REPLACE FUNCTION planfact.my_area(p_project uuid)
+ RETURNS uuid[]
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog'
+AS $function$
+declare v_uid uuid := auth.uid(); v_company uuid; v_roots uuid[];
+begin
+  if v_uid is null or p_project is null then return null; end if;
+  select company_id into v_company from core.projects where id = p_project;
+  if v_company is null or planfact.is_platform_admin() then return null; end if;
+  if exists (select 1 from core.role_assignments a
+              where a.company_id = v_company and a.user_id = v_uid
+                and (a.project_id is null or (a.project_id = p_project and a.location_id is null))
+                and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())) then
+    return null;
+  end if;
+  select array_agg(distinct a.location_id) into v_roots from core.role_assignments a
+   where a.company_id = v_company and a.user_id = v_uid and a.project_id = p_project and a.location_id is not null
+     and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now());
+  if v_roots is null then return null; end if;
+  return array(
+    with recursive sub(id) as (
+      select l.id from core.locations l where l.id = any (v_roots) and l.project_id = p_project and l.deleted_at is null
+      union
+      select c.id from core.locations c join sub on c.parent_id = sub.id where c.deleted_at is null)
+    select sub.id from sub);
+end $function$;
+
+CREATE OR REPLACE FUNCTION planfact.my_area_nodes(p_project uuid)
+ RETURNS uuid[]
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog'
+AS $function$
+  with a as (select planfact.my_area(p_project) ids)
+  select case when a.ids is null then null else array(
+    with recursive up(id, parent_id) as (
+      select l.id, l.parent_id from core.locations l where l.id = any (a.ids)
+      union
+      select p.id, p.parent_id from core.locations p join up on p.id = up.parent_id)
+    select up.id from up) end
+  from a
+$function$;
+
+CREATE OR REPLACE FUNCTION planfact.in_area(p_location uuid, p_area uuid[])
+ RETURNS boolean
+ LANGUAGE sql
+ IMMUTABLE
+ SET search_path TO 'pg_catalog'
+AS $function$
+  select p_area is null or p_location = any (p_area)
+$function$;
+
 drop function core.require_action(uuid, uuid, uuid, text, uuid, uuid);
 drop function core.row_allowed(uuid, uuid, uuid, text[], uuid, uuid);
 drop function core.assignment_allows(core.role_assignments, text, uuid, uuid[], uuid, uuid);
 drop function core.can_at(uuid, uuid, uuid, text);
+drop function core.has_grant(uuid, uuid, uuid, text);
 drop function core.in_area(uuid, uuid[]);
 drop function core.my_area_nodes(uuid);
 drop function core.my_area(uuid);
