@@ -1,8 +1,10 @@
 /**
  * P2-0048 этап 4: мастер «Назначить» (лист снизу на телефоне, панель справа на ПК — деталь Sheet из ui/page.ts).
  * Шаг 1 «Кто» — несколько сотрудников галочками; шаг 2 «Роль и где» — роль, «Вся компания / Проект», проект, места галочками
- * по дереву проекта (ничего — весь проект), «Отвечает за факт», «Дополнительно: срок, фирма подрядчика»; для роли только Качества —
- * вместо проекта и дерева «Объекты Качества»; шаг 3 «Проверка» — итог простыми словами → pf_set_participation.
+ * по дереву проекта (ничего — весь проект), «Отвечает за факт», «Дополнительно: срок, фирма подрядчика»; шаг 3 «Проверка» — итог
+ * простыми словами → pf_set_participation.
+ * P2-0071: «Где» — «Все объекты» / «Выбранные объекты» (несколько галочками; места — когда выбран один) / «Без объектов» (только
+ * общие разделы — назначение на проект-контейнер Качества); одно участие действует во всех модулях роли. «Объекты Качества» сняты.
  * «Изменить» у группы назначений открывает мастер на шаге 2 с заполненными полями; там же «Отозвать» (pf_revoke_assignment по группе).
  * Заменяет прежнюю форму «Назначить роль» (С16–С27): те же поля, подсказки и ошибки; правила — на сервере (047).
  */
@@ -12,8 +14,8 @@ import { PlaceTree, Sheet, Steps } from '../ui/index.ts';
 import { ConfirmDialog } from '../ui/settings.ts';
 import { PLAN_NODE_LABELS } from '../../services/locations/types.ts';
 import type { PlanNodeType } from '../../services/locations/types.ts';
-import type { CompanyApi, ContractorRef, ProjectRef, QualityObjectRef, RoleRow } from './company.service.ts';
-import { endOfDayIso, groupsOf, groupWhere, initials, resultText, roleKind, wizardSummary, whereLine } from './participation.ts';
+import type { CompanyApi, ContractorRef, ProjectRef, RoleRow } from './company.service.ts';
+import { endOfDayIso, groupsOf, groupWhere, initials, NO_OBJECTS, resultText, roleKind, wizardSummary, whereLine } from './participation.ts';
 import type { Group, Person } from './participation.ts';
 
 /** Узел дерева мест проекта для выбора (из pf_project_places / pf_list_locations). */
@@ -21,33 +23,39 @@ export interface PlaceItem { id: string; parent_id: string | null; name: string;
 export type LoadPlaces = (projectId: string, parentId: string | null) => Promise<PlaceItem[]>;
 
 export interface WizardInit {
-  step?: 1 | 2; users?: string[]; roleId?: string; scope?: 'company' | 'project'; projectId?: string;
-  places?: { id: string; path: string }[]; factOwner?: boolean; until?: string; firm?: string; objects?: string[];
+  step?: 1 | 2; users?: string[]; roleId?: string; scope?: Where; projectId?: string;
+  places?: { id: string; path: string }[]; factOwner?: boolean; until?: string; firm?: string;
   /** «Изменить»: группа назначений человека (роль × проект). */
   edit?: { userId: string; group: Group };
 }
+
+/** Где действует участие: все объекты (компания), выбранные объекты, без объектов (только общие разделы). */
+export type Where = 'company' | 'project' | 'none';
+const WHERE_LABEL: Record<Where, string> = { company: 'Все объекты', project: 'Выбранные объекты', none: 'Без объектов' };
 
 export const kindLabel = (t: string): string => (PLAN_NODE_LABELS[t as PlanNodeType] || 'место').toLowerCase();
 
 export function AssignWizard(props: {
   api: CompanyApi; loadPlaces: LoadPlaces | null; persons: Person[]; roles: RoleRow[]; projects: ProjectRef[];
-  contractors: ContractorRef[]; qObjects: QualityObjectRef[]; me: string; init: WizardInit;
+  contractors: ContractorRef[]; me: string; init: WizardInit;
+  /** P2-0071: проект-контейнер Качества («Без объектов»); null — переключателя нет. */
+  container?: string | null;
   onClose: () => void; onDone: (message: string) => void;
 }): ReactElement {
-  const { api, init, persons, roles, contractors, qObjects, me } = props;
+  const { api, init, persons, roles, contractors, me } = props;
+  const container = props.container || null;
   const edit = init.edit || null;
   const projects = props.projects.filter((p) => !p.archived_at);   // архивные — не назначаем (P2-0011)
   const [step, setStep] = useState<1 | 2 | 3>(init.step || 1);
   const [users, setUsers] = useState<string[]>(init.users || []);
   const [q, setQ] = useState('');
   const [roleId, setRoleId] = useState(init.roleId || '');
-  const [scope, setScope] = useState<'company' | 'project'>(init.scope || 'project');
-  const [projectId, setProjectId] = useState(init.projectId || '');
+  const [scope, setScope] = useState<Where>(init.scope === 'none' && !container ? 'company' : init.scope || 'project');
+  const [projectIds, setProjectIds] = useState<string[]>(init.projectId ? [init.projectId] : []);
   const [places, setPlaces] = useState<Map<string, string>>(new Map((init.places || []).map((p) => [p.id, p.path])));
   const [factOwner, setFactOwner] = useState(!!init.factOwner);
   const [until, setUntil] = useState(init.until || '');
   const [firm, setFirm] = useState(init.firm || '');
-  const [objects, setObjects] = useState<string[]>(init.objects || []);
   const [kids, setKids] = useState<Record<string, PlaceItem[] | undefined>>({});
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [error, setError] = useState('');
@@ -56,9 +64,12 @@ export function AssignWizard(props: {
 
   const role = roles.find((r) => r.id === roleId) || null;
   const kind = roleKind(role);
-  const where: 'company' | 'project' = kind.qualityOnly ? 'company' : scope;
-  const showObjects = where === 'company' && kind.quality && qObjects.length > 0;
-  const project = projects.find((p) => p.id === projectId) || props.projects.find((p) => p.id === projectId) || null;
+  const where: Where = scope;
+  // места и «отвечает за факт» — когда выбран ровно один объект
+  const projectId = where === 'project' && projectIds.length === 1 ? projectIds[0] : '';
+  const nameOfProject = (id: string): string => (projects.find((p) => p.id === id) || props.projects.find((p) => p.id === id) || { name: id }).name;
+  /** Куда назначаем: null — вся компания, контейнер — «Без объектов», иначе — выбранные объекты. */
+  const targets: (string | null)[] = where === 'company' ? [null] : where === 'none' ? [container] : projectIds;
 
   // дерево мест выбранного проекта: корни, первый объект раскрыт
   useEffect(() => {
@@ -94,7 +105,7 @@ export function AssignWizard(props: {
     }
     if (step === 2) {
       if (!users.length || !roleId) { setError('Выберите сотрудника и роль'); return; }
-      if (where === 'project' && !projectId) { setError('Выберите проект'); return; }
+      if (where === 'project' && !projectIds.length) { setError('Выберите объект'); return; }
       if (kind.firm && !firm) { setError('Выберите фирму подрядчика: без фирмы сотрудник не увидит ни одной записи'); return; }
       setStep(3);
     }
@@ -103,15 +114,19 @@ export function AssignWizard(props: {
   async function save(): Promise<void> {
     if (busy) return;
     setBusy(true); setError('');
-    const res = await api.setParticipation({
-      users, roleId, projectId: where === 'project' ? projectId : null, locations: where === 'project' ? Array.from(places.keys()) : [],
-      factOwner: where === 'project' && factOwner, validTo: endOfDayIso(until), objects: showObjects ? objects : [],
-      counterpartyId: kind.firm ? firm || null : null
-    });
-    if (!res.ok) { setBusy(false); setError(res.message); return; }
-    const out = { ...res.value };
-    // «Изменить» с другой ролью или проектом: прежняя группа отзывается (сервер приводит к области только ту же роль × проект)
-    if (edit && (edit.group.role_id !== roleId || (edit.group.project_id || '') !== (where === 'project' ? projectId : ''))) {
+    const out = { added: 0, changed: 0, revoked: 0 };
+    // P2-0071: по участию на каждый выбранный объект (места — только у одного объекта)
+    for (const t of targets) {
+      const res = await api.setParticipation({
+        users, roleId, projectId: t, locations: projectId ? Array.from(places.keys()) : [],
+        factOwner: !!projectId && factOwner, validTo: endOfDayIso(until), objects: [],
+        counterpartyId: kind.firm ? firm || null : null
+      });
+      if (!res.ok) { setBusy(false); setError(res.message); return; }
+      out.added += res.value.added; out.changed += res.value.changed; out.revoked += res.value.revoked;
+    }
+    // «Изменить» с другой ролью или без прежнего объекта: прежняя группа отзывается (сервер приводит к области только ту же роль × проект)
+    if (edit && (edit.group.role_id !== roleId || !targets.some((t) => (t || '') === (edit.group.project_id || '')))) {
       for (const it of edit.group.items) {
         if (!it.assignment_id || !it.is_active) continue;
         const r = await api.revoke(it.assignment_id);
@@ -159,7 +174,7 @@ export function AssignWizard(props: {
     h('div', { className: 'sui-hint', 'data-testid': 'co-wiz-count' }, `Выбрано: ${users.length}`));
 
   const tree = (): ReactElement | null => {
-    if (where !== 'project' || !projectId) return null;
+    if (!projectId) return null;
     const roots = kids[''];
     return h('fieldset', { className: 'cm-fs', 'data-testid': 'co-wiz-places' },
       h('legend', null, 'Места (ничего не отмечено — весь проект)'),
@@ -177,26 +192,24 @@ export function AssignWizard(props: {
       h('select', { name: 'role', className: 'co-input', value: roleId, 'data-testid': 'co-wiz-role', onChange: (e: { target: { value: string } }) => { setRoleId(e.target.value); setError(''); } },
         h('option', { value: '' }, '— выберите —'),
         roles.map((r) => h('option', { key: r.id, value: r.id }, r.name)))),
-    kind.qualityOnly ? h('div', { className: 'sui-hint', 'data-testid': 'co-wiz-qonly' }, 'Роль Качества — назначается на всю компанию; доступ ограничивается объектами Качества.') : null,
-    kind.qualityOnly ? null : h('div', { className: 'pf-field' }, 'Где',
+    h('div', { className: 'pf-field' }, 'Где',
       h('div', { className: 'cm-seg', role: 'radiogroup', 'aria-label': 'Где' },
-        (['company', 'project'] as const).map((s) => h('button', { key: s, type: 'button', role: 'radio', 'aria-checked': where === s, 'data-scope': s,
-          className: 'cm-seg-b' + (where === s ? ' is-on' : ''), onClick: () => setScope(s) }, s === 'company' ? 'Вся компания' : 'Проект')))),
-    where === 'project' ? h('label', { className: 'pf-field' }, 'Проект',
-      h('select', { name: 'project', className: 'co-input', value: projectId, 'data-testid': 'co-wiz-project',
-        onChange: (e: { target: { value: string } }) => { setProjectId(e.target.value); setPlaces(new Map()); } },
-        h('option', { value: '' }, '— выберите —'),
-        projects.map((p) => h('option', { key: p.id, value: p.id }, p.name)))) : null,
+        (container ? ['company', 'project', 'none'] as const : ['company', 'project'] as const).map((s) => h('button', { key: s, type: 'button', role: 'radio',
+          'aria-checked': where === s, 'data-scope': s, className: 'cm-seg-b' + (where === s ? ' is-on' : ''), onClick: () => setScope(s) }, WHERE_LABEL[s])))),
+    h('div', { className: 'sui-hint', 'data-testid': 'co-wiz-where-hint' }, where === 'company'
+      ? 'Видит все объекты компании — во всех модулях роли.'
+      : where === 'none' ? 'Только общие разделы: база знаний, ИИ-помощник, справочники. Записей объектов не видит, проверки не проводит.'
+      : 'Видит выбранные объекты целиком — во всех модулях роли. Один объект — можно отметить его части.'),
+    where === 'project' ? h('fieldset', { className: 'cm-fs', 'data-testid': 'co-wiz-project' },
+      h('legend', null, 'Объекты'),
+      projects.length ? h('div', { className: 'co-objects-list' }, projects.map((p) => h('label', { key: p.id, className: 'co-check' },
+        h('input', { type: 'checkbox', name: 'project', value: p.id, checked: projectIds.includes(p.id), disabled: !!edit && edit.group.project_id === p.id && projectIds.length === 1,
+          onChange: () => { setProjectIds(pick(projectIds, p.id)); setPlaces(new Map()); } }), p.name)))
+        : h('div', { className: 'sui-hint' }, 'Объектов нет — заведите их в «Проекты и объекты».')) : null,
     tree(),
-    where === 'project' ? h('label', { className: 'sui-check cm-owner' },
+    projectId ? h('label', { className: 'sui-check cm-owner' },
       h('input', { type: 'checkbox', checked: factOwner, 'data-testid': 'co-wiz-owner', onChange: () => setFactOwner(!factOwner) }),
       places.size ? 'Отвечает за факт по этим местам' : 'Отвечает за факт по всему проекту') : null,
-    showObjects ? h('fieldset', { className: 'cm-fs co-objects', 'data-testid': 'co-objects' },
-      h('legend', null, 'Объекты Качества'),
-      h('div', { className: 'pf-muted sui-hint' }, 'Ничего не отмечено — все объекты. Отмеченные — сотрудник видит записи только этих объектов и свои без объекта.'),
-      h('div', { className: 'co-objects-list' }, qObjects.map((o) =>
-        h('label', { key: o.id, className: 'co-check' }, h('input', { type: 'checkbox', name: 'qobj', value: o.id, checked: objects.includes(o.id),
-          onChange: () => setObjects(pick(objects, o.id)) }), o.name)))) : null,
     h('details', { className: 'cm-more', open: !!(kind.firm || until) || undefined },
       h('summary', null, 'Дополнительно: срок, фирма подрядчика'),
       h('div', { className: 'cm-more-body' },
@@ -211,22 +224,22 @@ export function AssignWizard(props: {
           'Сотрудник увидит в Качестве и Стройконтроле только записи этой фирмы — это проверяет сервер.') : null)));
 
   const summary = (): ReactElement => {
-    const s = wizardSummary({ names: users.map(nameOf), role: role ? role.name : '', project: where === 'project' && project ? project.name : null,
-      places: Array.from(places.values()), factOwner, until, firm: kind.firm ? (contractors.find((c) => c.id === firm) || { name: '' }).name : null,
-      objects: showObjects ? qObjects.filter((o) => objects.includes(o.id)).map((o) => o.name) : undefined });
+    const s = wizardSummary({ names: users.map(nameOf), role: role ? role.name : '',
+      project: where === 'none' ? NO_OBJECTS : where === 'project' ? projectIds.map(nameOfProject).join(', ') || null : null,
+      places: projectId ? Array.from(places.values()) : [], factOwner: !!projectId && factOwner, until,
+      firm: kind.firm ? (contractors.find((c) => c.id === firm) || { name: '' }).name : null, projects: where === 'project' ? projectIds.length : 1 });
     // сервер приводит набор «сотрудник × роль × проект» к выбранным местам — у тех, кто уже так участвует, прежние места заменятся
-    const pid = where === 'project' ? projectId : '';
     const replaced = users.filter((u) => !edit || u !== edit.userId).flatMap((u) => {
       const p = persons.find((x) => x.user_id === u);
-      const g = p ? groupsOf(p.items).find((x) => x.active && x.role_id === roleId && (x.project_id || '') === pid) : null;
-      return g ? [`${nameOf(u)} — ${groupWhere(g)}`] : [];
+      const gs = p ? groupsOf(p.items).filter((x) => x.active && x.role_id === roleId && targets.some((t) => (t || '') === (x.project_id || ''))) : [];
+      return gs.map((g) => `${nameOf(u)} — ${g.project_name ? g.project_name + ': ' : ''}${groupWhere(g)}`);
     });
     return h('div', { className: 'cm-wiz-step', 'data-testid': 'co-wiz-check' },
       h('div', { className: 'sui-card cm-sum' },
         h('b', { 'data-testid': 'co-wiz-who-sum' }, s.who),
         h('div', { 'data-testid': 'co-wiz-what' }, '→ ', s.what),
         h('div', { className: 'sui-hint', 'data-testid': 'co-wiz-n' }, edit ? 'Назначения сотрудника этой роли в этом проекте будут приведены к выбранным местам: новые добавятся, лишние отзовутся.' : s.countText + '.'),
-        where === 'project' && places.size ? h('div', { className: 'sui-hint' }, 'В План/Факте увидят только эти места.') : null,
+        projectId && places.size ? h('div', { className: 'sui-hint' }, 'Увидят только эти места (записи объекта без места — только просмотр).') : null,
         replaced.length ? h('div', { className: 'cm-replace', 'data-testid': 'co-wiz-replace' },
           'Уже участвуют с этой ролью здесь — их места будут заменены выбранными: ' + replaced.join('; ') + '.') : null,
         h('div', { className: 'sui-hint' }, 'Запись появится в журнале компании. Права действуют со следующего запроса.')));

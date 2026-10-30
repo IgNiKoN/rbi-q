@@ -35,3 +35,18 @@ export function abilities(actions: string[], catalog: CatalogRow[]): string[] {
   const modules = Array.from(new Set(groups.map((g) => g.moduleName).filter(Boolean)));
   return modules.length > 1 ? modules : groups.map((g) => g.title);
 }
+
+/** P2-0071: «Доступ к модулю» — включён, если у роли есть хоть одно действие модуля. */
+export const moduleOn = (actions: Set<string>, catalog: CatalogRow[], module: string): boolean =>
+  catalog.some((c) => c.module === module && actions.has(c.action));
+
+/** P2-0071: переключатель «Доступ к модулю»: выключить — снять все действия модуля; включить — поставить действия просмотра
+ *  модуля (…view; нет таких — первое действие модуля), остальное администратор отметит сам. */
+export function setModuleAccess(actions: Set<string>, catalog: CatalogRow[], module: string, on: boolean): Set<string> {
+  const mine = catalog.filter((c) => c.module === module);
+  const next = new Set(actions);
+  if (!on) { for (const c of mine) next.delete(c.action); return next; }
+  const views = mine.filter((c) => /\.view$/.test(c.action));
+  for (const c of views.length ? views : mine.slice(0, 1)) next.add(c.action);
+  return next;
+}

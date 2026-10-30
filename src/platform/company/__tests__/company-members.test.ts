@@ -81,6 +81,7 @@ function fakeApi(opts: { fail?: string } = {}) {
       { id: 'r-con', name: 'Представитель подрядчика', template_code: 'contractor_rep', actions: ['quality.view', 'quality.scope.contractor'], active_assignments: 0 },
       { id: 'r-eng', name: 'Инженер СК', template_code: null, actions: ['quality.view', 'quality.edit'], active_assignments: 0 }]; },
     async listQualityObjects() { return [{ id: 'obj_1', name: 'Большевиков,22 (Гений)' }, { id: 'obj_2', name: 'Школа 400 (Крыленко)' }]; },
+    async qualityContainer() { return 'cont'; },   // P2-0071: «Без объектов»
     async listMembers() { return members; },
     async listProjects() { return [{ id: 'p1', name: 'Проект Альфа', company_id: 'c1' }, { id: 'pb', name: 'Проект Бета', company_id: 'c2' }]; },
     async createRole() { return res(''); }, async renameRole() { return res(null); }, async setRoleActions() { return res(null); }, async deleteRole() { return res(null); },
@@ -188,9 +189,9 @@ test('мастер «Назначить»: 2 человека × Прораб ×
   assert.match(el.querySelector('[data-testid=co-wiz-error]').textContent, /Выберите сотрудника и роль/);
   assert.equal(sets.length, 0);
   choose(el.querySelector('[data-testid=co-wiz-role]'), 'r-Прораб / мастер'); await tick();
-  choose(el.querySelector('[data-testid=co-wiz-project]'), 'p1'); await tick();
-  const projOpts = Array.from(el.querySelectorAll('[data-testid=co-wiz-project] option')).map((o: N) => o.textContent);
-  assert.deepEqual(projOpts, ['— выберите —', 'Проект Альфа'], 'только проекты своей компании');
+  check(el.querySelector('[data-testid=co-wiz-project] input[value=p1]')); await tick();
+  const projOpts = Array.from(el.querySelectorAll('[data-testid=co-wiz-project] label')).map((o: N) => o.textContent);
+  assert.deepEqual(projOpts, ['Проект Альфа'], 'только объекты своей компании');
   const boxes = Array.from(el.querySelectorAll('[data-testid=co-wiz-tree] [data-testid=p2-tree-check]')) as N[];
   assert.deepEqual(boxes.map((b) => b.getAttribute('aria-label')), ['Корпус 1', 'Секция 1', 'Секция 2', 'Секция 3'], 'дерево мест проекта, первый объект раскрыт');
   check(boxes[1]); check(boxes[2]); await tick();
@@ -200,7 +201,7 @@ test('мастер «Назначить»: 2 человека × Прораб ×
   assert.equal(el.querySelector('[data-testid=co-wiz-who-sum]').textContent, 'Петров П.П., Сидорова Е.В.');
   assert.equal(el.querySelector('[data-testid=co-wiz-what]').textContent, '→ Прораб / мастер · Проект Альфа · Секция 1, Секция 2 · отвечают за факт · бессрочно');
   assert.match(el.querySelector('[data-testid=co-wiz-n]').textContent, /Будет 4 назначения/);
-  assert.match(el.querySelector('[data-testid=co-wiz-replace]').textContent, /Петров П\.П\. — Секция 1, Секция 2; Сидорова Е\.В\. — Секция 3/,
+  assert.match(el.querySelector('[data-testid=co-wiz-replace]').textContent, /Петров П\.П\. — Проект Альфа: Секция 1, Секция 2; Сидорова Е\.В\. — Проект Альфа: Секция 3/,
     'кто уже участвует с этой ролью — предупреждение о замене мест');
   click(el.querySelector('[data-testid=co-wiz-save]')); await tick();
   assert.deepEqual(sets[0], { users: ['u-for', 'u-sid'], roleId: 'r-Прораб / мастер', projectId: 'p1', locations: ['s1', 's2'], factOwner: true,
@@ -245,6 +246,7 @@ test('роль «только своя фирма»: выбор фирмы из 
   assert.ok(firm, 'выбор фирмы показан');
   assert.deepEqual(Array.from(firm.querySelectorAll('option')).map((o: N) => o.textContent), ['— выберите —', 'ООО «Альфа-Строй»', 'Бета Монтаж (нужен ИНН)']);
   assert.match(el.querySelector('[data-testid=co-firm-hint]').textContent, /только записи этой фирмы/);
+  click(el.querySelector('[data-scope=company]')); await tick();
   await next(el);
   assert.match(el.querySelector('[data-testid=co-wiz-error]').textContent, /Выберите фирму подрядчика/);
   choose(el.querySelector('[data-testid=co-firm]'), 'k1'); await tick();
@@ -253,32 +255,39 @@ test('роль «только своя фирма»: выбор фирмы из 
   click(el.querySelector('[data-testid=co-wiz-save]')); await tick();
   assert.equal(sets[0].counterpartyId, 'k1');
   assert.equal(sets[0].roleId, 'r-con');
-  assert.equal(sets[0].projectId, null, 'роль только Качества — на всю компанию');
+  assert.equal(sets[0].projectId, null, '«Все объекты» — на всю компанию');
 });
 
-test('роль только Качества: вместо проекта и дерева — «Объекты Качества»; отмеченные уходят по id; ничего — все объекты', async () => {
+test('P2-0071: роль Качества — «Все объекты / Выбранные объекты / Без объектов»; несколько объектов — по назначению на каждый; «Без объектов» — контейнер', async () => {
   const { api, sets } = fakeApi();
+  api.listProjects = async () => [{ id: 'p1', name: 'Проект Альфа', company_id: 'c1' }, { id: 'p2', name: 'Проект Гамма', company_id: 'c1' }];
   const el = mount(api);
   await tick();
   click(el.querySelector('[data-testid=co-assign-open]')); await tick();
   check(el.querySelector('[data-pick=u-new] input')); await tick();
   await next(el);
-  choose(el.querySelector('[data-testid=co-wiz-role]'), 'r-Прораб / мастер'); await tick();
-  assert.equal(el.querySelector('[data-testid=co-objects]'), null, 'роль без Качества — без объектов');
   choose(el.querySelector('[data-testid=co-wiz-role]'), 'r-eng'); await tick();
-  assert.ok(el.querySelector('[data-testid=co-wiz-qonly]'));
-  assert.equal(el.querySelector('[data-testid=co-wiz-project]'), null);
-  assert.equal(el.querySelector('[data-scope]'), null, '«Вся компания / Проект» не показывается');
-  const boxes = Array.from(el.querySelectorAll('[data-testid=co-objects] input[name=qobj]')) as N[];
-  assert.deepEqual(boxes.map((b) => b.value), ['obj_1', 'obj_2']);
+  assert.equal(el.querySelector('[data-testid=co-objects]'), null, '«Объекты Качества» сняты');
+  assert.deepEqual(Array.from(el.querySelectorAll('[data-scope]')).map((b: N) => b.textContent), ['Все объекты', 'Выбранные объекты', 'Без объектов']);
+  check(el.querySelector('[data-testid=co-wiz-project] input[value=p1]')); check(el.querySelector('[data-testid=co-wiz-project] input[value=p2]')); await tick();
+  assert.equal(el.querySelector('[data-testid=co-wiz-places]'), null, 'два объекта — без выбора мест');
+  assert.equal(el.querySelector('[data-testid=co-wiz-owner]'), null);
   await next(el);
-  assert.match(el.querySelector('[data-testid=co-wiz-what]').textContent, /Инженер СК · вся компания · все объекты Качества/);
-  click(el.querySelector('[data-testid=co-wiz-back]')); await tick();
-  check(el.querySelector('[data-testid=co-objects] input[value=obj_2]')); await tick();
-  await next(el);
-  assert.match(el.querySelector('[data-testid=co-wiz-what]').textContent, /объекты Качества: Школа 400 \(Крыленко\)/);
+  assert.match(el.querySelector('[data-testid=co-wiz-what]').textContent, /Инженер СК · Проект Альфа, Проект Гамма · объекты целиком/);
+  assert.match(el.querySelector('[data-testid=co-wiz-n]').textContent, /Будет 2 назначения/);
   click(el.querySelector('[data-testid=co-wiz-save]')); await tick();
-  assert.deepEqual([sets[0].projectId, sets[0].objects, sets[0].locations], [null, ['obj_2'], []]);
+  assert.deepEqual(sets.map((x) => [x.projectId, x.locations, x.objects]), [['p1', [], []], ['p2', [], []]]);
+  // «Без объектов» — назначение на контейнер, только общие разделы
+  click(el.querySelector('[data-testid=co-assign-open]')); await tick();
+  check(el.querySelector('[data-pick=u-new] input')); await tick();
+  await next(el);
+  choose(el.querySelector('[data-testid=co-wiz-role]'), 'r-eng'); await tick();
+  click(el.querySelector('[data-scope=none]')); await tick();
+  assert.match(el.querySelector('[data-testid=co-wiz-where-hint]').textContent, /Только общие разделы/);
+  await next(el);
+  assert.match(el.querySelector('[data-testid=co-wiz-what]').textContent, /Инженер СК · Без объектов · бессрочно/);
+  click(el.querySelector('[data-testid=co-wiz-save]')); await tick();
+  assert.equal(sets[2].projectId, 'cont');
 });
 
 test('«Изменить» у группы: мастер на шаге 2 с ролью, проектом, местами, «за факт»; убрали секцию 1 → на сервер одно место; та же роль — без отзыва', async () => {
@@ -289,7 +298,7 @@ test('«Изменить» у группы: мастер на шаге 2 с ро
   click(card.querySelector('[data-group] [data-testid=co-group-edit]')); await tick();
   assert.ok(el.querySelector('[data-testid=co-wiz-where]'), 'сразу шаг 2');
   assert.equal(el.querySelector('[data-testid=co-wiz-role]').value, 'r-Прораб / мастер');
-  assert.equal(el.querySelector('[data-testid=co-wiz-project]').value, 'p1');
+  assert.equal(el.querySelector('[data-testid=co-wiz-project] input[value=p1]').checked, true);
   assert.equal(el.querySelector('[data-testid=co-wiz-owner]').checked, true);
   const s1 = Array.from(el.querySelectorAll('[data-testid=p2-tree-check]')).find((b: N) => b.getAttribute('aria-label') === 'Секция 1') as N;
   assert.equal(s1.checked, true);
@@ -343,7 +352,7 @@ test('«По проектам»: кто назначен на узел (метк
   assert.ok(el.querySelector('[data-testid=co-wiz-who]'), 'мастер с шага 1 «Кто»');
   check(el.querySelector('[data-pick=u-new] input')); await tick();
   await next(el);
-  assert.equal(el.querySelector('[data-testid=co-wiz-project]').value, 'p1');
+  assert.equal(el.querySelector('[data-testid=co-wiz-project] input[value=p1]').checked, true);
   assert.match(el.querySelector('[data-testid=co-wiz-picked]').textContent, /Корпус 1 · Секция 3/);
 });
 
@@ -511,12 +520,13 @@ test('P2-0033: объекты Качества назначения видны �
   assert.match(g.querySelector('[data-testid=co-row-objects]').textContent, /Объекты Качества: Большевиков,22 \(Гений\)/);
   assert.match(el.querySelector('[data-person=u-for]').textContent, /Инженер СК · Качество: Большевиков,22/);
   click(g.querySelector('[data-testid=co-group-edit]')); await tick();
-  assert.equal(el.querySelector('[data-testid=co-objects] input[value=obj_1]').checked, true, '«Изменить» — объекты отмечены');
+  assert.equal(el.querySelector('[data-testid=co-objects]'), null, 'P2-0071: «Объекты Качества» в мастере сняты');
+  assert.equal(el.querySelector('[data-scope=company]').getAttribute('aria-checked'), 'true', '«Изменить» — «Все объекты»');
 });
 
-test('P2-0033 (L7): ошибка списка объектов Качества не ломает экран — назначение без выбора объектов', async () => {
+test('P2-0071: ошибка контейнера Качества не ломает экран — назначение без «Без объектов»', async () => {
   const { api } = fakeApi();
-  api.listQualityObjects = async () => { throw new Error('function pf_list_quality_objects does not exist'); };
+  api.qualityContainer = async () => { throw new Error('function pf_quality_container does not exist'); };
   const el = mount(api);
   await tick();
   assert.match(el.textContent, /Петров П\.П\./);
@@ -524,7 +534,7 @@ test('P2-0033 (L7): ошибка списка объектов Качества 
   check(el.querySelector('[data-pick=u-new] input')); await tick();
   await next(el);
   choose(el.querySelector('[data-testid=co-wiz-role]'), 'r-eng'); await tick();
-  assert.equal(el.querySelector('[data-testid=co-objects]'), null);
+  assert.equal(el.querySelector('[data-scope=none]'), null);
 });
 
 test('без дерева мест (нет сервиса проектов) — назначение на весь проект', async () => {
@@ -535,7 +545,7 @@ test('без дерева мест (нет сервиса проектов) — 
   check(el.querySelector('[data-pick=u-new] input')); await tick();
   await next(el);
   choose(el.querySelector('[data-testid=co-wiz-role]'), 'r-Прораб / мастер'); await tick();
-  choose(el.querySelector('[data-testid=co-wiz-project]'), 'p1'); await tick();
+  check(el.querySelector('[data-testid=co-wiz-project] input[value=p1]')); await tick();
   assert.match(el.querySelector('[data-testid=co-wiz-places]').textContent, /недоступно/);
   await next(el);
   click(el.querySelector('[data-testid=co-wiz-save]')); await tick();

@@ -708,6 +708,7 @@ AS $function$
                                    and quality.node_root_project(n) is not null), '{}'::jsonb)));
 $function$;
 
+drop function public.pf_quality_container(uuid);
 drop function quality.no_object();
 drop function quality.is_container(uuid);
 

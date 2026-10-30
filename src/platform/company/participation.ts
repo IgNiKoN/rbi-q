@@ -96,7 +96,11 @@ export function shortPlaces(paths: string[]): string[] {
 }
 
 /** Где действует группа: «Секция 1, Секция 2» / «весь проект» / «вся компания». */
+/** P2-0071: назначение на проект-контейнер Качества — «Без объектов» (только общие разделы: база знаний, ИИ, справочники). */
+export const NO_OBJECTS = 'Без объектов';
+
 export function groupWhere(g: Group): string {
+  if (g.project_name === NO_OBJECTS) return 'только общие разделы';
   if (g.places.length) return shortPlaces(g.places.map((p) => p.path)).join(', ');
   return g.project_id ? 'весь проект' : 'вся компания';
 }
@@ -144,15 +148,17 @@ export function counts(list: Person[]): Record<Filter, number> {
 export function wizardSummary(o: {
   names: string[]; role: string; project: string | null; places: string[]; factOwner: boolean; until: string;
   firm?: string | null; objects?: string[];
+  /** P2-0071: сколько объектов выбрано (несколько — по назначению на каждый, целиком). */
+  projects?: number;
 }): { who: string; what: string; count: number; countText: string } {
   const many = o.names.length > 1;
   const parts = [o.role, o.project || 'вся компания'];
-  if (o.project) parts.push(o.places.length ? shortPlaces(o.places).join(', ') : 'весь проект');
+  if (o.project && o.project !== NO_OBJECTS) parts.push(o.places.length ? shortPlaces(o.places).join(', ') : (o.projects || 1) > 1 ? 'объекты целиком' : 'весь проект');
   if (!o.project && o.objects) parts.push(o.objects.length ? 'объекты Качества: ' + o.objects.join(', ') : 'все объекты Качества');
   if (o.firm) parts.push('фирма: ' + o.firm);
   if (o.project && o.factOwner) parts.push(many ? 'отвечают за факт' : 'отвечает за факт');
   parts.push(o.until ? `до ${DAY.format(new Date(`${o.until}T12:00:00`))}` : 'бессрочно');
-  const count = o.names.length * Math.max(1, o.project ? o.places.length : 1);
+  const count = o.names.length * Math.max(1, o.project ? o.places.length : 1) * Math.max(1, o.projects || 1);
   return { who: o.names.join(', '), what: parts.join(' · '), count,
     countText: `Будет ${count} ${plural(count, 'назначение', 'назначения', 'назначений')}` };
 }

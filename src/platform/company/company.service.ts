@@ -7,7 +7,7 @@ import { createCoreService } from '../core/core.service.ts';
 import { copyCall } from '../services/offline/copy.ts';
 
 /** P2-0060: чтения «Компании» (роли, люди, журнал) — через копию для просмотра (без сети — последние данные); остальные функции — запись, без сети не отправляется. */
-export const COMPANY_READS: ReadonlySet<string> = new Set(['pf_my_admin_companies', 'pf_permission_catalog', 'pf_list_company_roles', 'pf_list_company_members', 'pf_list_company_audit', 'pf_list_quality_objects', 'pf_who_can']);
+export const COMPANY_READS: ReadonlySet<string> = new Set(['pf_my_admin_companies', 'pf_permission_catalog', 'pf_list_company_roles', 'pf_list_company_members', 'pf_list_company_audit', 'pf_list_quality_objects', 'pf_who_can', 'pf_quality_container']);
 
 export interface CompanyRef { company_id: string; company_name: string }
 /** Действие каталога; P2-0070 (052): модуль, группа, порядок и подпись для экрана — данные сервера (без них — «Прочее»). */
@@ -69,6 +69,8 @@ export interface CompanyApi {
   listContractors(companyId: string): Promise<ContractorRef[]>;
   /** P2-0033: объекты Качества компании для выбора при назначении (пусто — у компании нет объектов Качества). */
   listQualityObjects?(companyId: string): Promise<QualityObjectRef[]>;
+  /** P2-0071: проект-контейнер Качества — назначение на него = «Без объектов» (только общие разделы); null — нет. */
+  qualityContainer?(companyId: string): Promise<string | null>;
   /** objectIds — id объектов Качества (пусто — все объекты). */
   assignRole(userId: string, roleId: string, projectId: string | null, validTo: string | null, counterpartyId?: string | null,
     objectIds?: string[]): Promise<Result<string>>;
@@ -125,6 +127,10 @@ export function createCompanyService(): CompanyApi | null {
     listContractors: async (co) => ((await createCoreService()?.listCounterparties(co, false)) || [])   // REUSE: контрагенты — ядро
       .filter((x) => x.kinds.includes('contractor')).map((x) => ({ id: x.id, name: x.name, draft: x.draft })),
     listQualityObjects: (co) => rows<QualityObjectRef>('pf_list_quality_objects', { p_company: co }),
+    qualityContainer: async (co) => {
+      const r = await call<string | null>('pf_quality_container', { p_company: co });
+      return r.ok && typeof r.value === 'string' && r.value ? r.value : null;
+    },
     assignRole: (u, r, p, to, cp, objs) => call<string>('pf_assign_role', { p_user: u, p_role: r, p_project: p, p_valid_to: to,
       ...(cp ? { p_counterparty: cp } : {}), ...(objs && objs.length ? { p_objects: objs } : {}) }),
     revoke: (id) => call('pf_revoke_assignment', { p_assignment: id }),

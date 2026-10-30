@@ -3,11 +3,12 @@
  * Все изменения — через сервер (pf_*); при отказе показывается текст сервера.
  * P2-0048 этап 4 (вариант В): строка роли «что может · у N чел.»; телефон — список → роль («‹ Роли»), от 680 px контейнера — рядом;
  * группы прав раскрываются, со счётчиком «2 из 3»; «Сохранить» / «Отменить» закреплены внизу панели.
+ * P2-0071: у каждого модуля — переключатель «Доступ к модулю» (выключен — действий модуля нет, модуля нет в меню, группы скрыты).
  */
 import { createElement as h, useEffect, useState } from 'react';
 import { ConfirmDialog } from '../ui/settings.ts';
 import type { FormEvent, ReactElement } from 'react';
-import { abilities, actionLabel, groupCatalog } from './action-groups.ts';
+import { abilities, actionLabel, groupCatalog, moduleOn, setModuleAccess } from './action-groups.ts';
 import type { CatalogRow, CompanyApi, MemberRow, RoleRow } from './company.service.ts';
 
 /** Что может роль — группы, где отмечено хоть одно действие («Работы и план, Факт»); в нескольких модулях — модули. */
@@ -103,7 +104,6 @@ export function CompanyRoles(props: { api: CompanyApi; companyId: string }): Rea
   if (roles === null) return h('div', { className: 'pf-muted' }, 'Загрузка…');
 
   const groups = groupCatalog(catalog);
-  const manyModules = new Set(groups.map((g) => g.moduleName).filter(Boolean)).size > 1;
   const changed = role ? !sameSet(role.actions, draft) : false;
 
   const who = (r: RoleRow): string => {
@@ -138,9 +138,16 @@ export function CompanyRoles(props: { api: CompanyApi; companyId: string }): Rea
       h('div', { className: 'co-groups cr-groups' },
         groups.flatMap((g, i) => {
           const on = g.items.filter((it) => draft.has(it.action)).length;
-          // P2-0070: группы — из каталога; несколько модулей — заголовок модуля перед его группами
-          const head = manyModules && g.moduleName && g.moduleName !== groups[i - 1]?.moduleName
-            ? [h('div', { key: 'm-' + g.key, className: 'cr-module', 'data-testid': 'co-module-head' }, g.moduleName)] : [];
+          // P2-0070: группы — из каталога; P2-0071: перед группами модуля — его заголовок с переключателем «Доступ к модулю»
+          const access = g.module ? moduleOn(draft, catalog, g.module) : true;
+          const head = g.module && g.module !== groups[i - 1]?.module
+            ? [h('div', { key: 'm-' + g.key, className: 'cr-module', 'data-testid': 'co-module-head', 'data-module': g.module },
+                h('span', { className: 'cr-module-name' }, g.moduleName || g.module),
+                h('label', { className: 'sui-check cr-module-sw' },
+                  h('input', { type: 'checkbox', role: 'switch', 'data-testid': 'co-module-access', 'aria-checked': access, checked: access,
+                    disabled: isTemplate || busy, onChange: () => { setDraft(setModuleAccess(draft, catalog, g.module, !access)); setNotice(''); } }),
+                  h('span', null, 'Доступ к модулю')))] : [];
+          if (!access) return head;
           return [...head, h('details', { key: role.id + g.key, className: 'co-group cr-group', open: on > 0 || undefined, 'data-group': g.title },
             h('summary', null, h('b', null, g.title), h('span', { className: 'cr-count', 'data-testid': 'co-group-count' }, `${on} из ${g.items.length}`)),
             h('div', { className: 'cr-items' }, g.items.map((it) => h('label', { key: it.action, className: 'co-check', title: it.description },
@@ -172,7 +179,10 @@ export const COMPANY_ROLES_CSS = `
 .cr-list{max-height:none}
 .cr .co-input{width:100%}
 .cr-group{padding:0}
-.cr-module{margin:8px 0 -4px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
+.cr-module{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:8px 0 -4px;min-height:44px}
+.cr-module-name{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
+.cr-module-sw{display:flex;align-items:center;gap:8px;font-size:14px;min-height:44px}
+.cr-module-sw input{width:20px;height:20px;margin:0}
 .cr-group summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px;padding:0 12px;cursor:pointer;font-size:14px}
 .cr-count{font-size:12.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .cr-items{padding:0 12px 8px}

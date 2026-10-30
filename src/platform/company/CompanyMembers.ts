@@ -16,7 +16,7 @@ import { ActionsMenu, ConfirmDialog } from '../ui/settings.ts';
 import { PlaceTree, Sheet, StatusBadge } from '../ui/index.ts';
 import { AssignWizard, kindLabel } from './AssignWizard.ts';
 import type { LoadPlaces, PlaceItem, WizardInit } from './AssignWizard.ts';
-import { counts, dateInput, groupsOf, groupWhere, hasFactOwner, initials, matches, people, personFlags, takeIntent, whereLine, whoByNode } from './participation.ts';
+import { counts, dateInput, groupsOf, groupWhere, hasFactOwner, initials, matches, NO_OBJECTS, people, personFlags, takeIntent, whereLine, whoByNode } from './participation.ts';
 import type { Filter, Group, Person } from './participation.ts';
 
 export { endOfDayIso } from './participation.ts';
@@ -59,7 +59,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
   const [temp, setTemp] = useState<TempPassword | null>(null);
   const [copied, setCopied] = useState(false);
   const [editName, setEditName] = useState('');   // user_id, у которого правится ФИО
-  const [qObjects, setQObjects] = useState<QualityObjectRef[]>([]);
+  const [container, setContainer] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const [view, setView] = useState<'people' | 'projects'>('people');
@@ -68,10 +68,12 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
   const [wizKey, setWizKey] = useState(0);
 
   async function load(): Promise<void> {
-    const [m, r, p, k, o] = await Promise.all([api.listMembers(companyId), api.listRoles(companyId), api.listProjects(), api.listContractors(companyId),
-      // список объектов Качества — необязательный: ошибка сервера не ломает экран (ревью P2-0033, L7)
-      api.listQualityObjects ? api.listQualityObjects(companyId).catch(() => [] as QualityObjectRef[]) : Promise.resolve([] as QualityObjectRef[])]);
-    setRows(m); setRoles(r); setProjects(p.filter((x) => x.company_id === companyId)); setContractors(k); setQObjects(o);
+    const [m, r, p, k, c] = await Promise.all([api.listMembers(companyId), api.listRoles(companyId), api.listProjects(), api.listContractors(companyId),
+      // P2-0071: проект-контейнер Качества («Без объектов») — необязательный: ошибка сервера не ломает экран
+      api.qualityContainer ? api.qualityContainer(companyId).catch(() => null) : Promise.resolve(null)]);
+    // назначение на контейнер — «Без объектов» (только общие разделы), а не название служебного проекта
+    setRows(c ? m.map((x) => (x.project_id === c ? { ...x, project_name: NO_OBJECTS } : x)) : m);
+    setRoles(r); setProjects(p.filter((x) => x.company_id === companyId)); setContractors(k); setContainer(c);
   }
   useEffect(() => { setRows(null); void load(); }, [companyId]);
 
@@ -187,8 +189,9 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
   }
 
   function editGroup(p: Person, g: Group): void {
-    openWizard({ step: 2, users: [p.user_id], roleId: g.role_id, scope: g.project_id ? 'project' : 'company', projectId: g.project_id || '',
-      places: g.places, factOwner: g.factOwner, until: dateInput(g.validTo), firm: g.counterparty_id || '', objects: g.objects.map((o) => o.id),
+    const none = !!container && g.project_id === container;   // P2-0071: «Без объектов»
+    openWizard({ step: 2, users: [p.user_id], roleId: g.role_id, scope: none ? 'none' : g.project_id ? 'project' : 'company',
+      projectId: none ? '' : g.project_id || '', places: g.places, factOwner: g.factOwner, until: dateInput(g.validTo), firm: g.counterparty_id || '',
       edit: { userId: p.user_id, group: g } });
   }
 
@@ -305,7 +308,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
         h('div', { className: 'co-row cm-form-foot' },
           h('button', { type: 'button', className: 'pf-btn pf-btn--ghost', onClick: () => { setAdding(false); setError(''); } }, 'Отмена'),
           h('button', { type: 'submit', className: 'pf-btn', disabled: busy }, 'Добавить')))) : null,
-    wizard ? h(AssignWizard, { key: wizKey, api, loadPlaces, persons: list, roles, projects, contractors, qObjects, me, init: wizard,
+    wizard ? h(AssignWizard, { key: wizKey, api, loadPlaces, persons: list, roles, projects, contractors, container, me, init: wizard,
       onClose: () => setWizard(null),
       onDone: (msg) => { setWizard(null); setNotice(msg); void load(); } }) : null,
     confirmDialog());

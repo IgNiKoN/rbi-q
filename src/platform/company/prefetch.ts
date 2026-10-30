@@ -28,7 +28,8 @@ export async function prefetchCore(d: CorePrefetchDeps): Promise<CorePrefetchSta
     const api = d.api;
     const jobs: Array<() => Promise<unknown>> = [];
     if (isAdmin) jobs.push(() => api.listMembers(co), () => api.listRoles(co));
-    if (isAdmin && api.listQualityObjects) jobs.push(() => api.listQualityObjects!(co));
+    // P2-0071: «Сотрудники» читают проект-контейнер Качества («Без объектов»); список «объектов Качества» экран больше не читает
+    if (isAdmin && api.qualityContainer) jobs.push(() => api.qualityContainer!(co));
     const pr = d.projects;
     if (pr) {
       jobs.push(() => pr.listUnits(co));

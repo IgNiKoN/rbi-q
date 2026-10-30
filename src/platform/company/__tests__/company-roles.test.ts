@@ -278,3 +278,21 @@ test('P2-0070: группы из каталога — порядок серве�
   assert.deepEqual(abilities(['planfact.works.view', 'construction.defects.close'], cat), ['План/Факт', 'Стройконтроль'], 'несколько модулей — модули');
   assert.equal(groupCatalog(cat).find((x) => x.title === 'Замечания')!.items[0].label, 'Закрыть замечание');
 });
+
+test('P2-0071: «Доступ к модулю» — выключить снимает все действия модуля, включить ставит его просмотр; ядро и другие модули не трогает', async () => {
+  const { moduleOn, setModuleAccess } = await import('../action-groups.ts');
+  const cat = [
+    { action: 'quality.view', description: 'Просмотр', module: 'quality', module_name: 'Качество', group_name: 'База знаний и справочники', sort: 2910, label: 'Просмотр', area_scoped: false },
+    { action: 'quality.inspections.view', description: 'Видеть все', module: 'quality', module_name: 'Качество', group_name: 'Проверки', sort: 2110, label: 'Просмотр всех', area_scoped: true },
+    { action: 'quality.inspections.create', description: 'Проводить', module: 'quality', module_name: 'Качество', group_name: 'Проверки', sort: 2120, label: 'Создание', area_scoped: true },
+    { action: 'construction.defects.view', description: 'Замечания', module: 'construction', module_name: 'Стройконтроль', group_name: 'Замечания', sort: 3010, label: 'Видеть', area_scoped: true },
+    { action: 'security.roles.assign', description: 'Роли', module: null, module_name: 'Компания', group_name: 'Сотрудники и справочники', sort: 9010, label: null, area_scoped: false }
+  ] as unknown as Parameters<typeof moduleOn>[1];
+  const role = new Set(['quality.inspections.create', 'construction.defects.view', 'security.roles.assign']);
+  assert.equal(moduleOn(role, cat, 'quality'), true);
+  const off = setModuleAccess(role, cat, 'quality', false);
+  assert.deepEqual([...off].sort(), ['construction.defects.view', 'security.roles.assign']);
+  assert.equal(moduleOn(off, cat, 'quality'), false);
+  const on = setModuleAccess(off, cat, 'quality', true);
+  assert.deepEqual([...on].filter((a) => a.startsWith('quality.')).sort(), ['quality.inspections.view', 'quality.view'], 'включить — просмотр модуля');
+});

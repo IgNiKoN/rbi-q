@@ -803,6 +803,18 @@ AS $function$
                                    and quality.node_root_project(n) is not null), '{}'::jsonb)));
 $function$;
 
+-- 9. Мастер назначения «Компания → Сотрудники»: «Без объектов» — назначение на проект-контейнер Качества компании (только
+-- администратору ролей; нет контейнера или нет права — null, переключатель не показывается).
+create function public.pf_quality_container(p_company uuid)
+returns uuid language sql stable security definer set search_path = pg_catalog, planfact, core as $$
+  select pr.id from core.projects pr
+   where pr.company_id = p_company and pr.quality_container and pr.archived_at is null
+     and planfact.has_company_permission(p_company, 'security.roles.assign')
+   order by pr.created_at, pr.id limit 1
+$$;
+revoke all on function public.pf_quality_container(uuid) from public, anon;
+grant execute on function public.pf_quality_container(uuid) to authenticated;
+
 -- сторож — с правами вызывающего: отказ и проверки, которые он зовёт, — клиенту (только чтение / отказ)
 revoke all on function quality.deny(uuid, text), quality.row_exists(text, text, uuid), quality.is_platform_admin() from public, anon;
 grant execute on function quality.deny(uuid, text), quality.row_exists(text, text, uuid), quality.is_platform_admin() to authenticated;
