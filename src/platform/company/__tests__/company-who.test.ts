@@ -49,16 +49,17 @@ function fake() {
   const api = {
     async catalog() { return CATALOG; },
     async listProjects() { return [{ id: 'p1', name: 'ЖК «Северный»', company_id: 'c1' }, { id: 'p2', name: 'Чужой', company_id: 'c2' }]; },
-    async whoCan(_c: string, p: string, loc: string | null) { calls.push(`who:${p}:${loc ?? '-'}`); return { ok: true as const, value: ROWS }; }
+    async whoCan(_c: string, p: string, loc: string | null) { calls.push(`who:${p}:${loc ?? '-'}`); return { ok: true as const, value: ROWS }; },
+    async listRoles() { return [{ id: 'r-sk', name: 'Инженер СК' }, { id: 'r-sk2', name: 'Инженер СК (без закрытия)' }, { id: 'r-pr', name: 'Прораб' }]; }
   } as unknown as CompanyApi;
   const places = async (_p: string, parent: string | null): Promise<PlaceItem[]> => parent === null
     ? [{ id: 'k1', parent_id: null, name: 'Корпус 1', node_type: 'building', path: 'Корпус 1', hasKids: true }]
     : [{ id: 's1', parent_id: 'k1', name: 'Секция 1', node_type: 'section', path: 'Корпус 1 / Секция 1', hasKids: true }];
   return { api, calls, places };
 }
-async function mount(api: CompanyApi, places: (p: string, parent: string | null) => Promise<PlaceItem[]>) {
+async function mount(api: CompanyApi, places: (p: string, parent: string | null) => Promise<PlaceItem[]>, onOpen?: (t: 'roles' | 'members', id: string) => void) {
   const el = win.document.createElement('div'); win.document.body.appendChild(el);
-  flushSync(() => createRoot(el as N).render(createElement(CompanyWho, { api, companyId: 'c1', loadPlaces: places })));
+  flushSync(() => createRoot(el as N).render(createElement(CompanyWho, { api, companyId: 'c1', loadPlaces: places, onOpen })));
   await settle(); await settle(); await settle();
   return el as N;
 }
@@ -96,4 +97,33 @@ test('выбор места уходит на сервер', async () => {
   const sel = el.querySelector('[data-testid=co-who-place]');
   sel.value = 's1'; sel.dispatchEvent(new win.Event('change', { bubbles: true })); await settle(); await settle();
   assert.deepEqual(calls, ['who:p1:-', 'who:p1:s1']);
+});
+
+test('P2-0073: роль ведёт в «Роли и права» с этой ролью, человек — в «Сотрудники» с ним; подсказка вверху', async () => {
+  const { api, places } = fake();
+  const went: string[] = [];
+  const el = await mount(api, places, (t, id) => went.push(t + ':' + id));
+  const help = el.querySelector('[data-testid=co-who-help]');
+  assert.match(help.textContent, /Здесь только смотреть\. Что может роль — «Роли и права»; кому какая роль и где — «Сотрудники»/);
+  help.querySelector('[data-testid=co-who-go-roles]').dispatchEvent(new win.Event('click', { bubbles: true }));
+  help.querySelector('[data-testid=co-who-go-members]').dispatchEvent(new win.Event('click', { bubbles: true }));
+  el.querySelector('[data-mod=construction]').dispatchEvent(new win.Event('click', { bubbles: true })); await settle();
+  // таблица (ПК): строка Козлова — его роль и он сам
+  const row = el.querySelector('[data-testid=co-who-table] tbody tr[data-user=u2]');
+  row.querySelector('[data-testid=co-who-role]').dispatchEvent(new win.Event('click', { bubbles: true }));
+  row.querySelector('[data-testid=co-who-person]').dispatchEvent(new win.Event('click', { bubbles: true }));
+  // карточка (телефон): Петров
+  const card = el.querySelector('.cw-list .cw-p[data-user=u1]');
+  assert.equal(card.querySelector('[data-testid=co-who-role]').textContent, 'Инженер СК');
+  card.querySelector('[data-testid=co-who-role]').dispatchEvent(new win.Event('click', { bubbles: true }));
+  card.querySelector('[data-testid=co-who-person]').dispatchEvent(new win.Event('click', { bubbles: true }));
+  assert.deepEqual(went, ['roles:', 'members:', 'roles:r-sk2', 'members:u2', 'roles:r-sk', 'members:u1']);
+  assert.match(row.textContent, /Инженер СК \(без закрытия\) · только Корпус 1 \/ Секция 1/, 'где — по-прежнему текстом');
+});
+
+test('P2-0073: без перехода (onOpen не задан) — как раньше, только текст', async () => {
+  const { api, places } = fake();
+  const el = await mount(api, places);
+  assert.equal(el.querySelectorAll('[data-testid=co-who-role], [data-testid=co-who-person], .cw-link').length, 0);
+  assert.match(el.querySelector('[data-testid=co-who-help]').textContent, /Здесь только смотреть/);
 });

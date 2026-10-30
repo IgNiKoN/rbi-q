@@ -296,3 +296,18 @@ test('P2-0071: «Доступ к модулю» — выключить сним�
   const on = setModuleAccess(off, cat, 'quality', true);
   assert.deepEqual([...on].filter((a) => a.startsWith('quality.')).sort(), ['quality.inspections.view', 'quality.view'], 'включить — просмотр модуля');
 });
+
+test('P2-0073: из «Кто что может» — роль из адреса (…/roles?role=<id>) открыта сразу, на телефоне — её галочки', async () => {
+  win.location.hash = '#/settings/company/roles?role=own';
+  const el = mountRoles(fakeApi().api);
+  await tick();
+  assert.equal(el.querySelector('.co-list-item--active').getAttribute('data-role-id'), 'own');
+  assert.equal(el.querySelector('[data-testid=co-roles]').getAttribute('data-detail'), '1');
+  assert.equal(box(el, 'planfact.works.view').checked, true);
+  win.location.hash = '#/settings/company/roles?role=нет-такой';
+  const el2 = mountRoles(fakeApi().api);
+  await tick();
+  assert.equal(el2.querySelector('.co-list-item--active').getAttribute('data-role-id'), 'tpl-for', 'нет такой роли — первая, как раньше');
+  assert.equal(el2.querySelector('[data-testid=co-roles]').getAttribute('data-detail'), '0');
+  win.location.hash = '';
+});

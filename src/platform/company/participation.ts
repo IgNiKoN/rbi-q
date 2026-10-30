@@ -224,3 +224,11 @@ export function takeIntent(): Intent | null {
   if (w.RBI) w.RBI.companyIntent = undefined;
   return v === 'assign' || v === 'add' ? v : null;
 }
+
+/** P2-0073: выбранная роль или человек — параметром адреса (#/settings/company/roles?role=<id>, …/members?user=<id>): переход из «Кто что может». */
+export function pickFromHash(hash: string, key: 'role' | 'user'): string {
+  return new URLSearchParams(String(hash || '').split('?')[1] || '').get(key) || '';
+}
+export function companyLink(tab: 'roles' | 'members', id: string): string {
+  return `#/settings/company/${tab}?${tab === 'roles' ? 'role' : 'user'}=${encodeURIComponent(id)}`;
+}

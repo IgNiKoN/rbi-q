@@ -5,11 +5,12 @@
  * группы прав раскрываются, со счётчиком «2 из 3»; «Сохранить» / «Отменить» закреплены внизу панели.
  * P2-0071: у каждого модуля — переключатель «Доступ к модулю» (выключен — действий модуля нет, модуля нет в меню, группы скрыты).
  */
-import { createElement as h, useEffect, useState } from 'react';
+import { createElement as h, useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from '../ui/settings.ts';
 import type { FormEvent, ReactElement } from 'react';
 import { abilities, actionLabel, groupCatalog, moduleOn, setModuleAccess } from './action-groups.ts';
 import type { CatalogRow, CompanyApi, MemberRow, RoleRow } from './company.service.ts';
+import { pickFromHash } from './participation.ts';
 
 /** Что может роль — группы, где отмечено хоть одно действие («Работы и план, Факт»); в нескольких модулях — модули. */
 export function roleAbilities(actions: string[], catalog: CatalogRow[]): string {
@@ -42,13 +43,17 @@ export function CompanyRoles(props: { api: CompanyApi; companyId: string }): Rea
   const [detail, setDetail] = useState(false);   // телефон: открыта роль (иначе — список)
   const [byRole, setByRole] = useState<Map<string, number> | null>(null);
 
+  // P2-0073: открыли из «Кто что может» — роль из адреса (…/roles?role=<id>) открыта сразу (на телефоне — её галочки)
+  const asked = useRef(pickFromHash(window.location.hash, 'role'));
   async function load(selectId?: string): Promise<void> {
     const [r, c, m] = await Promise.all([api.listRoles(companyId), catalog.length ? Promise.resolve(catalog) : api.catalog(),
       api.listMembers(companyId).catch(() => null)]);
     setRoles(r); setCatalog(c); setByRole(m ? peopleByRole(m) : null);
-    const keep = selectId || selected;
+    const keep = selectId || selected || asked.current;
     const pick = r.find((x) => x.id === keep) || r[0];
     if (pick) { setSelected(pick.id); setDraft(new Set(pick.actions)); }
+    if (asked.current && pick && pick.id === asked.current) setDetail(true);
+    asked.current = '';
   }
 
   useEffect(() => { setRoles(null); setSelected(''); void load(); }, [companyId]);

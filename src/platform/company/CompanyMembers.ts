@@ -16,7 +16,7 @@ import { ActionsMenu, ConfirmDialog } from '../ui/settings.ts';
 import { PlaceTree, Sheet, StatusBadge } from '../ui/index.ts';
 import { AssignWizard, kindLabel } from './AssignWizard.ts';
 import type { LoadPlaces, PlaceItem, WizardInit } from './AssignWizard.ts';
-import { counts, dateInput, groupsOf, groupWhere, hasFactOwner, initials, matches, NO_OBJECTS, people, personFlags, takeIntent, whereLine, whoByNode } from './participation.ts';
+import { counts, dateInput, groupsOf, groupWhere, hasFactOwner, initials, matches, NO_OBJECTS, people, personFlags, pickFromHash, takeIntent, whereLine, whoByNode } from './participation.ts';
 import type { Filter, Group, Person } from './participation.ts';
 
 export { endOfDayIso } from './participation.ts';
@@ -63,7 +63,7 @@ export function CompanyMembers(props: { api: CompanyApi; companyId: string; me: 
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const [view, setView] = useState<'people' | 'projects'>('people');
-  const [sel, setSel] = useState('');
+  const [sel, setSel] = useState(() => pickFromHash(window.location.hash, 'user'));   // P2-0073: из «Кто что может» — человек открыт сразу
   const [wizard, setWizard] = useState<WizardInit | null>(null);
   const [wizKey, setWizKey] = useState(0);
 

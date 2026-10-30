@@ -30,6 +30,7 @@ import { ProjectsTab } from './ProjectsTab.ts';
 import { Patterns, PATTERNS_CSS } from './Patterns.ts';
 import { UnitsTab } from './UnitsTab.ts';
 import { CompanyWho, COMPANY_WHO_CSS } from './CompanyWho.ts';
+import { companyLink } from './participation.ts';
 
 type Mode = 'loading' | 'login' | 'noaccess' | 'ready';
 type Tab = 'members' | 'roles' | 'who' | 'objects' | 'counterparties' | 'directories' | 'branding' | 'modules' | 'audit' | 'patterns';
@@ -130,10 +131,11 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
     window.addEventListener(COMPANY_ROUTE_EVENT, onRoute);
     return () => { window.removeEventListener('hashchange', onRoute); window.removeEventListener('popstate', onRoute); window.removeEventListener(COMPANY_ROUTE_EVENT, onRoute); };
   }, []);
-  const go = (t: Tab): void => {
+  const open = (path: string): void => {
     const r = (window as unknown as { AppRouter?: { navigate?: (p: string) => void } }).AppRouter;
-    if (r && typeof r.navigate === 'function') r.navigate(`${BASE}/${t}`); else { window.history.pushState(null, '', `${BASE}/${t}`); setTab(t); }
+    if (r && typeof r.navigate === 'function') r.navigate(path); else { window.history.pushState(null, '', path); setTab(tabFromHash(path)); }
   };
+  const go = (t: Tab): void => open(`${BASE}/${t}`);
 
   // Вкладка из адреса закрыта или не указана → первая доступная, и адрес тоже (без лишней записи в истории).
   useEffect(() => {
@@ -201,7 +203,8 @@ export function CompanyApp(props: { auth: AuthApi | null; api: CompanyApi | null
   const cur: Tab = tab && tabs.includes(tab) ? tab : tabs[0];
   const body = cur === 'members' ? h(CompanyMembers, { api, companyId, me: who, projects: projects || null, key: companyId })
     : cur === 'roles' ? h(CompanyRoles, { api, companyId, key: companyId })
-    : cur === 'who' ? h(CompanyWho, { api, companyId, loadPlaces: placesLoader(projects), key: companyId })
+    : cur === 'who' ? h(CompanyWho, { api, companyId, loadPlaces: placesLoader(projects), key: companyId,
+      onOpen: (t: 'roles' | 'members', id: string) => open(id ? companyLink(t, id) : `${BASE}/${t}`) })
     : cur === 'objects' && projects ? h(CompanyScope, { api: projects, render: (c) => h(ProjectsTab, { api: projects, company: c, core: core || null, people: () => peopleOf(api, c.company_id) }) })
     : cur === 'counterparties' && core ? h(CounterpartiesTab, { core, companyId, key: companyId })
     : cur === 'directories' && projects ? h(CompanyScope, { api: projects, render: (c) => h(UnitsTab, { api: projects, company: c }) })

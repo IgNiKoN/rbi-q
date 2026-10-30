@@ -653,3 +653,14 @@ test('журнал: «CHANGE» (047) — понятная фраза и вид �
   assert.equal(auditText(r), 'Изменено назначение — alfa-foreman@test.invalid: отвечает за факт');
   assert.equal(auditKind(r), 'assign');
 });
+
+test('P2-0073: из «Кто что может» — человек из адреса (…/members?user=<id>) открыт сразу с назначениями', async () => {
+  win.location.hash = '#/settings/company/members?user=u-for';
+  const el = mount(fakeApi().api);
+  await tick();
+  const card = el.querySelector('[data-testid=co-person]');
+  assert.equal(card && card.getAttribute('data-user-id'), 'u-for');
+  assert.match(card.textContent, /Петров П\.П\./);
+  assert.ok(card.querySelector('[data-testid=co-groups]'), 'назначения человека видны');
+  win.location.hash = '';
+});
