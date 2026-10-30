@@ -33,6 +33,7 @@
 | `mode` | правило видимости и правки, как на сервере: `author` (только автор / исполнитель), `contractor` (команда объекта, подрядчик — своя фирма), `owner`, `shared` (библиотека — всем с правом), `area` (P2-0070: единый механизм — действие роли в области участия, зеркало `core.row_allowed`) | `author` |
 | `view` / `edit` | действия, как в серверной политике таблицы (первое действие задаёт модуль: `quality.*`, `construction.*`) | `['quality.view']` / `['quality.edit']` |
 | `ownFirst` | уходит в начале прохода, до скачивания чужого; задачи и замечания — только новые (сервер их ещё не видел, `cloudKnown` нет), правка уже известной записи — после скачивания, чтобы не отменить удаление или более новую правку с сервера | `true` (осмотры, задачи, замечания) |
+| `coreId` | P2-0072: поле номера записи по стандарту (`uuid`, ставит сервер 054). Телефон хранит его у загруженной записи и **не отправляет** (мост `quality-bridge.ts` убирает `core_id` и связи `core_<связь>_id` из каждой записи Качества) — правка или копия записи номер не затрёт | `core_id` (все виды Качества, базы знаний, Стройконтроля 2.0) |
 | `objectType` / `memory` | вид для общей отправки «объектов» (`pushCloudObject`) и массив в памяти — тогда движок отправляет его по описанию | совещание — `meeting` / `rbi_meetingsData` |
 
 ### Вид, который уходит функцией сервера (P2-0064)
@@ -109,11 +110,13 @@
 | Права на сервере (P2-0070) | `supabase/migrations/052_rights_mechanism_up.sql` (ядро `core.*`, каталог, Стройконтроль, План/Факт, `pf_who_can`); тесты `tests/server/052_rights_mechanism*.sql`; экран — `src/platform/company/action-groups.ts`, `CompanyRoles.ts`, `CompanyWho.ts`; кнопки Стройконтроля — `src/modules/construction-v2/rights.ts` |
 | Зеркальный тест | `tests/server/sync-access.mirror.mjs` (локальная копия сервера — `tests/server/pglite-db.mjs`, все миграции; PGlite — вне репозитория, путь в `P2_PGLITE`) |
 | Вид с `rpc` (P2-0064) | база записей устройства — `src/platform/services/offline/device-records.ts`; отправка — `send.ts` (`createSender`, `classify`, `sendKindsFrom`), `device-send.ts` (`submitDeviceRecord`, `sendNow`, `startDeviceSend` — из `entry.ts`; `window.RBI.deviceSend`); счётчик и «Отправка» — `net-status.ts` (`deviceRows`); экран модуля — `useDeviceRecords(module)` (`offline/index.ts`); сервер — `pf_fact_submit` (051); unit `src/platform/services/offline/__tests__/device-send.test.ts`, стенд `tests/offline/fact.mjs` |
-| Сценарии стенда | `tests/offline/sync.mjs` (`s-rename`, `s-foreign`, `s-leader`, `s-kinds`, `s-contractor`, `s-reject-retry`, `s-own-first`, `s-module-off`, `s-new-kind`), `tests/offline/pull-scope.mjs` (`s-pull-scope`) |
+| Номер записи (P2-0072) | сервис номеров `js/services/record-id.service.js` (`window.RbiIds`: `newId` — uuid v4, запасной путь без `crypto.randomUUID`; `stableId` — uuid v5; `childId` — пункт и фото проверки от номера проверки, у старой проверки — прежний составной номер); типы — `record-id.service.d.ts`; модули `src/` берут общий экземпляр со страницы; сторож кода «приставка + время» — `js/shared/__tests__/record-id.service.test.js`; сервер — `supabase/migrations/054_quality_ids_up.sql` (`core_id`, связи, `quality.core_ids_stamp`) |
+| Сценарии стенда | `tests/offline/sync.mjs` (`s-rename`, `s-foreign`, `s-leader`, `s-kinds`, `s-contractor`, `s-reject-retry`, `s-own-first`, `s-module-off`, `s-new-kind`, `q-ids`, `q-ids-other`), `tests/offline/pull-scope.mjs` (`s-pull-scope`) |
 
 ## Не делать
 
 - Сравнивать людей по ФИО или почте, фирмы — по названию, объекты — по тексту (кроме переходного правила п. 7).
 - Решать «можно ли» по названию роли (`=== 'engineer'`, `isAdmin()` как замена прав).
 - Писать в модуле свой отбор «моё» или свой список хранилищ.
+- Придумывать номер записи в модуле (`'prefix_' + Date.now()`): только `window.RbiIds.newId()` / `stableId()` (P2-0072); отправлять `core_id` с телефона.
 - Оставлять неотправленную запись без причины.

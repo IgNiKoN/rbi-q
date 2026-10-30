@@ -159,13 +159,18 @@ const CONTRACTOR_UUID = ['counterparty_id', 'core_counterparty_id'];
 export const NOT_REF = { device_id: 'id устройства', client_id: 'id с устройства для повтора без дубля', batch_id: 'группа отправки, не запись',
   import_batch: 'группа загрузки, не запись', record_id: 'журнал: ссылка на запись любой таблицы', source_record_id: 'очередь: запись любой таблицы',
   entity_id: 'реестр файлов: запись любой таблицы', core_id: 'ключ записи (P2-0072, мост 054): uuid рядом со старым id, не ссылка' };
+/** P2-0072 (054): мост ссылок Качества — текстовая ссылка → связь по uuid рядом (с внешним ключом); старое снимет уборка P2-0063. */
+export const LINK_BRIDGE = { inspection_id: 'core_inspection_id', report_id: 'core_report_id', parentId: 'core_parent_id',
+  object_id: 'core_construction_object_id', building_id: 'core_building_id', floor_id: 'core_floor_id', locationId: 'core_location_node_id',
+  contractorId: 'core_contractor_id' };
 const isUserRef = (n) => n === 'user_id' || /_user_id$/.test(n) || n === 'auth_user_id';
 const isRefName = (n) => n !== 'id' && (/_id$/.test(n) || /[a-z]Id$/.test(n)) && !(n in NOT_REF);
 
 const R = (s, n = 0, note = '') => ({ s, n, note });
 
-/** Светофор одной таблицы: правило → { s: green|yellow|red|na, n: число нарушений, note }. */
-export function evaluateTable(t) {
+/** Светофор одной таблицы: правило → { s: green|yellow|red|na, n: число нарушений, note }. colsOf(id) — колонки другой таблицы
+ *  (правило 10: валюта у родителя по внешнему ключу). */
+export function evaluateTable(t, colsOf = () => null) {
   const id = `${t.schema}.${t.name}`;
   const col = new Map(t.cols.map(([n, ty, nn]) => [n, { ty, nn }]));
   const has = (n, pred = () => true) => col.has(n) && pred(col.get(n).ty);
@@ -180,6 +185,10 @@ export function evaluateTable(t) {
   out.key = t.pk.length === 1 && t.pk[0] === 'id' && has('id', uuid) ? R('green')
     : R('red', 1, t.pk.length === 0 ? 'нет первичного ключа' : t.pk.length > 1 ? `составной ключ (${t.pk.join(', ')})` : `ключ ${t.pk[0]} ${col.get(t.pk[0])?.ty}`);
   if (out.key.s === 'red' && t.pk.length > 1) out.key.note = `составной ключ (${t.pk.map((n) => `${n} ${col.get(n)?.ty}`).join(', ')})`;
+  // P2-0072 (054): мост ключа — core_id uuid not null рядом со старым ключом (ключ синхронизации до уборки P2-0063)
+  if (out.key.s === 'red' && has('core_id', uuid) && col.get('core_id').nn) {
+    out.key = R('yellow', 0, `мост: core_id uuid рядом со старым ключом (${t.pk.map((n) => `${n} ${col.get(n)?.ty}`).join(', ')}) — старый снимет уборка P2-0063`);
+  }
 
   // компания
   const oldCompany = list(['companyId', 'company_id'], text);
@@ -226,7 +235,9 @@ export function evaluateTable(t) {
 
   // ссылки
   const axisCols = new Set([...PROJECT_UUID, ...PROJECT_TEXT, ...PLACE_UUID, ...PLACE_TEXT, 'companyId', 'contractorId']);
-  const textRefs = t.cols.filter(([n, ty]) => isRefName(n) && text(ty) && !axisCols.has(n) && !(n === 'company_id')).map(([n]) => n);
+  const bridged = (n) => LINK_BRIDGE[n] && has(LINK_BRIDGE[n], uuid) && t.fk[LINK_BRIDGE[n]];
+  const textRefs = t.cols.filter(([n, ty]) => isRefName(n) && text(ty) && !axisCols.has(n) && !(n === 'company_id') && !bridged(n)).map(([n]) => n);
+  const linkBridges = t.cols.filter(([n, ty]) => text(ty) && bridged(n)).map(([n]) => `${n} → ${LINK_BRIDGE[n]}`);
   const noFk = t.cols.filter(([n, ty]) => (isRefName(n) || /^core_.*_id$/.test(n)) && uuid(ty) && !isUserRef(n) && !t.fk[n]).map(([n]) => n);
   const cT = list(CONTRACTOR_TEXT, text), cU = list(CONTRACTOR_UUID, uuid);
   const rBad = [...(textRefs.length ? [`ссылка текстом (${textRefs.join(', ')})`] : []), ...(noFk.length ? [`нет внешнего ключа (${noFk.join(', ')})`] : []),
@@ -234,7 +245,9 @@ export function evaluateTable(t) {
   const rCount = textRefs.length + noFk.length + (cT.length && !cU.length ? 1 : 0);
   const anyRef = t.cols.some(([n]) => isRefName(n) || /^core_.*_id$/.test(n)) || cT.length;
   out.refs = rCount ? R('red', rCount, rBad.join('; '))
-    : !anyRef ? R('na') : cT.some((n) => n !== 'contractor_name') ? R('yellow', 0, `мост: название фирмы рядом с id (${cT.join(', ')})`) : R('green');
+    : !anyRef ? R('na')
+      : linkBridges.length ? R('yellow', 0, `мост: ссылка текстом рядом со связью по uuid (${linkBridges.join(', ')})${cT.some((n) => n !== 'contractor_name') ? `; название фирмы рядом с id (${cT.join(', ')})` : ''}`)
+        : cT.some((n) => n !== 'contractor_name') ? R('yellow', 0, `мост: название фирмы рядом с id (${cT.join(', ')})`) : R('green');
 
   // имена
   const badNames = [...(isSnake(t.name) ? [] : [t.name]), ...t.cols.map(([n]) => n).filter((n) => !isSnake(n))];
@@ -248,8 +261,10 @@ export function evaluateTable(t) {
   if (!money.length) out.money = R('na');
   else {
     const mBad = money.filter(([, ty]) => !ty.startsWith('numeric')).map(([n, ty]) => `${n} ${ty}`);
-    if (!has('currency')) mBad.push(`нет валюты (суммы: ${money.map(([n]) => n).join(', ')})`);
-    out.money = mBad.length ? R('red', mBad.length, mBad.join('; ')) : R('green');
+    // правило 10 (P2-0069, сторож — P2-0072): валюта в строке или у родителя по внешнему ключу (проект, смета, КП, КС-2, прайс, договор)
+    const parent = has('currency') ? null : [...new Set(Object.values(t.fk).flat())].find((p) => (colsOf(p) || []).includes('currency'));
+    if (!has('currency') && !parent) mBad.push(`нет валюты ни в строке, ни у родителя (суммы: ${money.map(([n]) => n).join(', ')})`);
+    out.money = mBad.length ? R('red', mBad.length, mBad.join('; ')) : R('green', 0, parent ? `валюта у родителя ${parent}` : '');
   }
 
   // исключения: класс или правило таблицы снимает красный/жёлтый → жёлтый с причиной
@@ -263,7 +278,10 @@ export function evaluateTable(t) {
   return { id, schema: t.schema, name: t.name, module: moduleOf(t.schema, t.name), classes, why: cfg.why || '', rules: out };
 }
 
-export const evaluate = (tables) => tables.filter((t) => SCOPE.includes(t.schema)).map(evaluateTable);
+export function evaluate(tables) {
+  const cols = new Map(tables.map((t) => [`${t.schema}.${t.name}`, t.cols.map(([n]) => n)]));
+  return tables.filter((t) => SCOPE.includes(t.schema)).map((t) => evaluateTable(t, (id) => cols.get(id)));
+}
 
 /** Нарушения (только красные): таблица → правило → число. */
 export function debtOf(evaluation) {

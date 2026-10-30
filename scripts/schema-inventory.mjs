@@ -21,6 +21,15 @@ const prodFile = process.argv.includes('--prod') ? process.argv[process.argv.ind
 
 const db = await serverDb();
 const tables = await readSchema(db);
+// P2-0072: заготовка «новая таблица модуля» (supabase/templates/new_module_table.sql) — в той же копии схемы, после описи
+let template = null;
+if (args.has('--check')) {
+  const TPL = 'planfact.tpl_check_items';
+  await db.exec(readFileSync(join(ROOT, 'supabase/templates/new_module_table.sql'), 'utf8').replaceAll('__schema__', 'planfact')
+    .replaceAll('__table__', 'tpl_check_items').replaceAll('__view__', 'planfact.fact.view').replaceAll('__edit__', 'planfact.fact.create'));
+  const all = await readSchema(db);
+  template = evaluate(all).find((e) => e.id === TPL);
+}
 await db.close();
 const evaluation = evaluate(tables);
 const ceiling = existsSync(DEBT) ? JSON.parse(readFileSync(DEBT, 'utf8')) : null;
@@ -30,8 +39,10 @@ if (args.has('--check')) {
   const { fresh, grew, lower } = compareDebt(evaluation, ceiling);
   for (const m of [...fresh, ...grew]) console.error(`✕ ${m}`);
   for (const m of lower) console.error(`↓ ${m}`);
-  console.log(`сторож таблиц: ${evaluation.length} таблиц, новые с нарушением ${fresh.length}, рост ${grew.length}, снизить потолок ${lower.length}`);
-  process.exit(fresh.length + grew.length + lower.length ? 1 : 0);
+  const tplBad = template ? Object.entries(template.rules).filter(([, r]) => r.s !== 'green' && r.s !== 'na').map(([c, r]) => `${c}: ${r.s} ${r.note}`) : ['не применилась'];
+  for (const m of tplBad) console.error(`✕ заготовка новой таблицы (supabase/templates/new_module_table.sql) — ${m}`);
+  console.log(`сторож таблиц: ${evaluation.length} таблиц, новые с нарушением ${fresh.length}, рост ${grew.length}, снизить потолок ${lower.length}; заготовка таблицы — ${tplBad.length ? 'не по стандарту' : 'зелёная по всем правилам'}`);
+  process.exit(fresh.length + grew.length + lower.length + tplBad.length ? 1 : 0);
 }
 
 if (args.has('--update-debt')) {

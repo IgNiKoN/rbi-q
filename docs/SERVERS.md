@@ -8,6 +8,7 @@
 
 | Миграция | Что добавляет |
 |---|---|
+| `054_quality_ids` | P2-0072 (только добавляющая, до выкладки приложения; откат `054_quality_ids_down.sql`): у 41 таблицы Качества `core_id uuid not null` уникальный рядом со старым номером (uuid-номер → он же), 16 связей `core_<связь>_id uuid` с внешним ключом на `core_id` родителя; сторож `quality.core_ids_stamp` (последним из BEFORE: заполняет, не даёт сменить) и `quality.core_ids_children` (родитель позже ребёнка). Права, RLS и функции 052/053 не меняются. Проба (только чтение) — `scripts/p2-0072/01_dryrun.sql`; выкладка — `ai-dev/reports/P2-0072/release-plan.md` |
 | `001` | Схема `planfact`: companies, company_members, projects, project_members*, works; RLS (deny-by-default); функции `public.pf_my_projects`, `pf_list_works`, `pf_add_work` |
 | `002` | Каталог действий (19), 9 шаблонов ролей, роли компании, назначения, модули компании, `planfact.has_permission` / `has_company_permission`; триггер копирования шаблонов в новую компанию; `pf_my_permissions`, `pf_assign_role`, `pf_revoke_assignment`. Таблица `project_members` удалена (доступ к проекту = назначения роли) |
 | `003` | `public.pf_my_context` — «компания · роль» для шапки |
