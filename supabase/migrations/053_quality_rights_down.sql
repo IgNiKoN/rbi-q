@@ -256,6 +256,111 @@ create policy sk_volumes_select on quality.sk_volumes for select to authenticate
 create policy sk_volumes_update on quality.sk_volumes for update to authenticated
   using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
   with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+-- Библиотека компании — прежние правила (проект записи сверяется с назначением).
+drop policy app_assistant_kb_delete on quality.app_assistant_kb;
+drop policy app_assistant_kb_insert on quality.app_assistant_kb;
+drop policy app_assistant_kb_select on quality.app_assistant_kb;
+drop policy app_assistant_kb_update on quality.app_assistant_kb;
+drop policy shared_checklists_delete on quality.shared_checklists;
+drop policy shared_checklists_insert on quality.shared_checklists;
+drop policy shared_checklists_select on quality.shared_checklists;
+drop policy shared_checklists_update on quality.shared_checklists;
+drop policy shared_docs_delete on quality.shared_docs;
+drop policy shared_docs_insert on quality.shared_docs;
+drop policy shared_docs_select on quality.shared_docs;
+drop policy shared_docs_update on quality.shared_docs;
+drop policy shared_etalons_delete on quality.shared_etalons;
+drop policy shared_etalons_insert on quality.shared_etalons;
+drop policy shared_etalons_select on quality.shared_etalons;
+drop policy shared_etalons_update on quality.shared_etalons;
+drop policy shared_feedback_delete on quality.shared_feedback;
+drop policy shared_feedback_insert on quality.shared_feedback;
+drop policy shared_feedback_select on quality.shared_feedback;
+drop policy shared_feedback_update on quality.shared_feedback;
+drop policy shared_nodes_delete on quality.shared_nodes;
+drop policy shared_nodes_insert on quality.shared_nodes;
+drop policy shared_nodes_select on quality.shared_nodes;
+drop policy shared_nodes_update on quality.shared_nodes;
+drop policy shared_practices_delete on quality.shared_practices;
+drop policy shared_practices_insert on quality.shared_practices;
+drop policy shared_practices_select on quality.shared_practices;
+drop policy shared_practices_update on quality.shared_practices;
+drop policy shared_twi_cards_delete on quality.shared_twi_cards;
+drop policy shared_twi_cards_insert on quality.shared_twi_cards;
+drop policy shared_twi_cards_select on quality.shared_twi_cards;
+drop policy shared_twi_cards_update on quality.shared_twi_cards;
+create policy app_assistant_kb_delete on quality.app_assistant_kb for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy app_assistant_kb_insert on quality.app_assistant_kb for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy app_assistant_kb_select on quality.app_assistant_kb for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy app_assistant_kb_update on quality.app_assistant_kb for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_checklists_delete on quality.shared_checklists for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_checklists_insert on quality.shared_checklists for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_checklists_select on quality.shared_checklists for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy shared_checklists_update on quality.shared_checklists for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_docs_delete on quality.shared_docs for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_docs_insert on quality.shared_docs for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_docs_select on quality.shared_docs for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy shared_docs_update on quality.shared_docs for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_etalons_delete on quality.shared_etalons for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_etalons_insert on quality.shared_etalons for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_etalons_select on quality.shared_etalons for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy shared_etalons_update on quality.shared_etalons for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_feedback_delete on quality.shared_feedback for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_feedback_insert on quality.shared_feedback for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_feedback_select on quality.shared_feedback for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy shared_feedback_update on quality.shared_feedback for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_nodes_delete on quality.shared_nodes for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_nodes_insert on quality.shared_nodes for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_nodes_select on quality.shared_nodes for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy shared_nodes_update on quality.shared_nodes for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_practices_delete on quality.shared_practices for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_practices_insert on quality.shared_practices for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_practices_select on quality.shared_practices for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy shared_practices_update on quality.shared_practices for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_twi_cards_delete on quality.shared_twi_cards for delete to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_twi_cards_insert on quality.shared_twi_cards for insert to authenticated
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
+create policy shared_twi_cards_select on quality.shared_twi_cards for select to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.view}'::text[]));
+create policy shared_twi_cards_update on quality.shared_twi_cards for update to authenticated
+  using (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]))
+  with check (quality.can(core_company_id, core_project_id, '{quality.edit}'::text[]));
 drop function quality.quality_rights_guard();
 drop function quality.row_exists(text, text, uuid);
 drop function quality.is_platform_admin();
@@ -557,6 +662,51 @@ begin
   end if;
   return true;
 end $function$;
+
+create or replace function quality.my_access(p_project uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'core', 'planfact'
+AS $function$
+  with asg as (
+    select a.*, r.template_code from core.role_assignments a
+    join core.company_roles r on r.id = a.role_id and r.company_id = a.company_id
+    where a.company_id = quality.request_company() and a.user_id = auth.uid()
+      and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now()))
+  select jsonb_build_object(
+    'company_id', quality.request_company(),
+    'actions', coalesce((select jsonb_agg(pc.action order by pc.action) from core.permission_catalog pc
+                          where (pc.action like 'quality.%' or pc.action like 'construction.%')
+                            and quality.can(quality.request_company(), p_project, array[pc.action])), '[]'::jsonb),
+    'templates', coalesce((select jsonb_agg(distinct template_code) from asg
+                            where (p_project is null or project_id is null or project_id = p_project)
+                              and template_code is not null), '[]'::jsonb),
+    'projects', case when exists (select 1 from asg where project_id is null) then null
+                     else coalesce((select jsonb_agg(distinct project_id) from asg), '[]'::jsonb) end,
+    'objects', case when not exists (select 1 from asg) or exists (select 1 from asg where quality_objects is null) then null
+                    else coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'key', o.canonical_key, 'name', o.display_name)
+                                                    order by o.display_name)
+                                     from quality.project_objects o
+                                    where o.core_company_id = quality.request_company()
+                                      and o.id in (select unnest(quality_objects) from asg)), '[]'::jsonb) end,
+    'contractor', (select jsonb_build_object('id', c.id, 'name', c.name,
+                            'keys', coalesce((select jsonb_agg(l.canonical_key order by l.canonical_key) from quality.contractor_core_links l
+                                               where l.counterparty_id = c.id), '[]'::jsonb))
+                     from asg join core.counterparties c on c.id = asg.counterparty_id and c.company_id = asg.company_id
+                    where c.deleted_at is null order by c.name limit 1),
+    'container', case when exists (select 1 from asg) or planfact.is_platform_admin() then quality.request_container() end,
+    -- P2-0070: участие × действия Стройконтроля (place — место участия, places — оно и всё под ним; null — весь проект)
+    'construction', jsonb_build_object(
+      'admin', planfact.is_platform_admin(),
+      'enabled', exists (select 1 from core.company_modules cm where cm.company_id = quality.request_company()
+                                                              and cm.module = 'construction' and cm.enabled),
+      'grants', core.my_grants(quality.request_company(), null, 'construction'),
+      'object_nodes', coalesce((select jsonb_object_agg(n.id, quality.node_root_project(n)) from quality.location_nodes n
+                                 where n.core_company_id = quality.request_company() and n."nodeType" = 'object'
+                                   and not coalesce(n.is_deleted, false) and coalesce(n."parentId", '') = ''
+                                   and quality.node_root_project(n) is not null), '{}'::jsonb)));
+$function$;
 
 drop function quality.no_object();
 drop function quality.is_container(uuid);

@@ -99,7 +99,7 @@ const KINDS = [['task', 'rbi_tasks', 'rbi_tasks', 'engineerName'], ['meeting', '
   ['practice', 'rbi_practices', 'shared_practices', 'author'], ['twi', 'twi_cards', 'shared_twi_cards', 'owner'], ['document', 'custom_docs', 'shared_docs', 'owner']];
 async function kinds(out) {
   const tag = 's-kinds';
-  note(`== ${tag}: инженер — своя и чужая запись каждого вида → своя уходит 1 раз; чужая — как сервер: «только автор» — причина, «команда объекта» и «библиотека» — уходит; удалить чужую нельзя`);
+  note(`== ${tag}: инженер — своя и чужая запись каждого вида → своя уходит 1 раз; чужая — как сервер: задача — причина, «команда объекта» и «библиотека» — уходит; удалить чужую — по праву группы`);
   freshProfile(out, tag); resetNet(); stand.quality = ENGINEER; stand.names = {};
   try {
     await start();
@@ -125,7 +125,11 @@ async function kinds(out) {
       }
       return out;
     }, [KINDS, now]).catch((e) => ({ err: e.message }));
-    ok(!del.err && Object.values(del).every(([a, b]) => a === true && b === false), `${tag}: «удалить» — своё можно, чужое нельзя (все ${KINDS.length} видов)`, JSON.stringify(del));
+    // P2-0071: чужое — по праву группы, как сервер: совещания, мероприятия, FMEA, этапы — «Редактирование» (у инженера есть);
+    // задачи — «Редактирование чужих» (нет); библиотека — только своё (ТД 238)
+    const FOREIGN_OK = ['meeting', 'intervention', 'fmea', 'schedule'];
+    ok(!del.err && Object.entries(del).every(([k, [a, b]]) => a === true && b === FOREIGN_OK.includes(k)),
+      `${tag}: «удалить» — своё можно, чужое — по праву группы (все ${KINDS.length} видов)`, JSON.stringify(del));
     await ctx.setOffline(false);
     for (let i = 0; i < 6 && !KINDS.every(([k, , t]) => sendsAll.get(`${t}:${k}-own-${now}`)); i++) {
       await page.evaluate(() => window.triggerSync && window.triggerSync('manual')).catch(() => {});

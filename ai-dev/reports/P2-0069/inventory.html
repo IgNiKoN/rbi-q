@@ -35,9 +35,9 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;background:var(--
 @media (max-width:600px){.m td.t{white-space:normal;overflow-wrap:anywhere;max-width:140px;font-size:12px}}
 </style></head><body><main>
 <h1>Опись таблиц сервера и светофор стандарта</h1>
-<p class="muted">P2-0069 · источник — локальная копия сервера (PGlite) со всеми миграциями, отпечаток миграций <code>85678d8e26ce8b59</code> · стандарт — <code>ai-dev/standards/DATA_TABLES.md</code></p>
+<p class="muted">P2-0069 · источник — локальная копия сервера (PGlite) со всеми миграциями, отпечаток миграций <code>bd4857633dcd5646</code> · стандарт — <code>ai-dev/standards/DATA_TABLES.md</code></p>
 
-<div class="card"><b>Коротко.</b> На сервере 176 таблиц. Под стандарт попадают 105 (ядро, План/Факт, Качество и Стройконтроль), остальные 71 — служебные Supabase и старое приложение RBI (внизу).
+<div class="card"><b>Коротко.</b> На сервере 177 таблиц. Под стандарт попадают 105 (ядро, План/Факт, Качество и Стройконтроль), остальные 72 — служебные Supabase и старое приложение RBI (внизу).
 Без единого красного — <b>30</b> из 105. Красное — это то, что переезжает по плану по шагам; новые таблицы с красным сторож не пропускает.</div>
 
 <h2>Итог по клеткам</h2>
@@ -334,7 +334,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;background:var(--
 <h2>Вне стандарта</h2>
 <div class="scroll"><table><thead><tr><th>Раздел</th><th>Таблиц</th><th>Почему не проверяется</th></tr></thead><tbody>
 <tr><td><code>public</code></td><td class="num">55</td><td>таблицы старого приложения RBI (в описи — модель для PGlite, 018_public_model); данные перенесены в quality</td></tr>
-<tr><td><code>p2_backup</code></td><td class="num">10</td><td>резервные копии перед переносом людей (040a1); снять после ~20.11.2026 — ТД №240</td></tr>
+<tr><td><code>p2_backup</code></td><td class="num">11</td><td>резервные копии перед переносом людей (040a1); снять после ~20.11.2026 — ТД №240</td></tr>
 <tr><td><code>auth</code></td><td class="num">4</td><td>учётные записи Supabase (в описи — модель для PGlite); схемой владеет Supabase</td></tr>
 <tr><td><code>storage</code></td><td class="num">2</td><td>файлы Supabase Storage (в описи — модель для PGlite); схемой владеет Supabase</td></tr>
 </tbody></table></div>

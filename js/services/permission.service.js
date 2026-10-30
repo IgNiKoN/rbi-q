@@ -433,13 +433,14 @@
 
         // P2-0061: решение по самой записи — общее правило (js/services/sync/sync-access.policy.js: id автора, объект, фирма,
         // действия с сервера; переходно — по ФИО). null — вид записи без описания `sync` (решает старая проверка по подписи).
-        _recordRule(rec, kindName) {
+        // P2-0071: remove — удаление (своё — «Удаление», чужое — ещё и «Редактирование чужих»), как сторож сервера
+        _recordRule(rec, kindName, remove) {
             const SA = window.RbiSyncAccess;
             const kind = SA && kindName ? SA.kindOf(kindName) : null;
             if (!SA || !kind) return null;
             const me = SA.deviceMe();
             if (!me || !me.actions.length) return null;   // З8: вход по PIN / демо / права ещё не пришли — прежняя проверка по подписи
-            return SA.canChange(rec, kind, me).ok;
+            return (remove && SA.canRemove ? SA.canRemove(rec, kind, me) : SA.canChange(rec, kind, me)).ok;
         },
 
         // 7. Можно ли редактировать проектные данные. P2-0061: canEdit(запись, вид) — по общему правилу; canEdit(ФИО) — как раньше
@@ -462,7 +463,7 @@
         // P2-0061: canDelete(запись, вид) — по общему правилу; canDelete(ФИО, id) — прежняя подпись, совместима
         canDelete(ownerName, ownerId) {
             if (ownerName && typeof ownerName === 'object') {
-                const d = this._recordRule(ownerName, ownerId);
+                const d = this._recordRule(ownerName, ownerId, true);
                 if (d !== null) return d;
                 const r = ownerName;
                 return this.canDelete(r.owner || r.author || r.inspectorName || r.engineerName || '', r.authorId);

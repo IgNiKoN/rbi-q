@@ -4,9 +4,11 @@
 // для каждой записи сравниваются: сервер видит (select под RLS) = visible() устройства, сервер даёт править (update под RLS)
 // = canSend() устройства; P2-0070 — Стройконтроль 2.0 по участию: роли с новыми действиями (тем же правилом, что перенос в 052),
 // участие на объект и на секцию, каждое действие записи: сервер core.row_allowed = canAct() устройства; План/Факт — та же
-// область по описанию манифеста (pf_my_area → grants): сервер planfact.has_permission ∧ in_area(my_area) = canAct() устройства. Запуск: P2_PGLITE=<папка с @electric-sql/pglite> node tests/server/sync-access.mirror.mjs
+// область по описанию манифеста (pf_my_area → grants): сервер planfact.has_permission ∧ in_area(my_area) = canAct() устройства;
+// P2-0071 — Качество тоже по участию (quality.my_access → quality): каждое действие записи — сервер quality.rec_ok = canAct()
+// устройства (своя запись — действия own), «без объектов» — назначение на контейнер. Запуск: P2_PGLITE=<папка с @electric-sql/pglite> node tests/server/sync-access.mirror.mjs
 import { serverDb } from './pglite-db.mjs';
-import { canAct, canSend, fineFromLegacy, kindOf, meFrom, visible } from '../../js/services/sync/sync-access.policy.js';
+import { canAct, canSend, fineFromLegacy, kindOf, meFrom, qualityFromLegacy, visible } from '../../js/services/sync/sync-access.policy.js';
 
 const db = await serverDb();
 const q = async (sql, params) => (await db.query(sql, params)).rows;
@@ -15,7 +17,7 @@ const uuid = async () => (await q('select gen_random_uuid() id'))[0].id;
 // ---- засев (под суперпользователем; автор вставки — sub, как set_author на сервере)
 const CA = await uuid(), PA = await uuid(), CP1 = await uuid(), CP2 = await uuid();
 const U = {};
-for (const k of ['eng', 'engO1', 'mgr', 'dir', 'comp', 'ctr', 'viewer', 'other', 'engP', 'sec', 'ctrSec', 'noclose']) U[k] = await uuid();
+for (const k of ['eng', 'engO1', 'mgr', 'dir', 'comp', 'ctr', 'viewer', 'other', 'engP', 'sec', 'ctrSec', 'noclose', 'noobj']) U[k] = await uuid();
 await q(`insert into auth.users(id, email) select u, u || '@test.invalid' from unnest($1::uuid[]) u`, [Object.values(U)]);
 await q(`insert into core.companies(id, name, is_test) values ($1, 'Зеркало P2-0061', true)`, [CA]);
 await q(`insert into core.company_members(company_id, user_id) select $1, u from unnest($2::uuid[]) u`, [CA, Object.values(U)]);
@@ -40,16 +42,20 @@ const ROLES = {
   ctr: ['quality.view', 'quality.edit', 'quality.scope.contractor', ...CE], viewer: ['quality.view', 'construction.view'], other: ['quality.view', 'quality.edit', ...CE],
   engP: ['quality.view', 'quality.edit', ...CE], sec: ['quality.view', 'quality.edit', ...CE], ctrSec: ['quality.view', 'quality.edit', 'quality.scope.contractor', ...CE],
   noclose: ['quality.view', 'construction.defects.view', 'construction.defects.create', 'construction.defects.reject', 'construction.acceptance.view',
-            'construction.acceptance.book']
+            'construction.acceptance.book'],
+  noobj: ['quality.view', 'quality.edit', ...CE]
 };
-// участие: engP — объект PA целиком; sec и ctrSec — секция 1 объекта PA; остальные — вся компания
-const PLACE = { engP: [PA, null], sec: [PA, L1], ctrSec: [PA, L1] };
+// P2-0071: проект-контейнер Качества — «без объектов»
+const PC = await uuid();
+await q(`insert into core.projects(id, company_id, name, quality_container) values ($1, $2, 'Контейнер зеркала', true)`, [PC, CA]);
+// участие: engP — объект PA целиком; sec и ctrSec — секция 1 объекта PA; noobj — «без объектов»; остальные — вся компания
+const PLACE = { engP: [PA, null], sec: [PA, L1], ctrSec: [PA, L1], noobj: [PC, null] };
 for (const [k, acts] of Object.entries(ROLES)) {
   const [{ id }] = await q(`insert into core.company_roles(company_id, name) values ($1, $2) returning id`, [CA, 'Зеркало ' + k]);
   await q(`insert into core.company_role_permissions(role_id, company_id, action) select $1, $2, a from unnest($3::text[]) a`, [id, CA, acts]);
   // P2-0070: новые действия Стройконтроля по прежним — тем же правилом, что перенос ролей в 052
   await q(`insert into core.company_role_permissions(role_id, company_id, action) select $1, $2, x from unnest($3::text[]) x
-           on conflict do nothing`, [id, CA, fineFromLegacy(acts)]);
+           on conflict do nothing`, [id, CA, qualityFromLegacy(fineFromLegacy(acts))]);   // P2-0071: и Качества — как перенос 053
   await q(`insert into core.role_assignments(company_id, user_id, role_id, quality_objects, counterparty_id, project_id, location_id) values ($1, $2, $3, $4, $5, $6, $7)`,
     [CA, U[k], id, k === 'engO1' ? ['o1-mir'] : null, k === 'ctr' || k === 'ctrSec' ? CP1 : null, (PLACE[k] || [])[0] || null, (PLACE[k] || [])[1] || null]);
 }
@@ -132,9 +138,11 @@ for (const [t, kindName] of TABLES) {
   const K = kindOf(kindName);
   const has = (n) => colsOf[t].some((x) => x.n === n);
   const pick = ['id', ...['core_created_by', 'core_counterparty_id', 'engineer_name', 'project_canonical_key', 'assigned_to_auth_user_id',
-    'core_project_id', 'core_location_id'].filter(has)];
-  // P2-0070: каждое действие записи по отдельности — сервер core.row_allowed = canAct устройства
-  const ACTS = K.mode === 'area' ? [...K.view, ...K.edit] : [];
+    'core_project_id', 'core_location_id', 'core_object_id'].filter(has)];
+  // P2-0070: каждое действие записи по отдельности — сервер core.row_allowed = canAct устройства; P2-0071 (Качество) — quality.rec_ok
+  const ACTS = K.mode === 'area' ? [...new Set([...K.view, ...K.edit, ...((K.own || {}).acts || [])])] : [];
+  const author = has('engineer_name') && ['rbi_inspections', 'rbi_tasks'].includes(t)
+    ? 'coalesce(core_created_by, quality.member_by_email(core_company_id, engineer_name))' : 'core_created_by';
   await db.exec('reset role');   // список записей — под сервером (не под последним пользователем прошлой таблицы)
   const all = await q(`select ${pick.map((n) => '"' + n + '"').join(',')} from quality.${t} order by id`);
   for (const k of Object.keys(U)) {
@@ -142,7 +150,7 @@ for (const [t, kindName] of TABLES) {
     const acc = (await q(`select quality.my_access() a`))[0].a;
     const me = meFrom({ userId: U[k], email: mail(k), name: 'Сотрудник ' + k, actions: acc.actions,
       objects: Array.isArray(acc.objects) ? acc.objects.map((o) => o.key) : null, contractorId: acc.contractor ? acc.contractor.id : '',
-      areas: { construction: acc.construction } });
+      areas: { construction: acc.construction, quality: acc.quality } });
     const seen = new Set((await q(`select id from quality.${t}`)).map((r) => r.id));
     for (const r of all) {
       let canEdit;
@@ -153,14 +161,16 @@ for (const [t, kindName] of TABLES) {
                             from quality.${t} where id = $2`, [K.edit, r.id])).some((x) => x.ok);
       } else try {
         await db.exec('begin');
-        canEdit = (await q(`update quality.${t} set id = id where id = $1 returning id`, [r.id])).length === 1;
+        // P2-0071: проверки и задачи — настоящая правка (сторож действий: своё — «Создание» / «Выполнение», чужое — «Редактирование чужих»)
+        const set = t === 'rbi_inspections' ? `template_title = coalesce(template_title, '') || 'x'` : t === 'rbi_tasks' ? `title = coalesce(title, '') || 'x'` : 'id = id';
+        canEdit = (await q(`update quality.${t} set ${set} where id = $1 returning id`, [r.id])).length === 1;
       } catch { canEdit = false; } finally { await db.exec('rollback').catch(() => {}); await asUser(U[k]); }
       // запись устройства — как её сохраняет скачивание (id автора, подпись, объект, фирма, кому задача)
       const nameField = [].concat((K.author || {}).name || [])[0] || 'inspectorName';
       const rec = { id: r.id, authorId: r.core_created_by || undefined, [nameField]: r.engineer_name || '', project_canonical_key: r.project_canonical_key || '',
         core_counterparty_id: r.core_counterparty_id || '', assignedToId: r.assigned_to_auth_user_id || '',
         contractorId: 'card-' + r.id,   // Б2: как на телефоне — contractorId это карточка справочника (другой номер), не id фирмы
-        core_project_id: r.core_project_id || '', core_location_id: r.core_location_id || '' };
+        core_project_id: r.core_project_id || '', core_location_id: r.core_location_id || '', core_object_id: r.core_object_id || '' };
       const dv = visible(rec, K, me), de = canSend(rec, K, me);
       const key = t + ' · ' + k;
       tally[key] = tally[key] || [0, 0];
@@ -168,8 +178,13 @@ for (const [t, kindName] of TABLES) {
       if (canEdit) tally[key][1]++;
       const pairs = [['видно', seen.has(r.id), dv], ['править', canEdit, de.ok]];
       for (const a of ACTS) {
-        const [{ ok }] = await q(`select core_company_id = quality.request_company() and core.row_allowed(core_company_id, core_project_id, core_location_id, array[$1], core_created_by, core_counterparty_id) ok
-                                   from quality.${t} where id = $2`, [a, r.id]).catch(() => [{ ok: false }]).then((x) => (x.length ? x : [{ ok: false }]));
+        const own = K.own && (K.own.acts || []).includes(a) ? [a] : [];
+        const sql = K.noObject
+          ? `select quality.rec_ok(core_company_id, core_project_id, core_object_id, array[$1], $3::text[], ${author}, ${has('assigned_to_auth_user_id') ? 'assigned_to_auth_user_id' : 'null'}, core_counterparty_id) ok
+               from quality.${t} where id = $2`
+          : `select core_company_id = quality.request_company() and core.row_allowed(core_company_id, core_project_id, core_location_id, array[$1], core_created_by, core_counterparty_id) ok
+               from quality.${t} where id = $2 and $3::text[] is not null`;
+        const [{ ok }] = await q(sql, [a, r.id, own]).catch(() => [{ ok: false }]).then((x) => (x.length ? x : [{ ok: false }]));
         pairs.push([a, ok, canAct(rec, K, me, a).ok]);
       }
       for (const [what, srv, dev] of pairs) {

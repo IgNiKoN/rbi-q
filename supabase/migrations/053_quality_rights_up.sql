@@ -13,7 +13,8 @@
 --     (проект ядра); «видеть все» — по действию, своя запись (автор или исполнитель) — по действию «своих»; запись без
 --     объекта — участники на всю компанию и автор; сторож действий — quality.quality_rights_guard (отказ 42501 с текстом);
 --  4а) остальные записи Качества на объекте (совещания и мероприятия, FMEA и этапы, отчёты, внешний СК) — тот же quality.rec_ok по
---     действиям своей группы; общие таблицы внешнего СК и шаблоны отчётов — по действиям группы без области;
+--     действиям своей группы; общие таблицы внешнего СК и шаблоны отчётов — по действиям группы без области; библиотека компании
+--     (эталоны, документы, практики, ТИВИ …) — общая: право есть — видно независимо от объекта записи;
 --  5) мост «объекты Качества» снят: pf_set_participation / pf_assign_role не принимают и не пишут quality_objects;
 --     set_record_object проверяет «объект за вами» по участию; общие таблицы Качества (quality.can) и прежние правила
 --     Стройконтроля 1 / черновиков видят записи контейнера при участии на любой объект.
@@ -717,6 +718,90 @@ begin
     execute format('create policy %I on quality.%I for delete to authenticated using (%s)', r.t || '_delete', r.t, v_edit);
   end loop;
 end $$;
+
+-- 7а. Библиотека компании (эталоны, документы, практики, ТИВИ, чек-листы, узлы, отзывы, база ИИ-помощника) — общая для компании:
+-- право есть — видно и правится независимо от объекта записи (решение владельца 30.10: «без объектов» — база знаний и ИИ доступны;
+-- телефон — режим shared). Прежде: проект записи сверялся с назначением.
+do $$
+declare t text;
+begin
+  foreach t in array array['shared_etalons', 'shared_docs', 'shared_practices', 'shared_twi_cards', 'shared_checklists', 'shared_nodes',
+                           'shared_feedback', 'app_assistant_kb'] loop
+    execute format('drop policy %I on quality.%I', t || '_select', t);
+    execute format('drop policy %I on quality.%I', t || '_insert', t);
+    execute format('drop policy %I on quality.%I', t || '_update', t);
+    execute format('drop policy %I on quality.%I', t || '_delete', t);
+    execute format('create policy %I on quality.%I for select to authenticated using (quality.can(core_company_id, null, ''{quality.view}''))', t || '_select', t);
+    execute format('create policy %I on quality.%I for insert to authenticated with check (quality.can(core_company_id, null, ''{quality.edit}''))', t || '_insert', t);
+    execute format('create policy %I on quality.%I for update to authenticated using (quality.can(core_company_id, null, ''{quality.edit}'')) '
+                   'with check (quality.can(core_company_id, null, ''{quality.edit}''))', t || '_update', t);
+    execute format('create policy %I on quality.%I for delete to authenticated using (quality.can(core_company_id, null, ''{quality.edit}''))', t || '_delete', t);
+  end loop;
+end $$;
+
+-- 8. «Кто я» для телефона: участие × действия Качества, контейнер, признак записи без места, объекты → объект ядра; объекты
+-- экрана — по участию (мост снят).
+create or replace function quality.my_access(p_project uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'core', 'planfact'
+AS $function$
+  with asg as (
+    select a.*, r.template_code from core.role_assignments a
+    join core.company_roles r on r.id = a.role_id and r.company_id = a.company_id
+    where a.company_id = quality.request_company() and a.user_id = auth.uid()
+      and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now()))
+  select jsonb_build_object(
+    'company_id', quality.request_company(),
+    'actions', coalesce((select jsonb_agg(pc.action order by pc.action) from core.permission_catalog pc
+                          where (pc.action like 'quality.%' or pc.action like 'construction.%')
+                            and quality.can(quality.request_company(), p_project, array[pc.action])), '[]'::jsonb),
+    'templates', coalesce((select jsonb_agg(distinct template_code) from asg
+                            where (p_project is null or project_id is null or project_id = p_project)
+                              and template_code is not null), '[]'::jsonb),
+    'projects', case when exists (select 1 from asg where project_id is null) then null
+                     else coalesce((select jsonb_agg(distinct project_id) from asg), '[]'::jsonb) end,
+    -- P2-0071: объекты Качества по участию (назначения на объекты ядра); назначение на компанию — все (null)
+    'objects', case when not exists (select 1 from asg) or exists (select 1 from asg where project_id is null) then null
+                    else coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'key', o.canonical_key, 'name', o.display_name)
+                                                    order by o.display_name)
+                                     from quality.project_objects o
+                                    where o.core_company_id = quality.request_company() and quality.object_alive(o)
+                                      and o.core_object_id in (select project_id from asg)), '[]'::jsonb) end,
+    'contractor', (select jsonb_build_object('id', c.id, 'name', c.name,
+                            'keys', coalesce((select jsonb_agg(l.canonical_key order by l.canonical_key) from quality.contractor_core_links l
+                                               where l.counterparty_id = c.id), '[]'::jsonb))
+                     from asg join core.counterparties c on c.id = asg.counterparty_id and c.company_id = asg.company_id
+                    where c.deleted_at is null order by c.name limit 1),
+    'container', case when exists (select 1 from asg) or planfact.is_platform_admin() then quality.request_container() end,
+    -- P2-0071: участие × действия Качества (правило устройства, режим area); контейнер — «без объектов»; признак записи без места;
+    -- объекты Качества → объект ядра (запись, созданная на телефоне, узнаёт свой объект как set_record_object сервера)
+    'quality', jsonb_build_object(
+      'admin', planfact.is_platform_admin(),
+      'enabled', exists (select 1 from core.company_modules cm where cm.company_id = quality.request_company()
+                                                              and cm.module = 'quality' and cm.enabled),
+      'grants', core.my_grants(quality.request_company(), null, 'quality'),
+      'container', quality.request_container(),
+      'unplaced', coalesce((select jsonb_object_agg(pc.action, pc.unplaced) from core.permission_catalog pc
+                             where pc.module = 'quality' and pc.unplaced is not null), '{}'::jsonb),
+      'objects', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'key', o.canonical_key, 'name', o.display_name,
+                                                               'synonyms', coalesce(to_jsonb(o.synonyms), '[]'::jsonb), 'project', o.core_object_id)
+                                            order by o.id)
+                             from quality.project_objects o
+                            where o.core_company_id = quality.request_company() and quality.object_alive(o)
+                              and o.core_object_id is not null), '[]'::jsonb)),
+    -- P2-0070: участие × действия Стройконтроля (place — место участия, places — оно и всё под ним; null — весь проект)
+    'construction', jsonb_build_object(
+      'admin', planfact.is_platform_admin(),
+      'enabled', exists (select 1 from core.company_modules cm where cm.company_id = quality.request_company()
+                                                              and cm.module = 'construction' and cm.enabled),
+      'grants', core.my_grants(quality.request_company(), null, 'construction'),
+      'object_nodes', coalesce((select jsonb_object_agg(n.id, quality.node_root_project(n)) from quality.location_nodes n
+                                 where n.core_company_id = quality.request_company() and n."nodeType" = 'object'
+                                   and not coalesce(n.is_deleted, false) and coalesce(n."parentId", '') = ''
+                                   and quality.node_root_project(n) is not null), '{}'::jsonb)));
+$function$;
 
 -- сторож — с правами вызывающего: отказ и проверки, которые он зовёт, — клиенту (только чтение / отказ)
 revoke all on function quality.deny(uuid, text), quality.row_exists(text, text, uuid), quality.is_platform_admin() from public, anon;

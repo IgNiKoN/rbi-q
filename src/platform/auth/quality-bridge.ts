@@ -121,14 +121,21 @@ export function roleFor(actions: string[]): string {
 
 /** Доступ из quality.my_access: projects — назначенные объекты ядра (null — вся компания), contractor — фирма назначения,
  *  objects — ключи закреплённых объектов Качества (P2-0033, 033; null — все объекты). */
-export interface QualityAccess { actions: string[]; templates: string[]; projects: string[] | null; contractor: string; contractorId: string; contractorKeys: string[]; objects: string[] | null; container: string | null; construction: ConstructionAccess | null }
+export interface QualityAccess { actions: string[]; templates: string[]; projects: string[] | null; contractor: string; contractorId: string; contractorKeys: string[]; objects: string[] | null; container: string | null; construction: ConstructionAccess | null; quality: QualityArea | null }
+/** P2-0071 (053): участие × действия Качества для правила устройства (режим `area`): то же, что у Стройконтроля, плюс
+ *  контейнер («без объектов»), признак действия для записи без места и объекты Качества → объект ядра. */
+export interface QualityArea {
+  admin: boolean; enabled: boolean; container: string | null; unplaced: Record<string, string>;
+  objects: { id: string; key: string; name: string; synonyms: string[]; project: string }[];
+  grants: ConstructionAccess['grants'];
+}
 /** P2-0070 (052): участие × действия Стройконтроля 2.0 для правила устройства (sync-access.policy.js, режим `area`). */
 export interface ConstructionAccess {
   admin: boolean; enabled: boolean; object_nodes: Record<string, string>;
   grants: { project: string | null; place: string | null; places: string[] | null; actions: string[]; counterparty: string | null }[];
 }
 export function parseAccess(data: unknown): QualityAccess {
-  const d = (data && typeof data === 'object' ? data : {}) as { actions?: unknown; templates?: unknown; projects?: unknown; contractor?: unknown; objects?: unknown; container?: unknown; construction?: unknown };
+  const d = (data && typeof data === 'object' ? data : {}) as { actions?: unknown; templates?: unknown; projects?: unknown; contractor?: unknown; objects?: unknown; container?: unknown; construction?: unknown; quality?: unknown };
   const c = (d.contractor && typeof d.contractor === 'object' ? d.contractor : {}) as { id?: unknown; name?: unknown; keys?: unknown };
   return {
     actions: Array.isArray(d.actions) ? d.actions.map(String) : [],
@@ -143,7 +150,28 @@ export function parseAccess(data: unknown): QualityAccess {
       ? d.objects.map((o) => (o && typeof o === 'object' ? String((o as { key?: unknown }).key ?? '') : '')).filter(Boolean) : null,
     // P2-0035 (039b): служебный объект-контейнер компании (как «Объекты RBI») — Качество работает в нём
     container: typeof d.container === 'string' && d.container ? d.container : null,
-    construction: parseConstruction(d.construction)
+    construction: parseConstruction(d.construction),
+    quality: parseQualityArea(d.quality)
+  };
+}
+
+/** Участие Качества из ответа сервера; сервер без 053 (нет поля) — null: правило устройства решает по прежним действиям. */
+export function parseQualityArea(v: unknown): QualityArea | null {
+  const base = parseConstruction(v);
+  if (!base) return null;
+  const o = v as { container?: unknown; unplaced?: unknown; objects?: unknown };
+  const unplaced: Record<string, string> = {};
+  if (o.unplaced && typeof o.unplaced === 'object') {
+    for (const [k, x] of Object.entries(o.unplaced as Record<string, unknown>)) if (x === 'all' || x === 'own') unplaced[k] = x;
+  }
+  const s = (x: unknown): string => (typeof x === 'string' ? x : '');
+  return {
+    admin: base.admin, enabled: base.enabled, grants: base.grants, unplaced,
+    container: s(o.container) || null,
+    objects: Array.isArray(o.objects) ? o.objects.filter((x) => x && typeof x === 'object').map((x) => {
+      const r = x as { id?: unknown; key?: unknown; name?: unknown; synonyms?: unknown; project?: unknown };
+      return { id: s(r.id), key: s(r.key), name: s(r.name), synonyms: Array.isArray(r.synonyms) ? r.synonyms.map(String) : [], project: s(r.project) };
+    }).filter((x) => x.project) : []
   };
 }
 
@@ -292,6 +320,8 @@ export interface QualitySync {
   contractorKeys?: string[];
   /** P2-0070: участие × действия Стройконтроля 2.0 (quality.my_access → construction); null — сервер без 052. */
   construction?: ConstructionAccess | null;
+  /** P2-0071: участие × действия Качества (quality.my_access → quality); null — сервер без 053. */
+  quality?: QualityArea | null;
   selectProject(id: string): Promise<void>;
 }
 
@@ -432,6 +462,7 @@ export async function applyQualityBridge(st: PlatformState, deps: BridgeDeps): P
     sync.objects = a.objects;   // P2-0061: null — все объекты (как сервер), иначе ключи закреплённых
     sync.contractorKeys = a.contractorKeys;
     sync.construction = a.construction;   // P2-0070: участие × действия Стройконтроля (правило устройства, кнопки)
+    sync.quality = a.quality;   // P2-0071: участие × действия Качества (правило устройства, кнопки)
     sync.role = roleFor(a.actions);
     // Фирма подрядчика — из назначения роли (020). Закреплённые объекты Качества (033) — экрану ключами объектов, как в старом
     // профиле (assignedProjects): старые фильтры и выбор объекта работают как раньше; что видно — решает сервер. Все объекты — [].

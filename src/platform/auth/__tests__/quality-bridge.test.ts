@@ -51,13 +51,20 @@ test('P2-0070: участие Стройконтроля из my_access (052); �
 
 test('доступ из my_access: объекты (null — вся компания) и фирма подрядчика', () => {
   assert.deepEqual(parseAccess({ actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: null }),
-    { actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null, construction: null });
+    { actions: ['quality.view'], templates: ['pto'], projects: [P1], contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null, construction: null, quality: null });
   assert.deepEqual(parseAccess({ actions: [], projects: null, contractor: { id: 'k', name: 'ООО «Альфа-Строй»', keys: ['альфа-строй'] } }),
-    { actions: [], templates: [], projects: null, contractor: 'ООО «Альфа-Строй»', contractorId: 'k', contractorKeys: ['альфа-строй'], objects: null, container: null, construction: null });   // P2-0061: ключи карточек фирмы
-  assert.deepEqual(parseAccess(null), { actions: [], templates: [], projects: null, contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null, construction: null });
+    { actions: [], templates: [], projects: null, contractor: 'ООО «Альфа-Строй»', contractorId: 'k', contractorKeys: ['альфа-строй'], objects: null, container: null, construction: null, quality: null });   // P2-0061: ключи карточек фирмы
+  assert.deepEqual(parseAccess(null), { actions: [], templates: [], projects: null, contractor: '', contractorId: '', contractorKeys: [], objects: null, container: null, construction: null, quality: null });
   assert.deepEqual(parseAccess({ actions: [], objects: [{ id: 'obj_1', key: 'большевиков,22 (гений)', name: 'Большевиков,22 (Гений)' }, { id: 'x' }] }).objects,
     ['большевиков,22 (гений)'], 'P2-0033: ключи закреплённых объектов Качества');
   assert.deepEqual(parseAccess({ actions: [], objects: [] }).objects, [], 'пустой список — не «все»');
+  // P2-0071: участие Качества — контейнер, признак записи без места (только all / own), объекты без объекта ядра отброшены
+  const q = parseAccess({ actions: [], quality: { admin: false, enabled: true, container: 'c1', unplaced: { 'quality.inspections.view': 'all', x: 'bad' },
+    objects: [{ id: 'o1', key: 'жк', name: 'ЖК', synonyms: ['ж'], project: 'p1' }, { id: 'o2', key: 'нет' }],
+    grants: [{ project: 'p1', place: null, places: null, actions: ['quality.inspections.view'], counterparty: null }] } }).quality;
+  assert.deepEqual(q && { container: q.container, unplaced: q.unplaced, objects: q.objects.map((o) => o.project), grants: q.grants.length },
+    { container: 'c1', unplaced: { 'quality.inspections.view': 'all' }, objects: ['p1'], grants: 1 });
+  assert.equal(parseAccess({ actions: [], quality: { grants: 'нет' } }).quality, null, 'сервер без 053 — null');
 });
 
 test('мост: подрядчик — фирма в настройках экрана, объекты экрану не передаются; список объектов — только свои', async () => {

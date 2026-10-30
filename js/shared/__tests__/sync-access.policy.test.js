@@ -2,7 +2,7 @@
  *  переходное правило по ФИО, id главнее подписи, без входа — ничего не уходит. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accessStamp, canAct, canChange, canSend, fineFromLegacy, isMine, keepPulled, kindOf, kindsFrom, meFrom, stampAuthor, visible } from '../../services/sync/sync-access.policy.js';
+import { accessStamp, canAct, canChange, canSend, fineFromLegacy, isMine, keepPulled, kindOf, kindsFrom, meFrom, qualityFromLegacy, stampAuthor, visible } from '../../services/sync/sync-access.policy.js';
 
 const K = kindOf('inspection');
 const U1 = '11111111-1111-4111-8111-111111111111', U2 = '22222222-2222-4222-8222-222222222222', CP = '33333333-3333-4333-8333-333333333333';
@@ -12,6 +12,13 @@ const rec = (o = {}) => ({ id: 'i1', inspectorName: 'Иванов Иван', pro
 const CE = ['construction.view', 'construction.edit', 'construction.defects.view', 'construction.defects.create', 'construction.defects.assign',
   'construction.defects.start', 'construction.defects.fix', 'construction.defects.close', 'construction.defects.reject', 'construction.defects.delete',
   'construction.acceptance.view', 'construction.acceptance.book', 'construction.acceptance.schedule', 'construction.acceptance.conduct', 'construction.transfer.edit'];
+// P2-0071: участие Качества (quality.my_access → quality): объекты ЖК Север → P1, ЖК Юг → P2, контейнер C — «без объектов»
+const P1 = 'p1', P2 = 'p2', C = 'c0';
+const QA = qualityFromLegacy(['quality.view', 'quality.edit']);
+const qArea = (grants) => ({ quality: { admin: false, container: C,
+  unplaced: { 'quality.inspections.view': 'all', 'quality.inspections.create': 'own', 'quality.inspections.delete': 'own', 'quality.meetings.view': 'all', 'quality.meetings.edit': 'own' },
+  objects: [{ id: 'o1', key: 'ЖК Север', name: 'ЖК Север', synonyms: [], project: P1 }, { id: 'o2', key: 'ЖК Юг', name: 'ЖК Юг', synonyms: [], project: P2 }],
+  grants: grants.map(([project, place, actions]) => ({ project, place, places: place ? [place] : null, actions: actions || QA, counterparty: null })) } });
 const CC = ['construction.view', 'construction.edit', 'construction.defects.view', 'construction.defects.start', 'construction.defects.fix',
   'construction.acceptance.view', 'construction.acceptance.book'];
 
@@ -48,14 +55,19 @@ test('stampAuthor: моей записи без id — мой id; чужой и 
   const d = rec({ inspectorName: '' }); assert.equal(stampAuthor(d, K, me), true, 'новая запись без подписи — автор я'); assert.equal(d.authorId, U1);
 });
 
-test('инженер: своё уходит, чужое — «запись другого сотрудника (ФИО)» с подсказкой', () => {
+test('инженер (P2-0071): видит все записи области; своё правит, чужое — «запись другого сотрудника (ФИО)»; без «Просмотр всех» — только своё', () => {
   const me = eng();
   assert.deepEqual(canSend(rec(), K, me), { ok: true });
-  const r = canSend(rec({ inspectorName: 'Петров Пётр' }), K, me);
+  assert.equal(visible(rec({ inspectorName: 'Петров Пётр' }), K, me), true, 'инженер видит объект целиком');
+  assert.equal(canChange(rec(), K, me).ok, true, 'своё — можно');
+  const r = canChange(rec({ inspectorName: 'Петров Пётр' }), K, me);
   assert.equal(r.ok, false); assert.equal(r.code, 'foreign');
   assert.equal(r.reason, 'Не отправлено: запись другого сотрудника (Петров Пётр)');
   assert.match(r.hint, /руководитель или автор/);
-  assert.equal(visible(rec({ inspectorName: 'Петров Пётр' }), K, me), false, 'инженер с правкой видит только своё — как сервер');
+  assert.equal(canAct(rec({ inspectorName: 'Петров Пётр' }), K, me, 'quality.inspections.edit_any').ok, false, 'кнопка «Редактирование чужих» — нет');
+  const own = eng({ actions: ['quality.view', 'quality.edit', 'quality.inspections.create', 'quality.inspections.delete'] });
+  assert.equal(visible(rec({ inspectorName: 'Петров Пётр' }), K, own), false, 'без «Просмотр всех» — только своё, как сервер');
+  assert.equal(visible(rec(), K, own), true);
 });
 
 test('руководитель (manage) и вся компания — чужое уходит; только просмотр — видит, но не отправляет', () => {
@@ -66,14 +78,24 @@ test('руководитель (manage) и вся компания — чужо�
   assert.equal(canSend(rec({ authorId: U2 }), K, viewer).code, 'right');
 });
 
-test('объекты: не назначенный — причина «объект», назначенный — по правилу; без объекта — только своё; просмотр в своём объекте — всё', () => {
-  const me = eng({ objects: ['ЖК Север'] });
-  assert.equal(canSend(rec({ project_canonical_key: 'ЖК Юг' }), K, me).code, 'object');
-  assert.equal(canSend(rec(), K, me).ok, true);
-  assert.equal(canSend(rec({ project_canonical_key: '', projectName: '', inspectorName: 'Петров' }), K, me).code, 'foreign');
-  assert.equal(canSend(rec({ project_canonical_key: 'unknown', projectName: '' }), K, me).ok, true, 'без объекта — своё');
-  assert.equal(visible(rec({ inspectorName: 'Петров' }), K, me), true, 'просмотр в назначенном объекте — все записи');
-  assert.equal(canSend(rec({ inspectorName: 'Петров' }), K, me).code, 'foreign', 'правка — только своё');
+test('объекты (P2-0071): участие на объект — записи объекта; чужой — «вне участия»; без объекта — вся компания и автор; «без объектов» — ничего', () => {
+  const me = eng({ areas: qArea([[P1]]) });
+  assert.equal(visible(rec({ inspectorName: 'Петров' }), K, me), true, 'объект по справочнику (ЖК Север → P1) — все записи');
+  assert.equal(canSend(rec({ project_canonical_key: 'ЖК Юг' }), K, me).code, 'area');
+  assert.equal(visible(rec({ project_canonical_key: 'ЖК Юг', core_object_id: P1 }), K, me), true, 'объект сервера главнее названия');
+  assert.equal(visible(rec({ project_canonical_key: '', inspectorName: 'Петров' }), K, me), false, 'чужая без объекта — нет');
+  assert.equal(canSend(rec({ project_canonical_key: '' }), K, me).ok, true, 'своя без объекта — да (право хоть где-то)');
+  const all = eng({ areas: qArea([['']]) });
+  assert.equal(visible(rec({ project_canonical_key: '', inspectorName: 'Петров' }), K, all), true, 'на всю компанию — и без объекта');
+  const none = eng({ areas: qArea([[C]]) });
+  assert.equal(visible(rec({ inspectorName: 'Петров' }), K, none), false, '«без объектов» — записей объектов нет');
+  assert.equal(canSend(rec({ project_canonical_key: '' }), K, none).ok, false, '«без объектов» — и своей без объекта нет');
+  const sec = eng({ areas: qArea([[P1, 's1']]) });
+  assert.equal(visible(rec({ inspectorName: 'Петров' }), K, sec), true, 'часть объекта — все записи без места');
+  assert.equal(canChange(rec({ inspectorName: 'Петров' }), K, sec).ok, false, 'часть объекта — чужое не правит');
+  assert.equal(canChange(rec({ authorId: U1 }), K, sec).ok, true, 'часть объекта — своё правит');
+  assert.equal(visible({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Север' }, kindOf('meeting'), sec), true, 'совещание объекта — видит');
+  assert.equal(canChange({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Север' }, kindOf('meeting'), sec).ok, false, 'чужое совещание — нет');
 });
 
 test('подрядчик: своя фирма по id — да, чужая или без фирмы — «запись другой фирмы»', () => {
@@ -105,9 +127,11 @@ test('этап 2: каждый вид Качества, СК и Базы зна�
     assert.equal(isMine(own, k, me), true, name + ': моё по ФИО');
     assert.equal(isMine({ ...other, authorId: U1 }, k, me), true, name + ': моё по id');
     assert.equal(canSend(own, k, me).ok, true, name + ': своё уходит');
-    // чужое: «только автор» — нет; «команда объекта» и «библиотека» — как сервер, да; изменить / удалить на экране — только своё
-    assert.equal(canSend(other, k, me).ok, k.mode !== 'author', name + ': чужое уходит по режиму сервера ' + k.mode);
-    assert.equal(canChange(other, k, me).ok, false, name + ': чужое изменить / удалить нельзя');
+    // чужое уходит по правилу строк сервера; изменить / удалить на экране — P2-0071 (area): по «Редактирование» группы (у задач —
+    // «Редактирование чужих», у инженера его нет); библиотека — только своё (ТД 238)
+    const anyEdit = k.mode === 'area' && (k.editAny || []).every((a) => QA.includes(a));
+    assert.equal(canSend(other, k, me).ok, k.mode === 'area' ? anyEdit : k.mode !== 'author', name + ': чужое уходит по праву (как сторож сервера) ' + k.mode);
+    assert.equal(canChange(other, k, me).ok, anyEdit, name + ': чужое изменить / удалить — по праву группы');
     assert.equal(canChange(own, k, me).ok, true, name + ': своё — можно');
     assert.equal(canChange(other, k, eng({ actions: ['quality.view', 'quality.edit', 'quality.manage'] })).ok, true, name + ': руководитель — можно');
   }
@@ -133,7 +157,7 @@ test('этап 5: модуль выключен у компании — «Не �
 });
 
 test('этап 5: отбор после скачивания — по правилу; «Только мои» — по id автора, чужое ФИО со своим id — моё', () => {
-  const me = eng({ objects: ['ЖК Север'] });
+  const me = eng({ areas: qArea([[P1]]) });   // P2-0071: объект — по участию
   const meet = kindOf('meeting');
   assert.equal(keepPulled({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Север' }, meet, me, false), true);
   assert.equal(keepPulled({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Юг' }, meet, me, false), false, 'чужой объект');
@@ -248,4 +272,16 @@ test('P2-0070: участие по модулям — у каждого моду
     assert.equal(act({ project: 'p1', location_id: 's2' }, pf, me, 'planfact.fact.create').code, 'area');
     assert.equal(act({ core_project_id: 'p1', core_location_id: 's2' }, d, me, 'construction.defects.close').ok, true, 'Стройконтроль — свой участок: весь объект');
     assert.deepEqual(Object.keys(areasFrom(null, { grants: [] })), ['construction'], 'area без карты — участие Стройконтроля');
+});
+
+test('удаление (P2-0071): своё — «Удаление»; чужое — ещё и «Редактирование чужих»; совещание — по «Редактирование»', async () => {
+  const { canRemove } = await import('../../services/sync/sync-access.policy.js');
+  const me = eng({ areas: qArea([[P1]]) });
+  assert.equal(canRemove(rec({ authorId: U1 }), K, me).ok, true, 'своя проверка');
+  assert.equal(canRemove(rec({ inspectorName: 'Петров' }), K, me).code, 'foreign', 'чужая без «Редактирование чужих»');
+  const noDel = eng({ areas: qArea([[P1, null, ['quality.view', 'quality.inspections.view', 'quality.inspections.create']]]) });
+  assert.equal(canRemove(rec({ authorId: U1 }), K, noDel).ok, false, 'без «Удаление» — и своё нет');
+  const boss = eng({ areas: qArea([[P1, null, [...QA, 'quality.inspections.edit_any']]]) });
+  assert.equal(canRemove(rec({ inspectorName: 'Петров' }), K, boss).ok, true, 'руководитель — чужое');
+  assert.equal(canRemove({ id: 'm', author: 'Петров', project_canonical_key: 'ЖК Север' }, kindOf('meeting'), me).ok, true, 'совещание объекта — по «Редактирование»');
 });

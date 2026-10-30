@@ -16,10 +16,10 @@ export const SKManifest = {
     entry: './index.js',
     menu: { section: 'quality', label: 'ПК СК', order: 5 },
     company: { enabledByDefault: true },
-    // P2-0061: виды записей для общего правила синхронизации (standards/SYNC_AND_ACCESS.md)
+    // P2-0061: виды записей для общего правила синхронизации (standards/SYNC_AND_ACCESS.md); P2-0071 — режим area, действия «Внешний СК»
     sync: [
         { kind: 'sk_record', store: 'sk_records', table: 'sk_records', title: 'Запись СК',
-          author: { id: 'authorId', name: ['uploaded_by', 'sk_uploaded_by', 'imported_by', 'owner', 'author'] }, object: ['project_canonical_key', 'projectName', 'projectId', 'project'], counterparty: ['core_counterparty_id'], contractorCard: 'contractorId', mode: 'contractor', view: ['quality.view'], edit: ['quality.edit'] }
+          author: { id: 'authorId', name: ['uploaded_by', 'sk_uploaded_by', 'imported_by', 'owner', 'author'] }, object: ['project_canonical_key', 'projectName', 'projectId', 'project'], counterparty: ['core_counterparty_id'], contractorCard: 'contractorId', mode: 'area', noObject: true, view: ['quality.sk.view'], edit: ['quality.sk.import'], editAny: ['quality.sk.import'], own: { view: ['quality.sk.view', 'quality.sk.import'], edit: ['quality.sk.import'], change: ['quality.sk.import'], acts: ['quality.sk.view', 'quality.sk.import'] } }
     ],
     routes: ['/sk', '/sk/:subTab'],
     defaultRoute: '/sk'
