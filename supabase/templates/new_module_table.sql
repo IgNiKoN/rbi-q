@@ -31,3 +31,7 @@ create policy __table___insert on __schema__.__table__ for insert to authenticat
 create policy __table___update on __schema__.__table__ for update to authenticated
   using (core.row_allowed(company_id, project_id, location_id, array['__edit__'], created_by, null))
   with check (core.row_allowed(company_id, project_id, location_id, array['__edit__'], created_by, null));
+
+-- P2-0053: сторож «Демо — только просмотр» — посетитель кнопки «Демо» не пишет в строки демо-компании (без него npm run
+-- test:schema — FAIL; имя — последним среди триггеров «до записи»)
+create trigger zzzzz_demo_guard before insert or update or delete on __schema__.__table__ for each row execute function core.demo_guard();

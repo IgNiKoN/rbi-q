@@ -57,6 +57,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const dir = mkdtempSync(join(tmpdir(), 'p2-0053-sandbox-'));
     const file = join(dir, 'Песочница — Клиент 0.md');
     writeFileSync(file, accessFile({ name: 'Песочница — Клиент 0', accounts: r.accounts }), { mode: 0o600 });
+    t((await r.verify()) === 9, 'вход каждой учёткой временным паролем — после записи файла доступов');
     const text = readFileSync(file, 'utf8');
     t(r.accounts.length === 9 && r.accounts.every((a) => text.includes(a.email) && text.includes(a.password)), `файл доступов: 9 учёток с логином и временным паролем (${file})`);
     t(!logs.join('\n').match(new RegExp(r.accounts.map((a) => a.password.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'))), 'в журнале скрипта паролей нет: ' + logs.join(' | '));

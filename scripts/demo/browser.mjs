@@ -30,7 +30,9 @@ export async function demoStandWithApp({ apiPort = 18893, appPort = 8891 } = {})
       from unnest(array['planfact','quality','construction']) m on conflict (company_id, module) do update set enabled = true;
     select set_config('request.jwt.claim.sub', '0d000000-0000-4000-8000-0000000000b1', false);
     select public.pf_save_project('0c000000-0000-4000-8000-0000000000b1', '0a000000-0000-4000-8000-0000000000b1', '{"name": "Мой объект"}');
-    select set_config('request.jwt.claim.sub', '', false);`);
+    select set_config('request.jwt.claim.sub', '', false);
+    insert into auth.users(id, email, email_confirmed_at) values ('0d000000-0000-4000-8000-00000000000a', 'owner@stand.test.invalid', now());
+    insert into core.platform_admins(user_id) values ('0d000000-0000-4000-8000-00000000000a');`);
   return { ...st, appUrl: 'http://localhost:' + appPort, stopApp: () => new Promise((r) => { app.closeAllConnections?.(); app.close(() => r()); }) };
 }
 
@@ -108,6 +110,30 @@ if (process.argv[1] && process.argv[1].endsWith('browser.mjs')) {
       check(/интернет/.test(msg), `${width}: без сети — «${msg}»`);
       await page.screenshot({ path: join(out, `demo-offline-${width}.jpg`), fullPage: false, type: 'jpeg', quality: 78 });
       await ctx.setOffline(false);
+      await ctx.close();
+    }
+    // администратор платформы (владелец): в демо — глазами роли, второе «устройство» (запрос без демо) — администратор
+    {
+      const { ctx, page } = await launch('owner', 1440);
+      await signIn(page, st.appUrl, 'owner@stand.test.invalid');
+      check(await page.evaluate(() => window.RBI.platform2.getState().isPlatformAdmin), 'админ платформы: до демо — администратор');
+      await chooseRole(page, 'foreman');
+      const inDemo = await page.evaluate(async () => {
+        const st = window.RBI.platform2.getState();
+        const proj = (await window.RBI.platform2.rpc('pf_my_projects')).data || [];
+        const demo = st.companies.find((c) => c.is_demo);
+        const p = proj.find((x) => x.company_id === demo.id);
+        const pos = (await window.RBI.platform2.rpc('pf_vor_positions', { p_project: p.id, p_location: null })).data || [];
+        return { admin: st.isPlatformAdmin, demo: st.companyId === demo.id, pos: pos.length, own: pos.every((x) => /Корпус 2.*Секция 1/.test(x.location_path)) };
+      });
+      check(inDemo.demo && !inDemo.admin && inDemo.pos > 0 && inDemo.own, `админ платформы в демо — глазами прораба: позиций ${inDemo.pos}, только Корпус 2 секция 1, «администратор» скрыт`);
+      const other = await fetch(st.stand.apiUrl + '/rest/v1/rpc/pf_platform_companies', { method: 'POST', headers: { 'content-type': 'application/json',
+        authorization: 'Bearer ' + await page.evaluate(() => JSON.parse(localStorage.getItem('platform2-auth')).access_token) }, body: '{}' });
+      check(other.status === 200, `админ платформы в демо, запрос с другого устройства (без компании демо) — администрирование работает (${other.status})`);
+      await page.screenshot({ path: join(out, 'demo-owner-foreman-1440.jpg'), type: 'jpeg', quality: 75 });
+      await page.locator('[data-testid=p2-demo-chip-exit]').click();
+      await wait(page, 7000);
+      check(await page.evaluate(() => window.RBI.platform2.getState().isPlatformAdmin), 'админ платформы: после «Выйти» — снова администратор');
       await ctx.close();
     }
   } finally {

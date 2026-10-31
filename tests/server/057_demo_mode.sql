@@ -55,6 +55,10 @@ create or replace function pg_temp.mydemo() returns uuid language sql security d
 create or replace function pg_temp.member(c uuid) returns boolean language sql security definer as $f$ select planfact.is_company_member(c) $f$;
 create or replace function pg_temp.padm() returns boolean language sql security definer as $f$ select planfact.is_platform_admin() $f$;
 create or replace function pg_temp.qadm() returns boolean language sql security definer as $f$ select quality.is_platform_admin() $f$;
+-- без ошибки (кроме своего профиля) могут пройти только функции, которые с этими аргументами ничего не делают
+create or replace function pg_temp.noop_only(p_bad text) returns boolean language sql as $f$
+  select coalesce(bool_and(x ~ '^public\.pf_(password_changed|set_full_name|estimate_refill|fill_object|import_places|overhead_template|remove_place_plan|restore_place|add_floors|copy_place|move_place)\('), true)
+    from unnest(string_to_array(trim(trailing '; ' from p_bad), '; ')) x where x <> '' $f$;
 create table pg_temp.ids(k text primary key, v uuid);
 grant all on pg_temp.ids to authenticated, anon;
 create or replace function pg_temp.id(p_k text) returns uuid language sql as $f$ select v from pg_temp.ids where k = p_k $f$;
@@ -165,7 +169,8 @@ declare
   pd uuid; k1 uuid; s1 uuid; s2 uuid; f1 uuid; f2 uuid; br uuid; wt uuid; imp uuid; pos1 uuid; pos2 uuid; est uuid; act uuid;
   fact uuid; unit uuid; cpa uuid := gen_random_uuid(); cpb uuid := gen_random_uuid(); m2 uuid; px uuid;
   res text := ''; str text; j jsonb; n int; p_before text; p_after text; c_before jsonb; who_before text; r record; bad text;
-  skip constant text[] := array['core.demo_visits', 'core.role_assignments', 'core.company_members', 'core.user_profiles'];
+  skip constant text[] := array['core.user_profiles'];   -- свой профиль (пароль сменён, ФИО) посетитель править может
+  admin_before text;
 begin
   insert into auth.users(id, email) select u, u || '@test.invalid' from unnest(array[dadm, dpto, dfor, v1, v2, padm, xadm]) u;
   insert into core.companies(id, name, is_test, is_demo) values (demo, 'Девелопмент Демо 057', true, true);
@@ -281,6 +286,13 @@ begin
                           and not 'security.roles.assign' = any (core.demo_actions('project_manager'))
                           and 'quality.scope.contractor' = any (core.demo_actions('contractor_rep')),
                           'действия демо-ролей: План/Факт есть, Качество и СК — только просмотр, без управления справочниками');
+  res := res || pg_temp.t(not exists (select 1 from core.company_role_permissions p join core.demo_roles d on d.role_id = p.role_id
+                                       where core.demo_admin_action(p.action) or p.action like 'security.%' or p.action in ('planfact.projects.manage', 'quality.manage', 'construction.manage'))
+                          and not exists (select 1 from core.role_templates t, unnest(core.demo_actions(t.code)) a where core.demo_admin_action(a)),
+                          'демо-роли — без административных действий (роли и права, сотрудники, модули, проекты и справочники, журнал)');
+  perform pg_temp.as_user(padm);
+  admin_before := (select string_agg(x::text, ';' order by x.id) from public.pf_platform_companies() x where x.id <> demo);
+  reset role;
 
   c_before := pg_temp.counts(demo);
   perform pg_temp.as_user(xadm);
@@ -325,8 +337,7 @@ begin
   reset role;
   p_after := pg_temp.print(skip);
   res := res || pg_temp.t(p_before = p_after, 'прораб-посетитель: все функции записи и прямая запись — данные не изменились');
-  res := res || pg_temp.t(bad in ('', 'public.pf_password_changed(); ', 'public.pf_password_changed(); public.pf_set_full_name(p_user uuid, p_full_name text); '),
-                          'прораб-посетитель: без ошибки прошли только свои (не демо) функции: ' || bad);
+  res := res || pg_temp.t(pg_temp.noop_only(bad), 'прораб-посетитель: без ошибки прошли только свой профиль и пустые вызовы: ' || bad);
 
   -- запись без компании в строке (компанию ставит сервер по заголовку) — сторож видит уже поставленную компанию
   perform pg_temp.as_user(v1, demo);
@@ -355,6 +366,7 @@ begin
   for r in select * from pg_temp.call_all() loop if r.answer = 'OK' then bad := bad || r.fn || '; '; end if; end loop;
   reset role;
   res := res || pg_temp.t(p_before = pg_temp.print(skip), 'ПТО-посетитель: все функции записи — данные не изменились (без ошибки: ' || bad || ')');
+  res := res || pg_temp.t(pg_temp.noop_only(bad), 'ПТО-посетитель: без ошибки — только свой профиль и пустые вызовы: ' || bad);
 
   -- представитель подрядчика: только своя фирма
   perform pg_temp.as_user(v2, demo);
@@ -369,6 +381,7 @@ begin
   for r in select * from pg_temp.write_all(demo) loop if r.answer = 'OK' and r.op = 'insert' then bad := bad || r.tbl || ' insert; '; end if; end loop;
   reset role;
   res := res || pg_temp.t(p_before = pg_temp.print(skip), 'подрядчик-посетитель: функции и прямая запись — данные не изменились (без ошибки: ' || bad || ')');
+  res := res || pg_temp.t(pg_temp.noop_only(bad), 'подрядчик-посетитель: без ошибки — только свой профиль и пустые вызовы: ' || bad);
 
   -- посетители не видят друг друга; их не видно в списках
   perform pg_temp.as_user(v2, demo);
@@ -387,7 +400,15 @@ begin
   res := res || pg_temp.t(pg_temp.padm() and pg_temp.can(demo, pd, f2, 'planfact.fact.create'), 'админ платформы до демо — всё');
   res := res || pg_temp.t((select people from public.pf_platform_companies() where id = demo) = 3, 'число людей демо — без посетителей (3)');
   j := public.pf_demo_enter('foreman');
-  res := res || pg_temp.t(not pg_temp.padm() and not pg_temp.qadm(), 'админ платформы в демо — не администратор');
+  res := res || pg_temp.t(not pg_temp.padm() and not pg_temp.qadm(), 'админ платформы в демо (запрос к демо) — не администратор');
+  perform pg_temp.as_user(padm);
+  res := res || pg_temp.t(pg_temp.padm() and pg_temp.msg('select public.pf_platform_companies()') = 'OK',
+                          'админ платформы в демо, запрос без компании (другое устройство) — администратор как раньше');
+  str := pg_temp.msg(format('insert into storage.objects (bucket_id, name, owner) values (%L, %L, auth.uid())', 'quality-inspection-photos', demo || '/p/x.png'));
+  res := res || pg_temp.t(str like '42501%', 'админ платформы в демо, файл без заголовка в папку демо — отказ правилом Storage (' || str || ')');
+  perform pg_temp.as_user(padm, cx);
+  res := res || pg_temp.t(pg_temp.padm() and pg_temp.can(cx, null, null, 'security.roles.assign'), 'админ платформы в демо, запрос к другой компании — администратор как раньше');
+  perform pg_temp.as_user(padm, demo);
   res := res || pg_temp.t(f1 = any (pg_temp.area(pd)) and not pg_temp.can(demo, pd, f2, 'planfact.fact.view'), 'админ платформы в демо — глазами прораба');
   res := res || pg_temp.t(pg_temp.msg('select public.pf_platform_companies()') like '42501%', 'админ платформы в демо — экран администрирования закрыт');
   res := res || pg_temp.t((select count(*) from jsonb_array_elements(public.pf_my_platform() -> 'companies')) = 1, 'админ платформы в демо — компании: только демо');
@@ -399,6 +420,7 @@ begin
   for r in select * from pg_temp.write_all(demo) loop if r.answer = 'OK' and r.op = 'insert' then bad := bad || r.tbl || ' insert; '; end if; end loop;
   reset role;
   res := res || pg_temp.t(p_before = pg_temp.print(skip), 'админ платформы в демо: функции и прямая запись — данные не изменились (без ошибки: ' || bad || ')');
+  res := res || pg_temp.t(pg_temp.noop_only(bad), 'админ платформы в демо: без ошибки — только свой профиль и пустые вызовы: ' || bad);
   perform pg_temp.as_user(padm, demo);
   res := res || pg_temp.t(public.pf_demo_leave(), 'админ платформы — вышел');
   res := res || pg_temp.t(pg_temp.padm() and (select count(*) from public.pf_platform_companies()) >= 3, 'после выхода — снова администратор платформы');
@@ -429,6 +451,18 @@ begin
                             from jsonb_object_keys(j) k where (c_before ->> k) is distinct from (j ->> k)), '') || ')');
   perform pg_temp.as_user(xadm);
   res := res || pg_temp.t(who_before = (select string_agg(x::text, ';' order by x::text) from public.pf_list_company_members(cx) x), 'сотрудники X до = после');
+  perform pg_temp.as_user(padm);
+  res := res || pg_temp.t(admin_before = (select string_agg(x::text, ';' order by x.id) from public.pf_platform_companies() x where x.id <> demo),
+                          'выборка администратора платформы по не-демо компаниям до = после');
+  reset role;
+
+  -- запись не посетителей проходит: учётка демо-компании (ПТО) — в демо, сотрудник другой компании — у себя
+  perform pg_temp.as_user(dpto, demo);
+  str := pg_temp.msg(format('select public.pf_estimate_update(%L, %L, 2000)', est, 'Смета демо'));
+  res := res || pg_temp.t(str = 'OK', 'учётка демо-компании (zd-…) пишет в демо (' || str || ')');
+  perform pg_temp.as_user(xadm, cx);
+  str := pg_temp.msg(format('select public.pf_save_division(%L, %L, %L, null, false)', cx, gen_random_uuid(), 'Дирекция X'));
+  res := res || pg_temp.t(str = 'OK', 'сотрудник другой компании пишет у себя (' || str || ')');
   reset role;
 
   -- запись в своей компании из демо — как обычно (после сверки «до = после»)
@@ -436,6 +470,11 @@ begin
   perform public.pf_demo_enter('foreman');
   str := pg_temp.msg(format('select public.pf_create_project(%L, %L)', cx, 'Свой объект 057'));
   res := res || pg_temp.t(str = 'OK', 'посетитель в демо пишет в свою компанию (' || str || ')');
+  -- файлы: в папку демо-компании — отказ, в папку своей компании — как обычно
+  str := pg_temp.msg(format('insert into storage.objects (bucket_id, name, owner) values (%L, %L, auth.uid())', 'core-place-plans', demo || '/' || pd || '/' || f1 || '/' || gen_random_uuid() || '.pdf'));
+  res := res || pg_temp.t(str like '42501%', 'посетитель: файл в папку демо-компании — отказ (' || str || ')');
+  str := pg_temp.msg(format('insert into storage.objects (bucket_id, name, owner) values (%L, %L, auth.uid())', 'quality-inspection-photos', cx || '/p/photo.png'));
+  res := res || pg_temp.t(str = 'OK', 'посетитель: файл в папку своей компании — как обычно (' || str || ')');
   reset role;
 
   raise exception E'ОТЧЁТ (откат):\n%FAIL всего: %', res, (select count(*) from regexp_matches(res, 'FAIL', 'g')) using errcode = 'P0001';

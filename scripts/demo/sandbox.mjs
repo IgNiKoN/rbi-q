@@ -60,16 +60,22 @@ export async function runSandbox({ url, anonKey, admin, name, key, domain = 'san
     out.push({ ...u, email, password: row.temp_password });
   }
   await c.auth.signOut();
-  // вход каждой учёткой временным паролем (пароль не меняется — это сделает клиент при первом входе)
+  log(`песочница «${name}»: компания создана, модулей ${Object.values(MODULES).filter(Boolean).length}, учёток ${out.length}`);
+  return { company, accounts: out, verify: () => verifySignIn(createClient, url, anonKey, out, log) };
+}
+
+/** Вход каждой учёткой временным паролем (пароль не меняется — это сделает клиент при первом входе). Вызывать ПОСЛЕ записи
+ *  файла доступов: при сбое пароли не теряются. */
+async function verifySignIn(createClient, url, anonKey, out, log) {
   let signed = 0;
   for (const a of out) {
     const u = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const r = await u.auth.signInWithPassword({ email: a.email, password: a.password });
     if (!r.error) { signed++; await u.auth.signOut().catch(() => {}); }
   }
-  log(`песочница «${name}»: компания создана, модулей ${Object.values(MODULES).filter(Boolean).length}, учёток ${out.length}, вход проверен у ${signed}`);
-  if (signed !== out.length) throw new Error(`вход не прошёл у ${out.length - signed} учёток — разобраться до передачи клиенту`);
-  return { company, accounts: out };
+  log(`вход проверен у ${signed} из ${out.length}`);
+  if (signed !== out.length) throw new Error(`вход не прошёл у ${out.length - signed} учёток — разобраться до передачи клиенту (файл доступов записан)`);
+  return signed;
 }
 
 /** Файл доступов владельцу (вне git): адрес, «до передачи клиенту», таблица учёток, как войти и что дальше. */
@@ -115,6 +121,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const r = await runSandbox({ url: env.P2_SUPABASE_URL, anonKey: env.P2_SUPABASE_ANON_KEY, admin: { email: env.P2_PLATFORM_ADMIN_EMAIL, password: env.P2_PLATFORM_ADMIN_PASSWORD },
       name, key, domain: opt('--domain', 'sandbox.rbi-q.ru') });
     writeFileSync(outFile, accessFile({ name, accounts: r.accounts }), { mode: 0o600 });
+    await r.verify();
     console.log(`Готово: учёток ${r.accounts.length}; логины и временные пароли — в файле доступов (в консоль не выводятся).`);
     process.exit(0);
   } catch (e) {

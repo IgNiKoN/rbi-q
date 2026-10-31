@@ -17867,10 +17867,26 @@ async function uu(t) {
   }), o = await Promise.race([t.getSession().catch(() => null), i]);
   return clearTimeout(s), typeof o == "string" ? { email: o, offline: !1, issuedAt: r } : t.stillStored() ? { email: e.email, offline: !0, issuedAt: r } : { email: null, offline: !1, issuedAt: null };
 }
-const hn = "__platform2SupabaseClient", fn = globalThis;
-function du(t) {
+function du() {
+  var e, r, n;
+  const t = globalThis;
+  try {
+    const s = (n = (r = (e = t.RBI) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r), i = s && s.mode === "email" ? (s.companies || []).find((o) => o.id === s.companyId) : null;
+    return i && i.is_demo ? i.id : null;
+  } catch {
+    return null;
+  }
+}
+const hu = (t, e) => {
+  const r = du();
+  if (!r) return fetch(t, e);
+  const n = new Headers(e && e.headers ? e.headers : t instanceof Request ? t.headers : void 0);
+  return n.has("x-company-id") || n.set("x-company-id", r), fetch(t, { ...e || {}, headers: n });
+}, hn = "__platform2SupabaseClient", fn = globalThis;
+function fu(t) {
   const e = fn[hn] || (fn[hn] = io(t.url, t.anonKey, {
-    auth: { storageKey: ao, persistSession: !0, autoRefreshToken: !0, detectSessionInUrl: !1 }
+    auth: { storageKey: ao, persistSession: !0, autoRefreshToken: !0, detectSessionInUrl: !1 },
+    global: { fetch: hu }
   }));
   return {
     async signIn(r, n) {
@@ -17934,7 +17950,7 @@ function ct() {
   return fn[hn] || null;
 }
 const Se = "platform2_quality_company", Ht = "platform2_quality_state_", Ws = "platform2_quality_project_", lo = "platform2_quality_access_", Xt = "platform2_quality_names_";
-function hu(t, e) {
+function pu(t, e) {
   try {
     const r = JSON.parse(t.getItem(Xt + e) || "[]");
     return Array.isArray(r) ? r.map(String).filter(Boolean).slice(-10) : [];
@@ -17943,7 +17959,7 @@ function hu(t, e) {
   }
 }
 function Ks(t, e, r) {
-  const n = hu(t, e), s = (r || "").trim(), i = (t.getItem(Xt + e + ":now") || "").trim();
+  const n = pu(t, e), s = (r || "").trim(), i = (t.getItem(Xt + e + ":now") || "").trim();
   i && i !== s && !n.includes(i) && n.push(i);
   const o = n.filter((a) => a !== s).slice(-10);
   try {
@@ -17967,7 +17983,7 @@ const pn = [
   "rbi_last_bg_cache_at",
   "rbi_settings_backup"
 ];
-function fu(t) {
+function mu(t) {
   if (t.mode !== "email" || !t.companyId) return null;
   const e = t.companies.find((r) => r.id === t.companyId);
   return e && (e.modules.includes("quality") || e.modules.includes("construction")) ? e.id : null;
@@ -17982,7 +17998,7 @@ function xe(t) {
   };
   return r(2166136261) + r(791551244);
 }
-function pu(t, e, r = "") {
+function gu(t, e, r = "") {
   const n = t.getItem(Se) || "", s = n && t.getItem(vt) || "", i = e || "", o = i ? r : "";
   if (n === i && s === o) return !1;
   const a = !!n && !s && n === i && !!o;
@@ -18007,7 +18023,7 @@ function pu(t, e, r = "") {
   for (const d of pn) typeof u[d] == "string" && t.setItem(d, u[d]);
   return t.removeItem(Ht + l(i, o)), i ? t.setItem(Se, i) : t.removeItem(Se), o ? t.setItem(vt, o) : t.removeItem(vt), !0;
 }
-function mu(t) {
+function yu(t) {
   const e = (r) => t.includes(r);
   return e("quality.manage") || e("construction.manage") ? "manager" : e("quality.scope.contractor") ? "contractor" : e("quality.edit") ? "engineer" : e("quality.view") || e("construction.view") || e("construction.edit") ? "director" : "guest";
 }
@@ -18026,10 +18042,10 @@ function $r(t) {
     // P2-0035 (039b): служебный объект-контейнер компании (как «Объекты RBI») — Качество работает в нём
     container: typeof e.container == "string" && e.container ? e.container : null,
     construction: co(e.construction),
-    quality: gu(e.quality)
+    quality: _u(e.quality)
   };
 }
-function gu(t) {
+function _u(t) {
   const e = co(t);
   if (!e) return null;
   const r = t, n = {};
@@ -18076,19 +18092,19 @@ function Vs(t, e) {
     Object.defineProperty(t, r, { configurable: !0, enumerable: !0, get: () => n, set: () => {
     } });
 }
-const yu = 15e3, _u = (t, e) => {
+const wu = 15e3, vu = (t, e) => {
   var n;
   const r = (n = globalThis.RbiSyncNet) == null ? void 0 : n.fetch;
   return r ? r(t, e) : fetch(t, e);
 };
-function wu(t, e, r, n) {
+function bu(t, e, r, n) {
   const s = t(e.url, e.anonKey, {
     // P2-0059 доработка (З2): пропуск — не дольше 15 с (обновление входа на слабой сети), иначе запрос — «нет ответа», а не «без входа»
     accessToken: async () => {
       var l;
       let o;
       const a = new Promise((c, u) => {
-        o = setTimeout(() => u(Object.assign(new Error("Нет ответа сервера (вход) за 15 с"), { code: "RBI_REQUEST_TIMEOUT" })), yu);
+        o = setTimeout(() => u(Object.assign(new Error("Нет ответа сервера (вход) за 15 с"), { code: "RBI_REQUEST_TIMEOUT" })), wu);
       });
       try {
         return ((l = (await Promise.race([n.auth.getSession(), a])).data.session) == null ? void 0 : l.access_token) ?? null;
@@ -18097,15 +18113,15 @@ function wu(t, e, r, n) {
       }
     },
     db: { schema: "quality" },
-    global: { headers: { "x-company-id": r }, fetch: _u }
-  }), i = xu(s.storage, r);
+    global: { headers: { "x-company-id": r }, fetch: vu }
+  }), i = Au(s.storage, r);
   return new Proxy(s, {
     get(o, a, l) {
-      return a === "auth" ? n.auth : a === "storage" ? i : a === "from" ? (c) => bu(o.from(c)) : Reflect.get(o, a, l);
+      return a === "auth" ? n.auth : a === "storage" ? i : a === "from" ? (c) => Su(o.from(c)) : Reflect.get(o, a, l);
     }
   });
 }
-function vu(t) {
+function ku(t) {
   if (!t) return t;
   const e = t.split(",").map((r) => r.trim()).filter(Boolean);
   return (e.includes("core_company_id") ? e : ["core_company_id", ...e]).join(",");
@@ -18130,22 +18146,22 @@ function mn(t) {
   for (const n of Gs) delete r[n];
   return r;
 }
-function bu(t) {
+function Su(t) {
   return new Proxy(t, {
     get(e, r, n) {
       const s = Reflect.get(e, r, n);
-      return typeof s != "function" ? s : r === "upsert" ? (i, o) => s.call(e, mn(i), o != null && o.onConflict ? { ...o, onConflict: vu(o.onConflict) } : o) : r === "insert" || r === "update" ? (i, ...o) => s.call(e, mn(i), ...o) : s;
+      return typeof s != "function" ? s : r === "upsert" ? (i, o) => s.call(e, mn(i), o != null && o.onConflict ? { ...o, onConflict: ku(o.onConflict) } : o) : r === "insert" || r === "update" ? (i, ...o) => s.call(e, mn(i), ...o) : s;
     }
   });
 }
-function ku(t) {
+function xu(t) {
   return t.startsWith("quality-") ? t : "quality-" + t;
 }
 function Lr(t, e) {
   const r = String(e || "").replace(/^\/+/, "");
   return r === t || r.startsWith(t + "/") ? r : t + "/" + r;
 }
-const Su = {
+const Eu = {
   upload: "first",
   update: "first",
   download: "first",
@@ -18161,13 +18177,13 @@ const Su = {
   remove: "list",
   createSignedUrls: "list"
 };
-function xu(t, e) {
+function Au(t, e) {
   return {
     from(r) {
-      const n = t.from(ku(r));
+      const n = t.from(xu(r));
       return new Proxy(n, {
         get(s, i, o) {
-          const a = Reflect.get(s, i, o), l = typeof i == "string" ? Su[i] : void 0;
+          const a = Reflect.get(s, i, o), l = typeof i == "string" ? Eu[i] : void 0;
           return typeof a != "function" || !l ? typeof a == "function" ? a.bind(s) : a : (...c) => {
             const u = c.slice();
             return l === "list" ? u[0] = Array.isArray(u[0]) ? u[0].map((d) => Lr(e, d)) : u[0] : (u[0] = Lr(e, u[0] ?? ""), l === "two" && (u[1] = Lr(e, u[1]))), a.apply(s, u);
@@ -18177,9 +18193,9 @@ function xu(t, e) {
     }
   };
 }
-const Eu = "rbi:quality-access";
+const Tu = "rbi:quality-access";
 let Js = !1;
-function Au(t) {
+function Ru(t) {
   const e = t.serviceWorker, r = t.platformClient;
   if (!e || !r || Js) return;
   Js = !0;
@@ -18196,13 +18212,13 @@ function Au(t) {
   }), n();
 }
 const Dr = /* @__PURE__ */ new WeakMap();
-async function Tu(t, e) {
+async function Cu(t, e) {
   var A;
   if (t.mode === "none" && !e.store.getItem(Se)) return null;
-  const r = fu(t), n = r && t.email ? xe(t.email) : "", s = !!t.offline || !!t.checking;
+  const r = mu(t), n = r && t.email ? xe(t.email) : "", s = !!t.offline || !!t.checking;
   if (s && (r || "") + ":" + n != (e.store.getItem(Se) || "") + ":" + (e.store.getItem(vt) || ""))
     return (e.win.RBI || {}).qualitySync || null;
-  if (pu(e.store, r, n))
+  if (gu(e.store, r, n))
     return e.reload(), null;
   const i = e.store.getItem(ur);
   if (i && e.dropDatabase) {
@@ -18224,8 +18240,8 @@ async function Tu(t, e) {
     }
     return a;
   }
-  Au(e);
-  const l = wu(e.createClient, e.cfg, r, e.platformClient);
+  Ru(e);
+  const l = bu(e.createClient, e.cfg, r, e.platformClient);
   e.win.supabaseClient = l;
   const c = lo + r + ":" + n;
   let u = { access: {}, projects: null };
@@ -18251,7 +18267,7 @@ async function Tu(t, e) {
     const { data: L, error: j } = await O;
     return $r(j ? x in u.access ? u.access[x] : null : L);
   }, f = await h(null), m = f.projects, g = t.companies.find((v) => v.id === r), y = () => e.listProjects(r).then((v) => (u.projects = v, d(), v), () => u.projects || []), _ = !f.container && !!t.checking && !!u.projects, w = f.container ? null : t.offline || _ ? u.projects || [] : await y(), S = f.container ? [{ id: f.container, name: g ? g.name : "" }] : (w || []).filter((v) => m === null || m.includes(v.id)), C = e.store.getItem(Ws + r), b = f.container ? f.container : S.some((v) => v.id === C) ? C : S.length === 1 ? S[0].id : null, T = t.email, I = (t.fullName || "").trim() || T, $ = (v) => {
-    P.actions = v.actions, P.objects = v.objects, P.contractorKeys = v.contractorKeys, P.construction = v.construction, P.quality = v.quality, P.role = mu(v.actions);
+    P.actions = v.actions, P.objects = v.objects, P.contractorKeys = v.contractorKeys, P.construction = v.construction, P.quality = v.quality, P.role = yu(v.actions);
     const x = v.objects || [];
     e.win.appSettings && Vs(e.win.appSettings, {
       userRole: P.role,
@@ -18266,7 +18282,7 @@ async function Tu(t, e) {
     const O = e.win.syncConfig;
     O && (P.role === "manager" || P.role === "director") && O.syncMode !== "full" && (O.syncMode = "full", e.store.setItem("rbi_sync_config", JSON.stringify(O)));
     const L = e.win.dispatchEvent;
-    typeof L == "function" && L.call(e.win, new Event(Eu));
+    typeof L == "function" && L.call(e.win, new Event(Tu));
   }, W = (v) => {
     const x = e.win.syncConfig = e.win.syncConfig || {};
     x.enabled = !!v, x.engineerName = I, x.authUserId = t.userId || null, x.previousNames = P.names || [], x.projectCode = v || "", x.pinHash = null, x.syncMode || (x.syncMode = "personal"), e.store.setItem("rbi_sync_config", JSON.stringify(x));
@@ -18291,8 +18307,8 @@ async function Tu(t, e) {
     P.projects = v.filter((x) => m === null || m.includes(x.id));
   })), W(b), $(await h(b)), e.win.initSync && await e.win.initSync(), e.win.renderSyncUI && e.win.renderSyncUI(), P;
 }
-const gn = (t) => ({ id: t.id, module: t.module, project: t.project, bytes: t.bytes || 0 }), Ru = (t, e, r) => t + "|" + e + "|" + r;
-function Cu() {
+const gn = (t) => ({ id: t.id, module: t.module, project: t.project, bytes: t.bytes || 0 }), Ou = (t, e, r) => t + "|" + e + "|" + r;
+function Iu() {
   const t = /* @__PURE__ */ new Map();
   return {
     size: () => t.size,
@@ -18313,8 +18329,8 @@ function Cu() {
     }
   };
 }
-const Ou = "platform2_offline_copy", Iu = 30 * 6e4, Ur = "reads";
-function ju(t) {
+const ju = "platform2_offline_copy", Pu = 30 * 6e4, Ur = "reads";
+function Nu(t) {
   let e = null;
   const r = /* @__PURE__ */ new Map(), n = /* @__PURE__ */ new Map(), s = (c, u, d) => {
     const p = r.get(c);
@@ -18322,7 +18338,7 @@ function ju(t) {
       d ? h.set(u, d) : h.delete(u);
     });
   }, i = (c) => c.slice(0, c.indexOf("|")), o = () => e || (e = new Promise((c, u) => {
-    const d = t.open(Ou, 1);
+    const d = t.open(ju, 1);
     d.onupgradeneeded = () => {
       d.result.createObjectStore(Ur, { keyPath: "id" }).createIndex("slot", "slot", { unique: !1 });
     }, d.onsuccess = () => c(d.result), d.onerror = () => {
@@ -18367,7 +18383,7 @@ function ju(t) {
       let d = r.get(c);
       if (d) {
         const [h, f] = await Promise.all([d, a("readonly", (m) => m.index("slot").count(c)).catch(() => -1)]);
-        (f >= 0 && f !== h.size || Date.now() - (n.get(c) || 0) > Iu) && (d = void 0);
+        (f >= 0 && f !== h.size || Date.now() - (n.get(c) || 0) > Pu) && (d = void 0);
       }
       d || (d = l(c).then((h) => new Map(h.map((f) => [f.id, gn(f)]))), r.set(c, d), n.set(c, Date.now()));
       const p = [...(await d).values()];
@@ -18375,16 +18391,16 @@ function ju(t) {
     }
   };
 }
-const Ys = "Нужен интернет для этого экрана", Xs = "Нет связи с сервером. Попробуйте позже", Pu = "Нужен интернет", Nu = 14, $u = 8e3, Lu = 6e4, Du = 24 * 3600 * 1e3;
+const Ys = "Нужен интернет для этого экрана", Xs = "Нет связи с сервером. Попробуйте позже", $u = "Нужен интернет", Lu = 14, Du = 8e3, Uu = 6e4, Bu = 24 * 3600 * 1e3;
 function uo(t) {
   const e = t && t.offline;
   return !e || typeof e != "object" ? null : { view: e.view === !0, input: Array.isArray(e.input) ? e.input.map(String) : [], files: e.files === !0 };
 }
-function Uu(t, e, r) {
+function qu(t, e, r) {
   return r && !(t && (t.input.includes("*") || t.input.includes(e)));
 }
-const Qs = (t, e) => e - Date.parse(t) > Nu * Du, Br = Symbol("timeout"), Bu = /нет права|нет доступа/i;
-function qu(t) {
+const Qs = (t, e) => e - Date.parse(t) > Lu * Bu, Br = Symbol("timeout"), Mu = /нет права|нет доступа/i;
+function Fu(t) {
   const e = () => t.now ? t.now() : Date.now();
   let r = 0;
   const n = /* @__PURE__ */ new Map(), s = /* @__PURE__ */ new Map(), i = (u, d, p) => {
@@ -18417,7 +18433,7 @@ function qu(t) {
         const C = await p();
         return C.ok ? { ok: !0, value: C.value, meta: null } : C;
       }
-      const m = Ru(f, u, d);
+      const m = Ou(f, u, d);
       if (h.allowed === !1) {
         if (await t.store.delete(m), t.offline()) return { ok: !1, message: Ys, offline: !0 };
         const C = await p();
@@ -18428,12 +18444,12 @@ function qu(t) {
       const y = await Promise.race([
         p().catch(() => ({ ok: !1, message: Xs })),
         new Promise((C) => {
-          g = setTimeout(() => C(Br), t.waitMs ?? $u);
+          g = setTimeout(() => C(Br), t.waitMs ?? Du);
         })
       ]);
-      if (clearTimeout(g), y === Br && (r = e() + Lu), y === Br || !y.ok && y.message === Xs) return c(u, d, m, h.quiet);
+      if (clearTimeout(g), y === Br && (r = e() + Uu), y === Br || !y.ok && y.message === Xs) return c(u, d, m, h.quiet);
       if (r = 0, !y.ok)
-        return Bu.test(y.message) && (await t.store.delete(m), l(u, d, null)), y;
+        return Mu.test(y.message) && (await t.store.delete(m), l(u, d, null)), y;
       const _ = new Date(e()).toISOString();
       let w = 0;
       try {
@@ -18491,26 +18507,26 @@ const Un = ["mine30", "all30", "all", "none"], ho = {
   all30: "Все за 30 дней",
   all: "Все",
   none: "Не скачивать заранее"
-}, fo = /* @__PURE__ */ new Set(["engineer", "contractor"]), Mu = 30, Fu = 24 * 3600 * 1e3;
+}, fo = /* @__PURE__ */ new Set(["engineer", "contractor"]), Hu = 30, zu = 24 * 3600 * 1e3;
 function yn(t) {
   return fo.has(t) ? "mine30" : "none";
 }
 function _n(t) {
   return fo.has(t) ? "all" : "none";
 }
-function Hu(t, e) {
+function Wu(t, e) {
   return Un.includes(t) ? t : yn(e);
 }
 const qr = (t) => {
   const e = Date.parse(String(t.date || ""));
   return Number.isFinite(e) ? e : 0;
-}, zu = (t) => String(t.project_canonical_key || t.project || t.object || t.projectCode || "");
-function Wu(t, e, r, n = Mu) {
-  const s = /* @__PURE__ */ new Map(), i = r - n * Fu, o = t.filter((l) => l && e(l));
+}, Ku = (t) => String(t.project_canonical_key || t.project || t.object || t.projectCode || "");
+function Vu(t, e, r, n = Hu) {
+  const s = /* @__PURE__ */ new Map(), i = r - n * zu, o = t.filter((l) => l && e(l));
   for (const l of o) qr(l) >= i && s.set(l.id, "all");
   const a = /* @__PURE__ */ new Map();
   for (const l of o) {
-    const c = zu(l) + "|" + String(l.template || "");
+    const c = Ku(l) + "|" + String(l.template || "");
     a.has(c) || a.set(c, []), a.get(c).push(l);
   }
   for (const l of a.values()) {
@@ -18537,7 +18553,7 @@ function qn() {
   return !!t && t.mode === "email" && (!!t.offline || typeof navigator < "u" && navigator.onLine === !1);
 }
 const zt = "__platform2OfflineReader";
-function Ku(t) {
+function Gu(t) {
   if (typeof window > "u") return;
   const e = window;
   (e.RBI = e.RBI || {}).offlineCopy = t;
@@ -18545,45 +18561,45 @@ function Ku(t) {
 function Sr() {
   const t = globalThis;
   if (!t[zt]) {
-    const e = typeof indexedDB < "u" ? ju(indexedDB) : Cu();
-    t[zt] = qu({ store: e, slot: me, offline: qn }), Ku(t[zt]);
+    const e = typeof indexedDB < "u" ? Nu(indexedDB) : Iu();
+    t[zt] = Fu({ store: e, slot: me, offline: qn }), Gu(t[zt]);
   }
   return t[zt];
 }
-function Vu(t, e, r, n) {
+function Ju(t, e, r, n) {
   return Sr().read(t, e, r, n);
 }
-function Gu(t) {
+function Yu(t) {
   var r;
   const e = (r = Bn()) == null ? void 0 : r.moduleLoader;
   return uo(e && typeof e.getById == "function" ? e.getById(t) : null);
 }
-const Ju = /* @__PURE__ */ new Set(["pf_my_permissions", "pf_my_area", "pf_my_admin_companies", "pf_permission_catalog", "pf_my_context"]), wn = /* @__PURE__ */ new Map(), Yu = /* @__PURE__ */ new Map(), vn = /* @__PURE__ */ new Set(), Xu = ["p_import", "p_position", "p_location", "p_act", "p_revision", "p_estimate", "p_object", "p_parent"], Qu = ["id", "import_id", "position_id", "location_id", "act_id", "estimate_id", "revision_id"];
-function Zu(t) {
+const Xu = /* @__PURE__ */ new Set(["pf_my_permissions", "pf_my_area", "pf_my_admin_companies", "pf_permission_catalog", "pf_my_context"]), wn = /* @__PURE__ */ new Map(), Qu = /* @__PURE__ */ new Map(), vn = /* @__PURE__ */ new Set(), Zu = ["p_import", "p_position", "p_location", "p_act", "p_revision", "p_estimate", "p_object", "p_parent"], ed = ["id", "import_id", "position_id", "location_id", "act_id", "estimate_id", "revision_id"];
+function td(t) {
   const e = t || {};
   if (typeof e.p_project == "string") return e.p_project;
-  for (const r of Xu) {
+  for (const r of Zu) {
     const n = e[r];
     if (typeof n == "string" && wn.has(n)) return wn.get(n);
   }
   return null;
 }
-function ed(t, e) {
+function rd(t, e) {
   for (const r of Array.isArray(e) ? e : [e]) {
     if (!r || typeof r != "object") continue;
     const n = r;
-    if (typeof n.id == "string" && typeof n.path == "string" && typeof n.node_type == "string" && (Yu.set(n.id, n.path), Number(n.child_count) === 0 ? vn.add(n.id) : vn.delete(n.id)), t) for (const s of Qu) {
+    if (typeof n.id == "string" && typeof n.path == "string" && typeof n.node_type == "string" && (Qu.set(n.id, n.path), Number(n.child_count) === 0 ? vn.add(n.id) : vn.delete(n.id)), t) for (const s of ed) {
       const i = n[s];
       typeof i == "string" && wn.set(i, t);
     }
   }
 }
-const td = (t) => JSON.stringify(t, (e, r) => r && typeof r == "object" && !Array.isArray(r) ? Object.fromEntries(Object.keys(r).sort().map((n) => [n, r[n]])) : r);
+const nd = (t) => JSON.stringify(t, (e, r) => r && typeof r == "object" && !Array.isArray(r) ? Object.fromEntries(Object.keys(r).sort().map((n) => [n, r[n]])) : r);
 async function Zs(t, e, r, n, s, i, o) {
-  if (!e.has(r)) return qn() ? { ok: !1, message: Pu } : s();
-  const a = Zu(n), l = Ju.has(r) || !!(i && i.has(r)), c = r + ":" + td(n || {}), u = await Vu(t, c, s, { project: a, quiet: l });
+  if (!e.has(r)) return qn() ? { ok: !1, message: $u } : s();
+  const a = td(n), l = Xu.has(r) || !!(i && i.has(r)), c = r + ":" + nd(n || {}), u = await Ju(t, c, s, { project: a, quiet: l });
   if (u.ok)
-    return ed(a, u.value), u;
+    return rd(a, u.value), u;
   if (u.offline && o) {
     const d = await o();
     if (d && d.ok)
@@ -18591,10 +18607,10 @@ async function Zs(t, e, r, n, s, i, o) {
   }
   return u;
 }
-function rd(t) {
+function sd(t) {
   return vn.has(t);
 }
-const bn = "platform2_offline_keep:", nd = "platform2_offline_prefetch:", po = () => {
+const bn = "platform2_offline_keep:", id = "platform2_offline_prefetch:", po = () => {
   try {
     return typeof localStorage > "u" ? null : localStorage;
   } catch {
@@ -18619,22 +18635,22 @@ function Mn(t) {
   const e = me();
   if (!e) return !1;
   const r = ut(bn + e, {})[t];
-  return typeof r == "boolean" ? r : !!((n = Gu(t)) != null && n.view);
+  return typeof r == "boolean" ? r : !!((n = Yu(t)) != null && n.view);
 }
 function ei(t, e) {
   const r = me();
   r && mo(bn + r, { ...ut(bn + r, {}), [t]: e });
 }
-function sd(t) {
+function od(t) {
   const e = me();
-  return e && ut(nd + e, {})[t] || null;
+  return e && ut(id + e, {})[t] || null;
 }
 const hr = "platform2_offline_files:";
 function kn(t = "quality") {
   const e = me(), r = e ? ut(hr + e, {})[t] : void 0;
   return Un.includes(r) ? r : null;
 }
-function id(t, e) {
+function ad(t, e) {
   const r = me();
   if (!r) return;
   const n = ut(hr + r, {});
@@ -18645,37 +18661,37 @@ function Fn() {
   return t && t.qualitySync && t.qualitySync.role || "guest";
 }
 function Sn() {
-  return Mn("quality") ? Hu(kn("quality"), Fn()) : "none";
+  return Mn("quality") ? Wu(kn("quality"), Fn()) : "none";
 }
 function go() {
   if (!Mn("knowledge")) return "none";
   const t = me(), e = t ? ut(hr + t, {}).knowledge : void 0;
   return e === "all" || e === "none" ? e : _n(Fn());
 }
-function od(t) {
+function ld(t) {
   var n, s;
   const e = typeof window > "u" || (s = (n = window.RBI) == null ? void 0 : n.services) == null ? void 0 : s.permissions, r = e && typeof e.getAssignedProjects == "function" ? e.getAssignedProjects() || [] : [];
   return !r.length || !!(e && typeof e.isRecordInAssignedProjects == "function" && e.isRecordInAssignedProjects(t, r));
 }
-function ad() {
+function cd() {
   if (typeof window > "u") return;
   const t = window;
-  (t.RBI = t.RBI || {}).offlineFiles = { scope: Sn, docs: go, select: (e) => Wu(e, od, Date.now()) };
+  (t.RBI = t.RBI || {}).offlineFiles = { scope: Sn, docs: go, select: (e) => Vu(e, ld, Date.now()) };
 }
-ad();
+cd();
 function ti(t) {
   const e = t && t.message || "";
   return /[А-Яа-яЁё]/.test(e) ? e : /cannot assign a role to yourself/i.test(e) ? "Нельзя назначить роль самому себе" : /failed to fetch|network|load failed/i.test(e) ? "Нет связи с сервером. Попробуйте позже" : t && t.code === "42501" || /forbidden|permission denied/i.test(e) ? "Нет права на это действие" : "Не удалось выполнить. Попробуйте ещё раз";
 }
-const ld = "core-place-plans", cd = 50 * 1024 * 1024;
-function ud(t) {
+const ud = "core-place-plans", dd = 50 * 1024 * 1024;
+function hd(t) {
   const e = String(t.name || "");
-  return t.type === "application/pdf" || /\.pdf$/i.test(e) ? t.size ? t.size > cd ? { ok: !1, message: `«${e}» больше 50 МБ — уменьшите PDF.` } : { ok: !0 } : { ok: !1, message: `«${e}» — пустой файл.` } : { ok: !1, message: `«${e || "файл"}» — не PDF. План загружается файлом PDF.` };
+  return t.type === "application/pdf" || /\.pdf$/i.test(e) ? t.size ? t.size > dd ? { ok: !1, message: `«${e}» больше 50 МБ — уменьшите PDF.` } : { ok: !0 } : { ok: !1, message: `«${e}» — пустой файл.` } : { ok: !1, message: `«${e || "файл"}» — не PDF. План загружается файлом PDF.` };
 }
-function dd(t, e, r, n) {
+function fd(t, e, r, n) {
   return `${t}/${e}/${r}/${n}.pdf`;
 }
-async function hd(t, e, r) {
+async function pd(t, e, r) {
   var s;
   const n = ct();
   if (!n) return { ok: !1, message: "Нет входа" };
@@ -18695,14 +18711,14 @@ function Mr(t) {
   const e = t || {}, r = (n) => typeof e[n] == "string" && e[n] ? String(e[n]) : null;
   return { id: r("id"), versionNo: typeof e.version_no == "number" ? e.version_no : null, previousId: r("previous") };
 }
-function fd() {
+function md() {
   const t = globalThis.crypto;
   return t && t.randomUUID ? t.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (e) => {
     const r = Math.random() * 16 | 0;
     return (e === "x" ? r : r & 3 | 8).toString(16);
   });
 }
-function pd(t) {
+function gd(t) {
   const e = t.created || {}, r = (s) => typeof s == "number" ? s : Number(s) || 0, n = (s) => Array.isArray(s) ? s : [];
   return {
     ok: t.ok === !0,
@@ -18715,7 +18731,7 @@ function pd(t) {
     roots: n(t.roots)
   };
 }
-function md() {
+function yd() {
   const t = ct();
   if (!t) return null;
   async function e(s, i) {
@@ -18745,7 +18761,7 @@ function md() {
         { p_project: s, p_parent: i },
         () => n("pf_list_locations", { p_project: s, p_parent: i }),
         ni,
-        i ? async () => rd(i) ? { ok: !0, value: [] } : null : void 0
+        i ? async () => sd(i) ? { ok: !0, value: [] } : null : void 0
       );
       return o.ok && Array.isArray(o.value) ? o.value : [];
     },
@@ -18812,7 +18828,7 @@ function md() {
     nextBuildNo: (s) => r("pf_next_build_no", { p_location: s }),
     importPlaces: async (s, i, o, a) => {
       const l = await r("pf_import_places", { p_project: s, p_batch: i, p_rows: o, p_dry_run: a });
-      return l.ok ? { ok: !0, value: pd(l.value || {}) } : l;
+      return l.ok ? { ok: !0, value: gd(l.value || {}) } : l;
     },
     importUndo: (s) => r("pf_import_undo", { p_batch: s }),
     savePlaceInfo: (s, i, o) => r("pf_save_place_info", { p_location: s, p_area: i, p_rooms: o }),
@@ -18821,9 +18837,9 @@ function md() {
       return i.ok ? { ok: !0, value: Array.isArray(i.value) ? i.value : [] } : i;
     },
     uploadPlacePlan: async (s, i, o) => {
-      const a = ud(i);
+      const a = hd(i);
       if (!a.ok) return a;
-      const l = o || fd(), c = await hd(ld, dd(s.companyId, s.projectId, s.id, l), i);
+      const l = o || md(), c = await pd(ud, fd(s.companyId, s.projectId, s.id, l), i);
       if (!c.ok) return c;
       const u = await r(
         "pf_add_place_plan",
@@ -18855,7 +18871,7 @@ function Hn(t) {
     return !1;
   }
 }
-function gd(t, e) {
+function _d(t, e) {
   try {
     if (!t) return;
     e ? t.setItem(xn, "1") : t.removeItem(xn);
@@ -18868,7 +18884,7 @@ function _o(t, e) {
 function zn(t, e) {
   return t.filter((r) => !_o(r, e));
 }
-const Wt = "platform2_entry", Fr = "platform2_company", En = "platform2_device_access_", yd = 14, _d = 24 * 3600 * 1e3, wd = 5e3, vd = 45e3;
+const Wt = "platform2_entry", Fr = "platform2_company", En = "platform2_device_access_", wd = 14, vd = 24 * 3600 * 1e3, bd = 5e3, kd = 45e3;
 function Qt(t, e) {
   try {
     const r = JSON.parse(Ct(t, En + xe(e)) || "null");
@@ -18885,9 +18901,9 @@ function si(t) {
   return !!t.error && (!t.status || t.status >= 500);
 }
 function vo(t, e) {
-  return t === null || e - t > yd * _d;
+  return t === null || e - t > wd * vd;
 }
-function bd(t, e, r) {
+function Sd(t, e, r) {
   return !!t && !vo(wo(t, e), r);
 }
 const Le = { mode: "none", email: null, isPlatformAdmin: !1, companies: [], companyId: null };
@@ -18928,7 +18944,7 @@ function zr(t) {
     userId: typeof e.user_id == "string" ? e.user_id : null
   };
 }
-function kd(t) {
+function xd(t) {
   const e = t.companies.find((n) => n.id === t.companyId) || null, r = {
     company: t.mode === "email" && t.companies.some((n) => n.can_manage_company),
     platformAdmin: t.mode === "email" && t.isPlatformAdmin
@@ -18936,8 +18952,8 @@ function kd(t) {
   if (t.mode === "email" && e) for (const n of e.modules) r[n] = !0;
   return r;
 }
-const Sd = "rbi_last_module_hash";
-function xd(t, e) {
+const Ed = "rbi_last_module_hash";
+function Ad(t, e) {
   const r = (n) => JSON.stringify([
     n.mode,
     n.email,
@@ -18951,33 +18967,33 @@ function xd(t, e) {
   ]);
   return r(t) !== r(e);
 }
-function Ed(t, e) {
-  return !t || xd(t, e) || !!t.offline && !e.offline;
+function Td(t, e) {
+  return !t || Ad(t, e) || !!t.offline && !e.offline;
 }
 function An(t) {
   const e = String(t || "");
   return /^#\/planfact(\/|$)/.test(e) ? "planfact" : /^#\/quality\/settings(\/|$)/.test(e) ? null : /^#\/quality(\/|$)/.test(e) ? "quality" : /^#\/construction(-v2)?(\/|$)/.test(e) ? "construction" : null;
 }
-function Ad(t, e, r) {
+function Rd(t, e, r) {
   const n = An(r);
   return !!t && !!n && t[n] === !0 && e[n] !== !0;
 }
-const re = "#/welcome", bo = "platform2_welcome_seen_", tt = { quality: "#/quality/audit", construction: "#/construction/defects", planfact: "#/planfact" }, Td = ["quality", "construction", "planfact"];
-function Rd(t) {
+const re = "#/welcome", bo = "platform2_welcome_seen_", tt = { quality: "#/quality/audit", construction: "#/construction/defects", planfact: "#/planfact" }, Cd = ["quality", "construction", "planfact"];
+function Od(t) {
   const e = String(t.lastHash || "");
   if (t.mode === "none") return null;
   if (t.mode !== "email") return (An(e) ? e : "") || tt.quality;
   if (!t.welcomeSeen) return re;
   const r = t.access, n = An(e);
   if (n && r[n] === !0) return e;
-  const s = Td.filter((o) => r[o] === !0);
+  const s = Cd.filter((o) => r[o] === !0);
   if (!s.length) return "#/settings";
   if (s.length === 1) return tt[s[0]];
   if (r.company || r.platformAdmin) return re;
   const i = t.actions || {};
   return r.quality && (i.quality || []).includes("quality.inspections.create") ? tt.quality : r.construction && (i.construction || []).some((o) => !/\.view$/.test(o)) ? tt.construction : r.planfact ? tt.planfact : re;
 }
-function Cd(t, e, r) {
+function Id(t, e, r) {
   var s;
   const n = { quality: /* @__PURE__ */ new Set(), construction: /* @__PURE__ */ new Set() };
   if (e && r)
@@ -18998,7 +19014,7 @@ function ko(t, e) {
 function Tn(t, e) {
   e && Re(t, bo + xe(e), "1");
 }
-function Od(t) {
+function jd(t) {
   let e = { ...Le };
   const r = /* @__PURE__ */ new Set(), n = () => {
     for (const f of r) f(e);
@@ -19025,7 +19041,7 @@ function Od(t) {
       const W = { data: null, error: "timeout", status: 0 }, P = new Promise((x) => {
         $ = setTimeout(() => {
           I == null || I.abort(), x([W, W]);
-        }, t.askLimitMs ?? vd);
+        }, t.askLimitMs ?? kd);
       }), A = Promise.all([g("pf_my_platform", void 0, I == null ? void 0 : I.signal), g("pf_my_profile", void 0, I == null ? void 0 : I.signal)].map((x) => x.catch((O) => ({ data: null, error: O || "network", status: 0 })))), v = { email: f, epoch: y, p: Promise.race([A, P]), stop: () => {
         clearTimeout($), I == null || I.abort();
       } };
@@ -19036,7 +19052,7 @@ function Od(t) {
     const _ = a.p;
     let w;
     const S = { data: null, error: "timeout", status: 0 }, [C, b] = Qt(t.storage, f) ? await Promise.race([_, new Promise((I) => {
-      w = setTimeout(() => I([S, S]), t.serverWaitMs ?? wd);
+      w = setTimeout(() => I([S, S]), t.serverWaitMs ?? bd);
     })]) : await _;
     if (clearTimeout(w), y !== l) return null;
     if (si(C) || si(b)) return o(f, m);
@@ -19057,7 +19073,7 @@ function Od(t) {
     if (!p) {
       p = !0;
       const g = t.storedSession ? t.storedSession() : null, y = g && g.email ? Qt(t.storage, g.email) : null;
-      g && g.email && bd(y, g.issuedAt, s()) && (e = { ...o(g.email, g.issuedAt), offline: !1, checking: !0 }, n());
+      g && g.email && Sd(y, g.issuedAt, s()) && (e = { ...o(g.email, g.issuedAt), offline: !1, checking: !0 }, n());
     }
     const f = l, m = await d();
     if (f !== l) return e;
@@ -19103,7 +19119,7 @@ function Od(t) {
       e.mode !== "email" || !e.companies.some((m) => m.id === f) || e.companyId === f || (Re(t.storage, Fr, f), e = { ...e, companyId: f }, n());
     },
     getState: () => e,
-    access: () => kd(e),
+    access: () => xd(e),
     subscribe(f) {
       return r.add(f), () => {
         r.delete(f);
@@ -19111,22 +19127,22 @@ function Od(t) {
     }
   };
 }
-const Id = "#/settings/company", jd = "#/settings/my/help", oe = "p2-welcome-on", Pd = ["quality", "construction", "planfact", "company"];
-function Nd(t, e) {
+const Pd = "#/settings/company", Nd = "#/settings/my/help", oe = "p2-welcome-on", $d = ["quality", "construction", "planfact", "company"];
+function Ld(t, e) {
   const r = [];
-  for (const n of Pd) {
+  for (const n of $d) {
     if (t[n] !== !0) continue;
     const s = e.find((i) => i.id === n);
-    !s || typeof s.title != "string" || typeof s.summary != "string" || !s.summary || r.push({ id: n, title: s.title, summary: s.summary, path: n === "company" ? Id : tt[n] });
+    !s || typeof s.title != "string" || typeof s.summary != "string" || !s.summary || r.push({ id: n, title: s.title, summary: s.summary, path: n === "company" ? Pd : tt[n] });
   }
   return r;
 }
-const $d = {
+const Dd = {
   quality: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>',
   construction: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>',
   planfact: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>',
   company: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-5h6v5"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>'
-}, Pt = (t, e) => `<svg viewBox="0 0 24 24" width="${e}" height="${e}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t}</svg>`, Ld = Pt('<path d="M9 6l6 6-6 6"/>', 20), Dd = Pt('<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>', 18), Ud = Pt('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 18), Bd = Pt('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 18), qd = `
+}, Pt = (t, e) => `<svg viewBox="0 0 24 24" width="${e}" height="${e}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t}</svg>`, Ud = Pt('<path d="M9 6l6 6-6 6"/>', 20), Bd = Pt('<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>', 18), qd = Pt('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 18), Md = Pt('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 18), Fd = `
 body.${oe} #main-bottom-nav,body.${oe} #header-dashboard,body.${oe} #header-data-block,
 body.${oe} #header-checklist-container,body.${oe} #construction-warning-banner{display:none!important}
 body.${oe} .app-sidebar-item.active:not(:hover){color:var(--text-muted);background:transparent}
@@ -19159,13 +19175,13 @@ body.${oe} .app-sidebar-item.active:not(:hover){color:var(--text-muted);backgrou
 @keyframes p2w-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes p2w-line{to{transform:scaleX(1)}}
 @media (prefers-reduced-motion:reduce){.p2w-anim *,.p2w-anim .p2w-eyebrow::before{animation:none!important;opacity:1!important;transform:none!important}}`, Xe = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[e]);
-function Md(t, e) {
-  const r = [e.company, e.role].filter(Boolean).join(" · "), n = e.tiles.map((s, i) => `<button type="button" class="p2w-tile" data-testid="p2-welcome-tile" data-module="${Xe(s.id)}" data-path="${Xe(s.path)}"` + (e.animate ? ` style="animation-delay:${(0.28 + i * 0.09).toFixed(2)}s"` : "") + `><span class="p2w-ico">${Pt($d[s.id] || "", 22)}</span><span class="p2w-txt"><span class="p2w-t">${Xe(s.title)}</span><span class="p2w-d">${Xe(s.summary)}</span></span><span class="p2w-go">${Ld}</span></button>`).join("");
-  t.innerHTML = `<section class="p2w${e.animate ? " p2w-anim" : ""}" data-testid="p2-welcome" data-animate="${e.animate ? "1" : "0"}">` + (r ? `<div class="p2w-eyebrow">${Xe(r)}</div>` : "") + `<h1 class="p2w-h">Добро пожаловать, ${Xe(e.name)}</h1><p class="p2w-p">Здесь ваши разделы. Откройте нужный — в следующий раз приложение сразу откроет тот, где вы были.</p><div class="p2w-grid${e.tiles.length === 1 ? " p2w-one" : ""}">${n}</div><div class="p2w-foot"><button type="button" class="p2w-link" data-testid="p2-welcome-help" data-path="${jd}">${Dd}Как тут всё устроено — обучение</button><button type="button" class="p2w-link" data-testid="p2-welcome-demo" data-path="#/demo">${Ud}Демо и обучение: заполненный объект глазами любой роли</button><button type="button" class="p2w-link" data-testid="p2-welcome-settings" data-path="#/settings">${Bd}Настройки</button></div></section>`, t.querySelectorAll("[data-path]").forEach((s) => s.addEventListener("click", (i) => {
+function Hd(t, e) {
+  const r = [e.company, e.role].filter(Boolean).join(" · "), n = e.tiles.map((s, i) => `<button type="button" class="p2w-tile" data-testid="p2-welcome-tile" data-module="${Xe(s.id)}" data-path="${Xe(s.path)}"` + (e.animate ? ` style="animation-delay:${(0.28 + i * 0.09).toFixed(2)}s"` : "") + `><span class="p2w-ico">${Pt(Dd[s.id] || "", 22)}</span><span class="p2w-txt"><span class="p2w-t">${Xe(s.title)}</span><span class="p2w-d">${Xe(s.summary)}</span></span><span class="p2w-go">${Ud}</span></button>`).join("");
+  t.innerHTML = `<section class="p2w${e.animate ? " p2w-anim" : ""}" data-testid="p2-welcome" data-animate="${e.animate ? "1" : "0"}">` + (r ? `<div class="p2w-eyebrow">${Xe(r)}</div>` : "") + `<h1 class="p2w-h">Добро пожаловать, ${Xe(e.name)}</h1><p class="p2w-p">Здесь ваши разделы. Откройте нужный — в следующий раз приложение сразу откроет тот, где вы были.</p><div class="p2w-grid${e.tiles.length === 1 ? " p2w-one" : ""}">${n}</div><div class="p2w-foot"><button type="button" class="p2w-link" data-testid="p2-welcome-help" data-path="${Nd}">${Bd}Как тут всё устроено — обучение</button><button type="button" class="p2w-link" data-testid="p2-welcome-demo" data-path="#/demo">${qd}Демо и обучение: заполненный объект глазами любой роли</button><button type="button" class="p2w-link" data-testid="p2-welcome-settings" data-path="#/settings">${Md}Настройки</button></div></section>`, t.querySelectorAll("[data-path]").forEach((s) => s.addEventListener("click", (i) => {
     i.preventDefault(), i.stopPropagation(), e.open(s.dataset.path || "");
   }));
 }
-const Fd = {
+const zd = {
   id: "quality",
   role: "module",
   title: "Качество",
@@ -19377,7 +19393,7 @@ const Fd = {
     "/meetings"
   ],
   defaultRoute: "/audit"
-}, Hd = {
+}, Wd = {
   id: "sk",
   role: "feature-of",
   parentModule: "quality",
@@ -19409,7 +19425,7 @@ const Fd = {
   ],
   routes: ["/sk", "/sk/:subTab"],
   defaultRoute: "/sk"
-}, zd = {
+}, Kd = {
   id: "settings",
   role: "service",
   title: "Настройки",
@@ -19421,7 +19437,7 @@ const Fd = {
   company: { enabledByDefault: !0 },
   routes: ["/settings"],
   defaultRoute: "/settings"
-}, Wd = {
+}, Vd = {
   id: "knowledge",
   role: "module",
   title: "База знаний",
@@ -19440,7 +19456,7 @@ const Fd = {
   ],
   routes: ["/knowledge", "/knowledge/twi", "/knowledge/docs", "/knowledge/nodes", "/knowledge/etalons"],
   defaultRoute: "/knowledge"
-}, Kd = {
+}, Gd = {
   id: "construction",
   role: "module",
   title: "Стройконтроль",
@@ -19456,7 +19472,7 @@ const Fd = {
   offline: { view: !0, input: ["*"], files: !0 },
   routes: ["/construction", "/construction/:subTab"],
   defaultRoute: "/construction"
-}, Vd = {
+}, Jd = {
   id: "construction-v2",
   role: "module",
   title: "Стройконтроль (новый)",
@@ -19521,7 +19537,7 @@ const Fd = {
   ],
   routes: ["/construction-v2", "/construction-v2/:subTab"],
   defaultRoute: "/construction-v2"
-}, Gd = {
+}, Yd = {
   id: "game",
   role: "feature-of",
   parentModule: "quality",
@@ -19534,7 +19550,7 @@ const Fd = {
   company: { enabledByDefault: !0 },
   routes: ["/game", "/game/:subTab", "/fmea", "/fmea/:id"],
   defaultRoute: "/game"
-}, Jd = {
+}, Xd = {
   id: "ai",
   role: "service",
   title: "ИИ-помощник",
@@ -19546,7 +19562,7 @@ const Fd = {
   company: { enabledByDefault: !0 },
   routes: [],
   defaultRoute: null
-}, Yd = {
+}, Qd = {
   id: "planfact",
   role: "module",
   title: "План/Факт",
@@ -19637,7 +19653,7 @@ const Fd = {
   ],
   routes: ["/planfact"],
   defaultRoute: "/planfact"
-}, Xd = {
+}, Zd = {
   id: "company",
   role: "module",
   title: "Компания",
@@ -19654,8 +19670,6 @@ const Fd = {
   routes: ["/company"],
   defaultRoute: "/company"
 }, Wn = [
-  Fd,
-  Hd,
   zd,
   Wd,
   Kd,
@@ -19663,8 +19677,10 @@ const Fd = {
   Gd,
   Jd,
   Yd,
-  Xd
-], Qd = `
+  Xd,
+  Qd,
+  Zd
+], eh = `
 .p2-login{width:100%;max-width:380px;background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:24px;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:14px;max-height:calc(100dvh - 32px);overflow-y:auto}
 .p2-login h2{margin:0;text-align:center;font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
 .p2-login-sub{margin:-8px 0 0;text-align:center;font-size:12px;color:var(--text-muted)}
@@ -19687,7 +19703,7 @@ function ii(t, e, r) {
   const n = ue(t, "label", {}, e);
   return n.appendChild(ue(t, "input", r)), n;
 }
-function Zd(t, e) {
+function th(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = ue(r, "div", { class: "p2-login", "data-testid": "p2-login", role: "dialog", "aria-label": "Вход" });
@@ -19716,7 +19732,7 @@ function Zd(t, e) {
   const a = ue(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-login-demo" }, "Посмотреть без входа (демо)");
   return a.addEventListener("click", () => e.onDemo()), n.append(s, a), t.appendChild(n), () => t.replaceChildren();
 }
-const eh = `
+const rh = `
 .p2-profile{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .p2-profile [hidden]{display:none!important}
 .p2-profile-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)}
@@ -19761,7 +19777,7 @@ function So(t, e) {
     });
   }), r;
 }
-function th(t, e) {
+function nh(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = U(r, "div", { class: "p2-login", "data-testid": "p2-new-password", role: "dialog", "aria-label": "Придумайте пароль" });
@@ -19780,7 +19796,7 @@ function th(t, e) {
   }), i = U(r, "button", { type: "button", class: "p2-login-demo", "data-testid": "p2-new-password-signout" }, "Выйти");
   return i.addEventListener("click", () => e.signOut()), n.append(s, i), t.appendChild(n), () => t.replaceChildren();
 }
-function rh(t, e) {
+function sh(t, e) {
   const r = t.ownerDocument;
   t.replaceChildren();
   const n = U(r, "div", { class: "p2-profile", "data-testid": "p2-profile" });
@@ -19835,7 +19851,7 @@ function rh(t, e) {
 }
 const xo = ["desk-user-name", "desk-user-avatar", "header-user-block"];
 let Fe = null;
-function nh(t, e) {
+function ih(t, e) {
   var n, s;
   if (typeof document > "u") return;
   const r = (s = (n = window.RBI) == null ? void 0 : n.services) == null ? void 0 : s.shell;
@@ -19850,7 +19866,7 @@ function nh(t, e) {
     r.renderUserBlock({ name: t, role: e || "нет роли" });
   }
 }
-function sh() {
+function oh() {
   if (!(!Fe || typeof document > "u")) {
     for (const t of xo) {
       const e = document.getElementById(t);
@@ -19859,8 +19875,8 @@ function sh() {
     Fe = null;
   }
 }
-const ih = "rbi:platform-net", ai = "platform2_legacy_cleanup_v1", oh = "RBI_QUALITY_DB", ah = "platform2_quality_state_";
-async function lh(t) {
+const ah = "rbi:platform-net", ai = "platform2_legacy_cleanup_v1", lh = "RBI_QUALITY_DB", ch = "platform2_quality_state_";
+async function uh(t) {
   const e = t.store;
   if (!e) return "retry";
   try {
@@ -19871,13 +19887,13 @@ async function lh(t) {
   try {
     if (!e.getItem(Se)) {
       for (const r of pn) e.removeItem(r);
-      e.removeItem(ah);
+      e.removeItem(ch);
     }
   } catch {
     return "retry";
   }
   try {
-    t.deleteDatabase && await t.deleteDatabase(oh);
+    t.deleteDatabase && await t.deleteDatabase(lh);
   } catch {
     return "retry";
   }
@@ -19888,7 +19904,7 @@ async function lh(t) {
   }
   return "done";
 }
-function ch(t, e, r = 5e3) {
+function dh(t, e, r = 5e3) {
   return new Promise((n, s) => {
     let i;
     try {
@@ -19905,27 +19921,27 @@ function ch(t, e, r = 5e3) {
     };
   });
 }
-const Kn = "p2_moved_to", uh = "p2_moved_at", li = "platform2_quality_state_";
-function dh(t) {
+const Kn = "p2_moved_to", hh = "p2_moved_at", li = "platform2_quality_state_";
+function fh(t) {
   const e = {};
   for (const r of t) for (const n of r.sync || []) n && n.store && !n.rpc && !(n.store in e) && (e[n.store] = n.title);
   return e;
 }
 const Ke = {
-  ...dh(Wn),
+  ...fh(Wn),
   // старый Стройконтроль (v1): описания `sync` нет — на сервере фирма по названию (row_visible 020), ТД; записи не теряются
   construction_defects: "Замечание",
   construction_acceptance: "Приёмка",
   construction_units: "Помещение"
-}, hh = ["app_photos", "checklist_snapshots"];
-function fh(t) {
+}, ph = ["app_photos", "checklist_snapshots"];
+function mh(t) {
   return /^demo[_-]/i.test(String(t.id ?? "")) || t.isDemo === !0 || t.is_demo === !0 || t.demo === !0;
 }
-function ph(t) {
+function gh(t) {
   return t.type === "auto" || t.source === "ai" || t.source === "system" || t.contractor === "Системная";
 }
 function Rn(t, e, r) {
-  return t in Ke ? e.filter((n) => n && n.id != null && !n[Kn] && !String(n.id).startsWith("sys_") && !fh(n) && !ph(n) && r(n)) : [];
+  return t in Ke ? e.filter((n) => n && n.id != null && !n[Kn] && !String(n.id).startsWith("sys_") && !mh(n) && !gh(n) && r(n)) : [];
 }
 const He = (t) => typeof t == "string" ? t.trim() : typeof t == "number" ? String(t) : "";
 function Vn(t, e) {
@@ -19944,20 +19960,20 @@ function Vn(t, e) {
     object: n("object", "objectName", "projectName", "project_display_name", "project", "title", "name")
   };
 }
-function mh(t, e, r) {
+function yh(t, e, r) {
   if (t[Kn]) return !1;
   const n = String(t.id ?? ""), s = He(t.entityId) || He(t.entity_id);
   return !!s && e.has(s) || n.length > 3 && r.includes(n);
 }
-const gh = "Инженер", yh = ["inspectorName", "engineerName", "engineer_name", "owner", "created_by"];
-function _h(t, e, r = "") {
+const _h = "Инженер", wh = ["inspectorName", "engineerName", "engineer_name", "owner", "created_by"];
+function vh(t, e, r = "") {
   const n = { ...t }, s = He(n.project_code);
   if ((!s || s === "LOCAL") && (n.project_code = e), r)
-    for (const i of yh) i in n && (!He(n[i]) || He(n[i]) === gh) && (n[i] = r);
+    for (const i of wh) i in n && (!He(n[i]) || He(n[i]) === _h) && (n[i] = r);
   return n;
 }
-function wh(t, e, r) {
-  return { ...t, [Kn]: e, [uh]: r };
+function bh(t, e, r) {
+  return { ...t, [Kn]: e, [hh]: r };
 }
 function fr(t) {
   return new Promise((e, r) => {
@@ -19976,7 +19992,7 @@ function Ot(t, e) {
     }, s.onerror = () => r(null), s.onblocked = () => r(null);
   });
 }
-async function vh(t, e, r) {
+async function kh(t, e, r) {
   const n = { orphans: [], rows: /* @__PURE__ */ new Map(), attachments: /* @__PURE__ */ new Map() }, s = await Ot(t, e);
   if (!s) return n;
   try {
@@ -19991,9 +20007,9 @@ async function vh(t, e, r) {
     }
     if (n.orphans.length) {
       const o = new Set(n.orphans.map((l) => l.id)), a = JSON.stringify([...n.rows.values()]);
-      for (const l of hh) {
+      for (const l of ph) {
         if (!i.includes(l)) continue;
-        const u = (await fr(s.transaction(l, "readonly").objectStore(l).getAll())).filter((d) => mh(d, o, a));
+        const u = (await fr(s.transaction(l, "readonly").objectStore(l).getAll())).filter((d) => yh(d, o, a));
         u.length && n.attachments.set(l, u);
       }
     }
@@ -20005,7 +20021,7 @@ async function vh(t, e, r) {
 function Cn(t) {
   return String(t.syncStatus ?? t.sync_status ?? "") === "blocked";
 }
-async function bh(t, e) {
+async function Sh(t, e) {
   const r = await Ot(t, e);
   if (!r) return 0;
   let n = 0;
@@ -20026,7 +20042,7 @@ async function bh(t, e) {
   return n;
 }
 const ci = 200;
-async function kh(t, e, r, n = 200) {
+async function xh(t, e, r, n = 200) {
   const s = { unsent: 0, rows: [] }, i = await Ot(t, e);
   if (!i) return s;
   const o = (l) => r(l) || Cn(l), a = (l, c) => {
@@ -20060,7 +20076,7 @@ async function kh(t, e, r, n = 200) {
   }
   return s;
 }
-async function Sh(t, e, r, n, s) {
+async function Eh(t, e, r, n, s) {
   const i = s.now || (/* @__PURE__ */ new Date()).toISOString(), o = await Ot(t, r), a = await Ot(t, e);
   if (!o || !a)
     throw o == null || o.close(), a == null || a.close(), new Error("База устройства недоступна");
@@ -20074,12 +20090,12 @@ async function Sh(t, e, r, n, s) {
       if (!o.objectStoreNames.contains(u)) continue;
       const h = o.transaction(u, "readwrite"), f = h.objectStore(u), m = f.keyPath, g = [];
       for (const _ of d)
-        await fr(f.getKey(_[m])) === void 0 && f.put(u in Ke ? _h(_, s.projectCode, s.author) : _), g.push(_), p && l++;
+        await fr(f.getKey(_[m])) === void 0 && f.put(u in Ke ? vh(_, s.projectCode, s.author) : _), g.push(_), p && l++;
       await new Promise((_, w) => {
         h.oncomplete = () => _(), h.onerror = () => w(h.error), h.onabort = () => w(h.error);
       });
       const y = a.transaction(u, "readwrite");
-      for (const _ of g) y.objectStore(u).put(wh(_, s.slot, i));
+      for (const _ of g) y.objectStore(u).put(bh(_, s.slot, i));
       await new Promise((_, w) => {
         y.oncomplete = () => _(), y.onerror = () => w(y.error), y.onabort = () => w(y.error);
       });
@@ -20089,7 +20105,7 @@ async function Sh(t, e, r, n, s) {
   }
   return l;
 }
-const xh = `
+const Ah = `
 .p2-rescue-wrap{position:fixed;inset:0;z-index:1300}
 .p2-rescue-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
 .p2-rescue{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow-y:auto;
@@ -20111,30 +20127,30 @@ const xh = `
 .p2-rescue__foot button[data-primary]{border:0;background:var(--accent,var(--primary));color:#fff}
 .p2-rescue__foot button:disabled{opacity:.6;cursor:default}
 @media (min-width:768px){.p2-rescue{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:540px;border-radius:20px}
-  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`, Wr = 50, Eh = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
-function Ah(t) {
+  .p2-rescue__grip{display:none}.p2-rescue__foot button{flex:0 0 auto}}`, Wr = 50, Th = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>';
+function Rh(t) {
   const e = new Date(t);
   if (!t || Number.isNaN(e.getTime())) return [t || "без даты", ""];
   const r = (n) => String(n).padStart(2, "0");
   return [r(e.getDate()) + "." + r(e.getMonth() + 1) + "." + e.getFullYear(), r(e.getHours()) + ":" + r(e.getMinutes())];
 }
-function Th(t, e) {
+function Ch(t, e) {
   const r = (g, y = {}, _) => {
     const w = t.createElement(g);
     for (const [S, C] of Object.entries(y)) w.setAttribute(S, C);
     return _ !== void 0 && (w.textContent = _), w;
   }, n = r("div", { class: "p2-rescue-wrap", "data-testid": "p2-rescue" }), s = r("div", { class: "p2-rescue-backdrop", "aria-hidden": "true" }), i = r("div", { class: "p2-rescue", role: "dialog", "aria-modal": "true", "aria-label": "Записи, сделанные без связи" }), o = e.orphans.length, a = r("div", { class: "p2-rescue__ico" });
-  a.innerHTML = Eh;
+  a.innerHTML = Th;
   const l = r("div");
   l.append(
-    r("b", {}, "Найдено " + o + " " + Rh(o, "запись", "записи", "записей") + ", " + (o % 10 === 1 && o % 100 !== 11 ? "сделанная" : "сделанные") + " без связи"),
+    r("b", {}, "Найдено " + o + " " + Oh(o, "запись", "записи", "записей") + ", " + (o % 10 === 1 && o % 100 !== 11 ? "сделанная" : "сделанные") + " без связи"),
     r("span", {}, (o === 1 ? "Она осталась" : "Они остались") + " на этом телефоне и не отправлены. Перенести в «" + e.companyName + "» и отправить?")
   );
   const c = r("div", { class: "p2-rescue__head" });
   c.append(a, l);
   const u = r("ul", { "data-testid": "p2-rescue-list" });
   for (const g of e.orphans.slice(0, Wr)) {
-    const [y, _] = Ah(g.date), w = r("li"), S = r("i", {}, y);
+    const [y, _] = Rh(g.date), w = r("li"), S = r("i", {}, y);
     _ && (S.append(r("br")), S.append(t.createTextNode(_))), w.append(S, r("strong", {}, g.type), r("em", {}, g.object || "без объекта")), u.append(w);
   }
   o > Wr && u.append(r("li", {}, "и ещё " + (o - Wr)));
@@ -20153,11 +20169,11 @@ function Th(t, e) {
     });
   }), n;
 }
-function Rh(t, e, r, n) {
+function Oh(t, e, r, n) {
   const s = t % 10, i = t % 100;
   return s === 1 && i !== 11 ? e : s >= 2 && s <= 4 && (i < 12 || i > 14) ? r : n;
 }
-const ui = "p2-sync-status-css", Ch = `
+const ui = "p2-sync-status-css", Ih = `
 .p2s{background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:16px;overflow:hidden}
 .p2s__head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px}
 .p2s__head>div:nth-child(2){flex:1 1 200px;min-width:0}
@@ -20197,7 +20213,7 @@ const ui = "p2-sync-status-css", Ch = `
 .p2j__more{padding:10px 16px;font-size:12.5px;color:var(--text-muted);border-top:1px solid var(--card-border)}
 .p2s button:focus-visible,.p2j summary:focus-visible{outline:2px solid var(--warning,#b8844a);outline-offset:2px}
 @media (min-width:768px){.p2s__btn{flex:none;margin-left:auto}}
-@media (min-width:1024px){.p2s__row{grid-template-columns:minmax(0,1fr) 150px minmax(0,1.1fr);align-items:center}}`, Oh = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Kr = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>', Ih = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>', ee = (t) => String(t ?? "").replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), pr = (t) => String(t).padStart(2, "0");
+@media (min-width:1024px){.p2s__row{grid-template-columns:minmax(0,1fr) 150px minmax(0,1.1fr);align-items:center}}`, jh = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Kr = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>', Ph = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>', ee = (t) => String(t ?? "").replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), pr = (t) => String(t).padStart(2, "0");
 function ze(t) {
   const e = new Date(t);
   return pr(e.getHours()) + ":" + pr(e.getMinutes());
@@ -20208,20 +20224,20 @@ function Eo(t, e) {
   const n = new Date(r), s = new Date(e), i = (a) => new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime(), o = Math.round((i(s) - i(n)) / 864e5);
   return o === 0 ? "сегодня " + ze(r) : o === 1 ? "вчера " + ze(r) : pr(n.getDate()) + "." + pr(n.getMonth() + 1) + " " + ze(r);
 }
-const jh = [
+const Nh = [
   [/RLS|прав доступа|permission/i, "нет прав"],
   [/не назначен/i, "объект не назначен"],
   [/другим инженером/i, "запись другого инженера"],
   [/Роль не подтверждена/i, "роль не подтверждена"],
   [/роль не может/i, "у роли нет права отправки"]
 ];
-function Ph(t, e, r) {
+function $h(t, e, r) {
   const n = String(t.syncStatus ?? t.sync_status ?? ""), s = String(t.syncBlockReason ?? t.sync_block_reason ?? "");
   if (e) {
     const i = String(t.syncBlockHint ?? "");
     if (/^(Не отправлено|Сервер отклонил):/.test(s))
       return { chip: "bad", why: s, hint: i || "запись осталась на телефоне; нажмите «Отправить снова», когда дадут права" };
-    const o = jh.find(([a]) => a.test(s));
+    const o = Nh.find(([a]) => a.test(s));
     return {
       chip: "bad",
       why: "Сервер отклонил: " + (o ? o[1] : s ? s.charAt(0).toLowerCase() + s.slice(1) : "нет прав"),
@@ -20234,23 +20250,23 @@ function Ph(t, e, r) {
   }
   return r.offline ? { chip: "net", why: "Нет связи", hint: "отправим сами, как появится" } : r.retryAfter > r.now ? r.retryKind === "server" ? { chip: "wait", why: "Сервер не ответил", hint: "повтор в " + ze(r.retryAfter) } : { chip: "wait", why: "Нет ответа сервера", hint: "проверяем связь каждую минуту — отправим сразу" } : { chip: "queue", why: "Ждёт отправки", hint: "уйдёт в ближайшую минуту" };
 }
-function Nh(t, e) {
+function Lh(t, e) {
   if (typeof e.p2Title == "string" && e.p2Title) return e.p2Title;
   const r = Vn(t, e), n = typeof e.templateTitle == "string" ? e.templateTitle : typeof e.template == "string" ? e.template : "", s = [e.section, e.floor].map((i) => typeof i == "string" ? i.trim() : "").filter(Boolean).join(", ");
   return [Ke[t] || r.type, n, r.object, s].filter((i, o, a) => i && a.indexOf(i) === o).join(" · ");
 }
-function $h(t, e) {
+function Dh(t, e) {
   return t.map(({ store: r, rec: n, rejected: s }) => ({
     store: r,
     id: String(n.id),
     rejected: s,
-    title: Nh(r, n),
+    title: Lh(r, n),
     when: Eo(Vn(r, n).date, e.now),
-    reason: Ph(n, s, e)
+    reason: $h(n, s, e)
   })).sort((r, n) => Number(r.rejected) - Number(n.rejected));
 }
-const Lh = { online: "есть", offline: "нет ответа", server: "сервер не отвечает" };
-function Dh(t, e) {
+const Uh = { online: "есть", offline: "нет ответа", server: "сервер не отвечает" };
+function Bh(t, e) {
   const r = t.items.filter((f) => !f.rejected), n = t.items.filter((f) => f.rejected), s = t.lastOkAt ? Eo(t.lastOkAt, t.now) : "";
   let i;
   if (t.counting === "first")
@@ -20258,45 +20274,45 @@ function Dh(t, e) {
   else if (!r.length && n.length)
     i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + Kr + '</div><div><b class="p2s__title">Не ушло: ' + n.length + '</b><span class="p2s__sub">Само не уйдёт — у каждой записи ниже причина и что делать</span></div></div>';
   else if (!r.length)
-    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--ok">' + Ih + '</div><div><b class="p2s__title">Всё отправлено</b><span class="p2s__sub">' + (s ? "Последняя успешная отправка: " + ee(s) : "На этом телефоне нет неотправленных записей") + "</span></div></div>";
+    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--ok">' + Ph + '</div><div><b class="p2s__title">Всё отправлено</b><span class="p2s__sub">' + (s ? "Последняя успешная отправка: " + ee(s) : "На этом телефоне нет неотправленных записей") + "</span></div></div>";
   else {
     const f = !t.offline && t.retryAfter > t.now && t.retryKind === "server", m = t.offline ? "Всё сохранено на телефоне и уйдёт само, когда появится связь." : f ? "Связь есть, сервер не ответил — отправим сами в " + ze(t.retryAfter) + "." : "Всё сохранено на телефоне и уйдёт само.";
-    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + (t.offline ? Oh : Kr) + '</div><div><b class="p2s__title">' + (t.offline ? "Нет связи · " : "") + "не отправлено: " + r.length + '</b><span class="p2s__sub">' + ee(m) + '</span></div><button class="p2s__btn" type="button" data-act="sync" data-testid="p2-sync-now">Отправить сейчас</button></div>';
+    i = '<div class="p2s__head"><div class="p2s__ico p2s__ico--warn">' + (t.offline ? jh : Kr) + '</div><div><b class="p2s__title">' + (t.offline ? "Нет связи · " : "") + "не отправлено: " + r.length + '</b><span class="p2s__sub">' + ee(m) + '</span></div><button class="p2s__btn" type="button" data-act="sync" data-testid="p2-sync-now">Отправить сейчас</button></div>';
   }
   const o = (f) => '<li class="p2s__row" data-testid="p2-sync-item" data-id="' + ee(f.id) + '" data-chip="' + f.reason.chip + '"><div class="p2s__name">' + ee(f.title) + '</div><div class="p2s__when">' + (f.when ? "записано " + ee(f.when) : "") + '</div><div class="p2s__why"><span class="p2s__chip p2s__chip--' + f.reason.chip + '">' + ee(f.reason.why) + '</span><span class="p2s__hint">' + ee(f.reason.hint) + "</span>" + (f.reason.act === "drop_photos" && f.store === "app_history" ? '<button class="p2s__act" type="button" data-act="drop" data-id="' + ee(f.id) + '">Отправить без этого фото</button>' : "") + "</div></li>", a = r.length ? '<ul class="p2s__list">' + r.map(o).join("") + "</ul>" : "", l = n.length ? '<div class="p2s__group p2s__group--act">Не ушло, нужно действие: ' + n.length + '<button class="p2s__act" type="button" data-act="retry" data-testid="p2-sync-retry">Отправить снова</button></div><ul class="p2s__list">' + n.map(o).join("") + "</ul>" : "", c = [];
-  (r.length || n.length) && c.push("Последняя успешная отправка: " + (s ? ee(s) : "ещё не было")), t.counting === "refresh" && t.countedAt && c.push('<span data-testid="p2-sync-counting">Обновляем · список на ' + ze(t.countedAt) + "</span>"), t.probe && t.probeAt && c.push("Проверка связи: " + ee(Lh[t.probe] || t.probe) + ", " + ze(t.probeAt));
-  const u = c.length ? '<div class="p2s__foot">' + c.map((f) => f.startsWith("<span") ? f : "<span>" + f + "</span>").join("") + "</div>" : "", d = '<section class="p2s" role="status" data-testid="p2-net-device">' + i + a + l + u + "</section>", p = t.journal.length ? '<ul class="p2j__ev" data-testid="p2-sync-journal-list">' + t.journal.map((f) => '<li><span class="p2j__t">' + ee(f.t) + '</span><span class="p2j__k' + (f.tone ? " p2j__k--" + f.tone : "") + '">' + ee(f.text) + "</span></li>").join("") + '</ul><div class="p2j__more">Показаны последние ' + t.journal.length + " · хранится до 500 событий на этом телефоне</div>" : '<div class="p2j__more">Событий пока нет</div>', h = '<details class="p2s p2j" data-testid="p2-sync-journal"' + (e ? " open" : "") + '><summary class="p2j__sum">Журнал синхронизации <small>· ' + t.journalTotal + " " + Uh(t.journalTotal, "событие", "события", "событий") + '</small><span class="p2j__chev" aria-hidden="true">▼</span></summary><div class="p2j__tools"><button class="p2j__copy" type="button" data-act="copy" data-testid="p2-sync-copy">Скопировать отчёт для разработчика</button><span class="p2s__hint">В отчёте нет содержимого записей и имён — только время, счётчики и ошибки.</span></div>' + p + "</details>";
+  (r.length || n.length) && c.push("Последняя успешная отправка: " + (s ? ee(s) : "ещё не было")), t.counting === "refresh" && t.countedAt && c.push('<span data-testid="p2-sync-counting">Обновляем · список на ' + ze(t.countedAt) + "</span>"), t.probe && t.probeAt && c.push("Проверка связи: " + ee(Uh[t.probe] || t.probe) + ", " + ze(t.probeAt));
+  const u = c.length ? '<div class="p2s__foot">' + c.map((f) => f.startsWith("<span") ? f : "<span>" + f + "</span>").join("") + "</div>" : "", d = '<section class="p2s" role="status" data-testid="p2-net-device">' + i + a + l + u + "</section>", p = t.journal.length ? '<ul class="p2j__ev" data-testid="p2-sync-journal-list">' + t.journal.map((f) => '<li><span class="p2j__t">' + ee(f.t) + '</span><span class="p2j__k' + (f.tone ? " p2j__k--" + f.tone : "") + '">' + ee(f.text) + "</span></li>").join("") + '</ul><div class="p2j__more">Показаны последние ' + t.journal.length + " · хранится до 500 событий на этом телефоне</div>" : '<div class="p2j__more">Событий пока нет</div>', h = '<details class="p2s p2j" data-testid="p2-sync-journal"' + (e ? " open" : "") + '><summary class="p2j__sum">Журнал синхронизации <small>· ' + t.journalTotal + " " + qh(t.journalTotal, "событие", "события", "событий") + '</small><span class="p2j__chev" aria-hidden="true">▼</span></summary><div class="p2j__tools"><button class="p2j__copy" type="button" data-act="copy" data-testid="p2-sync-copy">Скопировать отчёт для разработчика</button><span class="p2s__hint">В отчёте нет содержимого записей и имён — только время, счётчики и ошибки.</span></div>' + p + "</details>";
   return '<div class="space-y-3">' + d + h + "</div>";
 }
-function Uh(t, e, r, n) {
+function qh(t, e, r, n) {
   const s = Math.abs(t) % 100, i = s % 10;
   return s > 10 && s < 20 ? n : i > 1 && i < 5 ? r : i === 1 ? e : n;
 }
-const Bh = [
+const Mh = [
   { id: "quality", name: "Качество и Стройконтроль", what: "Осмотры, замечания, планы СК — одна база на телефоне", offline: null, files: "quality", code: ["quality", "construction", "construction-v2"] },
   { id: "planfact", name: "План/Факт", what: "Сводка, ВОР, Факт, шахматка, журнал, КС-2 и сметы — по моим проектам", offline: null, files: null, code: ["planfact"] },
   { id: "company", name: "Компания", what: "Проекты и объекты, места, сотрудники и роли, контрагенты", offline: null, files: null, code: ["company"] },
   { id: "knowledge", name: "База знаний", what: "Документы, TWI, тех. узлы, эталоны", offline: null, files: "knowledge", code: [] },
   { id: "ai", name: "ИИ-помощник", what: "Вопросы к базе знаний", offline: null, files: null, code: [] }
-], qh = ["twi_photo", "twi_pdf", "node_file", "custom_doc_pdf", "assistant_kb_file", "etalon_file"];
-function Mh(t, e) {
-  return Bh.filter((r) => r.id === "quality" ? t("quality") || t("construction") : t(r.id)).map((r) => ({ ...r, offline: e(r.id === "quality" ? "quality" : r.id) }));
+], Fh = ["twi_photo", "twi_pdf", "node_file", "custom_doc_pdf", "assistant_kb_file", "etalon_file"];
+function Hh(t, e) {
+  return Mh.filter((r) => r.id === "quality" ? t("quality") || t("construction") : t(r.id)).map((r) => ({ ...r, offline: e(r.id === "quality" ? "quality" : r.id) }));
 }
-function Fh(t) {
-  return !t || !t.view ? { text: "Только онлайн", kind: "on" } : Uu(t, "*", !0) ? { text: "Без сети: смотреть", kind: "ro" } : { text: "Без сети: смотреть и вносить", kind: "rw" };
+function zh(t) {
+  return !t || !t.view ? { text: "Только онлайн", kind: "on" } : qu(t, "*", !0) ? { text: "Без сети: смотреть", kind: "ro" } : { text: "Без сети: смотреть и вносить", kind: "rw" };
 }
-function Hh(t) {
+function Wh(t) {
   const e = {};
   for (const r of t.matchAll(/^\s*"[^"]+": \["[0-9a-f]+",(\d+),"([^"]*)"\]/gm)) e[r[2]] = (e[r[2]] || 0) + Number(r[1]);
   return e;
 }
-function zh(t) {
+function Kh(t) {
   const e = { quality: 0, knowledge: 0 };
   for (const r of t) {
     const n = String(r.cache_status || r.cacheStatus || "");
     if (n !== "cached_cloud" && n !== "cached_local") continue;
     const s = Number(r.size_bytes || r.sizeBytes || 0) || 0;
-    qh.includes(String(r.entity_type || r.entityType || "")) ? e.knowledge += s : e.quality += s;
+    Fh.includes(String(r.entity_type || r.entityType || "")) ? e.knowledge += s : e.quality += s;
   }
   return e;
 }
@@ -20304,10 +20320,10 @@ const bt = (t) => {
   if (!t) return "0 КБ";
   const e = (r, n) => (r < 10 ? r.toFixed(1) : Math.round(r).toString()).replace(".", ",") + " " + n;
   return t < 1048576 ? e(t / 1024, "КБ") : t < 1073741824 ? e(t / 1048576, "МБ") : e(t / 1073741824, "ГБ");
-}, Pe = (t) => t.replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), Wh = (t) => {
+}, Pe = (t) => t.replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]), Vh = (t) => {
   const e = new Date(t), r = /* @__PURE__ */ new Date(), n = String(e.getHours()).padStart(2, "0") + ":" + String(e.getMinutes()).padStart(2, "0"), s = e.toDateString() === r.toDateString(), i = new Date(r);
   return i.setDate(r.getDate() - 1), (s ? "сегодня " : e.toDateString() === i.toDateString() ? "вчера " : String(e.getDate()).padStart(2, "0") + "." + String(e.getMonth() + 1).padStart(2, "0") + " ") + n;
-}, Kh = `
+}, Gh = `
 .p2o{background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:16px;overflow:hidden;margin:12px 0}
 .p2o__head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px}
 .p2o__ico{width:44px;height:44px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--accent,var(--primary,#c49a5f));background:color-mix(in srgb,var(--accent,var(--primary,#c49a5f)) 14%,transparent)}
@@ -20345,10 +20361,10 @@ const bt = (t) => {
 .p2o-dlg__box{width:100%;max-width:440px;background:var(--card-bg);color:var(--text-main);border-radius:18px;border:1px solid var(--card-border);padding:18px;display:flex;flex-direction:column;gap:10px}
 .p2o-dlg__t{font-size:17px;font-weight:800}.p2o-dlg__p{font-size:14px;color:var(--text-muted);line-height:1.45}
 @media (min-width:768px){.p2o-dlg{align-items:center}.p2o__body{grid-column:1/2}}
-@media (max-width:599px){.p2o__total{margin-left:0;text-align:left;flex:1 1 100%}.p2o__sel{max-width:none}}`, Ao = "считаем…", mr = (t) => t === null ? Ao : bt(t), Vh = (t) => {
+@media (max-width:599px){.p2o__total{margin-left:0;text-align:left;flex:1 1 100%}.p2o__sel{max-width:none}}`, Ao = "считаем…", mr = (t) => t === null ? Ao : bt(t), Jh = (t) => {
   const e = new Date(t);
   return String(e.getHours()).padStart(2, "0") + ":" + String(e.getMinutes()).padStart(2, "0");
-}, Gh = {
+}, Yh = {
   quality: Un.map((t) => [t, ho[t]]),
   knowledge: [["all", "Все"], ["none", "Не скачивать заранее"]]
 };
@@ -20361,17 +20377,17 @@ function To(t) {
 }
 function Ro(t, e = 0) {
   const { used: r, free: n } = t, s = r !== null && n !== null && r + n > 0 ? Math.max(1, Math.round(r * 100 / (r + n))) : 0;
-  return `На телефоне <b>${mr(r)}</b> · свободно ${mr(n)}${e ? " · на " + Vh(e) : ""}<div class="p2o__bar"><i style="width:${s}%"></i></div>`;
+  return `На телефоне <b>${mr(r)}</b> · свободно ${mr(n)}${e ? " · на " + Jh(e) : ""}<div class="p2o__bar"><i style="width:${s}%"></i></div>`;
 }
 function di(t, e, r, n = 0) {
   const s = (i) => {
-    const o = Fh(i.row.offline), a = o.kind === "on", l = i.row.files ? `<label class="p2o__field">${i.row.files === "knowledge" ? "Документы заранее" : "Фото и PDF заранее"}<select class="p2o__sel" data-act="scope" data-mod="${i.row.files}" id="p2o-scope-${i.row.id}"${i.keep ? "" : " disabled"}>` + Gh[i.row.files].map(([c, u]) => `<option value="${c}"${c === i.scope ? " selected" : ""}>${Pe(u)}${c === i.roleScope ? " · по роли" : ""}</option>`).join("") + "</select></label>" : "";
+    const o = zh(i.row.offline), a = o.kind === "on", l = i.row.files ? `<label class="p2o__field">${i.row.files === "knowledge" ? "Документы заранее" : "Фото и PDF заранее"}<select class="p2o__sel" data-act="scope" data-mod="${i.row.files}" id="p2o-scope-${i.row.id}"${i.keep ? "" : " disabled"}>` + Yh[i.row.files].map(([c, u]) => `<option value="${c}"${c === i.scope ? " selected" : ""}>${Pe(u)}${c === i.roleScope ? " · по роли" : ""}</option>`).join("") + "</select></label>" : "";
     return `<div class="p2o__mod${a ? " p2o__mod--online" : ""}" data-mod="${i.row.id}" data-testid="p2o-mod-${i.row.id}"><div><span class="p2o__name">${Pe(i.row.name)}</span><span class="p2o__what">${Pe(i.row.what)}</span><span class="p2o__chip p2o__chip--${o.kind}">${o.text}</span></div>` + (a ? "" : `<label class="p2o__sw"><input type="checkbox" data-act="keep" data-mod="${i.row.id}" id="p2o-keep-${i.row.id}"${i.keep ? " checked" : ""}><span aria-hidden="true"></span>Держать без сети</label><div class="p2o__body"><div class="p2o__size" data-testid="p2o-size-${i.row.id}">${To(i)}</div>${l}<div class="p2o__last">${Pe(i.last)}</div><div class="p2o__btns"><button type="button" class="p2o__btn p2o__btn--main" data-act="download" data-mod="${i.row.id}"${i.keep ? "" : " disabled"}>Скачать сейчас</button>` + (i.row.id === "quality" ? '<button type="button" class="p2o__btn" data-act="reports" data-mod="quality">Отчёты на телефон</button>' : "") + `<button type="button" class="p2o__btn p2o__btn--danger" data-act="clear" data-mod="${i.row.id}" data-testid="p2o-clear-${i.row.id}">Очистить скачанное</button></div></div>`) + "</div>";
   };
   return `<section class="p2o" data-testid="p2-offline-modules"><div class="p2o__head"><div class="p2o__ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg></div><div style="flex:1 1 220px;min-width:0"><span class="p2o__title">Офлайн по модулям</span><span class="p2o__sub">Что телефон держит без сети. По умолчанию — по вашей роли: ${Pe(r)}. Можно поменять у каждого модуля.</span></div><div class="p2o__total" data-testid="p2o-total">${Ro(e, n)}</div></div>` + t.map(s).join("") + '<div class="p2o__foot"><span>Неотправленное («не отправлено: N») не удаляется никогда — ни очисткой, ни правилом по роли. Без сети раздел покажет то, что скачано заранее или открывалось.</span></div></section>';
 }
-const hi = { engineer: "инженер качества", contractor: "подрядчик", manager: "руководитель", director: "руководство", guest: "просмотр" }, On = { code: null, copy: null, files: null, used: null, free: null, at: 0 }, Jh = 10 * 6e4, Co = "platform2_offline_figures:";
-function Yh(t) {
+const hi = { engineer: "инженер качества", contractor: "подрядчик", manager: "руководитель", director: "руководство", guest: "просмотр" }, On = { code: null, copy: null, files: null, used: null, free: null, at: 0 }, Xh = 10 * 6e4, Co = "platform2_offline_figures:";
+function Qh(t) {
   try {
     const e = JSON.parse(localStorage.getItem(Co + t) || "null");
     if (e && typeof e == "object") return { ...On, ...e };
@@ -20379,13 +20395,13 @@ function Yh(t) {
   }
   return { ...On };
 }
-function Xh(t, e) {
+function Zh(t, e) {
   try {
     localStorage.setItem(Co + t, JSON.stringify(e));
   } catch {
   }
 }
-function Qh(t, e) {
+function ef(t, e) {
   var c;
   const r = t.RBI || {}, n = (c = r.services) == null ? void 0 : c.shell, s = r.platformMenuAccess || {}, i = (u) => {
     var d, p;
@@ -20394,8 +20410,8 @@ function Qh(t, e) {
     var d, p;
     return uo(((p = (d = r.moduleLoader) == null ? void 0 : d.getById) == null ? void 0 : p.call(d, u)) || null);
   }, a = Fn();
-  return { rows: Mh(i, o).map((u) => {
-    const d = Mn(u.id === "quality" ? "quality" : u.id), p = u.files === "quality" ? kn("quality") || yn(a) : u.files === "knowledge" ? kn("knowledge") || _n(a) : null, h = u.files === "quality" ? yn(a) : u.files === "knowledge" ? _n(a) : null, f = sd(u.id), m = d ? u.files === "quality" ? Sn() === "none" ? "Фото заранее не скачиваются — открытые остаются на телефоне" : "Фото и PDF заранее: " + ho[Sn()].toLowerCase() : u.files === "knowledge" ? go() === "none" ? "Открытые документы остаются на телефоне" : "Документы заранее: все" : f ? "Скачано заранее: " + Wh(f.at) : "Заранее ещё не скачивалось — скачается, когда будет связь" : "Заранее не скачивается — без сети раздел покажет то, что вы открывали", g = e.code;
+  return { rows: Hh(i, o).map((u) => {
+    const d = Mn(u.id === "quality" ? "quality" : u.id), p = u.files === "quality" ? kn("quality") || yn(a) : u.files === "knowledge" ? kn("knowledge") || _n(a) : null, h = u.files === "quality" ? yn(a) : u.files === "knowledge" ? _n(a) : null, f = od(u.id), m = d ? u.files === "quality" ? Sn() === "none" ? "Фото заранее не скачиваются — открытые остаются на телефоне" : "Фото и PDF заранее: " + ho[Sn()].toLowerCase() : u.files === "knowledge" ? go() === "none" ? "Открытые документы остаются на телефоне" : "Документы заранее: все" : f ? "Скачано заранее: " + Vh(f.at) : "Заранее ещё не скачивалось — скачается, когда будет связь" : "Заранее не скачивается — без сети раздел покажет то, что вы открывали", g = e.code;
     return {
       row: u,
       keep: d,
@@ -20410,7 +20426,7 @@ function Qh(t, e) {
 }
 let Vr = null;
 const Gr = {};
-async function Zh(t, e, r = On, n = !1) {
+async function tf(t, e, r = On, n = !1) {
   const s = (i, o) => Gr[i] || (Gr[i] = o().then((a) => {
     a && e(i, a);
   }, () => {
@@ -20421,7 +20437,7 @@ async function Zh(t, e, r = On, n = !1) {
     s("code", async () => {
       if (!Vr)
         try {
-          Vr = Hh(await (await fetch("./sw.js")).text());
+          Vr = Wh(await (await fetch("./sw.js")).text());
         } catch {
           return { code: {} };
         }
@@ -20432,7 +20448,7 @@ async function Zh(t, e, r = On, n = !1) {
       const i = (a = t.STORES) == null ? void 0 : a.FILE_REGISTRY;
       if (!t.dbGetAll || !i) return null;
       const o = t.dbCount ? await t.dbCount(i).catch(() => -1) : -1;
-      return !n && r.files && o >= 0 && o === r.filesN && Date.now() - (r.filesAt || 0) < Jh ? { files: r.files } : { files: zh(await t.dbGetAll(i)), filesN: o, filesAt: Date.now() };
+      return !n && r.files && o >= 0 && o === r.filesN && Date.now() - (r.filesAt || 0) < Xh ? { files: r.files } : { files: Kh(await t.dbGetAll(i)), filesN: o, filesAt: Date.now() };
     }),
     s("memory", async () => {
       const i = await navigator.storage.estimate(), o = i.usage || 0;
@@ -20444,10 +20460,10 @@ async function Zh(t, e, r = On, n = !1) {
     })
   ]);
 }
-function ef(t) {
+function rf(t) {
   if (t.getElementById("p2o-css")) return;
   const e = t.createElement("style");
-  e.id = "p2o-css", e.textContent = Kh, t.head.appendChild(e);
+  e.id = "p2o-css", e.textContent = Gh, t.head.appendChild(e);
 }
 function fi(t, e, r, n, s) {
   return new Promise((i) => {
@@ -20463,10 +20479,10 @@ function fi(t, e, r, n, s) {
   });
 }
 let pi = null, mi = 0, Ce = null;
-const tf = 1e4;
+const nf = 1e4;
 function gi(t, e) {
   if (!Ce) return;
-  const { f: r, fresh: n } = Ce, s = Qh(e, r), i = n.has("memory") ? 0 : r.at, o = di(s.rows, s.total, hi[s.role] || "просмотр", i), a = di(s.rows.map((c) => ({ ...c, codeBytes: 0, copyBytes: 0, fileBytes: 0 })), { used: 0, free: 0 }, hi[s.role] || "просмотр"), l = t;
+  const { f: r, fresh: n } = Ce, s = ef(e, r), i = n.has("memory") ? 0 : r.at, o = di(s.rows, s.total, hi[s.role] || "просмотр", i), a = di(s.rows.map((c) => ({ ...c, codeBytes: 0, copyBytes: 0, fileBytes: 0 })), { used: 0, free: 0 }, hi[s.role] || "просмотр"), l = t;
   if (l.__p2oShape === a && t.firstChild) {
     for (const d of s.rows) {
       const p = t.querySelector(`[data-testid=p2o-size-${d.row.id}]`), h = To(d);
@@ -20475,7 +20491,7 @@ function gi(t, e) {
     const c = t.querySelector("[data-testid=p2o-total]"), u = Ro(s.total, i);
     c && c.innerHTML !== u && (c.innerHTML = u);
   } else t.dataset.p2o !== o && (t.innerHTML = o);
-  t.dataset.p2o = o, l.__p2oShape = a, l.__p2oRows = s.rows, pi !== t && (pi = t, rf(t, e));
+  t.dataset.p2o = o, l.__p2oShape = a, l.__p2oRows = s.rows, pi !== t && (pi = t, sf(t, e));
 }
 async function Oo(t, e = !1) {
   if (!t) return;
@@ -20484,16 +20500,16 @@ async function Oo(t, e = !1) {
     t.replaceChildren();
     return;
   }
-  ef(r);
+  rf(r);
   const s = r.defaultView;
-  if ((!Ce || Ce.slot !== n) && (Ce = { slot: n, f: Yh(n), fresh: /* @__PURE__ */ new Set() }), gi(t, s), !e && Date.now() - mi < tf) return;
+  if ((!Ce || Ce.slot !== n) && (Ce = { slot: n, f: Qh(n), fresh: /* @__PURE__ */ new Set() }), gi(t, s), !e && Date.now() - mi < nf) return;
   mi = Date.now();
   const i = Ce;
-  i.fresh.clear(), await Zh(s, (o, a) => {
+  i.fresh.clear(), await tf(s, (o, a) => {
     Ce === i && (i.f = { ...i.f, ...a }, i.fresh.add(o), gi(t, s));
-  }, i.f, e), Ce === i && (i.f = { ...i.f, at: Date.now() }, Xh(n, i.f));
+  }, i.f, e), Ce === i && (i.f = { ...i.f, at: Date.now() }, Zh(n, i.f));
 }
-function rf(t, e) {
+function sf(t, e) {
   const r = t.ownerDocument, n = () => t.__p2oRows || [], s = () => {
     Oo(t, !0);
   }, i = (o) => {
@@ -20503,7 +20519,7 @@ function rf(t, e) {
     var p, h, f, m;
     const a = o.target, l = a.dataset.mod || "";
     if (a.dataset.act === "scope") {
-      id(l, a.value), s();
+      ad(l, a.value), s();
       return;
     }
     if (a.dataset.act !== "keep") return;
@@ -20559,7 +20575,7 @@ function rf(t, e) {
   });
 }
 const Io = (t, e) => t.createdAt < e.createdAt ? -1 : t.createdAt > e.createdAt ? 1 : t.id < e.id ? -1 : 1;
-function nf() {
+function of() {
   const t = /* @__PURE__ */ new Map();
   return {
     size: () => t.size,
@@ -20577,11 +20593,11 @@ function nf() {
     }
   };
 }
-const sf = "platform2_device_records", Jr = "records";
-function of(t) {
+const af = "platform2_device_records", Jr = "records";
+function lf(t) {
   let e = null;
   const r = () => e || (e = new Promise((s, i) => {
-    const o = t.open(sf, 1);
+    const o = t.open(af, 1);
     o.onupgradeneeded = () => {
       o.result.createObjectStore(Jr, { keyPath: "id" }).createIndex("slot", "slot", { unique: !1 });
     }, o.onsuccess = () => {
@@ -20627,26 +20643,26 @@ function of(t) {
     }
   };
 }
-const af = (t) => t.syncStatus !== "synced" && !t.syncServerRejected;
-function lf(t) {
+const cf = (t) => t.syncStatus !== "synced" && !t.syncServerRejected;
+function uf(t) {
   const e = {};
   for (const r of t || []) for (const n of r.sync || [])
     n && n.kind && n.rpc && !e[n.kind] && (e[n.kind] = { kind: n.kind, module: r.id, rpc: n.rpc, title: n.title || n.kind, store: n.store });
   return e;
 }
-const cf = /failed to fetch|networkerror|network|load failed|aborted|timeout|fetch/i;
-function uf(t, e) {
+const df = /failed to fetch|networkerror|network|load failed|aborted|timeout|fetch/i;
+function hf(t, e) {
   if (e !== void 0 || !t) return { kind: "net" };
   if (!t.error) return { kind: "ok", value: t.data ?? null };
   const r = Number(t.status || 0), n = String(t.error.message || "");
-  return !r || r >= 500 || r === 401 || r === 408 || r === 429 || cf.test(n) && !/[А-Яа-яЁё]/.test(n) ? { kind: "net" } : { kind: "rejected", message: /[А-Яа-яЁё]/.test(n) ? n.replace(/^\s*ERROR:\s*/i, "").slice(0, 300) : "отказ сервера" + (t.error.code ? " (" + t.error.code + ")" : "") };
+  return !r || r >= 500 || r === 401 || r === 408 || r === 429 || df.test(n) && !/[А-Яа-яЁё]/.test(n) ? { kind: "net" } : { kind: "rejected", message: /[А-Яа-яЁё]/.test(n) ? n.replace(/^\s*ERROR:\s*/i, "").slice(0, 300) : "отказ сервера" + (t.error.code ? " (" + t.error.code + ")" : "") };
 }
-const df = { planfact: "План/Факт", quality: "Качество", construction: "Стройконтроль" }, hf = "Исправьте условие (бригада, позиция, права) и нажмите «Отправить снова»";
+const ff = { planfact: "План/Факт", quality: "Качество", construction: "Стройконтроль" }, pf = "Исправьте условие (бригада, позиция, права) и нажмите «Отправить снова»";
 function yi(t) {
   return [3e4, 6e4, 12e4, 3e5][Math.min(Math.max(t, 1), 4) - 1];
 }
-const ff = 72 * 3600 * 1e3;
-function pf(t, e) {
+const mf = 72 * 3600 * 1e3;
+function gf(t, e) {
   return new Promise((r, n) => {
     const s = setTimeout(() => n(new Error("timeout")), e);
     t.then((i) => {
@@ -20656,16 +20672,16 @@ function pf(t, e) {
     });
   });
 }
-function mf(t) {
+function yf(t) {
   const e = t.callMs ?? 2e4, r = t.passMs ?? 45e3;
   async function n(i, o) {
     let a = null, l;
     try {
-      a = await pf(t.call(o.rpc, { p_client_id: i.id, p_entry: i.payload }), e);
+      a = await gf(t.call(o.rpc, { p_client_id: i.id, p_entry: i.payload }), e);
     } catch (c) {
       l = c ?? "error";
     }
-    return uf(a, l);
+    return hf(a, l);
   }
   async function s(i, o) {
     var p, h, f, m;
@@ -20675,10 +20691,10 @@ function mf(t) {
     let d = !1;
     for (const g of c) {
       if (g.syncStatus === "synced") {
-        l - Date.parse(g.sentAt || g.createdAt) > ff && await t.store.delete(g.id);
+        l - Date.parse(g.sentAt || g.createdAt) > mf && await t.store.delete(g.id);
         continue;
       }
-      if (!af(g)) {
+      if (!cf(g)) {
         o.rejected++;
         continue;
       }
@@ -20688,7 +20704,7 @@ function mf(t) {
         continue;
       }
       if (u && !u.includes(y.module)) {
-        const S = "Не отправлено: модуль «" + (df[y.module] || y.module) + "» выключен у компании";
+        const S = "Не отправлено: модуль «" + (ff[y.module] || y.module) + "» выключен у компании";
         (g.syncStatus !== "blocked" || g.syncBlockReason !== S) && (await t.store.put({ ...g, syncStatus: "blocked", syncBlockReason: S, syncBlockHint: "Запись сохранена на телефоне; уйдёт, когда администратор компании включит модуль" }), (p = t.changed) == null || p.call(t)), o.blocked++;
         continue;
       }
@@ -20698,7 +20714,7 @@ function mf(t) {
       }
       d || (d = !0, (h = t.journal) == null || h.call(t, { k: "start", mode: i, why: "device_records" }));
       const _ = await n(g, y), w = await t.store.get(g.id) || g;
-      _.kind === "ok" ? (await t.store.put({ ...w, syncStatus: "synced", result: _.value, sentAt: new Date(t.now()).toISOString(), syncBlockReason: "", syncBlockHint: "", syncServerRejected: !1, tries: (w.tries || 0) + 1 }), o.sent++) : _.kind === "rejected" ? (await t.store.put({ ...w, syncStatus: "blocked", syncServerRejected: !0, syncBlockReason: "Сервер отклонил: " + _.message, syncBlockHint: hf, tries: (w.tries || 0) + 1 }), o.rejected++) : (await t.store.put({ ...w, syncStatus: "not_synced", syncBlockReason: "", tries: (w.tries || 0) + 1 }), o.net = !0, o.left++), (f = t.changed) == null || f.call(t);
+      _.kind === "ok" ? (await t.store.put({ ...w, syncStatus: "synced", result: _.value, sentAt: new Date(t.now()).toISOString(), syncBlockReason: "", syncBlockHint: "", syncServerRejected: !1, tries: (w.tries || 0) + 1 }), o.sent++) : _.kind === "rejected" ? (await t.store.put({ ...w, syncStatus: "blocked", syncServerRejected: !0, syncBlockReason: "Сервер отклонил: " + _.message, syncBlockHint: pf, tries: (w.tries || 0) + 1 }), o.rejected++) : (await t.store.put({ ...w, syncStatus: "not_synced", syncBlockReason: "", tries: (w.tries || 0) + 1 }), o.net = !0, o.left++), (f = t.changed) == null || f.call(t);
     }
     d && ((m = t.journal) == null || m.call(t, { k: "end", mode: i, why: "device_records", ok: !o.net, pushed: o.sent, rejected: o.rejected, unsent: o.left, ms: t.now() - l, ...o.net ? { err: "нет связи" } : {} }));
   }
@@ -20734,15 +20750,15 @@ function Nt(t) {
 function _i(t) {
   return t === "qc_engineer" || t === "contractor_rep" ? "#/construction-v2" : "#/planfact";
 }
-function gf(t, e) {
+function _f(t, e) {
   var n;
   const r = t.companies.filter((s) => !s.is_demo);
   return e && r.some((s) => s.id === e) ? e : ((n = r.find((s) => s.modules.length > 0) || r[0] || null) == null ? void 0 : n.id) || null;
 }
-function yf(t, e) {
+function wf(t, e) {
   return t.filter((r) => !r.is_demo || r.id === e);
 }
-function _f(t) {
+function vf(t) {
   return String(t.roles[0] || "").replace(/\s+—\s+демо$/, "") || "роль не выбрана";
 }
 const No = "Демо открывается только с интернетом — подключитесь к сети и попробуйте снова";
@@ -20755,7 +20771,7 @@ function We(t, e, r) {
   }
   return null;
 }
-async function wf(t) {
+async function bf(t) {
   if (!t.online()) return { roles: [], error: No };
   const e = await t.rpc("pf_demo_roles");
   if (e.error) return { roles: [], error: /[А-Яа-яЁё]/.test(e.error.message) ? e.error.message : "Не удалось загрузить демо. Попробуйте позже" };
@@ -20772,18 +20788,18 @@ async function $o(t, e, r) {
   const o = String(((a = i.data) == null ? void 0 : a.company_id) || "");
   return !s && n.companyId && We(t, Po + t.userKey(n.email), n.companyId), await t.refresh(), We(t, In, _i(e)), r && We(t, r.key, r.value), t.go(_i(e)), s && s.id === o ? t.reload() : t.setCompany(o), null;
 }
-function vf(t) {
+function kf(t) {
   const e = We(t, In);
   return e && We(t, In, null), e;
 }
-async function bf(t) {
+async function Sf(t) {
   if (!t.online()) return "Чтобы выйти из демо, нужна сеть — подключитесь и нажмите ещё раз";
   const e = t.getState(), r = await t.rpc("pf_demo_leave");
   if (r.error) return /[А-Яа-яЁё]/.test(r.error.message) ? r.error.message : "Не удалось выйти из демо. Попробуйте ещё раз";
-  const n = e.email ? Po + t.userKey(e.email) : "", s = gf(e, n ? We(t, n) : null);
+  const n = e.email ? Po + t.userKey(e.email) : "", s = _f(e, n ? We(t, n) : null);
   return n && We(t, n, null), await t.refresh(), t.go("#/welcome"), s ? t.setCompany(s) : t.reload(), null;
 }
-const Qe = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[e]), Gn = (t, e) => `<svg viewBox="0 0 24 24" width="${e}" height="${e}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t}</svg>`, kf = Gn('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 22), Sf = Gn('<path d="M9 6l6 6-6 6"/>', 20), wi = Gn('<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>', 18), xf = `
+const Qe = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[e]), Gn = (t, e) => `<svg viewBox="0 0 24 24" width="${e}" height="${e}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t}</svg>`, xf = Gn('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 22), Ef = Gn('<path d="M9 6l6 6-6 6"/>', 20), wi = Gn('<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>', 18), Af = `
 body.${jo}::after{content:'';position:fixed;inset:0;pointer-events:none;border:3px solid rgba(220,38,38,.35);z-index:9998}
 .p2-demo-chip{position:fixed;z-index:9999;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);display:flex;align-items:center;gap:4px;
   max-width:calc(100vw - 24px);padding:4px;border-radius:999px;background:#dc2626;color:#fff;box-shadow:0 6px 18px rgba(220,38,38,.35);font:600 13px/1.2 inherit;font-family:inherit}
@@ -20801,9 +20817,9 @@ body.p2-demo-page .p2-demo-chip{display:none}
 .p2d-msg{font-size:15px;line-height:1.5;padding:16px;border-radius:14px;border:1px solid var(--card-border);background:var(--card-bg)}
 .p2d-sec{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin:28px 0 10px}
 .p2d-busy{opacity:.6;pointer-events:none}`;
-function Ef(t, e) {
+function Tf(t, e) {
   var s, i;
-  const r = e.roles.map((o) => `<button type="button" class="p2w-tile${o.current ? " p2d-cur" : ""}" data-testid="p2-demo-role" data-role="${Qe(o.code)}"${o.current ? ' aria-current="true"' : ""}><span class="p2w-ico">${kf}</span><span class="p2w-txt"><span class="p2w-t">${Qe(o.title)}${o.current ? " · сейчас" : ""}</span>` + (o.hint ? `<span class="p2w-d">${Qe(o.hint)}</span>` : "") + `<span class="p2d-area">Видит: ${Qe(o.area)}</span></span><span class="p2w-go">${Sf}</span></button>`).join(""), n = e.roles[0] ? e.roles[0].company_name : "Девелопмент Демо";
+  const r = e.roles.map((o) => `<button type="button" class="p2w-tile${o.current ? " p2d-cur" : ""}" data-testid="p2-demo-role" data-role="${Qe(o.code)}"${o.current ? ' aria-current="true"' : ""}><span class="p2w-ico">${xf}</span><span class="p2w-txt"><span class="p2w-t">${Qe(o.title)}${o.current ? " · сейчас" : ""}</span>` + (o.hint ? `<span class="p2w-d">${Qe(o.hint)}</span>` : "") + `<span class="p2d-area">Видит: ${Qe(o.area)}</span></span><span class="p2w-go">${Ef}</span></button>`).join(""), n = e.roles[0] ? e.roles[0].company_name : "Девелопмент Демо";
   t.innerHTML = `<section class="p2w p2d" data-testid="p2-demo"><div class="p2w-eyebrow">Демо · ${Qe(n)} · только просмотр</div><h1 class="p2w-h">${e.inDemo ? "Смотреть «ЖК Демо» другой ролью" : "Посмотрите «ЖК Демо» глазами любой роли"}</h1><p class="p2w-p">Заполненный объект: три корпуса на разных стадиях — Корпус 1 старт, Корпус 2 в разгаре, Корпус 3 сдача. ВОР, смета и КП, факт прорабов, КС-2, проверки качества, замечания на PDF-планах этажей и приёмки.</p>` + (e.error ? `<div class="p2d-msg" data-testid="p2-demo-error">${Qe(e.error)}</div>` : `<div class="p2w-grid p2d-roles">${r}</div>`) + '<p class="p2d-note">Демо — только просмотр: внести факт или выдать замечание здесь нельзя. Попробовать руками — в своей компании.</p>' + (e.extra || "") + '<div class="p2w-foot">' + (e.inDemo ? `<button type="button" class="p2w-link" data-testid="p2-demo-leave" data-act="leave">${wi}Выйти из демо</button>` : `<button type="button" class="p2w-link" data-act="back">${wi}Назад</button>`) + "</div></section>", t.querySelectorAll("[data-role]").forEach((o) => o.addEventListener("click", (a) => {
     var l;
     a.preventDefault(), a.stopPropagation(), (l = t.querySelector(".p2d")) == null || l.classList.add("p2d-busy"), e.choose(o.dataset.role || "");
@@ -20814,7 +20830,7 @@ function Ef(t, e) {
     o.preventDefault(), o.stopPropagation(), e.back();
   });
 }
-function Af(t, e, r) {
+function Rf(t, e, r) {
   let n = t.getElementById("p2-demo-chip");
   if (t.body.classList.toggle(jo, !!e), !e) {
     n && n.remove();
@@ -20826,20 +20842,20 @@ function Af(t, e, r) {
     s.preventDefault(), s.stopPropagation(), r.leave();
   }), t.body.appendChild(n)), n.querySelector(".p2-demo-role span").textContent = e.role + " ▾", n.querySelector(".p2-demo-role").setAttribute("title", "Смотрите как: " + e.role + " — нажмите, чтобы сменить роль");
 }
-const Lo = "rbi:device-records", Tf = "p2-device-records", Jn = () => typeof window > "u" ? void 0 : window, Rf = () => {
+const Lo = "rbi:device-records", Cf = "p2-device-records", Jn = () => typeof window > "u" ? void 0 : window, Of = () => {
   var t, e, r, n;
   return (n = (r = (e = (t = Jn()) == null ? void 0 : t.RBI) == null ? void 0 : e.platform2) == null ? void 0 : r.getState) == null ? void 0 : n.call(r);
 }, Kt = "__platform2DeviceSend";
 function dt() {
   const t = globalThis;
   if (t[Kt]) return t[Kt];
-  const e = typeof indexedDB < "u" ? of(indexedDB) : nf(), r = lf(Wn), n = mf({
+  const e = typeof indexedDB < "u" ? lf(indexedDB) : of(), r = uf(Wn), n = yf({
     store: e,
     kinds: r,
     slot: me,
     modules: () => {
       var o;
-      const s = Rf(), i = (o = s == null ? void 0 : s.companies) == null ? void 0 : o.find((a) => a.id === s.companyId);
+      const s = Of(), i = (o = s == null ? void 0 : s.companies) == null ? void 0 : o.find((a) => a.id === s.companyId);
       return i && Array.isArray(i.modules) ? i.modules : null;
     },
     async call(s, i) {
@@ -20851,7 +20867,7 @@ function dt() {
     now: () => Date.now(),
     lock: async (s) => {
       const i = typeof navigator < "u" ? navigator.locks : void 0;
-      return !i || typeof i.request != "function" ? (await s(), !0) : i.request(Tf, { ifAvailable: !0 }, async (o) => o ? (await s(), !0) : !1);
+      return !i || typeof i.request != "function" ? (await s(), !0) : i.request(Cf, { ifAvailable: !0 }, async (o) => o ? (await s(), !0) : !1);
     },
     journal: (s) => {
       var i, o;
@@ -20888,7 +20904,7 @@ async function fe(t = "silent") {
   }
 }
 const gr = (t) => dt().sender.pending(t), Do = () => dt().sender.resetRejected();
-async function Cf() {
+async function If() {
   const t = dt().kinds;
   return (await gr().catch(() => [])).map((e) => {
     var r;
@@ -20899,7 +20915,7 @@ async function Cf() {
     };
   });
 }
-function Of() {
+function jf() {
   const t = dt();
   if (t.wired || typeof window > "u") return;
   t.wired = !0, window.addEventListener("online", () => {
@@ -20916,7 +20932,7 @@ function Of() {
     });
   }, 6e4), fe();
 }
-const If = "rbi:net-status", vi = "#/settings/my/device", bi = "p2-net-style", jf = 6e3, Pf = `
+const Pf = "rbi:net-status", vi = "#/settings/my/device", bi = "p2-net-style", Nf = 6e3, $f = `
 .p2-offline #desk-sync-status,.p2-offline #header-sync-status{display:none!important}
 .p2-net{display:inline-flex;align-items:center;gap:6px;margin-left:6px;height:26px;padding:0 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;cursor:pointer;
   color:var(--warning,#b8844a);background:color-mix(in srgb,var(--warning,#b8844a) 14%,transparent);border:1px solid color-mix(in srgb,var(--warning,#b8844a) 35%,transparent)}
@@ -20938,19 +20954,19 @@ const If = "rbi:net-status", vi = "#/settings/my/device", bi = "p2-net-style", j
 @media (max-width:767px){.p2-need{margin:16px;padding:24px 16px}.p2-need__btns .p2-nbtn{flex:1 1 100%}}
 .p2-dev-unsent{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:16px;background:var(--card-bg);color:var(--text-main);border:1px solid color-mix(in srgb,var(--warning,#b8844a) 45%,transparent)}
 .p2-dev-unsent .p2-need__ico{width:44px;height:44px;border-radius:12px}
-.p2-dev-unsent b{display:block;font-size:15px}.p2-dev-unsent span{font-size:13px;color:var(--text-muted)}`, Yn = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Nf = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="M8 17l4-4 4 4"/><path d="M20 16.6A4 4 0 0 0 18 9h-1.3A7 7 0 1 0 4 15.3"/></svg>';
+.p2-dev-unsent b{display:block;font-size:15px}.p2-dev-unsent span{font-size:13px;color:var(--text-muted)}`, Yn = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M5.8 10.1A5 5 0 0 0 7 18h10.5"/><path d="M20.9 16.6A4 4 0 0 0 19 10a5 5 0 0 0-7.6-4.3"/></svg>', Lf = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="M8 17l4-4 4 4"/><path d="M20 16.6A4 4 0 0 0 18 9h-1.3A7 7 0 1 0 4 15.3"/></svg>';
 function Uo(t) {
   if (t.getElementById(bi)) return;
   const e = t.createElement("style");
-  e.id = bi, e.textContent = Pf, t.head.appendChild(e);
+  e.id = bi, e.textContent = $f, t.head.appendChild(e);
 }
 function ki(t, e) {
   const r = (t.offline ? "Нет связи, " : "") + "не отправлено: " + t.unsent;
   if (!t.offline && t.unsent <= 0) return { show: !1, label: r, html: "" };
-  const n = t.offline ? Yn : Nf;
+  const n = t.offline ? Yn : Lf;
   return e ? { show: !0, label: r, html: n + "<b>" + t.unsent + "</b>" } : { show: !0, label: r, html: n + (t.offline ? '<span>Нет связи</span><span class="p2-net__sep">·</span>' : "") + "<span>не отправлено: <b>" + t.unsent + "</b></span>" };
 }
-function $f(t, e, r) {
+function Df(t, e, r) {
   const n = t.ownerDocument;
   Uo(n);
   const s = n.createElement("div");
@@ -20961,14 +20977,14 @@ function $f(t, e, r) {
   };
   r.quality && o("Открыть Качество", !0, () => r.go("#/quality")), o("Повторить", !r.quality, () => window.dispatchEvent(new Event("platform2:refresh"))), t.replaceChildren(s);
 }
-function Lf(t, e) {
+function Uf(t, e) {
   const r = Date.parse(t || "");
   if (!Number.isFinite(r)) return "";
   const n = new Date(r), s = (o) => String(o).padStart(2, "0");
   return (new Date(e).toDateString() === n.toDateString() ? "" : s(n.getDate()) + "." + s(n.getMonth() + 1) + " ") + s(n.getHours()) + ":" + s(n.getMinutes());
 }
 let Si = !1;
-function Df(t) {
+function Bf(t) {
   if (Si || typeof window > "u") return;
   Si = !0;
   const e = window, r = document;
@@ -20999,7 +21015,7 @@ function Df(t) {
     if (p && Date.now() - p.at < A) return p.r;
     const x = (j = e.RbiSyncMergePolicy) == null ? void 0 : j.isUnsentLocal, O = e.RBI_DB_NAME || "";
     if (!x || !O || typeof indexedDB > "u") return { unsent: 0, rows: [] };
-    const L = kh(indexedDB, O, x).then((q) => (p = { r: q, at: Date.now() }, q));
+    const L = xh(indexedDB, O, x).then((q) => (p = { r: q, at: Date.now() }, q));
     d = L;
     try {
       return await L;
@@ -21021,7 +21037,7 @@ function Df(t) {
   function S(A, v, x) {
     if (!r.getElementById(ui)) {
       const Z = r.createElement("style");
-      Z.id = ui, Z.textContent = Ch, r.head.appendChild(Z);
+      Z.id = ui, Z.textContent = Ih, r.head.appendChild(Z);
     }
     const O = Date.now(), L = (Z) => {
       try {
@@ -21029,12 +21045,12 @@ function Df(t) {
       } catch {
         return "";
       }
-    }, j = e.RbiSyncNet, q = !!j && !!j.lastProbeAt && O - j.lastProbeAt < 12e4, J = { offline: n.offline || q && j.lastProbe === "offline", now: O, retryAfter: Number(L("rbi_sync_retry_after")) || 0, retryKind: L("rbi_sync_retry_kind") }, Y = e.RbiSyncJournal, Ne = e.RbiSyncJournalPolicy, ge = Y ? Y.list() : [], ne = Ne ? ge.slice(-20).reverse().map((Z) => ({ t: Lf(Z.t, O), text: Ne.eventLine(Z), tone: Ne.eventTone(Z) })) : [], Zn = $h(v || [], J);
+    }, j = e.RbiSyncNet, q = !!j && !!j.lastProbeAt && O - j.lastProbeAt < 12e4, J = { offline: n.offline || q && j.lastProbe === "offline", now: O, retryAfter: Number(L("rbi_sync_retry_after")) || 0, retryKind: L("rbi_sync_retry_kind") }, Y = e.RbiSyncJournal, Ne = e.RbiSyncJournalPolicy, ge = Y ? Y.list() : [], ne = Ne ? ge.slice(-20).reverse().map((Z) => ({ t: Uf(Z.t, O), text: Ne.eventLine(Z), tone: Ne.eventTone(Z) })) : [], Zn = Dh(v || [], J);
     if (!x) {
       const Z = Zn.filter((Yo) => !Yo.rejected).length;
       Z !== n.unsent && (n = { ...n, unsent: Z }, c());
     }
-    const Rr = Dh(
+    const Rr = Bh(
       {
         ...J,
         items: Zn,
@@ -21052,7 +21068,7 @@ function Df(t) {
   }
   async function C(A) {
     const v = await h(0, A).catch(() => null), x = v ? [...v.rows] : [];
-    return x.push(...await Cf()), x;
+    return x.push(...await If()), x;
   }
   async function b(A = !1) {
     const v = w();
@@ -21080,7 +21096,7 @@ function Df(t) {
     const x = v.dataset.act;
     if (x === "sync" && (fe("manual"), typeof e.triggerSync == "function" && e.triggerSync("manual")), x === "drop" && v.dataset.id && ((O = e.HistoryActions) != null && O.resolveSyncAttention) && Promise.resolve(e.HistoryActions.resolveSyncAttention(v.dataset.id)).then(() => b(!0)), x === "copy" && I(v), x === "retry") {
       const L = e.RBI_DB_NAME || "";
-      Promise.all([L && typeof indexedDB < "u" ? bh(indexedDB, L) : Promise.resolve(0), Do().catch(() => 0)]).then(() => Promise.all([fe("manual"), typeof e.triggerSync == "function" ? e.triggerSync("manual") : null])).then(() => b(!0), () => b(!0));
+      Promise.all([L && typeof indexedDB < "u" ? Sh(indexedDB, L) : Promise.resolve(0), Do().catch(() => 0)]).then(() => Promise.all([fe("manual"), typeof e.triggerSync == "function" ? e.triggerSync("manual") : null])).then(() => b(!0), () => b(!0));
     }
   }
   async function I(A) {
@@ -21125,7 +21141,7 @@ function Df(t) {
     const O = () => {
       A.remove();
     };
-    A.querySelector("button").addEventListener("click", O), r.body.appendChild(A), setTimeout(O, jf);
+    A.querySelector("button").addEventListener("click", O), r.body.appendChild(A), setTimeout(O, Nf);
   }
   function W() {
     c(), b(), $(), (e.RBI = e.RBI || {}).netStatus = {
@@ -21133,9 +21149,9 @@ function Df(t) {
       isOffline: a,
       needInternet: (A, v) => {
         const x = (e.RBI || {}).platformMenuAccess || {};
-        $f(A, v, { quality: x.quality === !0 || x.construction === !0, go: t.navigate });
+        Df(A, v, { quality: x.quality === !0 || x.construction === !0, go: t.navigate });
       }
-    }, window.dispatchEvent(new Event(If));
+    }, window.dispatchEvent(new Event(Pf));
   }
   async function P(A = !1) {
     var Ne;
@@ -21187,7 +21203,7 @@ function Xr(t, e, r) {
   } catch {
   }
 }
-function Uf(t, e) {
+function qf(t, e) {
   return t.done || t.step >= e ? 0 : t.step;
 }
 function Qr(t, e) {
@@ -21211,7 +21227,7 @@ function Mo(t, e, r) {
   }
   return s;
 }
-const Zr = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[e]), Bf = `
+const Zr = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[e]), Mf = `
 .p2t-hole{position:fixed;z-index:10001;border-radius:12px;box-shadow:0 0 0 9999px rgba(15,23,42,.55);outline:3px solid var(--accent,#c2964b);outline-offset:2px;
   pointer-events:none;transition:all .25s ease}
 .p2t-hole.p2t-none{left:50%;top:40%;width:0;height:0;outline:0}
@@ -21228,9 +21244,9 @@ const Zr = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">"
 .p2t-row button:focus-visible{outline:2px solid var(--accent,#c2964b);outline-offset:2px}
 .p2t-card.p2t-wait .p2t-row{opacity:.5;pointer-events:none}.p2t-card.p2t-wait .p2t-title::after{content:' · открываем экран…';font-weight:400;color:var(--text-muted,#666)}
 @media (max-width:767px){.p2t-card{left:12px!important;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px)!important;top:auto!important;width:auto}}`;
-function qf(t, e, r) {
+function Ff(t, e, r) {
   const n = r.doc, s = e.steps, i = s.length + (e.final ? 1 : 0);
-  let o = Uf(qo(r.storage, t), i), a = !0, l = 0, c = 0, u = null, d = null;
+  let o = qf(qo(r.storage, t), i), a = !0, l = 0, c = 0, u = null, d = null;
   const p = n.createElement("div");
   p.className = "p2t-hole", p.setAttribute("data-testid", "p2-tour-hole");
   const h = n.createElement("div");
@@ -21304,18 +21320,18 @@ function qf(t, e, r) {
   };
   return w(1), C;
 }
-const Mf = { title: "План/Факт", role: "project_manager", summary: "От ВОР до КС-2 глазами руководителя проекта: 11 шагов, около 3 минут", steps: [{ path: "#/planfact", target: "[data-testid=sm-portfolio]", title: "Сводка по объекту", body: "Три корпуса «ЖК Демо» на разных стадиях: Корпус 1 — старт, Корпус 2 — в разгаре, Корпус 3 — сдача. Сделано по договору в рублях и процентах — из факта прорабов." }, { path: "#/planfact", target: "[data-testid=pt-attention]", title: "Требует внимания", body: "Платформа сама подсказывает, что делать: отставание от плана, сделанное, но не выставленное в КС-2, позиции без движения." }, { path: "#/planfact/vor", target: "[data-testid=vor-imports]", title: "ВОР своей формы", body: "Ведомость объёмов работ загружается Excel-файлом в форме заказчика. Каждая строка разбирается: место (корпус, секция, этаж) и вид работ." }, { path: "#/planfact/vor", target: "[data-testid=vor-tab]", text: "Позиции", title: "Позиции работ", click: !0, body: "Позиция — это место × вид работ × объём. На неё вносится факт, ставятся цены, по ней считается КС-2." }, { path: "#/planfact/estimate", target: "[data-testid=es-list]", title: "Смета и КП", body: "Смета — цены по строкам ВОР. Коммерческое предложение — неизменяемая редакция сметы; договорная редакция КП — основа для КС-2." }, { path: "#/planfact/fact", target: "[data-testid=ft-tree]", title: "Факт прораба", body: "Прораб выбирает корпус, секцию, этаж и вносит объём за день — даже без интернета, запись уйдёт, когда появится сеть. В демо внести факт нельзя: только просмотр." }, { path: "#/planfact/fact", target: "[data-testid=pf-facttabs]", title: "Шахматка, проверка и журнал", body: "Шахматка — готовность по этажам. «Ждёт подтверждения» — перебор объёма, его подтверждает РП. Журнал — кто, когда и что внёс, с исправлениями и причиной." }, { path: "#/planfact/inbox", target: "[data-testid=ib-total]", title: "Входящие РП", body: "Дела руководителя проекта в одном месте: подтвердить факт, выдать черновик КС-2, выставить сделанное." }, { path: "#/planfact/ks2", target: "[data-testid=k2-kpis]", title: "КС-2 из факта", body: "Акт собирается из подтверждённого факта за период по ценам договорной КП. Выдано по актам — сколько уже предъявлено заказчику." }, { path: "#/planfact/ks2", target: "[data-testid=k2r-table]", title: "Реестр актов", body: "КС-2 №1 и №2 выданы, №3 — черновик текущего периода. Выданный акт не меняется: исправление — новой редакцией, история сохраняется." }], final: { title: "Попробуйте у себя", body: "В демо — только просмотр. Чтобы загрузить свою ВОР и внести факт, выйдите из демо: в своей компании всё работает по-настоящему." } }, Ff = { title: "Качество", role: "qc_engineer", summary: "Проверка по чек-листу → замечание → устранение: 5 шагов", steps: [{ path: "#/quality/audit", target: ".view-section.active", title: "Проверка по чек-листу", body: "Инженер выбирает объект и вид работ — открывается чек-лист с нормами (монолит, кладка, штукатурка, окна…). Каждый пункт: «норма» или «нарушение» с фото и комментарием." }, { path: "#/quality/analytics", target: "h3", text: "Динамика УрК", title: "Уровень качества", body: "По проверкам «ЖК Демо» платформа считает уровень качества (УрК) и показывает, как он меняется. Критичные нарушения (B3) — красным.", alt: [{ target: "h3", text: "Критический брак" }] }, { path: "#/quality/analytics", target: "h3", text: "Сравнение подрядчиков", title: "Подрядчики", body: "Кто из подрядчиков чаще нарушает и в каких видах работ — видно сразу, без отчётов в Excel.", alt: [{ target: "button", text: "Подрядчики" }] }, { path: "#/construction-v2/defects", target: "button", text: "📄 эт. 3", title: "Замечание на плане этажа", click: !0, body: "Замечание ставится точкой на PDF-плане этажа — подрядчик видит, где именно. Откроем Корпус 2, секция 1, этаж 3: его замечания и кнопка «На плане»." }, { path: "#/construction-v2/defects", target: "button", text: "Закрыто", title: "Устранение", body: "Подрядчик берёт замечание в работу и отмечает «Устранено», инженер проверяет и закрывает или возвращает на доработку. Сроки и просрочки — в реестре.", alt: [{ target: ".view-section.active" }] }], final: { title: "Попробуйте у себя", body: "В демо проверку не провести — только просмотр. В своей компании выберите вид работ и пройдите чек-лист с телефона, даже без сети." } }, Hf = { title: "Стройконтроль", role: "qc_engineer", summary: "Замечание подрядчику на плане → приёмка: 5 шагов", steps: [{ path: "#/construction-v2", target: "button", text: "📄 эт. 5", title: "Планы этажей", click: !0, body: "Дерево мест — из «Компании»: корпус → секция → этаж. Значок 📄 — у этажа загружен PDF-план. Откроем Корпус 2, секция 1, этаж 5.", alt: [{ target: "button", text: "Изменить" }] }, { path: "#/construction-v2", target: "#c2-plan-host", title: "Точки замечаний", body: "Каждая точка — замечание подрядчику: цвет — статус. «+ Замечание» ставит новую точку на план (в демо — только просмотр)." }, { path: "#/construction-v2/defects", target: "button", text: "Выдано", title: "Реестр замечаний", body: "Выдано, в работе, на проверке, закрыто — с подрядчиком, сроком и фото. Подрядчик видит только замечания своей фирмы.", alt: [{ target: "button", text: "📄 эт. 5" }] }, { path: "#/construction-v2/acceptance", target: ".view-section.active", text: "ОЖИДАЮТ", title: "Приёмка", body: "Подрядчик записывается на приёмку в свободное окно, инженер проводит её по чек-листу и принимает или возвращает на доработку." }, { path: "#/construction-v2/transfer", target: ".view-section.active", title: "Передача квартир", body: "Когда приёмки пройдены, квартиры передаются собственникам — статус каждой видно на шахматке." }], final: { title: "Попробуйте у себя", body: "В демо замечание не выдать — только просмотр. В своей компании загрузите PDF-план этажа в «Компания → Проекты» и поставьте первое замечание." } }, zf = {
-  planfact: Mf,
-  quality: Ff,
-  construction: Hf
-}, yr = zf, Wf = ["planfact", "quality", "construction"], Vt = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[e]), Kf = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>';
-function Vf(t) {
-  return `<div class="p2d-sec" id="p2-tours">Обучение по шагам</div><div class="p2w-grid">${Wf.filter((r) => yr[r]).map((r) => {
+const Hf = { title: "План/Факт", role: "project_manager", summary: "От ВОР до КС-2 глазами руководителя проекта: 11 шагов, около 3 минут", steps: [{ path: "#/planfact", target: "[data-testid=sm-portfolio]", title: "Сводка по объекту", body: "Три корпуса «ЖК Демо» на разных стадиях: Корпус 1 — старт, Корпус 2 — в разгаре, Корпус 3 — сдача. Сделано по договору в рублях и процентах — из факта прорабов." }, { path: "#/planfact", target: "[data-testid=pt-attention]", title: "Требует внимания", body: "Платформа сама подсказывает, что делать: отставание от плана, сделанное, но не выставленное в КС-2, позиции без движения." }, { path: "#/planfact/vor", target: "[data-testid=vor-imports]", title: "ВОР своей формы", body: "Ведомость объёмов работ загружается Excel-файлом в форме заказчика. Каждая строка разбирается: место (корпус, секция, этаж) и вид работ." }, { path: "#/planfact/vor", target: "[data-testid=vor-tab]", text: "Позиции", title: "Позиции работ", click: !0, body: "Позиция — это место × вид работ × объём. На неё вносится факт, ставятся цены, по ней считается КС-2." }, { path: "#/planfact/estimate", target: "[data-testid=es-list]", title: "Смета и КП", body: "Смета — цены по строкам ВОР. Коммерческое предложение — неизменяемая редакция сметы; договорная редакция КП — основа для КС-2." }, { path: "#/planfact/fact", target: "[data-testid=ft-tree]", title: "Факт прораба", body: "Прораб выбирает корпус, секцию, этаж и вносит объём за день — даже без интернета, запись уйдёт, когда появится сеть. В демо внести факт нельзя: только просмотр." }, { path: "#/planfact/fact", target: "[data-testid=pf-facttabs]", title: "Шахматка, проверка и журнал", body: "Шахматка — готовность по этажам. «Ждёт подтверждения» — перебор объёма, его подтверждает РП. Журнал — кто, когда и что внёс, с исправлениями и причиной." }, { path: "#/planfact/inbox", target: "[data-testid=ib-total]", title: "Входящие РП", body: "Дела руководителя проекта в одном месте: подтвердить факт, выдать черновик КС-2, выставить сделанное." }, { path: "#/planfact/ks2", target: "[data-testid=k2-kpis]", title: "КС-2 из факта", body: "Акт собирается из подтверждённого факта за период по ценам договорной КП. Выдано по актам — сколько уже предъявлено заказчику." }, { path: "#/planfact/ks2", target: "[data-testid=k2r-table]", title: "Реестр актов", body: "КС-2 №1 и №2 выданы, №3 — черновик текущего периода. Выданный акт не меняется: исправление — новой редакцией, история сохраняется." }], final: { title: "Попробуйте у себя", body: "В демо — только просмотр. Чтобы загрузить свою ВОР и внести факт, выйдите из демо: в своей компании всё работает по-настоящему." } }, zf = { title: "Качество", role: "qc_engineer", summary: "Проверка по чек-листу → замечание → устранение: 5 шагов", steps: [{ path: "#/quality/audit", target: ".view-section.active", title: "Проверка по чек-листу", body: "Инженер выбирает объект и вид работ — открывается чек-лист с нормами (монолит, кладка, штукатурка, окна…). Каждый пункт: «норма» или «нарушение» с фото и комментарием." }, { path: "#/quality/analytics", target: "h3", text: "Динамика УрК", title: "Уровень качества", body: "По проверкам «ЖК Демо» платформа считает уровень качества (УрК) и показывает, как он меняется. Критичные нарушения (B3) — красным.", alt: [{ target: "h3", text: "Критический брак" }] }, { path: "#/quality/analytics", target: "h3", text: "Сравнение подрядчиков", title: "Подрядчики", body: "Кто из подрядчиков чаще нарушает и в каких видах работ — видно сразу, без отчётов в Excel.", alt: [{ target: "button", text: "Подрядчики" }] }, { path: "#/construction-v2/defects", target: "button", text: "📄 эт. 3", title: "Замечание на плане этажа", click: !0, body: "Замечание ставится точкой на PDF-плане этажа — подрядчик видит, где именно. Откроем Корпус 2, секция 1, этаж 3: его замечания и кнопка «На плане»." }, { path: "#/construction-v2/defects", target: "button", text: "Закрыто", title: "Устранение", body: "Подрядчик берёт замечание в работу и отмечает «Устранено», инженер проверяет и закрывает или возвращает на доработку. Сроки и просрочки — в реестре.", alt: [{ target: ".view-section.active" }] }], final: { title: "Попробуйте у себя", body: "В демо проверку не провести — только просмотр. В своей компании выберите вид работ и пройдите чек-лист с телефона, даже без сети." } }, Wf = { title: "Стройконтроль", role: "qc_engineer", summary: "Замечание подрядчику на плане → приёмка: 5 шагов", steps: [{ path: "#/construction-v2", target: "button", text: "📄 эт. 5", title: "Планы этажей", click: !0, body: "Дерево мест — из «Компании»: корпус → секция → этаж. Значок 📄 — у этажа загружен PDF-план. Откроем Корпус 2, секция 1, этаж 5.", alt: [{ target: "button", text: "Изменить" }] }, { path: "#/construction-v2", target: "#c2-plan-host", title: "Точки замечаний", body: "Каждая точка — замечание подрядчику: цвет — статус. «+ Замечание» ставит новую точку на план (в демо — только просмотр)." }, { path: "#/construction-v2/defects", target: "button", text: "Выдано", title: "Реестр замечаний", body: "Выдано, в работе, на проверке, закрыто — с подрядчиком, сроком и фото. Подрядчик видит только замечания своей фирмы.", alt: [{ target: "button", text: "📄 эт. 5" }] }, { path: "#/construction-v2/acceptance", target: ".view-section.active", text: "ОЖИДАЮТ", title: "Приёмка", body: "Подрядчик записывается на приёмку в свободное окно, инженер проводит её по чек-листу и принимает или возвращает на доработку." }, { path: "#/construction-v2/transfer", target: ".view-section.active", title: "Передача квартир", body: "Когда приёмки пройдены, квартиры передаются собственникам — статус каждой видно на шахматке." }], final: { title: "Попробуйте у себя", body: "В демо замечание не выдать — только просмотр. В своей компании загрузите PDF-план этажа в «Компания → Проекты» и поставьте первое замечание." } }, Kf = {
+  planfact: Hf,
+  quality: zf,
+  construction: Wf
+}, yr = Kf, Vf = ["planfact", "quality", "construction"], Vt = (t) => t.replace(/[&<>"']/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[e]), Gf = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>';
+function Jf(t) {
+  return `<div class="p2d-sec" id="p2-tours">Обучение по шагам</div><div class="p2w-grid">${Vf.filter((r) => yr[r]).map((r) => {
     const n = yr[r], s = qo(t, r), i = s.done ? " · пройдено" : s.step > 0 ? " · продолжить" : "";
-    return `<button type="button" class="p2w-tile" data-testid="p2-tour-start" data-tour-start="${Vt(r)}"><span class="p2w-ico">${Kf}</span><span class="p2w-txt"><span class="p2w-t">Обучение: ${Vt(n.title)}${Vt(i)}</span><span class="p2w-d">${Vt(n.summary)}</span></span></button>`;
+    return `<button type="button" class="p2w-tile" data-testid="p2-tour-start" data-tour-start="${Vt(r)}"><span class="p2w-ico">${Gf}</span><span class="p2w-txt"><span class="p2w-t">Обучение: ${Vt(n.title)}${Vt(i)}</span><span class="p2w-d">${Vt(n.summary)}</span></span></button>`;
   }).join("")}</div>`;
 }
-const Gf = "auth-gate-overlay", xi = "p2-login-style";
+const Yf = "auth-gate-overlay", xi = "p2-login-style";
 let Te = null, Oe = null;
 function Ee() {
   return window;
@@ -21327,7 +21343,7 @@ function xr() {
 function Ae() {
   if (document.getElementById(xi)) return;
   const t = document.createElement("style");
-  t.id = xi, t.textContent = Qd + eh + qd + xf + Bf + `
+  t.id = xi, t.textContent = eh + rh + Fd + Af + Mf + `
 .p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
 .p2-show-test{display:inline-flex;align-items:center;gap:8px;font-size:13px;min-height:44px;margin-left:12px;cursor:pointer;color:var(--text-main)}
 .p2-show-test input{width:20px;height:20px;accent-color:var(--primary)}
@@ -21342,8 +21358,8 @@ function F() {
 }
 function N() {
   if (Te) return Te;
-  const t = oo(), e = t ? du(t) : null, r = e ? ct() : null;
-  return Te = Od({
+  const t = oo(), e = t ? fu(t) : null, r = e ? ct() : null;
+  return Te = jd({
     auth: e,
     rpc: r ? async (n, s, i) => {
       const o = r.rpc(n, s || {}), a = await (i ? o.abortSignal(i) : o);
@@ -21357,25 +21373,25 @@ function N() {
       const n = cr(F());
       return n ? { email: n.email, issuedAt: n.issuedAt } : null;
     }
-  }), Te.subscribe(ep), e && e.onAuthChange && e.onAuthChange(() => {
+  }), Te.subscribe(rp), e && e.onAuthChange && e.onAuthChange(() => {
     Te.refresh();
   }), window.addEventListener("platform2:refresh", () => {
     Te.refresh();
   }), window.addEventListener("online", () => {
     Te.refresh();
-  }), window.addEventListener(yo, Qf), Te;
+  }), window.addEventListener(yo, ep), Te;
 }
 function Er() {
-  return document.getElementById(Gf);
+  return document.getElementById(Yf);
 }
-const Jf = "Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены";
+const Xf = "Нет связи больше 14 дней — войдите, когда будет интернет. Данные на телефоне сохранены";
 function Xn() {
   const t = Er();
   if (!t) return;
   Ae();
   const e = t.querySelector("[data-p2-login-host]") || t, r = N();
-  Zd(e, {
-    notice: r.getState().loginReason === "stale" ? Jf : void 0,
+  th(e, {
+    notice: r.getState().loginReason === "stale" ? Xf : void 0,
     signIn: async (n, s) => {
       const i = await r.signIn(n, s);
       return i.ok && Qn(), i;
@@ -21386,12 +21402,12 @@ function Xn() {
   }), t.classList.remove("hidden");
 }
 let _r = !1;
-function Yf(t) {
+function Qf(t) {
   const e = Er();
   if (!e) return;
   Ae();
   const r = e.querySelector("[data-p2-login-host]") || e, n = N();
-  _r || (th(r, {
+  _r || (nh(r, {
     email: t,
     change: async (s) => {
       const i = await n.changePassword(s);
@@ -21402,7 +21418,7 @@ function Yf(t) {
     }
   }), _r = !0), e.classList.remove("hidden");
 }
-function Xf() {
+function Zf() {
   _r = !1;
   const t = Er();
   t && t.classList.add("hidden");
@@ -21411,15 +21427,15 @@ function Ar() {
   const t = N().getState(), e = F();
   let r = null;
   try {
-    r = window.localStorage.getItem(Sd);
+    r = window.localStorage.getItem(Ed);
   } catch {
   }
-  return Rd({
+  return Od({
     mode: t.mode,
     access: N().access(),
     lastHash: r,
     welcomeSeen: ko(e, t.email),
-    actions: Cd(e, t.companyId, t.email)
+    actions: Id(e, t.companyId, t.email)
   });
 }
 function Qn() {
@@ -21437,14 +21453,14 @@ function Fo(t) {
   const e = N().getState();
   Ae();
   let r = t.querySelector("select"), n = t.querySelector("label.p2-show-test");
-  const s = Hn(F()), i = { isPlatformAdmin: e.isPlatformAdmin, showTest: s, keepId: e.companyId }, o = yf(zn(e.companies, i), e.companyId);
+  const s = Hn(F()), i = { isPlatformAdmin: e.isPlatformAdmin, showTest: s, keepId: e.companyId }, o = wf(zn(e.companies, i), e.companyId);
   if (!(e.mode === "email" && e.isPlatformAdmin && e.companies.some((c) => _o(c, { ...i, showTest: !1, keepId: null }))))
     n && n.remove(), n = null;
   else if (!n) {
     n = document.createElement("label"), n.className = "p2-show-test";
     const c = document.createElement("input");
     c.type = "checkbox", c.setAttribute("data-testid", "p2-show-test"), c.addEventListener("change", () => {
-      gd(F(), c.checked), window.dispatchEvent(new Event(yo));
+      _d(F(), c.checked), window.dispatchEvent(new Event(yo));
     }), n.append(c, document.createTextNode("Показать тестовые"));
   }
   e.mode !== "email" || o.length < 2 ? (r && r.remove(), r = null) : (r || (r = document.createElement("select"), r.className = "p2-company-switch", r.setAttribute("aria-label", "Компания"), r.setAttribute("data-testid", "p2-company-switch"), r.addEventListener("change", () => N().setCompany(r.value))), r.replaceChildren(...o.map((c) => {
@@ -21456,7 +21472,7 @@ function Fo(t) {
     c.preventDefault(), c.stopPropagation(), Q(ce, !1);
   })), l.textContent = Nt(e) ? "Демо: сменить роль, обучение или выйти" : "Демо и обучение: заполненный объект глазами любой роли", t.appendChild(l));
 }
-function Qf() {
+function ep() {
   const t = N().getState();
   if (t.mode === "email") {
     const e = zn(t.companies, { isPlatformAdmin: t.isPlatformAdmin, showTest: Hn(F()) });
@@ -21464,41 +21480,41 @@ function Qf() {
   }
   Zt && Zt.isConnected && Fo(Zt);
 }
-const Zf = "Доступ к разделу изменился";
+const tp = "Доступ к разделу изменился";
 let Ei = null, Ai = null;
-function ep(t) {
+function rp(t) {
   var l, c;
-  const e = xr(), r = N().access(), n = Ad(Ei, r, window.location.hash);
+  const e = xr(), r = N().access(), n = Rd(Ei, r, window.location.hash);
   Ei = r;
-  const s = Ed(Ai, t);
-  Ai = t, e.platformMenuAccess = r, e.platform2 = Jo, s && window.dispatchEvent(new Event("rbi:platform-access")), window.dispatchEvent(new Event(ih));
+  const s = Td(Ai, t);
+  Ai = t, e.platformMenuAccess = r, e.platform2 = Jo, s && window.dispatchEvent(new Event("rbi:platform-access")), window.dispatchEvent(new Event(ah));
   const i = (l = e.services) == null ? void 0 : l.shell;
   i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu();
   const o = Ee().AppModeManager;
   if (o && typeof o.renderBottomNav == "function" && o.renderBottomNav(), t.mode === "email" && t.email) {
     const u = t.companies.find((d) => d.id === t.companyId);
-    nh(t.fullName || t.email, u ? u.name + (u.roles[0] ? " · " + u.roles[0] : "") : t.isPlatformAdmin ? "администратор платформы" : "");
+    ih(t.fullName || t.email, u ? u.name + (u.roles[0] ? " · " + u.roles[0] : "") : t.isPlatformAdmin ? "администратор платформы" : "");
   } else
-    sh();
+    oh();
   Ae();
   const a = Nt(t);
-  if (Af(document, a ? { role: _f(a) } : null, { pick: () => Q(ce, !1), leave: () => void Tr() }), a && !t.checking && !t.offline && ((c = F()) == null ? void 0 : c.getItem(Se)) === a.id) {
-    const u = vf({ storage: F() });
-    u && window.location.hash !== u && Q(u), op();
+  if (Rf(document, a ? { role: vf(a) } : null, { pick: () => Q(ce, !1), leave: () => void Tr() }), a && !t.checking && !t.offline && ((c = F()) == null ? void 0 : c.getItem(Se)) === a.id) {
+    const u = kf({ storage: F() });
+    u && window.location.hash !== u && Q(u), lp();
   }
   if (t.mode === "email" && window.location.hash === ce && Vo(), t.mode === "email" && t.mustChangePassword && t.email) {
-    Yf(t.email);
+    Qf(t.email);
     return;
   }
-  if (t.mode === "none" ? (_r = !1, Xn()) : Xf(), n && t.mode === "email") {
+  if (t.mode === "none" ? (_r = !1, Xn()) : Zf(), n && t.mode === "email") {
     Qn();
     const u = Ee().showToast;
-    typeof u == "function" && u(Zf);
+    typeof u == "function" && u(tp);
   }
-  (!t.offline || t.companies.length > 0) && sp(), tp(t), rp(t), Go(), t.mode === "email" && window.location.hash === re && Ho();
+  (!t.offline || t.companies.length > 0) && op(), np(t), sp(t), Go(), t.mode === "email" && window.location.hash === re && Ho();
 }
 let pt = null;
-function tp(t) {
+function np(t) {
   pt && (clearTimeout(pt), pt = null), t.offline && t.mode === "email" && (pt = setTimeout(() => {
     pt = null, N().refresh();
   }, 6e4));
@@ -21508,11 +21524,11 @@ function Pn() {
   const t = window.localStorage, e = t.getItem(Se) || "";
   return e ? e + ":" + (t.getItem(vt) || "") : "";
 }
-async function rp(t) {
+async function sp(t) {
   var e;
   try {
     const r = oo(), n = ct();
-    await Tu(t, {
+    await Cu(t, {
       win: window,
       store: window.localStorage,
       reload: () => window.location.reload(),
@@ -21527,7 +21543,7 @@ async function rp(t) {
         }
       },
       listProjects: async (o) => {
-        const a = md();
+        const a = yd();
         return (a ? await a.listProjects(o) : []).filter((c) => !c.archived_at).map((c) => ({ id: c.id, name: c.name }));
       }
     });
@@ -21540,36 +21556,36 @@ async function rp(t) {
       }));
     }
     const i = (e = xr().services) == null ? void 0 : e.shell;
-    i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu(), !t.offline && !t.checking && t.mode === "email" && np();
+    i && typeof i.renderSidebar == "function" && i.renderSidebar(), i && typeof i.renderMobileModuleMenu == "function" && i.renderMobileModuleMenu(), !t.offline && !t.checking && t.mode === "email" && ip();
   } catch (r) {
     console.warn("[Platform2] Качество: подключение к хранилищу компании не удалось", r);
   }
 }
 let Ri = !1;
-async function np() {
+async function ip() {
   var i, o;
   const t = Ee(), e = xr().qualitySync, r = (i = t.RbiSyncMergePolicy) == null ? void 0 : i.isUnsentLocal, n = ((o = t.APP_CONFIG) == null ? void 0 : o.LOCAL_DB_NAME) || "PLATFORM2_DB", s = t.RBI_DB_NAME || "";
   if (!(Ri || !e || !e.projectId || !r || !s || s === n || typeof indexedDB > "u")) {
     Ri = !0;
     try {
-      const a = await vh(indexedDB, n, r), l = window.localStorage;
+      const a = await kh(indexedDB, n, r), l = window.localStorage;
       if (!a.orphans.length) {
         l.removeItem(li);
         return;
       }
       if (Ae(), !document.getElementById("p2-rescue-style")) {
         const u = document.createElement("style");
-        u.id = "p2-rescue-style", u.textContent = xh, document.head.appendChild(u);
+        u.id = "p2-rescue-style", u.textContent = Ah, document.head.appendChild(u);
       }
       const c = e.projectId;
-      document.body.appendChild(Th(document, {
+      document.body.appendChild(Ch(document, {
         companyName: e.companyName || "компанию",
         orphans: a.orphans,
         onLater: () => {
         },
         onMove: async () => {
           try {
-            await Sh(indexedDB, n, s, a, { slot: Pn(), projectCode: c, author: e.engineerName || "" });
+            await Eh(indexedDB, n, s, a, { slot: Pn(), projectCode: c, author: e.engineerName || "" });
           } catch {
             return "Не удалось перенести. Попробуйте ещё раз";
           }
@@ -21581,7 +21597,7 @@ async function np() {
     }
   }
 }
-function sp() {
+function op() {
   var n;
   const t = (n = xr().services) == null ? void 0 : n.shell, e = N().access(), r = [];
   t && typeof t.isPlatformModuleAllowed == "function" && t.isPlatformModuleAllowed("planfact") && r.push("planfact"), e.company && r.push("company"), e.platformAdmin && r.push("platform-admin");
@@ -21594,7 +21610,7 @@ function sp() {
 const Nn = "tab-welcome";
 let Ci = !1, ae = null;
 const Oi = 1300;
-function ip() {
+function ap() {
   let t = document.getElementById(Nn);
   if (t) return t;
   t = document.createElement("div"), t.id = Nn, t.className = "view-section";
@@ -21610,17 +21626,17 @@ function Ho() {
     return;
   }
   Ae();
-  const e = ip();
+  const e = ap();
   document.querySelectorAll(".view-section").forEach((l) => l.classList.remove("active")), e.classList.add("active"), e.classList.remove("hidden");
   const r = document.getElementById("main-header");
   if (r && (r.style.display = "block"), document.body.classList.add(oe), !ae) {
     const l = t.email;
     ae = { key: "", animate: !ko(F(), l), at: Date.now(), email: l }, ae.animate ? setTimeout(() => Tn(F(), l), Oi) : Tn(F(), l);
   }
-  const n = t.companies.find((l) => l.id === t.companyId) || null, s = Nd(N().access(), Wn), i = JSON.stringify([t.email, t.fullName, n && n.id, s.map((l) => l.id)]);
+  const n = t.companies.find((l) => l.id === t.companyId) || null, s = Ld(N().access(), Wn), i = JSON.stringify([t.email, t.fullName, n && n.id, s.map((l) => l.id)]);
   if (ae.key === i && e.querySelector("[data-testid=p2-welcome]")) return;
   const o = ae.animate && (!ae.key || Date.now() - ae.at < Oi);
-  ae.key = i, Md(e, {
+  ae.key = i, Hd(e, {
     name: t.fullName || t.email,
     company: n ? n.name : null,
     role: n && n.roles[0] ? n.roles[0] : null,
@@ -21663,13 +21679,13 @@ function It() {
 }
 async function Tr() {
   var e;
-  const t = await bf(It());
+  const t = await Sf(It());
   t && (It().toast(t), (e = document.querySelector(".p2d")) == null || e.classList.remove("p2d-busy"));
 }
 let _t = null;
 function Wo(t) {
   const e = yr[t];
-  e && (_t && _t.stop(), Ae(), _t = qf(t, e, {
+  e && (_t && _t.stop(), Ae(), _t = Ff(t, e, {
     doc: document,
     storage: F(),
     currentPath: () => window.location.hash,
@@ -21692,7 +21708,7 @@ async function Ko(t, e) {
   n && (It().toast(n), (s = document.querySelector(".p2d")) == null || s.classList.remove("p2d-busy"));
 }
 let en = null;
-function op() {
+function lp() {
   var r, n;
   let t = null;
   try {
@@ -21731,14 +21747,14 @@ async function Vo() {
   document.querySelectorAll(".view-section").forEach((h) => h.classList.remove("active")), e.classList.add("active"), e.classList.remove("hidden");
   const r = document.getElementById("main-header");
   r && (r.style.display = "block"), document.body.classList.add(oe, "p2-demo-page");
-  const n = ++ji, s = It(), { roles: i, error: o } = await wf(s);
+  const n = ++ji, s = It(), { roles: i, error: o } = await bf(s);
   if (n !== ji || window.location.hash !== ce) return;
   const a = e, l = ((p = i.find((h) => h.current)) == null ? void 0 : p.code) || null;
-  Ef(a, {
+  Tf(a, {
     roles: i,
     error: o,
     inDemo: !!Nt(N().getState()),
-    extra: o ? "" : Vf(F()),
+    extra: o ? "" : Jf(F()),
     choose: (h) => void $o(s, h).then((f) => {
       var m;
       f && (s.toast(f), (m = a.querySelector(".p2d")) == null || m.classList.remove("p2d-busy"));
@@ -21769,20 +21785,20 @@ function Go() {
     r !== re && r !== ce && document.body.classList.remove(oe), r !== ce && document.body.classList.remove("p2-demo-page"), r !== re && (ae && Tn(F(), ae.email), ae = null);
   }), window.addEventListener("resize", zo), (window.location.hash === re || window.location.hash === ce) && typeof t.renderRoute == "function" && t.renderRoute());
 }
-function ap() {
+function cp() {
   let t = null;
   try {
     t = window.localStorage;
   } catch {
     t = null;
   }
-  lh({
+  uh({
     store: t,
-    deleteDatabase: typeof indexedDB < "u" ? (e) => ch(indexedDB, e) : null
+    deleteDatabase: typeof indexedDB < "u" ? (e) => dh(indexedDB, e) : null
   }).catch(() => {
   });
 }
-function lp() {
+function up() {
   const t = cr(F());
   if (!t || !t.email || Qt(F(), t.email)) return;
   const e = Er();
@@ -21791,7 +21807,7 @@ function lp() {
 function $n() {
   return Oe ? Oe.then((t) => {
     t.mode === "none" && Xn();
-  }) : (Go(), ap(), lp(), Oe = N().boot(), Oe.then(() => Df({ platform: () => N().getState(), navigate: (t) => Q(t) })), Oe.then(() => Of())), Oe;
+  }) : (Go(), cp(), up(), Oe = N().boot(), Oe.then(() => Bf({ platform: () => N().getState(), navigate: (t) => Q(t) })), Oe.then(() => jf())), Oe;
 }
 const Jo = {
   start: $n,
@@ -21823,7 +21839,7 @@ const Jo = {
       return;
     }
     const r = e.email + "|" + (e.fullName || "");
-    t.dataset.p2Profile === r && t.firstChild || (t.dataset.p2Profile = r, Ae(), rh(t, {
+    t.dataset.p2Profile === r && t.firstChild || (t.dataset.p2Profile = r, Ae(), sh(t, {
       email: e.email,
       fullName: e.fullName || null,
       change: (n) => N().changePassword(n),
@@ -21840,8 +21856,8 @@ const Jo = {
   }
 };
 export {
-  Zf as ACCESS_CHANGED_TEXT,
-  Jf as STALE_LOGIN_TEXT,
+  tp as ACCESS_CHANGED_TEXT,
+  Xf as STALE_LOGIN_TEXT,
   Jo as api,
   $n as start
 };

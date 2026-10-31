@@ -1,17 +1,19 @@
 -- P2-0053 (CRITICAL — права): кнопка «Демо» — заполненный «ЖК Демо» глазами любой роли, только смотреть.
 --  1) core.companies.is_demo — демо-компания (одна на платформу; ставит SQL учёток scripts/demo/accounts.mjs);
 --  2) core.demo_roles — демо-роли демо-компании: роль на выбор («прораб», «ПТО», …) = своя роль компании с действиями
---     шаблона без записи «с телефона» (факт остаётся, Качество и Стройконтроль — только просмотр, без управления ролями и
---     справочниками, без ИИ и журнала) и её область (проект, место, фирма) — заводит администратор демо-компании
---     (pf_demo_setup, засев scripts/demo/);
+--     шаблона без записи «с телефона» (факт остаётся, Качество и Стройконтроль — только просмотр) и НИКОГДА без
+--     административных (роли и права, сотрудники и участие, модули, проекты и справочники компании, ИИ, журнал) и её
+--     область (проект, место, фирма) — заводит администратор демо-компании (pf_demo_setup, засев scripts/demo/);
 --  3) core.demo_visits — посетитель (вошедший из любой компании): участник демо-компании с одной демо-ролью и её областью
 --     (обычное назначение P2-0048 — права и область считает прежняя проверка core.*); pf_demo_roles — выбор,
 --     pf_demo_enter(роль) — войти / сменить роль, pf_demo_leave — выйти (назначение отозвано, участие выключено);
 --  4) «только просмотр» для посетителя: сторож-триггер на каждой таблице core / planfact / quality с компанией или проектом —
 --     любая запись посетителя в строки демо-компании → отказ 42501 «Демо — только просмотр»; файлы — то же правилом Storage;
 --     не посетитель — одна проверка по индексу, больше ничего (РБИ и прочие компании не затрагиваются);
---  5) администратор платформы, пока он в демо, — обычный посетитель (planfact.is_platform_admin = false до «Выйти из демо»):
---     видит «ЖК Демо» глазами выбранной роли, а не всё; общий механизм has_grant / can_at / row_allowed не меняется;
+--  5) администратор платформы — обычный посетитель в запросах К ДЕМО-КОМПАНИИ, пока он её посетитель (компания запроса —
+--     заголовок x-company-id; решение Архитектора 31.10): planfact.is_platform_admin = false — видит «ЖК Демо» глазами
+--     выбранной роли; без заголовка или с другой компанией — администратор как раньше (второе устройство, забыл «Выйти»);
+--     has_grant / can_at / row_allowed не меняются;
 --  6) посетителей не видно: «Сотрудники», «Кто что может», число людей у администратора платформы; pf_my_platform отдаёт
 --     признак is_demo у компании.
 -- Применять после 056, одним запросом. Откат — 057_demo_mode_down.sql (демо-компания остаётся обычной тестовой).
@@ -91,19 +93,29 @@ returns boolean language sql stable security definer set search_path = pg_catalo
   select exists (select 1 from core.demo_visits v where v.company_id = p_company and v.user_id = p_user)
 $$;
 
--- Действия демо-роли из действий шаблона: просмотр и видимость записей; План/Факт целиком (кроме журнала) — его запись идёт
--- через сервер и упирается в сторож; Качество и Стройконтроль — только просмотр (их записи создаёт телефон без сети — по
--- копии прав он их и не даст создать); без управления ролями, справочниками, ИИ.
+-- Административные действия — демо-роли их не получают никогда (решение Архитектора 31.10): роли и права, сотрудники и
+-- участие, контрагенты, модули и настройки Качества / СК, проекты, места и справочники компании, ИИ, журнал.
+create function core.demo_admin_action(p_action text)
+returns boolean language sql immutable set search_path = pg_catalog as $$
+  select p_action like 'security.%' or p_action like 'core.%'
+      or p_action in ('quality.manage', 'quality.objects.manage', 'construction.manage', 'construction.objects.manage', 'quality.ai',
+                      'planfact.projects.manage', 'planfact.units.manage', 'planfact.brigades.manage', 'planfact.thresholds.edit',
+                      'planfact.audit.view')
+$$;
+
+-- Действия демо-роли из действий шаблона: просмотр и видимость записей; работа План/Факта (ВОР, смета, факт, КС-2) — его
+-- запись идёт через сервер и упирается в сторож; Качество и Стройконтроль — только просмотр (их записи создаёт телефон без
+-- сети — по копии прав он их и не даст создать); административных — нет.
 create function core.demo_actions(p_template text)
 returns text[] language sql stable security definer set search_path = pg_catalog as $$
   select coalesce(array_agg(t.action order by t.action), '{}')
     from core.role_template_permissions t
    where t.template_code = p_template
      and (t.action like '%.view' or t.action like 'quality.scope.%' or t.action like 'planfact.%')
-     and t.action not in ('planfact.audit.view')
+     and not core.demo_admin_action(t.action)
 $$;
 
-revoke all on function core.my_demo_company(), core.is_demo_visitor(uuid, uuid), core.demo_actions(text) from public, anon, authenticated;
+revoke all on function core.my_demo_company(), core.is_demo_visitor(uuid, uuid), core.demo_actions(text), core.demo_admin_action(text) from public, anon, authenticated;
 -- правило Storage ниже выполняется от имени клиента
 grant execute on function core.my_demo_company() to authenticated;
 
@@ -111,18 +123,29 @@ grant execute on function core.my_demo_company() to authenticated;
 create function core.demo_guard()
 returns trigger language plpgsql security definer set search_path = pg_catalog as $$
 declare
-  v_demo uuid := core.my_demo_company();
+  v_uid uuid := auth.uid();
+  v_cache text;
+  v_demo uuid;
   v_row jsonb;
   v_company uuid;
 begin
-  if v_demo is null then return coalesce(new, old); end if;
-  -- вход, смена роли и выход посетителя (pf_demo_enter / pf_demo_leave) пишут его участие — только эти таблицы
-  if current_setting('p2.demo_switch', true) = 'on'
-     and (tg_table_schema, tg_table_name) in (('core', 'demo_visits'), ('core', 'role_assignments'), ('core', 'company_members')) then
-    return coalesce(new, old);
+  if v_uid is null then return coalesce(new, old); end if;   -- сервис без входа — дальше
+  -- «посетитель ли» — один раз на транзакцию (пакетная запись РБИ не платит проверку за каждую строку); вход и выход из демо
+  -- сбрасывают запомненное
+  v_cache := current_setting('p2.demo_cache', true);
+  if v_cache is not null and v_cache like v_uid::text || ':%' then
+    v_demo := nullif(split_part(v_cache, ':', 2), '-')::uuid;
+  else
+    v_demo := core.my_demo_company();
+    perform set_config('p2.demo_cache', v_uid::text || ':' || coalesce(v_demo::text, '-'), true);
   end if;
+  if v_demo is null then return coalesce(new, old); end if;   -- не посетитель — дальше
   foreach v_row in array array[case when tg_op <> 'DELETE' then to_jsonb(new) end, case when tg_op <> 'INSERT' then to_jsonb(old) end] loop
     continue when v_row is null;
+    -- вход, смена роли и выход посетителя (pf_demo_enter / pf_demo_leave) пишут его участие — только эти таблицы и только
+    -- его строки
+    continue when current_setting('p2.demo_switch', true) = 'on' and (v_row->>'user_id')::uuid = auth.uid()
+      and (tg_table_schema, tg_table_name) in (('core', 'demo_visits'), ('core', 'role_assignments'), ('core', 'company_members'));
     if tg_table_schema = 'core' and tg_table_name = 'companies' then v_company := (v_row->>'id')::uuid;
     else
       v_company := coalesce((v_row->>'company_id')::uuid, (v_row->>'core_company_id')::uuid);
@@ -159,16 +182,35 @@ begin
   raise notice '057: сторож «Демо — только просмотр» — таблиц %', n;
 end $$;
 
--- Файлы: посетитель в демо не кладёт, не меняет и не удаляет файлы (в данные демо записи всё равно не попадут).
-create policy demo_visitor_no_insert on storage.objects as restrictive for insert to authenticated with check (core.my_demo_company() is null);
-create policy demo_visitor_no_update on storage.objects as restrictive for update to authenticated using (core.my_demo_company() is null);
-create policy demo_visitor_no_delete on storage.objects as restrictive for delete to authenticated using (core.my_demo_company() is null);
+-- Файлы: посетитель не кладёт, не меняет и не удаляет файлы в папке демо-компании (пути файлов компаний начинаются с её id:
+-- quality-*, core-place-plans); свои файлы с другого устройства — как обычно (триггер на таблицы Storage не закрывает).
+create function core.demo_file_ok(p_name text)
+returns boolean language sql stable security definer set search_path = pg_catalog as $$
+  select core.my_demo_company() is null or split_part(coalesce(p_name, ''), '/', 1) is distinct from core.my_demo_company()::text
+$$;
+revoke all on function core.demo_file_ok(text) from public, anon, authenticated;
+grant execute on function core.demo_file_ok(text) to authenticated;
+create policy demo_visitor_no_insert on storage.objects as restrictive for insert to authenticated with check (core.demo_file_ok(name));
+create policy demo_visitor_no_update on storage.objects as restrictive for update to authenticated using (core.demo_file_ok(name)) with check (core.demo_file_ok(name));
+create policy demo_visitor_no_delete on storage.objects as restrictive for delete to authenticated using (core.demo_file_ok(name));
 
--- 5. Администратор платформы в демо — обычный посетитель (до «Выйти из демо»).
+-- 5. Администратор платформы — посетитель в запросах к демо-компании (компания запроса — заголовок x-company-id; его шлют
+-- клиенты Качества и платформы, пока выбрана демо-компания). Без заголовка, с другой компанией, после «Выйти» — как раньше.
+create function core.request_company_text()
+returns text language plpgsql stable set search_path = pg_catalog as $$
+declare v text := nullif(btrim(coalesce(current_setting('request.headers', true), '')), '');
+begin
+  if v is null then return null; end if;
+  return (v::json) ->> 'x-company-id';
+exception when others then return null;   -- испорченный заголовок — как без него
+end $$;
+revoke all on function core.request_company_text() from public, anon, authenticated;
+
 create or replace function planfact.is_platform_admin()
 returns boolean language sql stable security definer set search_path = pg_catalog, planfact, core as $$
   select auth.uid() is not null and exists (select 1 from core.platform_admins where user_id = auth.uid())
-     and not exists (select 1 from core.demo_visits v where v.user_id = auth.uid() and v.deleted_at is null);
+     and not exists (select 1 from core.demo_visits v where v.user_id = auth.uid() and v.deleted_at is null
+                      and v.company_id::text = core.request_company_text());
 $$;
 
 -- 6. Функции кнопки «Демо».
@@ -251,6 +293,7 @@ declare v_uid uuid := auth.uid(); d core.demo_roles; v core.demo_visits; v_asg u
 begin
   if v_uid is null then raise exception 'Войдите, чтобы открыть демо' using errcode = '42501'; end if;
   perform set_config('p2.demo_switch', 'on', true);
+  perform set_config('p2.demo_cache', '', true);
   select dr.* into d from core.demo_roles dr join core.companies c on c.id = dr.company_id and c.is_demo and c.deleted_at is null
    where dr.code = p_role and dr.deleted_at is null;
   if d.id is null then raise exception 'Демо пока не готово или нет такой роли' using errcode = '22023'; end if;
@@ -283,6 +326,7 @@ begin
     update core.demo_visits set demo_role_id = d.id, assignment_id = v_asg where id = v.id;
   end if;
   perform set_config('p2.demo_switch', 'off', true);
+  perform set_config('p2.demo_cache', '', true);
   select c.name into v_name from core.companies c where c.id = d.company_id;
   return jsonb_build_object('company_id', d.company_id, 'company_name', v_name, 'role', d.code, 'title', d.title);
 end $$;
@@ -298,10 +342,12 @@ begin
   select * into v from core.demo_visits where user_id = v_uid and deleted_at is null for update;
   if v.id is null then return false; end if;
   perform set_config('p2.demo_switch', 'on', true);
+  perform set_config('p2.demo_cache', '', true);
   update core.role_assignments set revoked_at = now(), revoked_by = v_uid where id = v.assignment_id and revoked_at is null;
   update core.company_members set disabled_at = now(), disabled_by = v_uid where company_id = v.company_id and user_id = v_uid;
   update core.demo_visits set deleted_at = now() where id = v.id;
   perform set_config('p2.demo_switch', 'off', true);
+  perform set_config('p2.demo_cache', '', true);
   return true;
 end $$;
 revoke all on function public.pf_demo_leave() from public, anon;
@@ -338,6 +384,9 @@ select pg_temp.patch('public.pf_my_platform()'::regprocedure,
         '''id'', comp.id, ''name'', comp.name, ''is_test'', comp.is_test,'],
   array['select c.id, c.name, c.is_test, c.is_demo from core.companies c, me',
         '''id'', comp.id, ''name'', comp.name, ''is_test'', comp.is_test, ''is_demo'', comp.is_demo,']);
+select pg_temp.patch('quality.member_by_email(uuid, text)'::regprocedure,
+  array['where m.company_id = p_company and p_company = quality.request_company()'],
+  array['where m.company_id = p_company and p_company = quality.request_company() and not core.is_demo_visitor(p_company, m.user_id)']);
 drop function pg_temp.patch(regprocedure, text[], text[]);
 
 commit;

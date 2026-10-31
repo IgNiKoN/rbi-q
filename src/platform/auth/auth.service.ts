@@ -102,13 +102,33 @@ export async function resolveSession(o: { stored: StoredSession | null; online: 
   return o.stillStored() ? { email: st.email, offline: true, issuedAt } : { email: null, offline: false, issuedAt: null };
 }
 
+/** P2-0053: компания запроса для сервера — пока выбрана демо-компания (кнопка «Демо»), запросы платформы несут её
+ *  в заголовке x-company-id (как клиент Качества): по нему сервер делает администратора платформы обычным посетителем
+ *  только в запросах к демо (057). В остальное время заголовка нет — как раньше. */
+export function demoCompanyHeader(): string | null {
+  const g = globalThis as unknown as { RBI?: { platform2?: { getState?: () => { mode?: string; companyId?: string | null; companies?: { id: string; is_demo?: boolean }[] } } } };
+  try {
+    const st = g.RBI?.platform2?.getState?.();
+    const cur = st && st.mode === 'email' ? (st.companies || []).find((c) => c.id === st.companyId) : null;
+    return cur && cur.is_demo ? cur.id : null;
+  } catch { return null; }
+}
+export const demoAwareFetch: typeof fetch = (input, init) => {
+  const company = demoCompanyHeader();
+  if (!company) return fetch(input, init);
+  const headers = new Headers(init && init.headers ? init.headers : input instanceof Request ? input.headers : undefined);
+  if (!headers.has('x-company-id')) headers.set('x-company-id', company);
+  return fetch(input, { ...(init || {}), headers });
+};
+
 /** Один клиент на страницу: разделы Platform 2.0 (отдельные бандлы) делят сессию и не плодят клиентов Auth. */
 const GLOBAL_KEY = '__platform2SupabaseClient';
 const holder = globalThis as unknown as Record<string, SupabaseClient | undefined>;
 
 export function createAuthService(cfg: AuthConfig): AuthApi {
   const c = holder[GLOBAL_KEY] || (holder[GLOBAL_KEY] = createClient(cfg.url, cfg.anonKey, {
-    auth: { storageKey: STORAGE_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+    auth: { storageKey: STORAGE_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    global: { fetch: demoAwareFetch }
   }));
   return {
     async signIn(email, password) {

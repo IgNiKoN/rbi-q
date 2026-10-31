@@ -23,12 +23,20 @@ const db = await serverDb();
 const tables = await readSchema(db);
 // P2-0072: заготовка «новая таблица модуля» (supabase/templates/new_module_table.sql) — в той же копии схемы, после описи
 let template = null;
+let noGuard = [];
 if (args.has('--check')) {
   const TPL = 'planfact.tpl_check_items';
   await db.exec(readFileSync(join(ROOT, 'supabase/templates/new_module_table.sql'), 'utf8').replaceAll('__schema__', 'planfact')
     .replaceAll('__table__', 'tpl_check_items').replaceAll('__view__', 'planfact.fact.view').replaceAll('__edit__', 'planfact.fact.create'));
   const all = await readSchema(db);
   template = evaluate(all).find((e) => e.id === TPL);
+  // P2-0053: каждая таблица core / planfact / quality с компанией или проектом (и заготовка) — со сторожем «Демо — только просмотр»
+  noGuard = (await db.query(`select t.table_schema || '.' || t.table_name t from information_schema.tables t
+      where t.table_type = 'BASE TABLE' and t.table_schema in ('core', 'planfact', 'quality')
+        and exists (select 1 from information_schema.columns c where c.table_schema = t.table_schema and c.table_name = t.table_name
+                     and c.column_name in ('company_id', 'core_company_id', 'project_id') and c.data_type = 'uuid')
+        and not exists (select 1 from pg_trigger g where g.tgrelid = (quote_ident(t.table_schema) || '.' || quote_ident(t.table_name))::regclass
+                         and g.tgname = 'zzzzz_demo_guard' and not g.tgisinternal) order by 1`)).rows.map((r) => r.t);
 }
 await db.close();
 const evaluation = evaluate(tables);
@@ -41,8 +49,9 @@ if (args.has('--check')) {
   for (const m of lower) console.error(`↓ ${m}`);
   const tplBad = template ? Object.entries(template.rules).filter(([, r]) => r.s !== 'green' && r.s !== 'na').map(([c, r]) => `${c}: ${r.s} ${r.note}`) : ['не применилась'];
   for (const m of tplBad) console.error(`✕ заготовка новой таблицы (supabase/templates/new_module_table.sql) — ${m}`);
-  console.log(`сторож таблиц: ${evaluation.length} таблиц, новые с нарушением ${fresh.length}, рост ${grew.length}, снизить потолок ${lower.length}; заготовка таблицы — ${tplBad.length ? 'не по стандарту' : 'зелёная по всем правилам'}`);
-  process.exit(fresh.length + grew.length + lower.length + tplBad.length ? 1 : 0);
+  for (const t of noGuard) console.error(`✕ ${t}: нет сторожа «Демо — только просмотр» (zzzzz_demo_guard, P2-0053) — добавить в миграцию, как в заготовке`);
+  console.log(`сторож таблиц: ${evaluation.length} таблиц, новые с нарушением ${fresh.length}, рост ${grew.length}, снизить потолок ${lower.length}; заготовка таблицы — ${tplBad.length ? 'не по стандарту' : 'зелёная по всем правилам'}; без сторожа демо — ${noGuard.length}`);
+  process.exit(fresh.length + grew.length + lower.length + tplBad.length + noGuard.length ? 1 : 0);
 }
 
 if (args.has('--update-debt')) {

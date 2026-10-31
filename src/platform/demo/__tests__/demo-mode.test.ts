@@ -119,3 +119,23 @@ test('плашка «Демо · роль · Выйти» и экран роле
   renderDemoScreen(host as unknown as HTMLElement, { roles: [], error: 'Демо открывается только с интернетом', inDemo: false, choose: () => {}, leave: () => {}, back: () => {} });
   assert.match(host.querySelector('[data-testid=p2-demo-error]')!.textContent || '', /интернет/);
 });
+
+test('запросы платформы в демо несут компанию демо в заголовке x-company-id, вне демо — без заголовка', async () => {
+  const { demoAwareFetch, demoCompanyHeader } = await import('../../auth/auth.service.ts');
+  const g = globalThis as unknown as { RBI?: unknown; fetch: typeof fetch };
+  const seen: (string | null)[] = [];
+  const orig = g.fetch;
+  g.fetch = (async (_i: unknown, init?: RequestInit) => { seen.push(new Headers(init?.headers).get('x-company-id')); return new Response('{}'); }) as typeof fetch;
+  try {
+    delete g.RBI;
+    assert.equal(demoCompanyHeader(), null);
+    await demoAwareFetch('http://x/rest/v1/rpc/a', { headers: { a: '1' } });
+    g.RBI = { platform2: { getState: () => ({ mode: 'email', companyId: 'own', companies: [{ id: 'own' }, { id: 'demo', is_demo: true }] }) } };
+    await demoAwareFetch('http://x/rest/v1/rpc/a', {});
+    g.RBI = { platform2: { getState: () => ({ mode: 'email', companyId: 'demo', companies: [{ id: 'own' }, { id: 'demo', is_demo: true }] }) } };
+    assert.equal(demoCompanyHeader(), 'demo');
+    await demoAwareFetch('http://x/rest/v1/rpc/a', { headers: { a: '1' } });
+    await demoAwareFetch('http://x/rest/v1/rpc/a', { headers: { 'x-company-id': 'other' } });
+    assert.deepEqual(seen, [null, null, 'demo', 'other'], 'свой заголовок запроса не перетирается');
+  } finally { g.fetch = orig; delete g.RBI; }
+});

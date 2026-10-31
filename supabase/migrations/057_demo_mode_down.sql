@@ -58,6 +58,8 @@ select pg_temp.patch('public.pf_platform_companies()'::regprocedure,
 select pg_temp.patch('public.pf_my_platform()'::regprocedure,
   array[', c.is_demo from core.companies c, me', ', ''is_demo'', comp.is_demo'],
   array[' from core.companies c, me', '']);
+select pg_temp.patch('quality.member_by_email(uuid, text)'::regprocedure,
+  array[' and not core.is_demo_visitor(p_company, m.user_id)'], array['']);
 drop function pg_temp.patch(regprocedure, text[], text[]);
 
 drop function if exists public.pf_demo_leave();
@@ -66,6 +68,9 @@ drop function if exists public.pf_demo_roles();
 drop function if exists public.pf_demo_setup(uuid, jsonb);
 drop function if exists core.demo_guard();
 drop function if exists core.demo_actions(text);
+drop function if exists core.demo_admin_action(text);
+drop function if exists core.demo_file_ok(text);
+drop function if exists core.request_company_text();
 drop function if exists core.is_demo_visitor(uuid, uuid);
 drop function if exists core.my_demo_company();
 drop table if exists core.demo_visits;
