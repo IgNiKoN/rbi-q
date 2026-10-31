@@ -60,6 +60,9 @@ select pg_temp.patch('public.pf_my_platform()'::regprocedure,
   array[' from core.companies c, me', '']);
 select pg_temp.patch('quality.member_by_email(uuid, text)'::regprocedure,
   array[' and not core.is_demo_visitor(p_company, m.user_id)'], array['']);
+select pg_temp.patch('public.pf_summary_portfolio()'::regprocedure,
+  array[' v_demo uuid := core.request_demo_company();', '
+      and (v_demo is null or p.company_id = v_demo)'], array['', '']);
 drop function pg_temp.patch(regprocedure, text[], text[]);
 
 drop function if exists public.pf_demo_leave();
@@ -70,6 +73,7 @@ drop function if exists core.demo_guard();
 drop function if exists core.demo_actions(text);
 drop function if exists core.demo_admin_action(text);
 drop function if exists core.demo_file_ok(text);
+drop function if exists core.request_demo_company();
 drop function if exists core.request_company_text();
 drop function if exists core.is_demo_visitor(uuid, uuid);
 drop function if exists core.my_demo_company();

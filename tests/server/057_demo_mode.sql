@@ -294,6 +294,7 @@ begin
   admin_before := (select string_agg(x::text, ';' order by x.id) from public.pf_platform_companies() x where x.id <> demo);
   reset role;
 
+  insert into core.projects(id, company_id, name) values (gen_random_uuid(), cx, 'Свой объект сводки');
   c_before := pg_temp.counts(demo);
   perform pg_temp.as_user(xadm);
   who_before := (select string_agg(x::text, ';' order by x::text) from public.pf_list_company_members(cx) x);
@@ -318,6 +319,19 @@ begin
   res := res || pg_temp.t(pg_temp.can(demo, pd, f1, 'planfact.fact.view') and not pg_temp.can(demo, pd, f2, 'planfact.fact.view'),
                           'видит факт секции 1, не видит секции 2');
   res := res || pg_temp.t(not pg_temp.can(demo, pd, f1, 'quality.inspections.create'), 'создать проверку Качества — нет права');
+
+  -- сводка План/Факта: в запросе к демо — только объекты демо, без заголовка — как раньше (все объекты человека)
+  perform pg_temp.as_user(v1, demo);
+  res := res || pg_temp.t((select count(*) from public.pf_summary_portfolio()) >= 1
+                          and not exists (select 1 from public.pf_summary_portfolio() x join core.projects p on p.id = x.project_id where p.company_id <> demo),
+                          'сводка в демо — только объекты демо-компании');
+  perform pg_temp.as_user(v1, cx);
+  res := res || pg_temp.t(exists (select 1 from public.pf_summary_portfolio() x join core.projects p on p.id = x.project_id where p.company_id = cx)
+                          and exists (select 1 from public.pf_summary_portfolio() x join core.projects p on p.id = x.project_id where p.company_id = demo),
+                          'сводка вне демо (запрос к своей компании) — как раньше: объекты всех компаний человека');
+  perform pg_temp.as_user(v1, demo);
+  res := res || pg_temp.t(not exists (select 1 from public.pf_summary_portfolio() x join core.projects p on p.id = x.project_id where p.company_id = cx),
+                          'сводка в демо — свой объект посетителя не показан');
 
   -- запись прорабом-посетителем
   str := pg_temp.msg(format('select public.pf_fact_submit(%L, %L)', gen_random_uuid(),

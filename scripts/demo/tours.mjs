@@ -41,11 +41,13 @@ try {
         if (!(await card.count())) break;
         const info = await page.evaluate(() => {
           const c = document.querySelector('[data-testid=p2-tour-card]'); const h = document.querySelector('[data-testid=p2-tour-hole]');
+          if (!c || !h || !c.querySelector('.p2t-step')) return null;   // карточка ещё ищет цель шага
           const r = c.getBoundingClientRect(); const hr = h.getBoundingClientRect();
           return { step: c.querySelector('.p2t-step').textContent, title: c.querySelector('.p2t-title').textContent, hole: !h.classList.contains('p2t-none'),
             inView: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, hx: Math.round(hr.width), hy: Math.round(hr.height),
             final: !!c.querySelector('[data-testid=p2-tour-leave]'), scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth };
         });
+        if (!info) { await wait(page, 1000); continue; }
         if (info.step === prev) { await wait(page, 1000); continue; }   // шаг без цели пропускается — ждём следующий
         prev = info.step; n++;
         const m = info.step.match(/шаг (\d+) из (\d+)/); total = m ? Number(m[2]) : total;
@@ -71,6 +73,8 @@ try {
     }
     await ctx.close();
   }
+} catch (e) {
+  check(false, 'прогон прерван: ' + String(e && e.message || e).split('\n')[0]);   // ошибка прогона — FAIL, а не тихий выход 0
 } finally {
   writeFileSync(join(out, 'tours.txt'), lines.join('\n') + '\n');
   log(`снимки: ${out} (${((Date.now() - t0) / 1000).toFixed(0)} с)`);

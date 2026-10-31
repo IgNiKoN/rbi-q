@@ -206,6 +206,13 @@ exception when others then return null;   -- испорченный заголо
 end $$;
 revoke all on function core.request_company_text() from public, anon, authenticated;
 
+-- Демо-компания запроса (заголовок x-company-id — демо-компания), иначе null.
+create function core.request_demo_company()
+returns uuid language sql stable security definer set search_path = pg_catalog as $$
+  select c.id from core.companies c where c.is_demo and c.deleted_at is null and c.id::text = core.request_company_text()
+$$;
+revoke all on function core.request_demo_company() from public, anon, authenticated;
+
 create or replace function planfact.is_platform_admin()
 returns boolean language sql stable security definer set search_path = pg_catalog, planfact, core as $$
   select auth.uid() is not null and exists (select 1 from core.platform_admins where user_id = auth.uid())
@@ -387,6 +394,13 @@ select pg_temp.patch('public.pf_my_platform()'::regprocedure,
 select pg_temp.patch('quality.member_by_email(uuid, text)'::regprocedure,
   array['where m.company_id = p_company and p_company = quality.request_company()'],
   array['where m.company_id = p_company and p_company = quality.request_company() and not core.is_demo_visitor(p_company, m.user_id)']);
+-- Сводка План/Факта в демо (запрос к демо-компании) — только объекты демо, без объектов своей компании посетителя (доработка 1)
+select pg_temp.patch('public.pf_summary_portfolio()'::regprocedure,
+  array['declare v_today date := planfact.fact_today();',
+        'from core.projects p where p.archived_at is null and planfact.has_permission(p.id, ''planfact.fact.view'')'],
+  array['declare v_today date := planfact.fact_today(); v_demo uuid := core.request_demo_company();',
+        'from core.projects p where p.archived_at is null and planfact.has_permission(p.id, ''planfact.fact.view'')
+      and (v_demo is null or p.company_id = v_demo)']);
 drop function pg_temp.patch(regprocedure, text[], text[]);
 
 commit;

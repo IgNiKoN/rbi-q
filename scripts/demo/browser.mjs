@@ -85,6 +85,14 @@ if (process.argv[1] && process.argv[1].endsWith('browser.mjs')) {
       const own = await view(page);
       check(!own.demo && /Песочница/.test(own.company || ''), `${width}: вошёл в свою компанию «${own.company}»`);
       await page.evaluate(() => localStorage.setItem('p2-own-marker', '1'));
+      // ТД 403: у клиента свой объект — в демо «Сводка» его не показывает, в своей компании — показывает
+      const ownProject = await page.evaluate(async () => {
+        const P = window.RBI.platform2, st = P.getState();
+        const has = ((await P.rpc('pf_summary_portfolio')).data || []).some((x) => x.name === 'Свой объект клиента');
+        if (!has) await P.rpc('pf_create_project', { p_company: st.companyId, p_name: 'Свой объект клиента', p_code: null });
+        return ((await P.rpc('pf_summary_portfolio')).data || []).map((x) => x.name);
+      });
+      check(ownProject.includes('Свой объект клиента'), `${width}: своя компания — «Сводка» со своим объектом: ${JSON.stringify(ownProject)}`);
       await go(page, '#/demo', 3000);
       check((await page.locator('[data-testid=p2-demo-role]').count()) === 8, `${width}: экран «Демо» — 8 ролей`);
       check((await hscroll(page)) <= 0, `${width}: экран «Демо» без горизонтальной прокрутки`);
@@ -95,6 +103,53 @@ if (process.argv[1] && process.argv[1].endsWith('browser.mjs')) {
         check(v.demo && v.chip && /демо/i.test(v.chip) && v.hash !== '#/demo', `${width} ${role}: в демо, плашка «${v.chip}», раздел ${v.hash}, модули ${JSON.stringify(v.modules)}`);
         check((await hscroll(page)) <= 0, `${width} ${role}: без горизонтальной прокрутки`);
         await page.screenshot({ path: join(out, `demo-${role}-${width}.jpg`), fullPage: false, type: 'jpeg', quality: 78 });
+        if (role === 'management' || role === 'project_manager') {
+          await go(page, '#/planfact', 4000);
+          const opts = await page.locator('[data-testid=sm-project] option').allInnerTexts();
+          check(opts.length >= 2 && opts.some((o) => /ЖК Демо/.test(o)) && !opts.some((o) => /Свой объект клиента/.test(o)),
+            `${width} ${role}: «Сводка» в демо — только объекты демо: ${JSON.stringify(opts)}`);
+          await page.screenshot({ path: join(out, `demo-summary-${role}-${width}.jpg`), fullPage: false, type: 'jpeg', quality: 78 });
+        }
+        if (role === 'qc_engineer' || role === 'contractor_rep' || role === 'customer') {
+          // ТД 406: план этажа — кнопки создания есть в разметке, но скрыты; замечание открыто — кнопок действий нет
+          const visibleCreate = () => page.evaluate(() => [...document.querySelectorAll('button')]
+            .filter((b) => b.offsetParent !== null && /\+ Замечание|Управление иерархией|^Зона$|Записаться/.test(b.textContent.trim()))
+            .map((b) => location.hash + ' ' + b.textContent.trim()));
+          const pickFloor = async () => {   // этаж с PDF-планом; на телефоне дерево — в выезжающей панели «Изменить»
+            const open = page.locator('[data-c2-plan-picker-open]:visible').first();
+            if (await open.count()) { await open.click(); await wait(page, 1200); }
+            const floor = page.locator('button:visible', { hasText: '📄 эт.' }).first();
+            if (await floor.count()) { await floor.click(); await wait(page, 2500); }
+          };
+          const seen = []; let inDom = 0;
+          if (role !== 'contractor_rep') {   // у подрядчика СК 2.0 — «Кабинет», плана этажа нет
+            await go(page, '#/construction-v2', 3500);
+            await pickFloor();
+            inDom = await page.locator('[data-c2-add-mode],[data-c2-zone-mode]').count();
+            seen.push(...await visibleCreate());
+            await page.screenshot({ path: join(out, `demo-sk-${role}-${width}.jpg`), fullPage: false, type: 'jpeg', quality: 78 });
+          }
+          for (const hash of ['#/construction-v2/defects', '#/construction-v2/acceptance']) { await go(page, hash, 3500); seen.push(...await visibleCreate()); }
+          check(!seen.length && (role === 'contractor_rep' || inDom > 0),
+            `${width} ${role}: СК 2.0 в демо — кнопок создания не видно${role === 'contractor_rep' ? '' : ` (на плане этажа в разметке ${inDom}, скрыты)`}${seen.length ? ': ' + JSON.stringify(seen) : ''}`);
+          await go(page, '#/construction-v2/defects', 3500);
+          let row = page.locator('[data-c2-def-row]:visible').first();
+          if (!(await row.count())) { await pickFloor(); row = page.locator('[data-c2-def-row]:visible').first(); }
+          if (!(await row.count())) {   // подрядчик: замечания — в «Кабинете»
+            await go(page, '#/construction-v2/cabinet', 3500);
+            row = page.locator('[data-c2-cab-def]:visible, [data-c2-cab-desk-def]:visible').first();
+          }
+          const rows = await row.count();
+          if (rows) { await row.click(); await wait(page, 2000); }
+          const form = await page.evaluate(() => ({
+            open: [...document.querySelectorAll('[data-c2-defect-close]')].some((b) => b.offsetParent !== null),
+            acts: [...document.querySelectorAll('[data-c2-status],[data-c2-defect-save]')].filter((b) => b.offsetParent !== null).map((b) => b.textContent.trim()) }));
+          check(rows > 0 && form.open && !form.acts.length, `${width} ${role}: замечание в демо открыто — кнопок действий нет${form.acts.length ? ': ' + JSON.stringify(form.acts) : ''} (форма ${form.open ? 'открыта' : 'не открылась'})`);
+          await page.screenshot({ path: join(out, `demo-sk-defect-${role}-${width}.jpg`), fullPage: false, type: 'jpeg', quality: 78 });
+          await page.keyboard.press('Escape').catch(() => {});
+          const close = page.locator('[data-c2-defect-close]:visible').first();
+          if (await close.count()) await close.click().catch(() => {});
+      }
       }
       // запись в демо: факт прорабом — понятный отказ (сервер); выход — своя компания
       const w = await page.evaluate(() => window.RBI.platform2.rpc('pf_demo_roles'));

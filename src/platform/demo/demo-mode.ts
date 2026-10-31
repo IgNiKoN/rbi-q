@@ -131,7 +131,9 @@ const EYE = svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><ci
 const CHEVRON = svg('<path d="M9 6l6 6-6 6"/>', 20);
 const EXIT = svg('<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>', 18);
 
-/** Стили экрана #/demo и плашки — токены темы (как приветствие P2-0074); плашка — красная, как «Выйти из демо» Качества. */
+/** Стили экрана #/demo и плашки — токены темы (как приветствие P2-0074); плашка — красная, как «Выйти из демо» Качества.
+ *  В демо запись запрещена всем ролям (сторож 057) — кнопки создания Стройконтроля 2.0 («+ Замечание», «Зона» — заявка
+ *  на приёмку, «Управление иерархией») скрыты, чтобы запись не копилась «не отправлено» (ТД 406). */
 export const DEMO_CSS = `
 body.${DEMO_BODY_CLASS}::after{content:'';position:fixed;inset:0;pointer-events:none;border:3px solid rgba(220,38,38,.35);z-index:9998}
 .p2-demo-chip{position:fixed;z-index:9999;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);display:flex;align-items:center;gap:4px;
@@ -144,6 +146,8 @@ body.${DEMO_BODY_CLASS}::after{content:'';position:fixed;inset:0;pointer-events:
 .p2-demo-chip button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media (min-width:1280px){.p2-demo-chip{bottom:auto;top:12px;left:auto;right:16px;transform:none}}
 body.p2-demo-page .p2-demo-chip{display:none}
+body.${DEMO_BODY_CLASS} [data-c2-add-mode],body.${DEMO_BODY_CLASS} [data-c2-apt-add-mode],body.${DEMO_BODY_CLASS} [data-c2-zone-mode],
+body.${DEMO_BODY_CLASS} [onclick^="window.ConstAdmin.openModal"]{display:none!important}
 .p2d-roles .p2w-tile.p2d-cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 .p2d-area{font-size:12px;color:var(--text-muted);margin-top:2px;overflow-wrap:anywhere}
 .p2d-note{font-size:14px;line-height:1.45;color:var(--text-muted);margin:16px 0 0;padding:12px 14px;border-radius:12px;background:var(--sel-bg)}
