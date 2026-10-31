@@ -25,6 +25,9 @@ import { startDeviceSend } from '../services/offline/device-send.ts';
 import { DEMO_CSS, DEMO_PATH, demoCompanyOf, demoRoleTitle, enterDemo, leaveDemo, loadDemoRoles, renderDemoScreen, syncDemoChip, takeDemoGo, withoutDemo } from '../demo/demo-mode.ts';
 import type { DemoDeps } from '../demo/demo-mode.ts';
 import { deviceUserKey } from './quality-bridge.ts';
+import { runTour, TOUR_CSS, TOUR_PENDING_KEY } from '../tour/tour-engine.ts';
+import type { TourRun } from '../tour/tour-engine.ts';
+import { TOURS, toursHtml } from '../tour/tours.ts';
 
 type Rbi = Record<string, unknown> & {
   services?: { shell?: { renderSidebar?: () => void; renderMobileModuleMenu?: () => void } };
@@ -46,7 +49,7 @@ function ensureStyle(): void {
   if (document.getElementById(STYLE_ID)) return;
   const s = document.createElement('style');
   s.id = STYLE_ID;
-  s.textContent = LOGIN_CSS + PASSWORD_CSS + WELCOME_CSS + DEMO_CSS + `
+  s.textContent = LOGIN_CSS + PASSWORD_CSS + WELCOME_CSS + DEMO_CSS + TOUR_CSS + `
 .p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
 .p2-show-test{display:inline-flex;align-items:center;gap:8px;font-size:13px;min-height:44px;margin-left:12px;cursor:pointer;color:var(--text-main)}
 .p2-show-test input{width:20px;height:20px;accent-color:var(--primary)}
@@ -205,7 +208,7 @@ function renderCompanySwitch(host: HTMLElement | null): void {
       demo.setAttribute('data-testid', 'p2-demo-open');
       demo.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); go(DEMO_PATH, false); });
     }
-    demo.textContent = demoCompanyOf(st) ? 'Демо: сменить роль или выйти' : 'Демо: посмотреть заполненный объект глазами любой роли';
+    demo.textContent = demoCompanyOf(st) ? 'Демо: сменить роль, обучение или выйти' : 'Демо и обучение: заполненный объект глазами любой роли';
     host.appendChild(demo);
   }
 }
@@ -251,7 +254,12 @@ function apply(st: PlatformState): void {
   ensureStyle();
   const demoCo = demoCompanyOf(st);
   syncDemoChip(document, demoCo ? { role: demoRoleTitle(demoCo) } : null, { pick: () => go(DEMO_PATH, false), leave: () => void runLeave() });
-  if (demoCo && !st.checking && !st.offline) { const next = takeDemoGo({ storage: localStore() }); if (next && window.location.hash !== next) go(next); }
+  // экран роли и тур — когда устройство уже в базе демо (иначе мост Качества сейчас перезапустит страницу)
+  if (demoCo && !st.checking && !st.offline && localStore()?.getItem(QUALITY_COMPANY_KEY) === demoCo.id) {
+    const next = takeDemoGo({ storage: localStore() });
+    if (next && window.location.hash !== next) go(next);
+    startPendingTour();
+  }
   if (st.mode === 'email' && window.location.hash === DEMO_PATH) void drawDemo();
   if (st.mode === 'email' && st.mustChangePassword && st.email) { showPasswordScreen(st.email); return; }   // сначала свой пароль
   if (st.mode === 'none') { passwordShown = false; showLogin(); } else hideLogin();
@@ -465,6 +473,34 @@ async function runLeave(): Promise<void> {
   if (err) { demoDeps().toast(err); document.querySelector('.p2d')?.classList.remove('p2d-busy'); }
 }
 
+/** P2-0053: обучение — тур поверх «ЖК Демо» нужной ролью (не та роль — сначала вход в демо ролью тура, тур — после перезапуска). */
+let tourRun: TourRun | null = null;
+function startTourNow(id: string): void {
+  const tour = TOURS[id];
+  if (!tour) return;
+  if (tourRun) tourRun.stop();
+  ensureStyle();
+  tourRun = runTour(id, tour, { doc: document, storage: localStore(), currentPath: () => window.location.hash, waitMs: 8000,
+    go: (p) => go(p, false),
+    onEnd: (how) => { tourRun = null; if (how === 'leave') void runLeave(); } });
+}
+async function startTour(id: string, currentRole: string | null): Promise<void> {
+  const tour = TOURS[id];
+  if (!tour) return;
+  if (demoCompanyOf(getPlatform().getState()) && currentRole === tour.role) { startTourNow(id); return; }
+  const err = await enterDemo(demoDeps(), tour.role, { key: TOUR_PENDING_KEY, value: id });   // тур — после перезапуска страницы
+  if (err) { demoDeps().toast(err); document.querySelector('.p2d')?.classList.remove('p2d-busy'); }
+}
+let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+function startPendingTour(): void {
+  let id: string | null = null;
+  try { id = localStore()?.getItem(TOUR_PENDING_KEY) || null; } catch { id = null; }
+  if (!id || pendingTimer || tourRun) return;
+  try { localStore()?.removeItem(TOUR_PENDING_KEY); } catch { /* — */ }
+  const tid = id;
+  pendingTimer = setTimeout(() => { pendingTimer = null; startTourNow(tid); }, 1500);   // разделу — время нарисоваться
+}
+
 const DEMO_VIEW_ID = 'tab-demo';
 let demoDrawing = 0;
 /** Экран #/demo: роли «ЖК Демо» с сервера; без связи / не готово — понятный текст. */
@@ -493,10 +529,16 @@ async function drawDemo(): Promise<void> {
   const { roles, error } = await loadDemoRoles(d);
   if (mine !== demoDrawing || window.location.hash !== DEMO_PATH) return;
   const host = el;
-  renderDemoScreen(host, { roles, error, inDemo: !!demoCompanyOf(getPlatform().getState()),
+  const current = roles.find((r) => r.current)?.code || null;
+  renderDemoScreen(host, { roles, error, inDemo: !!demoCompanyOf(getPlatform().getState()), extra: error ? '' : toursHtml(localStore()),
     choose: (role) => void enterDemo(d, role).then((e) => { if (e) { d.toast(e); host.querySelector('.p2d')?.classList.remove('p2d-busy'); } }),
     leave: () => void runLeave(),
     back: () => { if (window.history.length > 1) window.history.back(); else go(WELCOME_PATH); } });
+  host.querySelectorAll<HTMLElement>('[data-tour-start]').forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    host.querySelector('.p2d')?.classList.add('p2d-busy');
+    void startTour(b.dataset.tourStart || '', current);
+  }));
   const pad = w().updateBodyPadding;
   if (typeof pad === 'function') pad();
   const h = document.getElementById('main-header');
@@ -572,6 +614,8 @@ export const api = {
   renderCompanySwitch,
   /** P2-0053: экран «Демо» (роли «ЖК Демо») и «Выйти из демо». */
   openDemo: (): void => go(DEMO_PATH, false),
+  /** P2-0053: обучение — тур по id (planfact / quality / construction). */
+  startTour: (id: string): void => { void startTour(id, null); },
   leaveDemo: (): Promise<void> => runLeave(),
   /** P2-0028: «Настройки → Платформа → Мой профиль» (вызывают Настройки при показе). Не вошёл почтой — пусто. */
   renderMyProfile: (host: HTMLElement | null): void => {

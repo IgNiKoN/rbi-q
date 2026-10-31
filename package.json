@@ -18,7 +18,7 @@
     "build:platform": "vite build --config vite.platform.config.ts && npm run build:version",
     "build:platform-admin": "vite build --config vite.platform-admin.config.ts && npm run build:version",
     "check:ts": "tsc --noEmit",
-    "test:unit": "node --test js/shared/__tests__/*.test.js js/modules/knowledge/__tests__/*.test.js js/modules/quality/features/analytics/__tests__/*.test.js js/modules/quality/features/reports/__tests__/*.test.js supabase/functions/__tests__/*.test.ts src/modules/planfact/__tests__/*.test.ts src/platform/company/__tests__/*.test.ts src/platform/auth/__tests__/*.test.ts src/platform/admin/__tests__/*.test.ts src/platform/core/__tests__/*.test.ts src/platform/demo/__tests__/*.test.ts src/modules/construction-v2/__tests__/*.test.ts src/platform/services/offline/__tests__/*.test.ts",
+    "test:unit": "node --test js/shared/__tests__/*.test.js js/modules/knowledge/__tests__/*.test.js js/modules/quality/features/analytics/__tests__/*.test.js js/modules/quality/features/reports/__tests__/*.test.js supabase/functions/__tests__/*.test.ts src/modules/planfact/__tests__/*.test.ts src/platform/company/__tests__/*.test.ts src/platform/auth/__tests__/*.test.ts src/platform/admin/__tests__/*.test.ts src/platform/core/__tests__/*.test.ts src/platform/demo/__tests__/*.test.ts src/platform/tour/__tests__/*.test.ts src/modules/construction-v2/__tests__/*.test.ts src/platform/services/offline/__tests__/*.test.ts",
     "smoke:knowledge": "node _ai/scripts/smoke-knowledge.mjs --reload",
     "smoke:construction-knowledge": "node _ai/scripts/smoke-construction-knowledge.mjs --reload",
     "test": "npm run test:unit",
@@ -28,7 +28,9 @@
     "demo:accounts": "node scripts/demo/accounts.mjs",
     "demo:seed": "node scripts/demo/seed.mjs",
     "demo:stand": "node scripts/demo/stand.mjs",
-    "demo:check": "node scripts/demo/check.mjs"
+    "demo:check": "node scripts/demo/check.mjs",
+    "demo:check-sandbox": "node scripts/demo/check-sandbox.mjs",
+    "demo:files": "node scripts/demo/files.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",

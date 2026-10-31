@@ -83,7 +83,7 @@ export async function loadDemoRoles(d: DemoDeps): Promise<{ roles: DemoRole[]; e
 }
 
 /** Войти в демо ролью (или сменить роль). Первый вход — переключение компании (страница перезапускается с базой демо). */
-export async function enterDemo(d: DemoDeps, role: string): Promise<string | null> {
+export async function enterDemo(d: DemoDeps, role: string, after?: { key: string; value: string }): Promise<string | null> {
   if (!d.online()) return NEED_NET;
   const st = d.getState();
   if (st.mode !== 'email' || !st.email) return 'Войдите своей учёткой, чтобы открыть демо';
@@ -93,7 +93,9 @@ export async function enterDemo(d: DemoDeps, role: string): Promise<string | nul
   const company = String((r.data as { company_id?: unknown } | null)?.company_id || '');
   if (!was && st.companyId) store(d, DEMO_RETURN_PREFIX + d.userKey(st.email), st.companyId);
   await d.refresh();
+  // после refresh: он перерисовывает экран, а это — для страницы после перезапуска
   store(d, DEMO_GO_KEY, demoHomeFor(role));
+  if (after) store(d, after.key, after.value);
   d.go(demoHomeFor(role));
   if (was && was.id === company) d.reload();   // смена роли в демо: права и разделы — заново
   else d.setCompany(company);                   // вход: база демо на устройстве (мост Качества перезапустит страницу)

@@ -106,7 +106,7 @@ export function renderWelcome(host: HTMLElement, o: WelcomeOptions): void {
     `<p class="p2w-p">Здесь ваши разделы. Откройте нужный — в следующий раз приложение сразу откроет тот, где вы были.</p>` +
     `<div class="p2w-grid${o.tiles.length === 1 ? ' p2w-one' : ''}">${tiles}</div>` +
     `<div class="p2w-foot"><button type="button" class="p2w-link" data-testid="p2-welcome-help" data-path="${HELP_PATH}">${BOOK}Как тут всё устроено — обучение</button>` +
-    `<button type="button" class="p2w-link" data-testid="p2-welcome-demo" data-path="#/demo">${EYE}Демо: заполненный объект глазами любой роли</button>` +
+    `<button type="button" class="p2w-link" data-testid="p2-welcome-demo" data-path="#/demo">${EYE}Демо и обучение: заполненный объект глазами любой роли</button>` +
     `<button type="button" class="p2w-link" data-testid="p2-welcome-settings" data-path="#/settings">${GEAR}Настройки</button></div></section>`;
   // data-path без делегирования роутера оболочки (он ловит [data-path] на body): переход один, здесь
   host.querySelectorAll<HTMLElement>('[data-path]').forEach((b) => b.addEventListener('click', (e) => {
