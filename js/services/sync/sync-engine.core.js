@@ -337,6 +337,19 @@ async function rbiSyncPass(mode = 'silent') {
         ? window.RbiSyncPullPolicy.pullSinceWithOverlap(localStorage.getItem('rbi_sync_last_pull_at') || '')
         : (localStorage.getItem('rbi_sync_last_pull_at') || '');
     const lastPushAt = localStorage.getItem('rbi_sync_last_push_at') || '';
+    // P2-0078: таблицы, которые раньше каждый проход читались целиком, — только изменения: у каждой своя метка
+    // (sync-pull.policy tablePullSince / tablePullDone); полный проход (lastPullAt пуст) — целиком.
+    const pullStartedAt = new Date().toISOString();
+    const pullPol = window.RbiSyncPullPolicy && window.RbiSyncPullPolicy.tablePullSince ? window.RbiSyncPullPolicy : null;
+    // доработка 1: права устройства сменились (секция, фирма, действия — без смены объектов) — эти таблицы целиком
+    let accessFull = false;
+    try {
+        accessFull = !!(pullPol && pullPol.pullAccessChanged && pullPol.pullAccessChanged(localStorage,
+            pullPol.accessFingerprint(window.RBI && window.RBI.qualitySync, window.syncConfig && window.syncConfig.projectCode)));
+    } catch (_e) { accessFull = true; }
+    const tableSince = (t) => (pullPol ? pullPol.tablePullSince(localStorage, t, accessFull ? '' : lastPullAt) : '');
+    const tableDone = (t) => { if (pullPol) pullPol.tablePullDone(localStorage, t, pullStartedAt); };
+    const changedSince = (q, since) => (since ? q.gt('updated_at', since) : q);
 
     const forceFullPullRequested = localStorage.getItem('rbi_force_full_pull') === '1';
 
@@ -822,7 +835,17 @@ async function rbiSyncPass(mode = 'silent') {
         const storageDir = storageSlashIndex >= 0 ? storagePath.slice(0, storageSlashIndex) : '';
         const storageFileName = storageSlashIndex >= 0 ? storagePath.slice(storageSlashIndex + 1) : storagePath;
 
-        const objectExistsInBucket = async function () {
+        // P2-0078: «есть ли файл» — запрос одного файла (exists, HEAD), а не список папки (storage.search по всей папке на сервере —
+        // до 10 с). Список — только запасной путь: сервер не умеет exists или файл после загрузки «ещё не виден».
+        const objectExistsInBucket = async function (afterUpload) {
+            try {
+                const bucket = window.supabaseClient.storage.from(bucketName);
+                if (typeof bucket.exists === 'function') {
+                    const { data } = await bucket.exists(storagePath);
+                    if (data === true) return true;
+                    if (!afterUpload) return false;
+                }
+            } catch (_e) { /* запасной путь — список */ }
             // После upload Storage иногда отвечает с лагом — 2–3 попытки list.
             for (let attempt = 0; attempt < 3; attempt++) {
                 try {
@@ -861,7 +884,7 @@ async function rbiSyncPass(mode = 'silent') {
 
         // 6. Не возвращаем publicUrl, пока объект реально не виден в бакете
         // (иначе в записи остаётся сирота → offline-cache 404).
-        if (!(await objectExistsInBucket())) {
+        if (!(await objectExistsInBucket(true))) {
             console.error('[Sync] Upload OK, но объект не найден в Storage:', bucketName, storagePath);
             throw new Error(`[Sync] Файл не подтверждён в Storage после upload: ${bucketName}/${storagePath}`);
         }
@@ -2215,19 +2238,15 @@ async function rbiSyncPass(mode = 'silent') {
                 try {
                     const pCode = window.syncConfig.projectCode;
 
-                    let query = window.supabaseClient
+                    // P2-0078: постранично (по 1000, порядок по id) и только изменения со своей метки — раньше один запрос
+                    // limit(25000) на все замечания (≈ 12 000 строк, 5 с на сервере); сбой не сдвигает метку.
+                    const skSince = tableSince('sk_records');
+                    const cloudSkRows = await rbiPullAllRows((from, to) => changedSince(window.supabaseClient
                         .from('sk_records')
                         .select('*')
-                        .eq('project_code', pCode)
-                        .limit(25000); // <-- СНЯЛИ ЛИМИТ СУПАБЕЙСА (По умолчанию там 1000)
-
-                    if (lastPullAt) {
-                        query = query.gt('updated_at', lastPullAt);
-                    }
-
-                    const { data: cloudSkRows, error: skPullError } = await query;
-
-                    if (skPullError) throw skPullError;
+                        .eq('project_code', pCode), skSince)
+                        .order('id', { ascending: true })
+                        .range(from, to), 1000);
 
                     if (cloudSkRows && cloudSkRows.length > 0) {
                         const localRecords = await dbGetAll(STORES.SK_RECORDS) || [];
@@ -2316,6 +2335,7 @@ async function rbiSyncPass(mode = 'silent') {
                             if (typeof sk_renderMainTab === 'function') sk_renderMainTab();
                         }
                     }
+                    tableDone('sk_records');   // строки записаны на устройство — метка таблицы
                 } catch (e) {
                     console.warn('[Sync][ПК СК] Не удалось подтянуть sk_records:', e.message);
                 }
@@ -2328,10 +2348,10 @@ async function rbiSyncPass(mode = 'silent') {
                     const pCode = window.syncConfig.projectCode;
 
                     // 1. Справочник подрядчиков
-                    const { data: cloudContractors, error: contractorsErr } = await window.supabaseClient
+                    const { data: cloudContractors, error: contractorsErr } = await changedSince(window.supabaseClient
                         .from('contractor_directory')
                         .select('*')
-                        .eq('project_code', pCode);
+                        .eq('project_code', pCode), tableSince('contractor_directory'));
 
                     if (contractorsErr) throw contractorsErr;
 
@@ -2349,12 +2369,13 @@ async function rbiSyncPass(mode = 'silent') {
                             });
                         }
                     }
+                    tableDone('contractor_directory');   // строки записаны на устройство — метка таблицы
 
                     // 2. Алиасы подрядчиков
-                    const { data: cloudAliases, error: aliasesErr } = await window.supabaseClient
+                    const { data: cloudAliases, error: aliasesErr } = await changedSince(window.supabaseClient
                         .from('contractor_aliases')
                         .select('*')
-                        .eq('project_code', pCode);
+                        .eq('project_code', pCode), tableSince('contractor_aliases'));
 
                     if (aliasesErr) throw aliasesErr;
 
@@ -2371,14 +2392,28 @@ async function rbiSyncPass(mode = 'silent') {
                             });
                         }
                     }
+                    tableDone('contractor_aliases');   // строки записаны на устройство — метка таблицы
 
                     // 3. Очередь нормализации подрядчиков
-                    const { data: cloudQueue, error: queueErr } = await window.supabaseClient
+                    const queueSince = tableSince('contractor_normalization_queue');
+                    const { data: cloudQueue, error: queueErr } = await changedSince(window.supabaseClient
                         .from('contractor_normalization_queue')
                         .select('*')
-                        .eq('project_code', pCode);
+                        .eq('project_code', pCode), queueSince);
 
                     if (queueErr) throw queueErr;
+                    // P2-0078 (доработка 1): заявку удаляют на сервере насовсем («Удалить заявку», game.actions.js) — при загрузке
+                    // целиком (раз в сутки, смена прав, вход) пришедшие с сервера заявки, которых там больше нет, убираются и с устройства;
+                    // свои неотправленные остаются. Ответ мог обрезаться лимитом сервера (1 000) — тогда не трогаем.
+                    if (!queueSince && Array.isArray(cloudQueue) && cloudQueue.length < 1000 && typeof dbDelete === 'function') {
+                        const onServer = new Set(cloudQueue.map((q) => String(q.id)));
+                        for (const r of (await dbGetAll(STORES.CONTRACTOR_QUEUE)) || []) {
+                            const fromCloud = r && r.source === 'cloud' && (r.syncStatus || r.sync_status) === 'synced';
+                            if (fromCloud && String(r.project_code || '') === String(pCode) && !onServer.has(String(r.id))) {
+                                await dbDelete(STORES.CONTRACTOR_QUEUE, r.id);
+                            }
+                        }
+                    }
 
                     if (Array.isArray(cloudQueue)) {
                         for (const q of cloudQueue) {
@@ -2393,12 +2428,15 @@ async function rbiSyncPass(mode = 'silent') {
                             });
                         }
                     }
+                    tableDone('contractor_normalization_queue');   // строки записаны на устройство — метка таблицы
 
                     // 4. Платформенная таблица contractors → merge legal_* в локальный directory (тот же UUID)
                     try {
-                        const { data: platformContractors, error: platformContrErr } = await window.supabaseClient
+                        // реквизиты дописываются в карточки справочника: пришли новые карточки — подрядчики целиком
+                        const contractorsSince = Array.isArray(cloudContractors) && cloudContractors.length > 0 ? '' : tableSince('contractors');
+                        const { data: platformContractors, error: platformContrErr } = await changedSince(window.supabaseClient
                             .from('contractors')
-                            .select('*');
+                            .select('*'), contractorsSince);
 
                         if (platformContrErr) throw platformContrErr;
 
@@ -2438,6 +2476,7 @@ async function rbiSyncPass(mode = 'silent') {
                                 }
                             }
                         }
+                        tableDone('contractors');   // строки записаны на устройство — метка таблицы
                     } catch (e) {
                         console.warn('[Sync][Подрядчики] Не удалось подтянуть platform contractors:', e.message || e);
                     }
@@ -2445,9 +2484,9 @@ async function rbiSyncPass(mode = 'silent') {
                     // 5. Платформенная таблица contracts → IDB + память сервиса
                     if (STORES.CONTRACTS) {
                         try {
-                            const { data: cloudContracts, error: contractsErr } = await window.supabaseClient
+                            const { data: cloudContracts, error: contractsErr } = await changedSince(window.supabaseClient
                                 .from('contracts')
-                                .select('*');
+                                .select('*'), tableSince('contracts'));
 
                             if (contractsErr) throw contractsErr;
 
@@ -2467,6 +2506,7 @@ async function rbiSyncPass(mode = 'silent') {
                                     });
                                 }
                             }
+                            tableDone('contracts');   // строки записаны на устройство — метка таблицы
                         } catch (e) {
                             console.warn('[Sync][Подрядчики] Не удалось подтянуть contracts:', e.message || e);
                         }
@@ -2484,9 +2524,9 @@ async function rbiSyncPass(mode = 'silent') {
             // --- Справочник локаций v2 (location_nodes + construction_floors_v2) ---
             if (STORES.LOCATION_NODES && window.supabaseClient) {
                 try {
-                    const { data: cloudNodes, error: locErr } = await window.supabaseClient
+                    const { data: cloudNodes, error: locErr } = await changedSince(window.supabaseClient
                         .from('location_nodes')
-                        .select('*');
+                        .select('*'), tableSince('location_nodes'));
                     if (locErr) throw locErr;
                     if (Array.isArray(cloudNodes)) {
                         for (const n of cloudNodes) {
@@ -2537,6 +2577,7 @@ async function rbiSyncPass(mode = 'silent') {
                             });
                         }
                     }
+                    tableDone('location_nodes');   // строки записаны на устройство — метка таблицы
                     // P2-0054: ЖК, места которых ведёт «Компания» (там структура мест — только просмотр). До 048 на сервере — пропуск.
                     try {
                         const { data: coreRoots, error: coreErr } = await window.supabaseClient.rpc('core_led_roots');
@@ -2548,9 +2589,9 @@ async function rbiSyncPass(mode = 'silent') {
                         console.warn('[Sync][Локации] Не удалось узнать ЖК «Компании»:', e.message || e);
                     }
                     if (STORES.CONST_FLOORS_V2) {
-                        const { data: cloudPlans, error: planErr } = await window.supabaseClient
+                        const { data: cloudPlans, error: planErr } = await changedSince(window.supabaseClient
                             .from('construction_floors_v2')
-                            .select('*');
+                            .select('*'), tableSince('construction_floors_v2'));
                         if (planErr) throw planErr;
                         if (Array.isArray(cloudPlans)) {
                             for (const p of cloudPlans) {
@@ -2584,11 +2625,12 @@ async function rbiSyncPass(mode = 'silent') {
                                 }
                             }
                         }
+                        tableDone('construction_floors_v2');   // строки записаны на устройство — метка таблицы
                     }
                     if (STORES.CONST_DEFECTS_V2) {
-                        const { data: cloudDefects, error: defErr } = await window.supabaseClient
+                        const { data: cloudDefects, error: defErr } = await changedSince(window.supabaseClient
                             .from('construction_defects_v2')
-                            .select('*');
+                            .select('*'), tableSince('construction_defects_v2'));
                         if (defErr) throw defErr;
                         if (Array.isArray(cloudDefects)) {
                             for (const d of cloudDefects) {
@@ -2668,11 +2710,12 @@ async function rbiSyncPass(mode = 'silent') {
                                 });
                             }
                         }
+                        tableDone('construction_defects_v2');   // строки записаны на устройство — метка таблицы
                     }
                     if (STORES.CONST_ACCEPTANCE_V2) {
-                        const { data: cloudAcc, error: accErr } = await window.supabaseClient
+                        const { data: cloudAcc, error: accErr } = await changedSince(window.supabaseClient
                             .from('construction_acceptance_v2')
-                            .select('*');
+                            .select('*'), tableSince('construction_acceptance_v2'));
                         if (accErr) throw accErr;
                         if (Array.isArray(cloudAcc)) {
                             for (const a of cloudAcc) {
@@ -2726,12 +2769,13 @@ async function rbiSyncPass(mode = 'silent') {
                                 });
                             }
                         }
+                        tableDone('construction_acceptance_v2');   // строки записаны на устройство — метка таблицы
                     }
                     // Pull помещений construction-v2 (шахматка; без фото)
                     if (STORES.CONST_UNITS_V2) {
-                        const { data: cloudUnits, error: unitsErr } = await window.supabaseClient
+                        const { data: cloudUnits, error: unitsErr } = await changedSince(window.supabaseClient
                             .from('construction_units_v2')
-                            .select('*');
+                            .select('*'), tableSince('construction_units_v2'));
                         if (unitsErr) throw unitsErr;
                         if (Array.isArray(cloudUnits)) {
                             for (const u of cloudUnits) {
@@ -2758,6 +2802,7 @@ async function rbiSyncPass(mode = 'silent') {
                                 }
                             }
                         }
+                        tableDone('construction_units_v2');   // строки записаны на устройство — метка таблицы
                     }
                     const locSvc = window.RBI && window.RBI.services && window.RBI.services.locations;
                     if (locSvc && typeof locSvc.init === 'function') {
@@ -4701,7 +4746,7 @@ async function rbiSyncPass(mode = 'silent') {
                 typeof window.RbiStorageManager.syncFileRegistryFromCloud === 'function' &&
                 typeof window.RbiStorageManager.runAdaptiveStorageCleanup === 'function'
             ) {
-                await window.RbiStorageManager.syncFileRegistryFromCloud();
+                await window.RbiStorageManager.syncFileRegistryFromCloud({ passSince: lastPullAt, full: accessFull });
                 if (typeof window.RbiStorageManager.backfillLocalFileRegistryCache === 'function') {
                     await window.RbiStorageManager.backfillLocalFileRegistryCache();
                 }

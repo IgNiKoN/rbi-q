@@ -9,6 +9,12 @@ import {
   pullPagedByIds,
   useBulkLocalLookup,
   clientScopeMode,
+  tablePullKey,
+  tablePullSince,
+  tablePullDone,
+  TABLE_FULL_EVERY_MS,
+  pullAccessChanged,
+  accessFingerprint,
   PULL_BATCH_SIZE,
   PULL_CONCURRENCY,
   isThrottleError,
@@ -380,5 +386,53 @@ describe('P2-0025: одна выборка локальных записей —
     assert.equal(useBulkLocalLookup(true, 10), false);
     assert.equal(useBulkLocalLookup(false, 60), false);
     assert.equal(useBulkLocalLookup(false, 10000), false);
+  });
+});
+
+describe('P2-0078: таблица — только изменения (своя метка)', () => {
+  const mem = () => { const m = new Map(); return { m, getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
+  const NOW = Date.parse('2026-10-31T13:00:00.000Z');
+  it('без метки — целиком; после загрузки — с метки минус 15 минут', () => {
+    const st = mem();
+    assert.equal(tablePullSince(st, 'location_nodes', '2026-10-31T10:00:00.000Z', NOW), '');
+    tablePullDone(st, 'location_nodes', '2026-10-31T12:00:00.000Z');
+    assert.equal(tablePullSince(st, 'location_nodes', '2026-10-31T11:45:00.000Z', NOW), '2026-10-31T11:45:00.000Z');
+    assert.equal(tablePullSince(st, 'location_nodes', undefined, NOW), '2026-10-31T11:45:00.000Z', 'вне прохода — по своей метке');
+  });
+  it('полный проход (смена прав, объектов) — метка снимается, таблица целиком; сбой полной загрузки — следующий раз тоже целиком', () => {
+    const st = mem();
+    tablePullDone(st, 'contracts', '2026-10-31T12:00:00.000Z');
+    assert.equal(tablePullSince(st, 'contracts', '', NOW), '');
+    assert.equal(st.getItem(tablePullKey('contracts')), null);
+    assert.equal(tablePullSince(st, 'contracts', '2026-10-31T12:30:00.000Z', NOW), '', 'метки нет — целиком');
+  });
+  it('доработка 1: метке больше суток — таблица целиком (страховка), меньше — только изменения', () => {
+    const st = mem();
+    tablePullDone(st, 'location_nodes', '2026-10-30T12:00:00.000Z');
+    assert.equal(tablePullSince(st, 'location_nodes', 'x', Date.parse('2026-10-30T12:00:00.000Z') + TABLE_FULL_EVERY_MS - 1), '2026-10-30T11:45:00.000Z');
+    assert.equal(tablePullSince(st, 'location_nodes', 'x', Date.parse('2026-10-30T12:00:00.000Z') + TABLE_FULL_EVERY_MS + 1), '');
+  });
+  it('сбой одной таблицы не сдвигает её метку; метки таблиц независимы', () => {
+    const st = mem();
+    tablePullDone(st, 'contracts', '2026-10-31T12:00:00.000Z');
+    tablePullDone(st, 'location_nodes', '2026-10-31T12:00:00.000Z');
+    tablePullDone(st, 'location_nodes', '2026-10-31T12:50:00.000Z');   // contracts — сбой, метка прежняя
+    assert.equal(tablePullSince(st, 'contracts', 'x', NOW), '2026-10-31T11:45:00.000Z');
+    assert.equal(tablePullSince(st, 'location_nodes', 'x', NOW), '2026-10-31T12:35:00.000Z');
+    tablePullDone(st, 'contracts', '');
+    assert.equal(tablePullSince(st, 'contracts', 'x', NOW), '2026-10-31T11:45:00.000Z', 'пустое время — метку не трогает');
+  });
+  it('доработка 1: права устройства сменились (секция, фирма, действие) — да один раз; тот же ответ в другом порядке — нет', () => {
+    const st = mem();
+    const qs = { userId: 'u-1', role: 'engineer', actions: ['quality.view', 'construction.defects.view'], objects: ['o1'], contractorKeys: [],
+      construction: { enabled: true, object_nodes: { a: 1, b: 2 } }, quality: { areas: [{ p: 'p1', loc: 's1' }, { p: 'p1', loc: 's2' }] } };
+    assert.equal(pullAccessChanged(st, accessFingerprint(qs, 'c1')), true, 'первый раз — целиком');
+    assert.equal(pullAccessChanged(st, accessFingerprint(qs, 'c1')), false);
+    const same = { ...qs, actions: [...qs.actions].reverse(), construction: { object_nodes: { b: 2, a: 1 }, enabled: true },
+      quality: { areas: [qs.quality.areas[1], qs.quality.areas[0]] } };
+    assert.equal(pullAccessChanged(st, accessFingerprint(same, 'c1')), false, 'порядок не важен');
+    assert.equal(pullAccessChanged(st, accessFingerprint({ ...qs, quality: { areas: [{ p: 'p1', loc: 's3' }] } }, 'c1')), true, 'другая секция');
+    assert.equal(pullAccessChanged(st, accessFingerprint({ ...qs, quality: { areas: [{ p: 'p1', loc: 's3' }] } }, 'c2')), true, 'другая компания');
+    assert.equal(pullAccessChanged(st, null), false, 'нет входа по почте — не знаем');
   });
 });

@@ -97,6 +97,24 @@ test('заранее «мои проекты» (почти всё): Сводка
   st.offline = false;
 });
 
+test('P2-0078: заранее — объекты порциями не больше 3 одновременно, между порциями ждёт синхронизацию Качества (idle)', async () => {
+  st.offline = false;
+  let active = 0, peak = 0, idles = 0;
+  const ids = ['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6', 'p-7'];
+  const empty = async () => [];
+  const deps = {
+    summary: null, fact: null, projects: null, ks2: null, estimate: null,
+    vor: { listProjects: async () => ids.map((id) => ({ id, company_id: 'c-1' })),
+      permissions: async () => { active++; peak = Math.max(peak, active); await new Promise((r) => setTimeout(r, 5)); active--; return []; },
+      listImports: empty, listProfiles: empty, positions: empty, importRows: empty },
+    idle: async () => { idles++; assert.equal(active, 0, 'следующая порция — после предыдущей'); }
+  } as unknown as N;
+  const stats = await prefetchPlanfact(deps);
+  assert.equal(stats.projects, 7);
+  assert.equal(peak, 3, 'одновременно — не больше 3 объектов');
+  assert.equal(idles, 2, 'порции 3 + 3 + 1 — ожидание перед второй и третьей');
+});
+
 test('чтения нет в копии, а экран собирает его из других копий (позиции места — из всех позиций проекта): ответ без «Нужен интернет»', async () => {
   st.offline = false;
   const LOC = new Set(['pf_list_locations', 'pf_fact_positions']);

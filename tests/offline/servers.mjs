@@ -33,6 +33,8 @@ export const sends = new Map();
 /** P2-0061: отправки строк любой таблицы — «таблица:id» → сколько раз (повтор той же строки — +1). */
 export const sendsAll = new Map();
 export const flow = { inflight: 0, maxInflight: 0, hung: 0 };
+/** P2-0078: выдано строк stand.serve — таблица → { queries, rows, delta } (delta — запросов «изменено после», updated_at=gt.). */
+export const served = new Map();
 /** P2-0064: факт с телефона (pf_fact_submit): id с телефона → ответ сервера (повтор — прежний ответ); calls — сколько раз пришло;
  *  entries — сколько записей факта создано (дубль был бы > 1 на id); reject — RegExp по тексту записи: отказ сервера с причиной. */
 export const fact = { byId: new Map(), calls: new Map(), entries: 0, reject: null };
@@ -40,7 +42,7 @@ const held = [];
 /** Сбросить погоду и содержимое сервера перед сценарием. */
 export function resetNet() {
   Object.assign(net, { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [], reject: null });
-  rows.clear(); files.clear(); sends.clear(); sendsAll.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
+  rows.clear(); files.clear(); sends.clear(); sendsAll.clear(); served.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
   fact.byId.clear(); fact.calls.clear(); fact.entries = 0; fact.reject = null;
 }
 /** «Зависшие» запросы обрываются (связь пропала окончательно). */
@@ -108,6 +110,9 @@ const RPC = {
   pf_company_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', archived_at: null }],
   pf_my_projects: (u) => (hasPf(u) ? [{ id: 'p-1', name: 'ЖК Тестовый', company_id: COMPANY.id, archived_at: null }] : []),
   pf_my_permissions: (u) => (u.id === USER.id ? ['planfact.fact.view', 'planfact.fact.create', 'planfact.vor.manage'] : []),
+  // P2-0078: права всех объектов одним вызовом — по ответу pf_my_permissions сценария (stand.rpc) или стенда
+  pf_my_permissions_all: (u, a) => (Array.isArray(a.p_projects) ? a.p_projects : []).map((id) => ({ project_id: id,
+    actions: (stand.rpc && stand.rpc.pf_my_permissions ? stand.rpc.pf_my_permissions : RPC.pf_my_permissions)(u, { p_project: id }) })),
   pf_my_area: () => ({ full: true, locations: [], fact_owner: [], can_on_behalf: false }),
   pf_vor_list_imports: () => IMPORTS,
   pf_vor_positions: () => VOR_POSITIONS,
@@ -215,8 +220,16 @@ function respond(req, res, u, body) {
       if (lost) { lost.left--; return req.socket.destroy(); }
       return v && v.__status ? json(res, v.__status, { message: v.message || 'Internal error', ...(v.code ? { code: v.code } : {}) }) : json(res, 200, v); }
     if (u.pathname.startsWith('/rest/v1/')) {
-      const served = stand.serve && stand.serve[u.pathname.slice(9)];
-      if (req.method === 'GET' && served) return json(res, 200, served, { 'Content-Range': `0-${Math.max(served.length - 1, 0)}/${served.length}` });
+      const tname = u.pathname.slice(9);
+      let serve = stand.serve && stand.serve[tname];
+      if (req.method === 'GET' && serve) {
+        // P2-0078: «изменено после» (updated_at=gt.<время>) — как PostgREST; счётчик выданных строк
+        const gt = (u.searchParams.get('updated_at') || '').match(/^gt\.(.+)$/);
+        if (gt) serve = serve.filter((r) => Date.parse(r.updated_at) > Date.parse(gt[1]));
+        const c = served.get(tname) || { queries: 0, rows: 0, delta: 0 };
+        c.queries++; c.rows += serve.length; if (gt) c.delta++; served.set(tname, c);
+        return json(res, 200, serve, { 'Content-Range': `0-${Math.max(serve.length - 1, 0)}/${serve.length}` });
+      }
       if (req.method === 'GET' || req.method === 'HEAD') return json(res, 200, [], { 'Content-Range': '*/0' });
       return json(res, 201, []);
     }
@@ -228,6 +241,9 @@ function respond(req, res, u, body) {
       return json(res, 200, found.map((f) => ({ name: f.slice(dir.length), id: f, metadata: { size: 1 } })));
     }
     if (u.pathname.startsWith('/storage/v1/object/') && (req.method === 'POST' || req.method === 'PUT')) return json(res, 200, { Key: u.pathname.slice(19), Id: 'f' });
+    // P2-0078: «есть ли файл» (storage exists — HEAD одного файла): есть — 200, нет — 400, как Storage
+    const hd = req.method === 'HEAD' && u.pathname.match(/^\/storage\/v1\/object\/(?!list\/|sign\/|public\/|info\/)(.+)$/);
+    if (hd) { res.writeHead(files.has(decodeURIComponent(hd[1])) ? 200 : 400, { 'Access-Control-Allow-Origin': '*' }); return res.end(); }
     // P2-0057: файл Storage сценария (путь, заголовки → { status, type, body } или null) — закрытые файлы по …/authenticated/…
     const own = req.method === 'GET' && stand.storage && u.pathname.startsWith('/storage/v1/object/') ? stand.storage(u.pathname, req.headers) : null;
     if (own) { res.writeHead(own.status || 200, { 'Content-Type': own.type || 'application/octet-stream', 'Access-Control-Allow-Origin': '*' }); return res.end(own.body); }

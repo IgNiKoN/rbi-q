@@ -236,6 +236,13 @@ export function showView(): void {
   window.dispatchEvent(new Event(ROUTE_EVENT));
 }
 
+/** P2-0078: перед следующей порцией «заранее» — синхронизация Качества идёт — подождать (до 60 с), затем пауза 1 с. */
+async function qualityIdle(): Promise<void> {
+  const busy = (): boolean => !!(window as unknown as { isSyncing?: boolean }).isSyncing;
+  for (let i = 0; i < 60 && busy(); i++) await new Promise((r) => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 1000));
+}
+
 /** P2-0060: «держать без сети» — заранее скачать основные экраны моих проектов (раз в сутки; force — по кнопке). */
 let prefetching: Promise<PrefetchStats | null> | null = null;
 export function prefetchOffline(opts?: { force?: boolean }): Promise<PrefetchStats | null> {
@@ -244,7 +251,7 @@ export function prefetchOffline(opts?: { force?: boolean }): Promise<PrefetchSta
   if (!(opts && opts.force) && !prefetchDue('planfact', Date.now())) return Promise.resolve(null);
   const area = createAreaService();
   prefetching = prefetchPlanfact({ summary: summaryApi, vor: vorApi, fact: factApi, projects: projectsApi, ks2: ks2Api, estimate: estimateApi,
-    area: area ? (p) => area.myArea(p) : undefined })
+    area: area ? (p) => area.myArea(p) : undefined, idle: qualityIdle })
     .then((st) => { if (!st.stopped) markPrefetched('planfact', st, Date.now()); return st; })
     .finally(() => { prefetching = null; });
   return prefetching;
