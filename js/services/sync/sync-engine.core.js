@@ -341,7 +341,13 @@ async function rbiSyncPass(mode = 'silent') {
     // (sync-pull.policy tablePullSince / tablePullDone); полный проход (lastPullAt пуст) — целиком.
     const pullStartedAt = new Date().toISOString();
     const pullPol = window.RbiSyncPullPolicy && window.RbiSyncPullPolicy.tablePullSince ? window.RbiSyncPullPolicy : null;
-    const tableSince = (t) => (pullPol ? pullPol.tablePullSince(localStorage, t, lastPullAt) : '');
+    // доработка 1: права устройства сменились (секция, фирма, действия — без смены объектов) — эти таблицы целиком
+    let accessFull = false;
+    try {
+        accessFull = !!(pullPol && pullPol.pullAccessChanged && pullPol.pullAccessChanged(localStorage,
+            pullPol.accessFingerprint(window.RBI && window.RBI.qualitySync, window.syncConfig && window.syncConfig.projectCode)));
+    } catch (_e) { accessFull = true; }
+    const tableSince = (t) => (pullPol ? pullPol.tablePullSince(localStorage, t, accessFull ? '' : lastPullAt) : '');
     const tableDone = (t) => { if (pullPol) pullPol.tablePullDone(localStorage, t, pullStartedAt); };
     const changedSince = (q, since) => (since ? q.gt('updated_at', since) : q);
 
@@ -2389,12 +2395,25 @@ async function rbiSyncPass(mode = 'silent') {
                     tableDone('contractor_aliases');   // строки записаны на устройство — метка таблицы
 
                     // 3. Очередь нормализации подрядчиков
+                    const queueSince = tableSince('contractor_normalization_queue');
                     const { data: cloudQueue, error: queueErr } = await changedSince(window.supabaseClient
                         .from('contractor_normalization_queue')
                         .select('*')
-                        .eq('project_code', pCode), tableSince('contractor_normalization_queue'));
+                        .eq('project_code', pCode), queueSince);
 
                     if (queueErr) throw queueErr;
+                    // P2-0078 (доработка 1): заявку удаляют на сервере насовсем («Удалить заявку», game.actions.js) — при загрузке
+                    // целиком (раз в сутки, смена прав, вход) пришедшие с сервера заявки, которых там больше нет, убираются и с устройства;
+                    // свои неотправленные остаются. Ответ мог обрезаться лимитом сервера (1 000) — тогда не трогаем.
+                    if (!queueSince && Array.isArray(cloudQueue) && cloudQueue.length < 1000 && typeof dbDelete === 'function') {
+                        const onServer = new Set(cloudQueue.map((q) => String(q.id)));
+                        for (const r of (await dbGetAll(STORES.CONTRACTOR_QUEUE)) || []) {
+                            const fromCloud = r && r.source === 'cloud' && (r.syncStatus || r.sync_status) === 'synced';
+                            if (fromCloud && String(r.project_code || '') === String(pCode) && !onServer.has(String(r.id))) {
+                                await dbDelete(STORES.CONTRACTOR_QUEUE, r.id);
+                            }
+                        }
+                    }
 
                     if (Array.isArray(cloudQueue)) {
                         for (const q of cloudQueue) {
@@ -4727,7 +4746,7 @@ async function rbiSyncPass(mode = 'silent') {
                 typeof window.RbiStorageManager.syncFileRegistryFromCloud === 'function' &&
                 typeof window.RbiStorageManager.runAdaptiveStorageCleanup === 'function'
             ) {
-                await window.RbiStorageManager.syncFileRegistryFromCloud({ passSince: lastPullAt });
+                await window.RbiStorageManager.syncFileRegistryFromCloud({ passSince: lastPullAt, full: accessFull });
                 if (typeof window.RbiStorageManager.backfillLocalFileRegistryCache === 'function') {
                     await window.RbiStorageManager.backfillLocalFileRegistryCache();
                 }

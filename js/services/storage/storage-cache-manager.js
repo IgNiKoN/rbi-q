@@ -445,7 +445,8 @@ window.RbiStorageManager = {
         await dbPut(STORES.FILE_REGISTRY, normalized);
     },
 
-    /** P2-0078: passSince — метка прохода синхронизации ('' — полный проход: реестр целиком); без неё — по своей метке. */
+    /** P2-0078: passSince — метка прохода синхронизации ('' — полный проход: реестр целиком); full — права устройства сменились
+     *  (тоже целиком); без них — по своей метке (целиком, если ей больше суток). */
     async syncFileRegistryFromCloud(opts = {}) {
         try {
             if (!window.supabaseClient || !window.syncConfig?.enabled || !STORES.FILE_REGISTRY) return 0;
@@ -456,7 +457,7 @@ window.RbiStorageManager = {
             // P2-0078: только изменения со своей метки (раньше — весь реестр страницами каждый проход: 2,7 с на страницу на сервере);
             // полный проход синхронизации или нет метки — целиком.
             const pol = window.RbiSyncPullPolicy && window.RbiSyncPullPolicy.tablePullSince ? window.RbiSyncPullPolicy : null;
-            const since = pol ? pol.tablePullSince(localStorage, 'file_registry', opts.passSince) : '';
+            const since = pol ? pol.tablePullSince(localStorage, 'file_registry', opts.full ? '' : opts.passSince) : '';
             const startedAt = new Date().toISOString();
             const page = (from, to) => {
                 let q = window.supabaseClient

@@ -202,20 +202,28 @@ export function clientScopeMode(p) {
 
 /** P2-0078: ключ метки «таблица загружена до» (localStorage). */
 export const tablePullKey = (table) => 'rbi_pull_at:' + table;
+/** P2-0078 (доработка 1): таблица целиком не реже раза в сутки (страховка: строки, ставшие видимыми без смены прав на устройстве). */
+export const TABLE_FULL_EVERY_MS = 24 * 3600 * 1000;
+/** P2-0078 (доработка 1): отпечаток прав устройства на прошлой загрузке (localStorage). */
+export const PULL_ACCESS_KEY = 'rbi_pull_access';
 
 /**
  * P2-0078: с какого момента грузить таблицу, которую раньше каждый проход читали целиком. У каждой таблицы — своя метка
- * (ставится только после её успешной загрузки — сбой одной таблицы не теряет её изменений). Полный проход (passSince === '':
- * первый вход, смена прав, объектов или роли — общая метка сброшена) — метка снимается и таблица грузится целиком; без метки —
- * целиком. passSince не задан (загрузка вне прохода) — по своей метке.
+ * (ставится только после её успешной загрузки — сбой одной таблицы не теряет её изменений). Целиком — полный проход
+ * (passSince === '': первый вход, смена объектов или роли — общая метка сброшена; метка таблицы снимается), нет метки или ей
+ * больше суток. passSince не задан (загрузка вне прохода) — по своей метке.
  * @param {{ getItem(k: string): string|null, removeItem(k: string): void }} store
  * @param {string} table
  * @param {string} [passSince]
+ * @param {number} [now]
  * @returns {string} ISO или '' (целиком)
  */
-export function tablePullSince(store, table, passSince) {
+export function tablePullSince(store, table, passSince, now = Date.now()) {
     if (passSince === '') { store.removeItem(tablePullKey(table)); return ''; }
-    return pullSinceWithOverlap(store.getItem(tablePullKey(table)) || '');
+    const mark = store.getItem(tablePullKey(table)) || '';
+    const t = Date.parse(mark);
+    if (!mark || !Number.isFinite(t) || now - t > TABLE_FULL_EVERY_MS) return '';
+    return pullSinceWithOverlap(mark);
 }
 
 /** P2-0078: таблица загружена — метка = время начала загрузки (с запасом назад — pullSinceWithOverlap). */
@@ -223,7 +231,33 @@ export function tablePullDone(store, table, startedAt) {
     if (startedAt) store.setItem(tablePullKey(table), startedAt);
 }
 
+/**
+ * P2-0078 (доработка 1): права устройства (роль, действия, объекты, фирма, области — ответ quality.my_access) сменились с
+ * прошлой загрузки → таблицы «только изменения» целиком в этом проходе (строки, ставшие видимыми, имеют старое updated_at).
+ * Запоминает новый отпечаток. Отпечатка нет (Качество без входа по почте) — false.
+ * @param {{ getItem(k: string): string|null, setItem(k: string, v: string): void }} store
+ * @param {string|null} fingerprint
+ * @returns {boolean}
+ */
+export function pullAccessChanged(store, fingerprint) {
+    if (fingerprint == null) return false;
+    if (store.getItem(PULL_ACCESS_KEY) === fingerprint) return false;
+    store.setItem(PULL_ACCESS_KEY, fingerprint);
+    return true;
+}
+
+/** P2-0078 (доработка 1): отпечаток прав устройства из RBI.qualitySync (порядок списков не важен). */
+export function accessFingerprint(qs, projectCode) {
+    if (!qs) return null;
+    const sorted = (a) => (Array.isArray(a) ? a.map(String).sort() : a == null ? null : a);
+    const norm = (v) => (v && typeof v === 'object' && !Array.isArray(v)
+        ? Object.keys(v).sort().reduce((o, k) => { o[k] = norm(v[k]); return o; }, {})
+        : Array.isArray(v) ? v.map(norm).map((x) => JSON.stringify(x)).sort() : v);
+    return JSON.stringify([projectCode || '', qs.userId || '', qs.role || '', sorted(qs.actions), sorted(qs.objects),
+        sorted(qs.contractorKeys), norm(qs.construction || null), norm(qs.quality || null)]);
+}
+
 if (typeof window !== 'undefined') {
     window.RbiSyncPullPolicy = { PULL_OVERLAP_MS, PULL_BATCH_SIZE, PULL_CONCURRENCY, pullSinceWithOverlap, pullPagedByIds, isThrottleError, indexLocalHistory, keepLocalOverCloud, clientScopeMode, useBulkLocalLookup,
-        tablePullKey, tablePullSince, tablePullDone };
+        tablePullKey, tablePullSince, tablePullDone, TABLE_FULL_EVERY_MS, pullAccessChanged, accessFingerprint };
 }

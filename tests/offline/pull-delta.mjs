@@ -105,6 +105,31 @@ async function pullDelta(out) {
       `строк ${p3.location_nodes.rows}/${p3.sk_records.rows}, на устройстве ${d3.renamed}/${skText}`);
     ok(Object.entries(p3).every(([t, c]) => ['location_nodes', 'sk_records'].includes(t) || c.rows === 0),
       `${tag}: остальные таблицы — 0 строк`, JSON.stringify(p3));
+    // доработка 1: права устройства расширились (новая секция у участника — объекты те же) — сервер стал отдавать строку со старым
+    // updated_at; «только изменения» её бы не увидели — проход грузит эти таблицы целиком
+    stand.serve.construction_defects_v2.push({ ...base('df', 4), locationId: 'pd-ln-2', status: 'issued', text: 'Замечание 4 (новая секция)', history: [] });
+    // заявку подрядчика удалили на сервере насовсем; на устройстве — своя неотправленная заявка
+    stand.serve.contractor_normalization_queue = stand.serve.contractor_normalization_queue.filter((r) => r.id !== 'pd-cq-3');
+    await page.evaluate(async () => window.RBI.services.storage.put(STORES.CONTRACTOR_QUEUE, { id: 'pd-cq-local', project_code: 'p-1', raw_name: 'Своя заявка',
+      source: 'local', syncStatus: 'not_synced', sync_status: 'not_synced', updatedAt: new Date().toISOString() })).catch(() => {});
+    await page.evaluate(() => { const q = window.RBI && window.RBI.qualitySync; if (q) q.actions = [...(q.actions || []), 'construction.defects.view:секция-2']; });
+    const s4 = snap();
+    await pass(page);
+    const p4 = diff(s4, snap());
+    const seen4 = await page.evaluate(async () => ((await window.RBI.services.storage.getAll(STORES.CONST_DEFECTS_V2)) || [])
+      .filter((r) => r.id === 'pd-df-4').length).catch(() => -1);
+    note('четвёртый проход (права расширились): ' + JSON.stringify(p4) + ' новая строка на устройстве: ' + seen4);
+    ok(seen4 === 1 && p4.construction_defects_v2.delta === 0 && p4.location_nodes.delta === 0,
+      `${tag}: права устройства сменились — таблицы целиком, ставшая видимой строка со старой датой пришла`, `строк ${p4.construction_defects_v2.rows}, на устройстве ${seen4}`);
+    const queue = await page.evaluate(async () => ((await window.RBI.services.storage.getAll(STORES.CONTRACTOR_QUEUE)) || []).map((r) => r.id)).catch(() => []);
+    ok(!queue.includes('pd-cq-3') && queue.includes('pd-cq-local') && queue.includes('pd-cq-1'),
+      `${tag}: загрузка целиком — заявка, удалённая на сервере насовсем, убрана с устройства; своя неотправленная осталась`, JSON.stringify(queue.filter((x) => String(x).startsWith('pd-cq'))));
+    const s5 = snap();
+    await pass(page);
+    const p5 = diff(s5, snap());
+    // строки, изменённые в шаге 3 (меньше 15 минут назад), повторно попадают в запас «− 15 мин» — безвредно (тот же id)
+    ok(Object.entries(p5).every(([t, c]) => c.delta === c.queries && c.rows === (['location_nodes', 'sk_records'].includes(t) ? 1 : 0)),
+      `${tag}: после этого — снова только изменения (лишь строки из запаса 15 минут)`, JSON.stringify(Object.entries(p5).filter(([, c]) => c.rows > 0 || c.delta !== c.queries)));
     await ctx.close();
   } finally { stand.serve = null; await stop().catch(() => {}); }
 }
