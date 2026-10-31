@@ -27,7 +27,14 @@ async function device(out) {
   try {
     let { ctx, page } = await launch(out, tag, { width: 1440, height: 900 });
     await signIn(page);
-    await page.waitForTimeout(14000);   // заранее План/Факт и «Компания» — через 8–10 с после запуска
+    // заранее «Компания» — через 10 с после запуска, План/Факт — после первой синхронизации Качества и не раньше 45 с (P2-0078)
+    await page.waitForTimeout(14000);
+    for (let i = 0; i < 50; i++) {
+      const done = await page.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('platform2_offline_prefetch:'));
+        return !!(k && JSON.parse(localStorage.getItem(k)).planfact); }).catch(() => false);
+      if (done) break;
+      await page.waitForTimeout(1500);
+    }
     await openDevice(page);
     const mods = await page.evaluate(() => [...document.querySelectorAll('[data-testid^=p2o-mod-]')].map((e) => e.dataset.mod));
     ok(JSON.stringify(mods) === JSON.stringify(['quality', 'planfact', 'company']), `${tag}: мои модули — Качество и СК, План/Факт, Компания`, JSON.stringify(mods));

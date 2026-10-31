@@ -9,7 +9,9 @@ import type { Result } from '../../../platform/company/company.service.ts';
 import type { ParsedRow, RowContext } from './parse.ts';
 import type { BaseRow } from './revision.ts';
 import { fetchMyProjects } from '../../../platform/core/projects.service.ts';
-import { copyCall } from '../../../platform/services/offline/copy.ts';
+import { copyCall, offlineNow } from '../../../platform/services/offline/copy.ts';
+import { createPermsBatch } from './permissions-batch.ts';
+import type { PermsBatch } from './permissions-batch.ts';
 
 /** P2-0060: функции-чтения ВОР (копия для просмотра); остальные pf_vor_* — запись. */
 export const VOR_READS: ReadonlySet<string> = new Set(['pf_my_permissions', 'pf_vor_list_imports', 'pf_vor_import_rows', 'pf_vor_list_profiles',
@@ -84,6 +86,28 @@ export function chunks<T>(list: T[], size: number): T[][] {
   return out;
 }
 
+/** P2-0078: права всех моих объектов одним вызовом — общий на клиент (экраны и «заранее» создают свои сервисы). */
+let perms: { client: unknown; batch: PermsBatch } | null = null;
+function permsBatch(c: NonNullable<ReturnType<typeof getClient>>): PermsBatch {
+  if (perms && perms.client === c) return perms.batch;
+  const batch = createPermsBatch({
+    now: () => Date.now(),
+    offline: offlineNow,
+    myProjects: async () => (await fetchMyProjects<VorProject>()).map((p) => p.id),
+    fetchAll: async (ids) => {
+      try {
+        const { data, error } = await c.rpc('pf_my_permissions_all', { p_projects: ids });
+        return error || !Array.isArray(data) ? null : (data as Array<{ project_id: string; actions: string[] | null }>);
+      } catch { return null; }
+    }
+  });
+  if (!perms && typeof window !== 'undefined') {
+    for (const e of ['rbi:platform-access', 'rbi:company-access']) window.addEventListener(e, () => { if (perms) perms.batch.reset(); });
+  }
+  perms = { client: c, batch };
+  return batch;
+}
+
 export function createVorService(): VorApi | null {
   const c = getClient();
   if (!c) return null;
@@ -111,7 +135,13 @@ export function createVorService(): VorApi | null {
   }
   return {
     listProjects: () => fetchMyProjects<VorProject>(),
-    permissions: (p) => rows<string>('pf_my_permissions', { p_project: p }),
+    async permissions(p) {
+      const v = await permsBatch(c).get(p);
+      if (!v) return rows<string>('pf_my_permissions', { p_project: p });
+      // в копию для просмотра — как ответ pf_my_permissions этого объекта (без сети экран откроется с правами)
+      const r = await copyCall('planfact', VOR_READS, 'pf_my_permissions', { p_project: p }, async () => ({ ok: true as const, value: v }));
+      return r.ok && Array.isArray(r.value) ? (r.value as string[]) : v;
+    },
     listImports: (p) => rows<VorImport>('pf_vor_list_imports', { p_project: p }),
     importRows: (i) => rows<VorRow>('pf_vor_import_rows', { p_import: i }),
     async saveDraft(p, list, onProgress) {

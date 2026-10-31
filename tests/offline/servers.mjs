@@ -110,6 +110,9 @@ const RPC = {
   pf_company_projects: () => [{ id: 'p-1', name: 'ЖК Тестовый', archived_at: null }],
   pf_my_projects: (u) => (hasPf(u) ? [{ id: 'p-1', name: 'ЖК Тестовый', company_id: COMPANY.id, archived_at: null }] : []),
   pf_my_permissions: (u) => (u.id === USER.id ? ['planfact.fact.view', 'planfact.fact.create', 'planfact.vor.manage'] : []),
+  // P2-0078: права всех объектов одним вызовом — по ответу pf_my_permissions сценария (stand.rpc) или стенда
+  pf_my_permissions_all: (u, a) => (Array.isArray(a.p_projects) ? a.p_projects : []).map((id) => ({ project_id: id,
+    actions: (stand.rpc && stand.rpc.pf_my_permissions ? stand.rpc.pf_my_permissions : RPC.pf_my_permissions)(u, { p_project: id }) })),
   pf_my_area: () => ({ full: true, locations: [], fact_owner: [], can_on_behalf: false }),
   pf_vor_list_imports: () => IMPORTS,
   pf_vor_positions: () => VOR_POSITIONS,

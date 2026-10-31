@@ -5,6 +5,8 @@
  * ВОР (загрузки, позиции, строки загрузок), Факт (ожидания, позиции, журнал 30 дней, бригады), шахматка (дерево мест), КС-2 и сметы — по праву;
  * позиции по месту — на телефоне из всех позиций проекта (fact.service), отдельных запросов нет. Только открытое: история позиции, строки сметы,
  * акт КС-2 целиком, владельцы факта места. Объём на проект замеряется (stats).
+ * P2-0078: объекты — порциями по PREFETCH_PORTION одновременно (внутри объекта запросы по одному); между порциями — idle (не мешать
+ * синхронизации Качества); права объектов — одним вызовом (vor.permissions берёт их из пакета pf_my_permissions_all).
  */
 import type { SummaryApi } from './summary/summary.service.ts';
 import type { VorApi } from './vor/vor.service.ts';
@@ -21,11 +23,15 @@ import { FACT_VIEW } from './fact/fact.service.ts';
 import { offlineNow, offlineReader } from '../../platform/services/offline/copy.ts';
 
 export interface PrefetchDeps { summary: SummaryApi | null; vor: VorApi | null; fact: FactApi | null; projects: ProjectsApi | null; area?: (p: string) => Promise<unknown>;
-  ks2?: Ks2Api | null; estimate?: EstimateApi | null; today?: string }
+  ks2?: Ks2Api | null; estimate?: EstimateApi | null; today?: string;
+  /** P2-0078: перед следующей порцией объектов — дождаться, пока не идёт синхронизация Качества. */
+  idle?: () => Promise<void> }
 export interface PrefetchStats { projects: number; reads: number; bytes: number; perProject: { id: string; reads: number; bytes: number }[]; stopped?: string }
 
 /** Период графиков Сводки по умолчанию (Dashboard) — тот же ключ копии. */
 const WEEKS = 8;
+/** P2-0078: объектов «заранее» одновременно (порция). */
+export const PREFETCH_PORTION = 3;
 
 export async function prefetchPlanfact(d: PrefetchDeps): Promise<PrefetchStats> {
   const stats: PrefetchStats = { projects: 0, reads: 0, bytes: 0, perProject: [] };
@@ -39,17 +45,18 @@ export async function prefetchPlanfact(d: PrefetchDeps): Promise<PrefetchStats> 
   if (d.summary) { await count(d.summary.portfolio()); await count(d.summary.inbox()); }
   const today = d.today || todayMoscow();
   const mine = await count(d.vor.listProjects());   // участие (pf_my_projects)
-  for (const p of mine) {
-    if (silent()) { stats.stopped = 'связь пропала'; break; }
-    const r0 = reads;
-    const perms = await count(d.vor.permissions(p.id));
-    if (d.area) await count(d.area(p.id));
+  const vor = d.vor;
+  async function one(p: (typeof mine)[number]): Promise<void> {
+    let own = 0;
+    const cnt = async <T>(x: Promise<T>): Promise<T> => { own++; return count(x); };
+    const perms = await cnt(vor.permissions(p.id));
+    if (d.area) await cnt(d.area(p.id));
     // ВОР: загрузки, позиции (реестр) и строки загрузок (подсказка «номер и раздел ВОР» при вводе факта)
-    await count(d.vor.listImports(p.id)); await count(d.vor.listProfiles(p.id));   // профили колонок — экран ВОР читает при выборе проекта
-    const vp = await count(d.vor.positions(p.id, null));
-    for (const imp of new Set(vp.map((x) => x.import_id).filter(Boolean))) { if (silent()) break; await count(d.vor.importRows(imp)); }
-    if (d.ks2 && (perms.includes(KS2_VIEW) || perms.includes(KS2_EDIT))) { await count(d.ks2.settings(p.id)); await count(d.ks2.acts(p.id)); }
-    if (d.estimate && perms.includes(ESTIMATE_MANAGE)) await count(d.estimate.listEstimates(p.id));
+    await cnt(vor.listImports(p.id)); await cnt(vor.listProfiles(p.id));   // профили колонок — экран ВОР читает при выборе проекта
+    const vp = await cnt(vor.positions(p.id, null));
+    for (const imp of new Set(vp.map((x) => x.import_id).filter(Boolean))) { if (silent()) break; await cnt(vor.importRows(imp)); }
+    if (d.ks2 && (perms.includes(KS2_VIEW) || perms.includes(KS2_EDIT))) { await cnt(d.ks2.settings(p.id)); await cnt(d.ks2.acts(p.id)); }
+    if (d.estimate && perms.includes(ESTIMATE_MANAGE)) await cnt(d.estimate.listEstimates(p.id));
     if (perms.includes(FACT_VIEW) && !silent()) {
       // Сводка объекта — те же вызовы, что Dashboard и ProjectView
       if (d.summary) {
@@ -57,17 +64,22 @@ export async function prefetchPlanfact(d: PrefetchDeps): Promise<PrefetchStats> 
         const jobs: Array<() => Promise<unknown>> = [() => s.weekly(p.id, WEEKS), () => s.places(p.id, null), () => s.workTypes(p.id),
           () => s.positions(p.id, null), () => s.ks2Gap(p.id), () => s.attention(p.id)];
         for (const f of jobs) {
-          if (silent()) break; await count(f());
+          if (silent()) break; await cnt(f());
         }
       }
       // Факт: ждут подтверждения, позиции (и по месту — из них), журнал 30 дней (как экран); шахматка — дерево мест целиком
-      if (d.fact && !silent()) { await count(d.fact.pending(p.id)); await count(d.fact.positions(p.id, null));
-        await count(d.fact.journal(p.id, shiftDate(today, -(JOURNAL_DAYS - 1)), today, JOURNAL_LIMIT)); }
-      if (d.projects && !silent()) await loadPlaces((parent) => count(d.projects!.listLocations(p.id, parent)));
+      if (d.fact && !silent()) { await cnt(d.fact.pending(p.id)); await cnt(d.fact.positions(p.id, null));
+        await cnt(d.fact.journal(p.id, shiftDate(today, -(JOURNAL_DAYS - 1)), today, JOURNAL_LIMIT)); }
+      if (d.projects && !silent()) await loadPlaces((parent) => cnt(d.projects!.listLocations(p.id, parent)));
     }
     const bytes = (await offlineReader().size('planfact', p.id)) + (await offlineReader().size('company', p.id));
-    stats.perProject.push({ id: p.id, reads: reads - r0, bytes });
+    stats.perProject.push({ id: p.id, reads: own, bytes });
     stats.projects++;
+  }
+  for (let i = 0; i < mine.length; i += PREFETCH_PORTION) {
+    if (silent()) { stats.stopped = 'связь пропала'; break; }
+    if (i > 0 && d.idle) await d.idle();
+    await Promise.all(mine.slice(i, i + PREFETCH_PORTION).map(one));
   }
   // бригады компаний — один раз на компанию (окно «Внести факт» их показывает)
   if (d.fact) for (const co of new Set(mine.map((p) => (p as { company_id?: string }).company_id).filter(Boolean) as string[])) { if (silent()) break; await count(d.fact.listBrigades(co, false)); }

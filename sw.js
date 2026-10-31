@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.31-7186a17d',
+  version: '2026.10.31-7d28cf43',
   date: '2026-10-31',
-  digest: '7186a17d',
+  digest: '7d28cf43',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -76,7 +76,7 @@ const APP_RELEASE = {
     "js/dist/planfact/chunks/exceljs.min-Cd0WKM3n.js": ["f113c5443f0643dc",1394665,"planfact"],
     "js/dist/planfact/chunks/xlsx-reader-CPcF3VtK.js": ["2434aeece60d858e",2160,"planfact"],
     "js/dist/planfact/chunks/xlsx-writer-C1YpHX_s.js": ["70ba43f300adeb4d",12722,"planfact"],
-    "js/dist/planfact/planfact.js": ["f391e8a25c2e487d",1710186,"planfact"],
+    "js/dist/planfact/planfact.js": ["ae198f2bfbcaf90e",1712124,"planfact"],
     "js/dist/platform-admin/platform-admin.js": ["60eb5c906b7b4f8b",27845,"platform-admin"],
     "js/dist/platform/platform.js": ["a643e26651be79ce",852454,""],
     "js/dist/rbi-construction-acceptance.js": ["ea4a7f059ca0367b",14449,"construction"],
@@ -116,7 +116,7 @@ const APP_RELEASE = {
     "js/modules/knowledge/twi.docx-export.js": ["bd5c958a5c92c51a",28903,""],
     "js/modules/modules.manifest.d.ts": ["0f8375887572f52d",811,""],
     "js/modules/modules.manifest.js": ["12bd76b9dd6d6fb7",1998,""],
-    "js/modules/planfact/index.js": ["e359f78f83fb07a3",12512,""],
+    "js/modules/planfact/index.js": ["b42f704b9784949e",13580,""],
     "js/modules/planfact/planfact.manifest.js": ["c62b34d5b4b7ff2f",5985,""],
     "js/modules/quality/features/ai/ai.actions.js": ["6931c8c275369567",258576,"quality"],
     "js/modules/quality/features/ai/ai.manifest.js": ["be59786506d712f7",1460,""],

@@ -91,7 +91,8 @@ async function prefetch(out, width) {
   await go(page, '#/settings/company/objects', 6000);   // ядро платформы: «Компания → Проекты» — открыто с сетью (копия того, что открывали)
   const coOnline = await page.evaluate(() => document.body.innerText.includes('ЖК Тестовый'));
   let st = null;
-  for (let i = 0; i < 20 && !st; i++) {
+  // P2-0078: заранее План/Факта — после первой синхронизации Качества и не раньше 45 с после запуска
+  for (let i = 0; i < 50 && !st; i++) {
     await page.waitForTimeout(1500);
     st = await page.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('platform2_offline_prefetch:'));
       return k ? JSON.parse(localStorage.getItem(k)).planfact || null : null; });

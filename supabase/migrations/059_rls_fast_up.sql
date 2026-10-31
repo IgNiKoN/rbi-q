@@ -521,6 +521,38 @@ create policy quality_files_guard_select on storage.objects as restrictive for s
     else (select quality.storage_companies('{quality}')) end)
   else true end);
 
+-- 6. Этап 5 — права План/Факта по всем моим объектам одним вызовом (прежде pf_my_permissions на каждый объект подряд: 19 вызовов
+-- по 70–180 мс). Смысл — как pf_my_permissions (planfact.has_permission → core.has_grant, место не указано): модуль План/Факта
+-- включён у компании объекта; администратор платформы — все действия каталога; иначе действие роли действующего назначения на
+-- компанию или на этот объект (назначение на место — только для действий с областью). Объект без модуля — не в ответе (как «{}»).
+-- Прежняя pf_my_permissions остаётся (совместимость, без сети — копия по объекту).
+create or replace function public.pf_my_permissions_all(p_projects uuid[])
+ RETURNS TABLE(project_id uuid, actions text[])
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'planfact', 'core'
+AS $function$
+  with adm as (select planfact.is_platform_admin() yes),
+  asg as (
+    select a.company_id, a.project_id, a.location_id, rp.action
+      from core.role_assignments a
+      join core.company_role_permissions rp on rp.role_id = a.role_id and rp.company_id = a.company_id
+     where a.user_id = auth.uid() and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now()))
+  select pr.id, coalesce((
+      select array_agg(c.action order by c.action) from core.permission_catalog c
+       where (select yes from adm)
+          or exists (select 1 from asg
+                      where asg.company_id = pr.company_id and asg.action = c.action and (asg.project_id is null or asg.project_id = pr.id)
+                        and (asg.location_id is null or c.area_scoped))), '{}')
+    from core.projects pr
+    join core.company_modules cm on cm.company_id = pr.company_id and cm.module = 'planfact' and cm.enabled
+   where auth.uid() is not null and pr.id = any (p_projects[1:500])
+$function$;
+comment on function public.pf_my_permissions_all(uuid[]) is
+  'P2-0078: права План/Факта по объектам (до 500) одним вызовом — то же, что pf_my_permissions по каждому';
+revoke all on function public.pf_my_permissions_all(uuid[]) from public, anon;
+grant execute on function public.pf_my_permissions_all(uuid[]) to authenticated;
+
 -- Пункты и фото проверки (quality.inspection_child_ok, чтение): проверка есть и видна (её правило) — видно; проверки нет —
 -- своё при просмотре или проведении проверок хоть где-то в компании. Видимые проверки — один раз на запрос (хеш).
 do $$

@@ -153,7 +153,8 @@ function unmountSettings() { if (loaded && typeof loaded.unmountSettings === 'fu
 /**
  * P2-0060: «держать без сети» — заранее скачать основные экраны моих проектов в копию для просмотра (в бандле: prefetchOffline).
  * Связь подтверждена сервером, модуль положен, на устройстве прошлый раз — больше суток назад (точное «пора» по «компания +
- * пользователь» и выбор «держать без сети» проверяет бандл). Через 8 с после запуска — не мешать первой загрузке. По кнопке — offlinePrefetch.
+ * пользователь» и выбор «держать без сети» проверяет бандл). Через 8 с после запуска и после первой синхронизации Качества (P2-0078) — не
+ * мешать первой загрузке. По кнопке — offlinePrefetch.
  */
 var PREFETCH_DEVICE_KEY = 'platform2_offline_prefetch_last:planfact';
 var PREFETCH_EVERY_MS = 24 * 3600 * 1000;
@@ -170,7 +171,23 @@ function maybePrefetch() {
     try { last = Number(localStorage.getItem(PREFETCH_DEVICE_KEY) || 0); } catch (_) { /* без localStorage — как в первый раз */ }
     if (Date.now() - last < PREFETCH_EVERY_MS) return;
     prefetchAsked = true;
-    setTimeout(function () { prefetchNow(false).catch(function () { prefetchAsked = false; }); }, 8000);
+    setTimeout(function () { afterFirstScreen(function () { prefetchNow(false).catch(function () { prefetchAsked = false; }); }); }, 8000);
+}
+/**
+ * P2-0078: «заранее» — после первого экрана: первая синхронизация Качества закончилась и с запуска прошло не меньше 45 с (вход нового
+ * устройства — без загрузки всех объектов сразу и параллельно с ней). Ждём не дольше 3 минут.
+ */
+var PREFETCH_AFTER_START_MS = 45000;
+var startedAt = Date.now();
+function afterFirstScreen(run) {
+    (function check() {
+        var cfg = window.syncConfig;
+        var firstDone = !(cfg && cfg.enabled);
+        try { firstDone = firstDone || !!localStorage.getItem('rbi_sync_last_pull_at'); } catch (_) { firstDone = true; }
+        var since = Date.now() - startedAt;
+        if ((firstDone && !window.isSyncing && since >= PREFETCH_AFTER_START_MS) || since >= 180000) { run(); return; }
+        setTimeout(check, 2000);
+    })();
 }
 
 export function init(ctx) {
