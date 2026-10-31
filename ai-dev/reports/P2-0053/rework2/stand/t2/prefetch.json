@@ -1,0 +1,40 @@
+[
+  {
+    "tag": "v-prefetch375",
+    "projects": 1,
+    "reads": 22,
+    "bytes": 5356,
+    "perProject": [
+      {
+        "id": "p-1",
+        "reads": 18,
+        "bytes": 4517
+      }
+    ]
+  },
+  {
+    "tag": "v-prefetch375-core",
+    "companies": 1,
+    "reads": 12,
+    "bytes": 24
+  },
+  {
+    "tag": "v-prefetch1440",
+    "projects": 1,
+    "reads": 22,
+    "bytes": 5356,
+    "perProject": [
+      {
+        "id": "p-1",
+        "reads": 18,
+        "bytes": 4517
+      }
+    ]
+  },
+  {
+    "tag": "v-prefetch1440-core",
+    "companies": 1,
+    "reads": 12,
+    "bytes": 20
+  }
+]

@@ -14,12 +14,16 @@ const [out = join(tmpdir(), 'p2-0053-shots'), widthsArg = '375,1440'] = process.
 const KEEP = process.argv.includes('--keep');
 mkdirSync(out, { recursive: true });
 export const ROLES = ['management', 'project_manager', 'pto', 'foreman', 'qc_engineer', 'economist', 'customer', 'contractor_rep'];
-const CLIENT = 'admin.k0@sandbox.test.invalid';
+// --heavy (доработка 2): вместо клиента «песочницы» — тяжёлая учётка, как владелец (админ платформы, 20 объектов своей компании)
+const HEAVY_RUN = process.argv.includes('--heavy');
+const CLIENT = HEAVY_RUN ? 'heavy-owner@stand.test.invalid' : 'admin.k0@sandbox.test.invalid';
+const OWN = HEAVY_RUN ? /Тяжёлая/ : /Песочница/;
 const lines = [];
 const log = (s) => { lines.push(s); console.log(s); };
 const check = (c, l) => log((c ? 'PASS ' : 'FAIL ') + l);
 
-export async function demoStandWithApp({ apiPort = 18893, appPort = 8891 } = {}) {
+// порты по умолчанию — P2_DEMO_API_PORT / P2_DEMO_APP_PORT (параллельные прогоны), иначе :18893 / :8891
+export async function demoStandWithApp({ apiPort = Number(process.env.P2_DEMO_API_PORT || 18893), appPort = Number(process.env.P2_DEMO_APP_PORT || 8891) } = {}) {
   const st = await standWithNeighbours(null, apiPort);
   // сервер стенда standWithNeighbours слушает свой порт; приложению нужен адрес — поднимаем статику на него
   const app = http.createServer(createApp(st.stand.apiUrl));
@@ -78,12 +82,13 @@ export async function chooseRole(page, role) {
 if (process.argv[1] && process.argv[1].endsWith('browser.mjs')) {
   const t0 = Date.now();
   const st = await demoStandWithApp();
+  if (HEAVY_RUN) log(`тяжёлая учётка: мест ${await (await import('./heavy.mjs')).addHeavy(st.db)}`);
   try {
     for (const width of widthsArg.split(',').map(Number)) {
       const { ctx, page } = await launch('w' + width, width);
       await signIn(page, st.appUrl, CLIENT);
       const own = await view(page);
-      check(!own.demo && /Песочница/.test(own.company || ''), `${width}: вошёл в свою компанию «${own.company}»`);
+      check(!own.demo && OWN.test(own.company || ''), `${width}: вошёл в свою компанию «${own.company}»`);
       await page.evaluate(() => localStorage.setItem('p2-own-marker', '1'));
       // ТД 403: у клиента свой объект — в демо «Сводка» его не показывает, в своей компании — показывает
       const ownProject = await page.evaluate(async () => {
@@ -157,7 +162,7 @@ if (process.argv[1] && process.argv[1].endsWith('browser.mjs')) {
       await page.locator('[data-testid=p2-demo-chip-exit]').click();
       await wait(page, 7000);
       const back = await view(page);
-      check(!back.demo && /Песочница/.test(back.company || '') && !back.chip, `${width}: «Выйти» — снова своя компания «${back.company}», плашки нет`);
+      check(!back.demo && OWN.test(back.company || '') && !back.chip, `${width}: «Выйти» — снова своя компания «${back.company}», плашки нет`);
       check(await page.evaluate(() => localStorage.getItem('p2-own-marker') === '1'), `${width}: данные устройства своей компании на месте`);
       await ctx.setOffline(true);
       await go(page, '#/demo', 2500);

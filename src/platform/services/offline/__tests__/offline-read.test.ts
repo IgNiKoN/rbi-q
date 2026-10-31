@@ -78,6 +78,7 @@ test('сервер не ответил (обрыв / молчит дольше �
   await reader.read('planfact', 'k', ok('копия'));
   const cut = await reader.read('planfact', 'k', noNet);
   assert.ok(cut.ok && cut.value === 'копия' && cut.meta!.from === 'copy', 'обрыв связи');
+  env.now += 1000;   // сервер давно не отвечал на чтения (P2-0053 доработка 2: иначе одно долгое чтение тишину не включает)
   const silent = await reader.read('planfact', 'k', () => new Promise<Result<string>>(() => { /* молчит */ }));
   assert.ok(silent.ok && silent.meta!.from === 'copy', 'сервер молчит');
   env.now += SILENT_MS + 1;   // минута тишины прошла — снова спрашиваем сервер
@@ -197,6 +198,7 @@ test('сервер промолчал дольше ожидания — мину
   const { env, reader } = setup();
   await reader.read('planfact', 'summary:portfolio', ok(['было']));
   const hang = (): Promise<Result<string[]>> => new Promise(() => {});
+  env.now = NOW + 1000;   // сервер давно не отвечал (P2-0053 доработка 2)
   const r1 = await reader.read('planfact', 'summary:portfolio', hang);
   assert.equal(r1.ok && r1.meta!.from, 'copy');
   assert.equal(reader.serverSilent(), true);
@@ -204,11 +206,48 @@ test('сервер промолчал дольше ожидания — мину
   const r2 = await reader.read('planfact', 'summary:portfolio', async () => { calls++; return { ok: true, value: ['новое'] }; });
   assert.equal(calls, 0, 'пока сервер молчит — к нему не идём');
   assert.equal(r2.ok && r2.meta!.from, 'copy');
-  env.now = NOW + SILENT_MS + 1;
+  env.now = NOW + 1000 + SILENT_MS + 1;
   assert.equal(reader.serverSilent(), false);
   const r3 = await reader.read('planfact', 'summary:portfolio', async () => { calls++; return { ok: true, value: ['новое'] }; });
   assert.equal(calls, 1);
   assert.deepEqual(r3.ok && r3.value, ['новое']);
+});
+
+test('P2-0053 доработка 2: сервер только что ответил на другое чтение — одно долгое чтение тишину не включает', async () => {
+  const { env, reader } = setup();
+  await reader.read('planfact', 'summary:portfolio', ok(['ЖК Демо']));
+  env.now += 5;   // меньше ожидания: сервер жив
+  const r1 = await reader.read('planfact', 'summary:inbox', () => new Promise<Result<string[]>>(() => {}));
+  assert.ok(!r1.ok && r1.offline, 'это чтение — без данных (копии нет)');
+  assert.equal(reader.serverSilent(), false, 'остальные экраны по-прежнему спрашивают сервер');
+  let calls = 0;
+  await reader.read('planfact', 'summary:places', async () => { calls++; return { ok: true, value: [1] }; });
+  assert.equal(calls, 1);
+});
+
+test('P2-0053 доработка 2: промолчавший запрос всё же ответил — сервер снова спрашивают (минуты тишины нет); оборвался — тишина остаётся', async () => {
+  const { reader, env } = setup();
+  env.now += 1000;
+  let answer!: (r: Result<string[]>) => void;
+  const slow = (): Promise<Result<string[]>> => new Promise((res) => { answer = res; });
+  const r1 = await reader.read('planfact', 'summary:inbox', slow);
+  assert.ok(!r1.ok && r1.offline, 'копии нет — «Нужен интернет» (как в демо)');
+  assert.equal(reader.serverSilent(), true);
+  assert.deepEqual(reader.missedKeys('planfact'), ['summary:inbox']);
+  answer({ ok: true, value: ['поздно'] });
+  await new Promise((res) => setTimeout(res, 0));
+  assert.equal(reader.serverSilent(), false, 'поздний ответ — сервер жив');
+  assert.deepEqual(reader.missedKeys('planfact'), [], 'поздний ответ — в копии, пометка «Нужен интернет» снята');
+  let calls = 0;
+  const r2 = await reader.read('planfact', 'summary:portfolio', async () => { calls++; return { ok: true, value: ['ЖК Демо'] }; });
+  assert.equal(calls, 1);
+  assert.deepEqual(r2.ok && r2.value, ['ЖК Демо']);
+  let cut!: (r: Result<string[]>) => void;
+  env.now += 1000;   // сервер опять давно не отвечал
+  await reader.read('planfact', 'summary:inbox', () => new Promise<Result<string[]>>((res) => { cut = res; }));
+  cut({ ok: false, message: NO_CONNECTION_TEXT });
+  await new Promise((res) => setTimeout(res, 0));
+  assert.equal(reader.serverSilent(), true, 'поздний обрыв связи — тишина остаётся');
 });
 
 test('P2-0073: размер, очистка и отбор по объектам — по описи копии, без чтения содержимого', async () => {
