@@ -11,8 +11,9 @@ begin
    where ns.nspname = 'core' and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))
      -- P2-0070 (052): исключение — проверки для правил строк модулей (RLS выполняется от имени клиента), только authenticated;
      -- P2-0057 (055): то же для правил Storage файлов планов мест (core.place_file_can)
+     -- P2-0053 (057): то же для правила Storage «посетитель демо файлы не кладёт» (core.my_demo_company)
      and not (p.oid in (to_regprocedure('core.row_allowed(uuid,uuid,uuid,text[],uuid,uuid)'), to_regprocedure('core.in_area(uuid,uuid[])'),
-                        to_regprocedure('core.place_file_can(text,boolean)'))
+                        to_regprocedure('core.place_file_can(text,boolean)'), to_regprocedure('core.my_demo_company()'))
               and not has_function_privilege('anon', p.oid, 'execute'));
   res := res || pg_temp.t(n = 0, 'функции core недоступны authenticated и anon (доступны: ' || coalesce(s, '—') || ')');
   select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace where ns.nspname = 'core';
