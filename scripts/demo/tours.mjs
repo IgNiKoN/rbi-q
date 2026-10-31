@@ -16,6 +16,9 @@ const check = (c, l) => log((c ? 'PASS ' : 'FAIL ') + l);
 const wait = (p, ms) => p.waitForTimeout(ms);
 
 const st = await demoStandWithApp({ apiPort: 8892, appPort: 8898 });
+// --heavy (доработка 2): туры у тяжёлой учётки, как владелец (админ платформы, 20 объектов своей компании)
+const HEAVY_RUN = process.argv.includes('--heavy');
+if (HEAVY_RUN) await (await import('./heavy.mjs')).addHeavy(st.db);
 const t0 = Date.now();
 try {
   for (const width of widthsArg.split(',').map(Number)) {
@@ -26,7 +29,7 @@ try {
     const page = ctx.pages()[0] || await ctx.newPage();
     await page.route(/rbi-q\.ru/, (r) => r.abort());
     page.on('pageerror', (e) => log(`  [ошибка страницы] ${e.message.split('\n')[0]}`));
-    await signIn(page, st.appUrl, 'admin.k0@sandbox.test.invalid');
+    await signIn(page, st.appUrl, HEAVY_RUN ? 'heavy-owner@stand.test.invalid' : 'admin.k0@sandbox.test.invalid');
     // закрытые PDF-планы на боевом берёт кэш приложения (sw.js) со входом; на стенде он не успевает установиться за прогон —
     // план этажа показывает «не удалось скачать» (сервер стенда файл отдаёт: scripts/demo/check.mjs), шаги тура от этого не зависят
     for (const id of ['planfact', 'quality', 'construction']) {

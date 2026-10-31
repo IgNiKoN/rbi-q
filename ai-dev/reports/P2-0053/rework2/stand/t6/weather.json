@@ -1,0 +1,20 @@
+[
+  {
+    "weather": "w-hang",
+    "title": "сеть есть, ничего не грузится 5 мин → сервер ответил",
+    "delivered": 5,
+    "lost": 0,
+    "photoRows": 5,
+    "files": 5,
+    "minutesToZero": 6.6,
+    "unsentLeft": 0,
+    "unsentWhy": [],
+    "taps": 0,
+    "maxSendsPerRecord": 1,
+    "passes": 1,
+    "concurrentPasses": 1,
+    "concurrentInspectionPosts": 1,
+    "longestSyncingSec": 3,
+    "hungRequests": 16
+  }
+]
