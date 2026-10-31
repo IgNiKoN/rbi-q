@@ -58,3 +58,7 @@
 | `node scripts/p2-0078/prod-dryrun.mjs --check` | актуален |
 | стенд `s-pull-delta` | 7 / 7 |
 | стенд затронутых сценариев (синхронизация, СК, файлы, «заранее», «Данные на устройстве», задачи P2-0077, холодный запуск), 8 потоков | PASS 210, FAIL 0, 217 с |
+
+## Выкладка (31.10.2026)
+
+выложена 31.10 (059 на боевом; сайт `bafcf8c7`, версия `2026.10.31-f344d38b`; откат — `059_rls_fast_down.sql` + сайт `7556e44e`); `test:server` PASS 467 / FAIL 0; через 20 мин: `file_registry` 2,2 с → 15 мс, `sk_records` 0,43 с → 56 мс, `storage.search` 10,2 с → 1 вызов 1,5 мс. Ход и замеры — [`release/checks.md`](release/checks.md), «до» — [`release/measure-before.md`](release/measure-before.md). Ждёт суточного замера (Архитектор) и «принято».
