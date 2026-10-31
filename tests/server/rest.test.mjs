@@ -1091,6 +1091,39 @@ else {
   for (const a of asgR) check('P2-0075: назначение на проект прогона отозвано', (await rpc('pf_revoke_assignment', { p_assignment: a }, tok.alfaAdmin)).ok);
   if (pR) check('P2-0075: проект прогона в архиве', (await rpc('pf_update_project', { p_project: pR, p_name: RUN, p_code: 'REST', p_archived: true }, tok.alfaAdmin)).ok);
 }
+// --- P2-0053: кнопка «Демо» — посетитель из «Альфы» (прораб) входит в «ЖК Демо», видит свой участок, писать не может, выходит.
+// Нет демо-компании (057 не применена или «ЖК Демо» не засеян) — SKIP, не PASS. ---
+{
+  const roles = await rpc('pf_demo_roles', {}, tok.alfaForeman);
+  const list = roles.ok ? await j(roles) : null;
+  if (!Array.isArray(list) || !list.length) console.log(`SKIP P2-0053: «ЖК Демо» нет на сервере (статус ${roles.status}) — NOT RUN`);
+  else {
+    const an2 = await rpc('pf_demo_roles', {});
+    check('P2-0053: аноним — роли демо не видит', an2.status === 401 || an2.status === 403, `статус ${an2.status}`);
+    try {
+      const e = await rpc('pf_demo_enter', { p_role: 'foreman' }, tok.alfaForeman);
+      const ej = await j(e);
+      check('P2-0053: прораб «Альфы» вошёл в демо прорабом', e.ok && ej && ej.role === 'foreman', `статус ${e.status}`);
+      const demo = ej && ej.company_id;
+      const pr = (await j(await rpc('pf_my_projects', {}, tok.alfaForeman)));
+      const pid = Array.isArray(pr) ? pr.find((x) => x.company_id === demo)?.id || null : null;
+      const pos = pid ? await j(await rpc('pf_vor_positions', { p_project: pid, p_location: null }, tok.alfaForeman)) : [];
+      check('P2-0053: посетитель-прораб видит только свой участок (Корпус 2, секция 1)', Array.isArray(pos) && pos.length > 0 && pos.every((x) => /Корпус 2.*Секция 1/.test(x.location_path)), `позиций ${Array.isArray(pos) ? pos.length : '—'}`);
+      const w = await rpc('pf_save_division', { p_company: demo, p_id: crypto.randomUUID(), p_name: 'REST-демо', p_head_user: null, p_archived: false }, tok.alfaForeman);
+      check('P2-0053: запись посетителя в демо — отказ', !w.ok, `статус ${w.status}`);
+      const ins = await fetch(`${URL_}/rest/v1/construction_defects_v2`, { method: 'POST', headers: { apikey: ANON, Authorization: `Bearer ${tok.alfaForeman}`, 'Content-Type': 'application/json',
+        'Content-Profile': 'quality', 'x-company-id': demo }, body: JSON.stringify({ id: crypto.randomUUID(), text: 'REST-демо', status: 'open' }) });
+      check('P2-0053: прямая запись посетителя в таблицу СК демо — отказ', !ins.ok, `статус ${ins.status}`);
+      const mem = await rpc('pf_list_company_members', { p_company: demo }, tok.alfaForeman);
+      check('P2-0053: посетитель не видит сотрудников демо', !mem.ok, `статус ${mem.status}`);
+    } finally {
+      const l = await rpc('pf_demo_leave', {}, tok.alfaForeman);
+      check('P2-0053: выход из демо', l.ok);
+      const pl = await j(await rpc('pf_my_platform', {}, tok.alfaForeman));
+      check('P2-0053: после выхода демо-компании в списке нет', Array.isArray(pl?.companies) && !pl.companies.some((c) => c.is_demo));
+    }
+  }
+}
 // --- P2-0075: видимых «REST…» не прибавилось (постоянные записи теста — не больше одной каждая) ---
 {
   const after = await restVisible();

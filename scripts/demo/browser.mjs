@@ -19,8 +19,8 @@ const lines = [];
 const log = (s) => { lines.push(s); console.log(s); };
 const check = (c, l) => log((c ? 'PASS ' : 'FAIL ') + l);
 
-export async function demoStandWithApp({ apiPort = 8892, appPort = 8891 } = {}) {
-  const st = await standWithNeighbours(null);
+export async function demoStandWithApp({ apiPort = 18893, appPort = 8891 } = {}) {
+  const st = await standWithNeighbours(null, apiPort);
   // сервер стенда standWithNeighbours слушает свой порт; приложению нужен адрес — поднимаем статику на него
   const app = http.createServer(createApp(st.stand.apiUrl));
   await new Promise((r) => app.listen(appPort, r));

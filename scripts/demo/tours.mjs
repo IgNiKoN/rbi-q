@@ -36,7 +36,7 @@ try {
       await page.locator('[data-testid=p2-tour-card]').waitFor({ timeout: 45000 }).catch(() => {});
       await wait(page, 2500);
       let n = 0, total = 0, prev = '', backed = false;
-      for (let guard = 0; guard < 20; guard++) {
+      for (let guard = 0; guard < 60; guard++) {
         const card = page.locator('[data-testid=p2-tour-card]');
         if (!(await card.count())) break;
         const info = await page.evaluate(() => {
@@ -46,7 +46,7 @@ try {
             inView: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, hx: Math.round(hr.width), hy: Math.round(hr.height),
             final: !!c.querySelector('[data-testid=p2-tour-leave]'), scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth };
         });
-        if (info.step === prev) { await wait(page, 1500); continue; }
+        if (info.step === prev) { await wait(page, 1000); continue; }   // шаг без цели пропускается — ждём следующий
         prev = info.step; n++;
         const m = info.step.match(/шаг (\d+) из (\d+)/); total = m ? Number(m[2]) : total;
         check(info.inView && info.scroll <= 0 && (info.hole || info.final), `${width} ${id} ${info.step}: «${info.title}» — подсветка ${info.hole ? info.hx + '×' + info.hy : 'нет (итог)'}, карточка на экране ${info.inView ? 'да' : 'НЕТ'}`);
@@ -54,8 +54,10 @@ try {
         if (info.final) { await page.locator('[data-testid=p2-tour-done]').click(); break; }
         if (n === 2 && !backed) {   // «Назад» — один раз
           backed = true;
-          await page.locator('[data-testid=p2-tour-back]').click(); await wait(page, 2500);
-          const back = await page.locator('.p2t-step').innerText().catch(() => '');
+          const was = info.step;
+          await page.locator('[data-testid=p2-tour-back]').click();
+          let back = was;
+          for (let k = 0; k < 25 && back.toLowerCase() === was.toLowerCase(); k++) { await wait(page, 1000); back = await page.locator('.p2t-step').innerText().catch(() => ''); }
           check(/шаг 1 из/i.test(back), `${width} ${id}: «Назад» — снова шаг 1 (${back})`);
           await page.locator('[data-testid=p2-tour-next]').click(); await wait(page, 3500);
           prev = await page.locator('.p2t-step').innerText().catch(() => '');

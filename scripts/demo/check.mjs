@@ -31,7 +31,7 @@ async function snapshot(db) {
   return out;
 }
 
-export async function standWithNeighbours(today) {
+export async function standWithNeighbours(today, apiPort = 18893) {
   const db = await standDb();
   // «чужая» компания с объектом и местами, «песочница» клиента с админом и прорабом-посетителем
   await db.exec(`
@@ -49,7 +49,7 @@ export async function standWithNeighbours(today) {
     select public.pf_fill_object('0b000000-0000-4000-8000-0000000000a1', 1, 3, 2, 1, 'through', 1, false, false);
     select set_config('request.jwt.claim.sub', '', false);`);
   await db.exec(accountsSql('stand'));
-  const stand = await startStand({ db, apiPort: 18893, appPort: 0 });
+  const stand = await startStand({ db, apiPort, appPort: 0 });
   const seed = (log = () => {}) => runSeed({ url: stand.apiUrl, anonKey: 'stand', password: 'stand', today, log });
   return { db, stand, seed };
 }

@@ -143,6 +143,7 @@ body.${DEMO_BODY_CLASS}::after{content:'';position:fixed;inset:0;pointer-events:
 .p2-demo-chip .p2-demo-exit{background:#fff;color:#b91c1c;font-weight:700;flex:none}
 .p2-demo-chip button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media (min-width:1280px){.p2-demo-chip{bottom:auto;top:12px;left:auto;right:16px;transform:none}}
+body.p2-demo-page .p2-demo-chip{display:none}
 .p2d-roles .p2w-tile.p2d-cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 .p2d-area{font-size:12px;color:var(--text-muted);margin-top:2px;overflow-wrap:anywhere}
 .p2d-note{font-size:14px;line-height:1.45;color:var(--text-muted);margin:16px 0 0;padding:12px 14px;border-radius:12px;background:var(--sel-bg)}

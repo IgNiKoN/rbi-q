@@ -480,7 +480,7 @@ function startTourNow(id: string): void {
   if (!tour) return;
   if (tourRun) tourRun.stop();
   ensureStyle();
-  tourRun = runTour(id, tour, { doc: document, storage: localStore(), currentPath: () => window.location.hash, waitMs: 8000,
+  tourRun = runTour(id, tour, { doc: document, storage: localStore(), currentPath: () => window.location.hash, waitMs: 6000,
     go: (p) => go(p, false),
     onEnd: (how) => { tourRun = null; if (how === 'leave') void runLeave(); } });
 }
@@ -523,7 +523,7 @@ async function drawDemo(): Promise<void> {
   el.classList.remove('hidden');
   const header = document.getElementById('main-header');
   if (header) header.style.display = 'block';
-  document.body.classList.add(WELCOME_BODY_CLASS);
+  document.body.classList.add(WELCOME_BODY_CLASS, 'p2-demo-page');   // на экране «Демо» плашка не нужна — его кнопки те же
   const mine = ++demoDrawing;
   const d = demoDeps();
   const { roles, error } = await loadDemoRoles(d);
@@ -557,6 +557,7 @@ function wireWelcome(): void {
   window.addEventListener('rbi:route', (e) => {
     const path = (e as CustomEvent<{ path?: string }>).detail?.path;
     if (path !== WELCOME_PATH && path !== DEMO_PATH) document.body.classList.remove(WELCOME_BODY_CLASS);
+    if (path !== DEMO_PATH) document.body.classList.remove('p2-demo-page');
     if (path !== WELCOME_PATH) {
       if (welcomeVisit) markWelcomeSeen(localStore(), welcomeVisit.email);
       welcomeVisit = null;

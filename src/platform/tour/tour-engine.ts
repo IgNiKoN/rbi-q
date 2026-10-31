@@ -15,6 +15,8 @@ export interface TourStep {
   body: string;
   /** «Далее» сначала нажимает на цель (открыть план этажа, вкладку) */
   click?: boolean;
+  /** запасные цели на том же экране (другая раскладка: телефон / ПК); «Далее» на запасную цель не нажимает */
+  alt?: { target: string; text?: string }[];
 }
 export interface TourDef { title: string; role: string; summary: string; steps: TourStep[]; final?: { title: string; body: string } }
 export type Tours = Record<string, TourDef>;
@@ -54,14 +56,21 @@ export interface TourDeps {
 /** Цель шага на экране (видимая); null — нет. С текстом — самый маленький элемент с этим текстом (кнопка, а не весь экран). */
 export function findTarget(doc: Document, step: TourStep): HTMLElement | null {
   if (!step.target) return null;
+  for (const t of [{ target: step.target, text: step.text }, ...(step.alt || [])]) {
+    const el = findOne(doc, t.target, t.text);
+    if (el) return el;
+  }
+  return null;
+}
+function findOne(doc: Document, target: string, text?: string): HTMLElement | null {
   const norm = (s: string): string => s.replace(/\s+/g, ' ').trim().toLowerCase();
   let best: HTMLElement | null = null, area = Infinity;
-  for (const el of Array.from(doc.querySelectorAll<HTMLElement>(step.target))) {
-    if (step.text && !norm(el.textContent || '').includes(step.text.toLowerCase())) continue;
+  for (const el of Array.from(doc.querySelectorAll<HTMLElement>(target))) {
+    if (text && !norm(el.textContent || '').includes(text.toLowerCase())) continue;
     const r = el.getBoundingClientRect();
     if (!(r.width > 0 && r.height > 0)) continue;
-    if (step.text && (r.width < 16 || r.height < 16)) continue;   // крошечный (свёрнутый) двойник — не цель
-    if (!step.text) return el;
+    if (text && (r.width < 16 || r.height < 16)) continue;   // крошечный (свёрнутый) двойник — не цель
+    if (!text) return el;
     if (r.width * r.height < area) { best = el; area = r.width * r.height; }
   }
   return best;
@@ -84,6 +93,7 @@ export const TOUR_CSS = `
 .p2t-row .p2t-next{margin-left:auto;background:var(--accent,#c2964b);border-color:var(--accent,#c2964b);color:#fff}
 .p2t-row .p2t-close{border:0;background:none;color:var(--text-muted,#666);padding:0 8px}
 .p2t-row button:focus-visible{outline:2px solid var(--accent,#c2964b);outline-offset:2px}
+.p2t-card.p2t-wait .p2t-row{opacity:.5;pointer-events:none}.p2t-card.p2t-wait .p2t-title::after{content:' · открываем экран…';font-weight:400;color:var(--text-muted,#666)}
 @media (max-width:767px){.p2t-card{left:12px!important;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px)!important;top:auto!important;width:auto}}`;
 
 export interface TourRun { stop(): void; index(): number; next(): Promise<void>; back(): Promise<void> }
@@ -205,7 +215,11 @@ export function runTour(id: string, tour: TourDef, d: TourDeps): TourRun {
     index: () => i,
     async next() {
       const step = steps[i];
-      if (step && step.click && target) { if (!target.isConnected && step.target) target = findTarget(doc, step); target?.click(); await new Promise((res) => setTimeout(res, 600)); }
+      if (step && step.click && target && step.target) {
+        if (!target.isConnected) target = findTarget(doc, step);
+        // запасную цель (другая раскладка) не нажимаем
+        if (target && findOne(doc, step.target, step.text) === target) { target.click(); await new Promise((res) => setTimeout(res, 600)); }
+      }
       if (i + 1 >= total) { finish('done'); return; }
       i++;
       await show(1);
