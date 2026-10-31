@@ -1,0 +1,129 @@
+{
+  "_comment": "P2-0053. «ЖК Демо» кнопки «Демо»: всё выдуманное. ИНН с кодом региона 00 не существуют; почты zd-…@demo.invalid (домен .invalid писем не доставляет). Даты — дни от --today (по умолчанию сегодня).",
+  "company": {
+    "key": "dd",
+    "name": "Девелопмент Демо",
+    "modules": { "planfact": true, "quality": true, "construction": true, "knowledge": true, "ai": false },
+    "users": [
+      { "key": "admin",     "name": "Администраторова Дарья",  "role": "company_admin" },
+      { "key": "boss",      "name": "Руководов Борис",         "role": "management" },
+      { "key": "pm",        "name": "Проектов Павел",          "role": "project_manager" },
+      { "key": "pto",       "name": "Техникова Полина",        "role": "pto" },
+      { "key": "foreman1",  "name": "Мастеров Фёдор",          "role": "foreman" },
+      { "key": "foreman2",  "name": "Прорабов Степан",         "role": "foreman" },
+      { "key": "qc",        "name": "Контролёва Ксения",       "role": "qc_engineer" },
+      { "key": "economist", "name": "Сметов Эдуард",           "role": "economist" },
+      { "key": "customer",  "name": "Заказчиков Захар",        "role": "customer" },
+      { "key": "contractor","name": "Отделкин Олег",           "role": "contractor_rep" }
+    ]
+  },
+  "division": "Дирекция строительства",
+  "project": {
+    "name": "ЖК Демо",
+    "code": "ЖКД",
+    "address": "г. Демоград, ул. Примерная, 1",
+    "stage": "construction",
+    "our_role": "customer",
+    "timezone": "Europe/Moscow",
+    "country": "RU",
+    "planned_start_days": -210,
+    "planned_finish_days": 330
+  },
+  "objects": [
+    { "key": "k1", "name": "Корпус 1", "stage": "старт", "kind": "building", "build_no": "К1", "sections": 2, "floors": 6, "apartments": 4, "roof": true },
+    { "key": "k2", "name": "Корпус 2", "stage": "в разгаре", "kind": "building", "build_no": "К2", "sections": 2, "floors": 9, "apartments": 4, "roof": true },
+    { "key": "k3", "name": "Корпус 3", "stage": "сдача", "kind": "building", "build_no": "К3", "sections": 2, "floors": 7, "apartments": 4, "roof": true },
+    { "key": "park", "name": "Паркинг", "kind": "parking", "build_no": "П1", "places": ["Уровень −1", "Въездная рампа"] }
+  ],
+  "counterparties": [
+    { "key": "customer", "name": "ООО «Девелопмент Демо»",      "inn": "0000000011", "kinds": ["customer"] },
+    { "key": "frame",    "name": "ООО «Монолит Демо»",          "inn": "0000000022", "kinds": ["contractor"] },
+    { "key": "finish",   "name": "ООО «Отделка Демо»",          "inn": "0000000033", "kinds": ["contractor"] },
+    { "key": "networks", "name": "ООО «Инженерные сети Демо»",  "inn": "0000000044", "kinds": ["contractor"] }
+  ],
+  "brigades": [
+    { "key": "b1", "name": "Бригада Каркас-1", "leader": "Бетонов Иван" },
+    { "key": "b2", "name": "Бригада Отделка-1", "leader": "Шпаклёв Пётр" }
+  ],
+  "participation": [
+    { "user": "boss",       "role": "management" },
+    { "user": "pm",         "role": "project_manager", "project": true },
+    { "user": "pto",        "role": "pto", "project": true },
+    { "user": "foreman1",   "role": "foreman", "places": ["k2/Секция 1"], "fact_owner": true },
+    { "user": "foreman2",   "role": "foreman", "places": ["k2/Секция 2", "k3"], "fact_owner": true },
+    { "user": "qc",         "role": "qc_engineer", "project": true },
+    { "user": "economist",  "role": "economist", "project": true },
+    { "user": "customer",   "role": "customer", "project": true },
+    { "user": "contractor", "role": "contractor_rep", "project": true, "counterparty": "finish" }
+  ],
+  "demo_roles": [
+    { "code": "management",      "title": "Руководитель",              "sort": 10, "hint": "Сводка по всем корпусам и деньги — без права менять" },
+    { "code": "project_manager", "title": "Руководитель проекта",      "sort": 20, "project": true, "hint": "Весь «ЖК Демо»: ВОР, смета, факт на проверке, КС-2" },
+    { "code": "pto",             "title": "Инженер ПТО",               "sort": 30, "project": true, "hint": "ВОР, смета и КП, места, PDF-планы этажей" },
+    { "code": "foreman",         "title": "Прораб",                    "sort": 40, "project": true, "place": "k2/Секция 1", "hint": "Свой участок — Корпус 2, секция 1: факт за 4 недели" },
+    { "code": "qc_engineer",     "title": "Инженер качества",          "sort": 50, "project": true, "hint": "Проверки по чек-листам, замечания на PDF-плане этажа, приёмки" },
+    { "code": "economist",       "title": "Экономист",                 "sort": 60, "project": true, "hint": "Цены, смета, КС-2 и деньги" },
+    { "code": "customer",        "title": "Заказчик",                  "sort": 70, "project": true, "hint": "Ход стройки и качество — без сумм" },
+    { "code": "contractor_rep",  "title": "Представитель подрядчика",  "sort": 80, "project": true, "counterparty": "finish", "hint": "Только своя фирма — «Отделка Демо»: её замечания и приёмки" }
+  ],
+  "work_types": [
+    { "key": "earth",    "name": "Земляные работы (котлован)",             "unit": "м³",  "checklist": "zemlya" },
+    { "key": "found",    "name": "Монолитные работы ниже отм. 0,000",      "unit": "м³",  "checklist": "monolit_minus" },
+    { "key": "hydro",    "name": "Гидроизоляция ниже отм. 0,000",          "unit": "м²",  "checklist": "gidro_0" },
+    { "key": "slab",     "name": "Армирование и бетонирование перекрытий", "unit": "м³",  "checklist": "armature" },
+    { "key": "walls",    "name": "Монолитные стены и колонны",             "unit": "м³",  "checklist": "monolit" },
+    { "key": "gas",      "name": "Кладка наружных стен из газобетона",     "unit": "м³",  "checklist": "gazobeton" },
+    { "key": "brick",    "name": "Кладка перегородок из кирпича",          "unit": "м³",  "checklist": "kirpich" },
+    { "key": "stairs",   "name": "Вентблоки и лестничные марши",           "unit": "шт.", "checklist": "vent_stairs" },
+    { "key": "roof",     "name": "Кровля",                                 "unit": "м²",  "checklist": "krovlya" },
+    { "key": "windows",  "name": "Окна ПВХ",                               "unit": "шт.", "checklist": "okna_pvh" },
+    { "key": "facade",   "name": "Навесной вентилируемый фасад",           "unit": "м²",  "checklist": "nvf_facade" },
+    { "key": "plaster",  "name": "Штукатурка стен",                        "unit": "м²",  "checklist": "otdelka_shtukaturka" },
+    { "key": "screed",   "name": "Стяжка пола",                            "unit": "м²",  "checklist": "polusuhaya_styazhka" },
+    { "key": "putty",    "name": "Шпатлёвка стен",                         "unit": "м²",  "checklist": "otdelka_shpatlevka" },
+    { "key": "paint",    "name": "Окраска стен",                           "unit": "м²",  "checklist": "otdelka_pokraska" },
+    { "key": "tile",     "name": "Плиточные работы",                       "unit": "м²",  "checklist": "otdelka_plitka" },
+    { "key": "gkl",      "name": "Перегородки из ГКЛ",                     "unit": "м²",  "checklist": "otdelka_gkl" },
+    { "key": "doors",    "name": "Двери металлические",                    "unit": "шт.", "checklist": "dveri_met" },
+    { "key": "steel",    "name": "Металлоконструкции",                     "unit": "т",   "checklist": "mk" },
+    { "key": "landscape","name": "Благоустройство",                        "unit": "м²",  "checklist": "blago" }
+  ],
+  "vor": {
+    "file_name": "ВОР ЖК Демо (форма заказчика).xlsx",
+    "sheet": "ВОР",
+    "per_floor": [
+      { "work": "slab",    "qty": 42,  "price": 9500,  "contractor": "frame" },
+      { "work": "walls",   "qty": 28,  "price": 11000, "contractor": "frame" },
+      { "work": "gas",     "qty": 18,  "price": 6200,  "contractor": "frame" },
+      { "work": "plaster", "qty": 640, "price": 480,   "contractor": "finish", "material": { "name": "Штукатурка гипсовая", "unit": "кг", "per": 9, "price": 14 } },
+      { "work": "screed",  "qty": 310, "price": 520,   "contractor": "finish" },
+      { "work": "windows", "qty": 16,  "price": 3800,  "contractor": "finish" }
+    ],
+    "per_object": [
+      { "work": "earth",  "qty": 4200, "price": 650,  "contractor": "frame" },
+      { "work": "found",  "qty": 900,  "price": 12500, "contractor": "frame" },
+      { "work": "hydro",  "qty": 1500, "price": 900,  "contractor": "frame" },
+      { "work": "roof",   "qty": 620,  "price": 2100, "contractor": "frame" },
+      { "work": "facade", "qty": 2900, "price": 3300, "contractor": "finish" }
+    ],
+    "parking": [
+      { "work": "found",     "qty": 1800, "price": 12500, "contractor": "frame" },
+      { "work": "landscape", "qty": 3400, "price": 1100,  "contractor": "networks" }
+    ]
+  },
+  "fact": {
+    "_comment": "Корпус 1 — без факта; Корпус 2 — 4 недели (каркас до 7 этажа, отделка начата), одно исправление; Корпус 3 — работы закрыты 16…6 недель назад.",
+    "k2": { "weeks": 4, "frame_floors": 7, "finish_floors": 3, "step_days": 2 },
+    "k3": { "from_days": -112, "to_days": -42 }
+  },
+  "ks2": [
+    { "no": "1", "from_days": -112, "to_days": -77, "issue": true, "objects": ["k3"] },
+    { "no": "2", "from_days": -76,  "to_days": -29, "issue": true, "objects": ["k3", "k2"] },
+    { "no": "3", "from_days": -28,  "to_days": 0,   "issue": false, "objects": ["k2"] }
+  ],
+  "plans": [
+    { "object": "k2", "section": "Секция 1", "floor": 5 },
+    { "object": "k2", "section": "Секция 1", "floor": 3 },
+    { "object": "k3", "section": "Секция 1", "floor": 2 }
+  ]
+}
