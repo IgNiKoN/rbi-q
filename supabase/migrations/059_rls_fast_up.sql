@@ -184,10 +184,203 @@ end $function$;
 comment on function quality.read_ok(quality.read_scope, uuid, uuid, uuid, uuid, uuid) is
   'P2-0078: видна ли запись Качества по областям quality.read_scope (без запросов к базе, на каждой строке)';
 
+-- 2а. Правила quality.row_visible(компания, проект, действия, вид, автор, исполнитель, ключ фирмы, фирма) — Стройконтроль 1,
+-- черновики, очередь: как quality.assignment_sees. all_p — все записи проектов, mine_p — свои (автор или исполнитель — я),
+-- ctr — «проект/ключ фирмы» (роль «своя фирма»: ключи — сопоставления фирмы и её название). Запись без проекта и записи
+-- проекта-контейнера — при любом назначении.
+create type quality.visible_scope as (me uuid, all_p uuid[], mine_p uuid[], ctr text[]);
+
+create or replace function quality.visible_scope(p_actions text[], p_kind text)
+ RETURNS quality.visible_scope
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'core', 'planfact'
+AS $function$
+declare
+  c uuid := quality.request_company();
+  s quality.visible_scope;
+  v_all constant uuid := quality.any_project();
+  v_extra uuid[]; g record; v_p uuid[]; m text; v_keys text[];
+begin
+  s := row(auth.uid(), '{}', '{}', '{}');
+  if c is null or s.me is null then return s; end if;
+  v_extra := quality.no_project() || array(select p.id from core.projects p where p.company_id = c and p.quality_container);
+  for g in
+    with acts as (
+      select act from unnest(p_actions) act
+       where exists (select 1 from core.company_modules cm where cm.company_id = c and cm.module = split_part(act, '.', 1) and cm.enabled))
+    select x.act, true adm, null::uuid project_id, null::uuid counterparty_id, null::text[] r from acts x where planfact.is_platform_admin()
+    union all
+    select x.act, false, a.project_id, a.counterparty_id,
+           array(select rp.action from core.company_role_permissions rp where rp.role_id = a.role_id and rp.company_id = a.company_id)
+      from acts x join core.role_assignments a on a.company_id = c and a.user_id = s.me
+       and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())
+       and exists (select 1 from core.company_role_permissions rp where rp.role_id = a.role_id and rp.company_id = a.company_id and rp.action = x.act)
+     where not planfact.is_platform_admin()
+  loop
+    if g.adm then s.all_p := s.all_p || v_all; continue; end if;
+    m := split_part(g.act, '.', 1);
+    v_p := coalesce(g.project_id, v_all) || v_extra;
+    if p_kind = 'owner' then
+      if (m || '.manage') = any(g.r) then s.all_p := s.all_p || v_p; else s.mine_p := s.mine_p || v_p; end if;
+    elsif 'quality.scope.company' = any(g.r) then s.all_p := s.all_p || v_all;
+    elsif (m || '.manage') = any(g.r) then s.all_p := s.all_p || v_p;
+    elsif 'quality.scope.contractor' = any(g.r) then
+      if g.counterparty_id is not null then         -- как quality.contractor_matches
+        v_keys := array(select l.canonical_key from quality.contractor_core_links l
+                         where l.core_company_id = c and l.counterparty_id = g.counterparty_id
+                        union
+                        select quality.contractor_key(cp.name) from core.counterparties cp
+                         where cp.id = g.counterparty_id and cp.company_id = c and cp.deleted_at is null);
+        s.ctr := s.ctr || array(select pp::text || '/' || k from unnest(v_p) pp, unnest(v_keys) k where k <> 'unknown_contractor');
+      end if;
+    elsif p_kind = 'author' and (m || '.edit') = any(g.r) then s.mine_p := s.mine_p || v_p;
+    else s.all_p := s.all_p || v_p;
+    end if;
+  end loop;
+  return s;
+end $function$;
+comment on function quality.visible_scope(text[], text) is
+  'P2-0078: области назначений для правил чтения quality.row_visible (Стройконтроль 1, черновики, очередь) — один раз на запрос';
+
+create or replace function quality.visible_ok(s quality.visible_scope, p_project uuid, p_author uuid, p_assignee uuid, p_cname text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ IMMUTABLE
+AS $function$
+declare
+  v_all constant uuid := 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+  k uuid := coalesce(p_project, '00000000-0000-0000-0000-000000000001'::uuid);   -- quality.no_project()
+  v_key text;
+begin
+  if s.me is null then return false; end if;
+  if s.all_p && array[k, v_all] then return true; end if;
+  if coalesce(p_author = s.me or p_assignee = s.me, false) and s.mine_p && array[k, v_all] then return true; end if;
+  if cardinality(s.ctr) > 0 and nullif(btrim(coalesce(p_cname, '')), '') is not null then
+    v_key := quality.contractor_key(p_cname);
+    return s.ctr && array[k::text || '/' || v_key, v_all::text || '/' || v_key];
+  end if;
+  return false;
+end $function$;
+comment on function quality.visible_ok(quality.visible_scope, uuid, uuid, uuid, text) is
+  'P2-0078: видна ли запись по областям quality.visible_scope (без запросов к базе, на каждой строке)';
+
+-- 2б. Правила core.row_allowed с местом (Стройконтроль 2.0): как core.row_allowed + core.assignment_allows. all_p / cp_p —
+-- назначения без места (проект; «проект/фирма»), placed — назначения на место: ключи «проект/место» (и «/фирма») для каждого
+-- места поддерева назначения, в т. ч. удалённых (как core.place_up); un_* — те же назначения для записи без места (признак
+-- действия: mine — «нет», own — «своя», all — «все»). Запись без проекта — при любом назначении. Место записи всегда есть
+-- в core.locations (внешний ключ), поэтому «без места» = core_location_id пуст.
+create type quality.area_scope as (
+  me uuid, all_p uuid[], cp_p text[], placed jsonb, has_loc boolean,
+  un_all uuid[], un_mine uuid[], un_own uuid[], un_cp text[], un_own_cp text[]);
+
+create or replace function quality.area_scope(p_actions text[])
+ RETURNS quality.area_scope
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'core', 'planfact'
+AS $function$
+declare
+  c uuid := quality.request_company();
+  s quality.area_scope;
+  v_all constant uuid := quality.any_project();
+  g record; v_p uuid[]; v_cp uuid; v_any boolean; v_sub uuid[]; v_keys text[] := '{}';
+begin
+  s := row(auth.uid(), '{}', '{}', '{}'::jsonb, false, '{}', '{}', '{}', '{}', '{}');
+  if c is null or s.me is null then return s; end if;
+  for g in
+    with acts as (
+      select pc.action act, pc.area_scoped, pc.unplaced from core.permission_catalog pc
+       where pc.action = any(p_actions)
+         and (pc.module is null or exists (select 1 from core.company_modules cm where cm.company_id = c and cm.module = pc.module and cm.enabled)))
+    select x.*, true adm, null::uuid project_id, null::uuid location_id, null::uuid counterparty_id, null::text[] r
+      from acts x where planfact.is_platform_admin()
+    union all
+    select x.*, false, a.project_id, a.location_id, a.counterparty_id,
+           array(select rp.action from core.company_role_permissions rp where rp.role_id = a.role_id and rp.company_id = a.company_id)
+      from acts x join core.role_assignments a on a.company_id = c and a.user_id = s.me
+       and a.revoked_at is null and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())
+       and (a.location_id is null or x.area_scoped)
+       and exists (select 1 from core.company_role_permissions rp where rp.role_id = a.role_id and rp.company_id = a.company_id and rp.action = x.act)
+     where not planfact.is_platform_admin()
+  loop
+    if g.adm or 'quality.scope.company' = any(g.r) then s.all_p := s.all_p || v_all; continue; end if;
+    v_p := array[coalesce(g.project_id, v_all), quality.no_project()];
+    v_any := (split_part(g.act, '.', 1) || '.manage') = any(g.r) or not 'quality.scope.contractor' = any(g.r);
+    v_cp := g.counterparty_id;
+    if g.location_id is null then
+      if v_any then s.all_p := s.all_p || v_p;
+      elsif v_cp is not null then s.cp_p := s.cp_p || array(select pp::text || '/' || v_cp::text from unnest(v_p) pp); end if;
+      continue;
+    end if;
+    s.has_loc := true;
+    if g.unplaced is null and g.act like '%.view' then   -- без места: только своя и только просмотр, фирма не проверяется
+      s.un_mine := s.un_mine || v_p;
+    end if;
+    continue when not v_any and v_cp is null;           -- «своя фирма» без фирмы — ничего больше
+    v_sub := array(
+      with recursive sub(id) as (
+        select l.id from core.locations l where l.id = g.location_id
+        union
+        select ch.id from core.locations ch join sub on ch.parent_id = sub.id)
+      select sub.id from sub);
+    v_keys := v_keys || array(select pp::text || '/' || l::text || case when v_any then '' else '/' || v_cp::text end
+                                from unnest(v_p) pp, unnest(v_sub) l);
+    if g.unplaced is null then
+      null;
+    elsif g.unplaced = 'own' then
+      if v_any then s.un_own := s.un_own || v_p;
+      else s.un_own_cp := s.un_own_cp || array(select pp::text || '/' || v_cp::text from unnest(v_p) pp); end if;
+    elsif v_any then s.un_all := s.un_all || v_p;
+    else s.un_cp := s.un_cp || array(select pp::text || '/' || v_cp::text from unnest(v_p) pp);
+    end if;
+  end loop;
+  s.placed := coalesce((select jsonb_object_agg(k, true) from (select distinct k from unnest(v_keys) k) x), '{}'::jsonb);
+  return s;
+end $function$;
+comment on function quality.area_scope(text[]) is
+  'P2-0078: области назначений (с местами) для правил чтения core.row_allowed — один раз на запрос; строку сверяет quality.area_ok';
+
+create or replace function quality.area_ok(s quality.area_scope, p_project uuid, p_location uuid, p_author uuid, p_cp uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ IMMUTABLE
+AS $function$
+declare
+  v_all constant text := 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+  k uuid := coalesce(p_project, '00000000-0000-0000-0000-000000000001'::uuid);   -- quality.no_project()
+  kc text[] := array[k::text || '/' || p_cp::text, v_all || '/' || p_cp::text];
+begin
+  if s.me is null then return false; end if;
+  if s.all_p && array[k, v_all::uuid] then return true; end if;
+  if p_cp is not null and s.cp_p && kc then return true; end if;
+  if not s.has_loc then return false; end if;
+  if p_location is not null then
+    return s.placed ?| array[k::text || '/' || p_location::text, v_all || '/' || p_location::text,
+                             k::text || '/' || p_location::text || '/' || p_cp::text, v_all || '/' || p_location::text || '/' || p_cp::text];
+  end if;
+  if p_author = s.me and s.un_mine && array[k, v_all::uuid] then return true; end if;
+  if s.un_all && array[k, v_all::uuid] then return true; end if;
+  if (p_author is null or p_author = s.me) and s.un_own && array[k, v_all::uuid] then return true; end if;
+  if p_cp is not null then
+    if s.un_cp && kc then return true; end if;
+    if (p_author is null or p_author = s.me) and s.un_own_cp && kc then return true; end if;
+  end if;
+  return false;
+end $function$;
+comment on function quality.area_ok(quality.area_scope, uuid, uuid, uuid, uuid) is
+  'P2-0078: видна ли запись по областям quality.area_scope (без запросов к базе, на каждой строке)';
+
 revoke all on function quality.any_project(), quality.no_project(), quality.readable_projects(text[]), quality.read_scope(text[], text[]),
-  quality.read_ok(quality.read_scope, uuid, uuid, uuid, uuid, uuid) from public, anon;
+  quality.read_ok(quality.read_scope, uuid, uuid, uuid, uuid, uuid), quality.visible_scope(text[], text),
+  quality.visible_ok(quality.visible_scope, uuid, uuid, uuid, text), quality.area_scope(text[]),
+  quality.area_ok(quality.area_scope, uuid, uuid, uuid, uuid) from public, anon;
 grant execute on function quality.any_project(), quality.no_project(), quality.readable_projects(text[]), quality.read_scope(text[], text[]),
-  quality.read_ok(quality.read_scope, uuid, uuid, uuid, uuid, uuid) to authenticated;
+  quality.read_ok(quality.read_scope, uuid, uuid, uuid, uuid, uuid), quality.visible_scope(text[], text),
+  quality.visible_ok(quality.visible_scope, uuid, uuid, uuid, text), quality.area_scope(text[]),
+  quality.area_ok(quality.area_scope, uuid, uuid, uuid, uuid) to authenticated;
+-- ключ фирмы по названию (чистая функция, без данных) — строку сверяет quality.visible_ok с правами вызывающего
+grant execute on function quality.contractor_key(text) to authenticated;
 
 -- 3. Правила чтения: этап 1 — file_registry (quality.can) и sk_records (quality.rec_ok).
 drop policy file_registry_select on quality.file_registry;
@@ -200,5 +393,113 @@ create policy sk_records_select on quality.sk_records for select to authenticate
   core_company_id = (select quality.request_company())
   and quality.read_ok((select quality.read_scope('{quality.sk.view}', '{quality.sk.view,quality.sk.import}')),
                       core_project_id, core_object_id, core_created_by, null, core_counterparty_id));
+
+-- 4. Этап 2 — остальные таблицы quality.* тем же шаблоном (правило — общая функция; списки — те же действия, что в 018 / 053).
+-- Список для отката — тот же (059_rls_fast_down.sql).
+do $$
+declare r record;
+begin
+  -- quality.can(компания, проект, действия)
+  for r in select * from (values
+      ('allowed_projects', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('contractor_aliases', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('contractor_directory', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('contractor_normalization_queue', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('contractors', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('object_aliases', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('object_normalization_queue', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('project_objects', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('project_settings', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('rbi_company_settings', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('rbi_engineer_profiles', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('rbi_error_logs', 'core_company_id', 'core_project_id', '{quality.view,construction.view}'),
+      ('construction_buildings', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('construction_floors', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('construction_floors_v2', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('construction_objects', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('construction_units', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('construction_units_v2', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('contracts', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('location_node_aliases', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('location_nodes', 'core_company_id', 'core_project_id', '{construction.view}'),
+      ('rbi_engineer_ratings', 'core_company_id', 'core_project_id', '{quality.view}'),
+      ('sk_category_map', 'core_company_id', 'core_project_id', '{quality.sk.view}'),
+      ('sk_contractor_map', 'core_company_id', 'core_project_id', '{quality.sk.view}'),
+      ('sk_data_bundles', 'core_company_id', 'core_project_id', '{quality.sk.view}'),
+      ('sk_import_batches', 'core_company_id', 'core_project_id', '{quality.sk.view}'),
+      ('sk_mapping', 'core_company_id', 'core_project_id', '{quality.sk.view}'),
+      ('sk_volumes', 'core_company_id', 'core_project_id', '{quality.sk.view}'),
+      ('sk_links', 'company_id', 'project_id', '{quality.sk.view}'),
+      ('shared_report_templates', 'core_company_id', 'core_project_id', '{quality.reports.view}'),
+      -- библиотека компании — без проекта (7а 053)
+      ('app_assistant_kb', 'core_company_id', null, '{quality.view}'),
+      ('shared_checklists', 'core_company_id', null, '{quality.view}'),
+      ('shared_docs', 'core_company_id', null, '{quality.view}'),
+      ('shared_etalons', 'core_company_id', null, '{quality.view}'),
+      ('shared_feedback', 'core_company_id', null, '{quality.view}'),
+      ('shared_nodes', 'core_company_id', null, '{quality.view}'),
+      ('shared_practices', 'core_company_id', null, '{quality.view}'),
+      ('shared_twi_cards', 'core_company_id', null, '{quality.view}')) v(t, c, p, acts) loop
+    execute format('drop policy %I on quality.%I', r.t || '_select', r.t);
+    execute format('create policy %I on quality.%I for select to authenticated using (%I = (select quality.request_company()) '
+                   'and (select quality.readable_projects(%L)) && array[%s, quality.any_project()])',
+                   r.t || '_select', r.t, r.c, r.acts,
+                   case when r.p is null then 'quality.no_project()' else format('coalesce(%I, quality.no_project())', r.p) end);
+  end loop;
+  -- quality.rec_ok(компания, проект, объект, видеть все, своя, автор, исполнитель, фирма)
+  for r in select * from (values
+      ('project_fmea', '{quality.method.view}', '{quality.method.view,quality.method.edit}', 'core_created_by', 'null'),
+      ('project_schedule_stages', '{quality.method.view}', '{quality.method.view,quality.method.edit}', 'core_created_by', 'null'),
+      ('project_meetings', '{quality.meetings.view}', '{quality.meetings.view,quality.meetings.edit}', 'core_created_by', 'null'),
+      ('project_interventions', '{quality.meetings.view}', '{quality.meetings.view,quality.meetings.edit}', 'core_created_by', 'null'),
+      ('shared_reports', '{quality.reports.view}', '{quality.reports.view,quality.reports.edit}', 'core_created_by', 'null'),
+      ('shared_report_snapshots', '{quality.reports.view}', '{quality.reports.view,quality.reports.edit}', 'core_created_by', 'null'),
+      ('rbi_inspections', '{quality.inspections.view}', '{quality.inspections.view,quality.inspections.create}',
+       'coalesce(core_created_by, quality.member_by_email(core_company_id, engineer_name))', 'null'),
+      ('rbi_tasks', '{quality.tasks.view}', '{quality.tasks.view,quality.tasks.create,quality.tasks.work}',
+       'coalesce(core_created_by, quality.member_by_email(core_company_id, engineer_name))', 'assigned_to_auth_user_id')) v(t, a_any, a_own, author, assignee) loop
+    execute format('drop policy %I on quality.%I', r.t || '_select', r.t);
+    execute format('create policy %I on quality.%I for select to authenticated using (core_company_id = (select quality.request_company()) '
+                   'and quality.read_ok((select quality.read_scope(%L, %L)), core_project_id, core_object_id, %s, %s, core_counterparty_id))',
+                   r.t || '_select', r.t, r.a_any, r.a_own, r.author, r.assignee);
+  end loop;
+  -- quality.row_visible(компания, проект, действия, вид, автор, исполнитель, ключ фирмы, фирма)
+  for r in select * from (values
+      ('construction_acceptance', '{construction.view}', 'contractor', 'core_created_by', 'contractor'),
+      ('construction_defects', '{construction.view}', 'contractor', 'core_created_by', 'contractor'),
+      ('rbi_draft_sessions', '{quality.view}', 'owner',
+       'coalesce(core_created_by, owner_auth_user_id, quality.member_by_email(core_company_id, engineer_name))', 'null'),
+      ('rbi_sync_queue', '{quality.view,construction.view}', 'owner',
+       'coalesce(core_created_by, quality.member_by_email(core_company_id, engineer_name))', 'null')) v(t, acts, kind, author, cname) loop
+    execute format('drop policy %I on quality.%I', r.t || '_select', r.t);
+    execute format('create policy %I on quality.%I for select to authenticated using (core_company_id = (select quality.request_company()) '
+                   'and quality.visible_ok((select quality.visible_scope(%L, %L)), core_project_id, %s, null, %s))',
+                   r.t || '_select', r.t, r.acts, r.kind, r.author, r.cname);
+  end loop;
+  -- core.row_allowed с местом (Стройконтроль 2.0)
+  for r in select * from (values
+      ('construction_acceptance_v2', '{construction.acceptance.view}'),
+      ('construction_defects_v2', '{construction.defects.view}')) v(t, acts) loop
+    execute format('drop policy %I on quality.%I', r.t || '_select', r.t);
+    execute format('create policy %I on quality.%I for select to authenticated using (core_company_id = (select quality.request_company()) '
+                   'and quality.area_ok((select quality.area_scope(%L)), core_project_id, core_location_id, core_created_by, core_counterparty_id))',
+                   r.t || '_select', r.t, r.acts);
+  end loop;
+end $$;
+
+-- Пункты и фото проверки (quality.inspection_child_ok, чтение): проверка есть и видна (её правило) — видно; проверки нет —
+-- своё при просмотре или проведении проверок хоть где-то в компании. Видимые проверки — один раз на запрос (хеш).
+do $$
+declare t text;
+begin
+  foreach t in array array['rbi_inspection_items', 'rbi_inspection_photos'] loop
+    execute format('drop policy %I on quality.%I', t || '_select', t);
+    execute format('create policy %I on quality.%I for select to authenticated using ('
+                   '(core_company_id, inspection_id) in (select i.core_company_id, i.id from quality.rbi_inspections i) '
+                   'or (core_company_id = (select quality.request_company()) and core_created_by = (select auth.uid()) '
+                   'and (select quality.has_anywhere(quality.request_company(), ''{quality.inspections.view,quality.inspections.create}'', null)) '
+                   'and not quality.row_exists(''rbi_inspections'', inspection_id, core_company_id)))', t || '_select', t);
+  end loop;
+end $$;
 
 commit;

@@ -20,6 +20,9 @@ end $f$;
 create table public.t059_users(k text primary key, id uuid not null, co uuid);
 create table public.t059_tables(t text primary key, key text not null, n int, err text);
 create table public.t059(phase text, variant text, usr text, tbl text, ids text[], err text);
+-- правила таблиц Качества до 059 — для сверки после отката (059_rls_fast_compare.check.sql)
+create table public.t059_pol as select tablename::text t, policyname::text p, cmd::text, permissive::text, roles::text,
+  coalesce(qual, '') qual, coalesce(with_check, '') wc from pg_policies where schemaname = 'quality';
 
 create or replace function pg_temp.capture(p_phase text, p_variant text, p_part_only boolean) returns void language plpgsql as $f$
 declare u record; t record; v text[]; e text;
@@ -58,11 +61,12 @@ declare
   ca uuid := gen_random_uuid(); cb uuid := gen_random_uuid();
   cont uuid := gen_random_uuid(); p1 uuid := gen_random_uuid(); p2 uuid := gen_random_uuid();
   bcont uuid := gen_random_uuid(); bp uuid := gen_random_uuid();
-  k1 uuid := gen_random_uuid(); s1 uuid := gen_random_uuid();
+  k1 uuid := gen_random_uuid(); s1 uuid := gen_random_uuid(); a1 uuid := gen_random_uuid(); d1 uuid := gen_random_uuid();
+  k2 uuid := gen_random_uuid();
   f1 uuid := gen_random_uuid(); f2 uuid := gen_random_uuid();
   v_view text[]; r record; u uuid; rid uuid; uo record;
   u_sec uuid; u_imp uuid; u_ctr uuid; u_own_ctr uuid; u_own_p1 uuid;
-  t record; cols text[]; sel text; n int;
+  t record; cols text[]; sel text; n int; ax text[];
 begin
   insert into core.companies(id, name, is_test) values (ca, 'Альфа 059', true), (cb, 'Бета 059', true);
   insert into core.company_modules(company_id, module, enabled)
@@ -75,10 +79,16 @@ begin
     (bcont, cb, 'Контейнер Б 059', true), (bp, cb, 'ЖК Б 059', false);
   set local session_replication_role = replica;
   insert into core.locations(id, company_id, project_id, parent_id, node_type, name, canonical_key, object_kind) values
-    (k1, ca, p1, null, 'object', 'Корпус 1', 'корпус 1', 'building'), (s1, ca, p1, k1, 'section', 'Секция 1', 'секция 1', null);
+    (k1, ca, p1, null, 'object', 'Корпус 1', 'корпус 1', 'building'), (s1, ca, p1, k1, 'section', 'Секция 1', 'секция 1', null),
+    (a1, ca, p1, s1, 'apartment', 'Кв. 1', 'кв 1', null), (d1, ca, p1, s1, 'floor', 'Этаж (удалён)', 'этаж удалён', null),
+    (k2, ca, p2, null, 'object', 'Корпус 1', 'корпус 1', 'building');
+  update core.locations set deleted_at = now() where id = d1;
   set local session_replication_role = origin;
   insert into core.counterparties(id, company_id, name, inn, kinds) values
     (f1, ca, 'ООО Ромашка 059', '7700000591', array['contractor']), (f2, ca, 'ООО Лютик 059', '7700000592', array['contractor']);
+  -- сопоставление «название фирмы в записи → фирма» (Стройконтроль 1, роль «своя фирма»)
+  insert into quality.contractor_core_links(core_company_id, canonical_key, counterparty_id)
+    values (ca, quality.contractor_key('ромашка-алиас 059'), f1);
 
   -- роли: просмотр всего (все «…view» Качества и Стройконтроля), с «своя фирма», с «вся компания», «только своё» (действия
   -- записи без просмотра), только Качество, только Стройконтроль, «…manage»
@@ -140,7 +150,9 @@ begin
     ('29 участник двух компаний', 'просмотр', cb, null, null, null, null, null, null),
     ('30 без компании в запросе', 'просмотр', ca, null, null, null, null, null, null),
     ('31 Б руководитель', 'шаблон company_admin', cb, null, null, null, null, null, null),
-    ('32 Б просмотр (Качество выключено)', 'просмотр', cb, null, null, null, null, null, null);
+    ('32 Б просмотр (Качество выключено)', 'просмотр', cb, null, null, null, null, null, null),
+    ('34 просмотр корпус 1', 'просмотр', ca, p1, k1, null, null, null, null),
+    ('35 своя фирма без фирмы секция 1', 'просмотр + своя фирма', ca, p1, s1, null, null, null, null);
   create temp table t059_who(k text primary key, co uuid, members uuid[]) on commit drop;
   insert into t059_who select k, case when k like '30 %' then null when k like '3_ Б%' then cb else ca end,
          case when k like '29 %' then array[ca, cb] when k like '3_ Б%' then array[cb] else array[ca] end
@@ -170,36 +182,53 @@ begin
   select id into u_own_ctr from public.t059_users where k = '18 своё фирма F1';
   select id into u_own_p1 from public.t059_users where k = '16 только своё ЖК-1';
 
-  -- записи: каждая таблица quality.* с правилом чтения, все сочетания осей, какие есть в таблице; прочие обязательные поля —
-  -- уникальным текстом / нулём / пустым. Без триггеров (оси — прямо, как их поставил бы сервер).
-  create temp table t059_axes on commit drop as
-  select c.co, p.pr, o.ob, a.au, s.asg, f.cp, md5(format('%s/%s/%s/%s/%s/%s', c.co, p.pr, o.ob, a.au, s.asg, f.cp)) h
-    from (values (ca), (cb)) c(co)
-    cross join (values (null::uuid), (cont), (p1), (p2), (bcont), (bp)) p(pr)
-    cross join (values (null::uuid), (cont), (p1), (p2)) o(ob)
-    cross join (values (null::uuid), (u_sec), (u_imp), (u_ctr), (u_own_ctr), (u_own_p1)) a(au)
-    cross join (values (null::uuid), (u_imp), (u_own_p1)) s(asg)
-    cross join (values (null::uuid), (f1), (f2)) f(cp)
-   where (c.co = ca and p.pr in (cont, p1, p2) or c.co = cb and p.pr in (bcont, bp) or p.pr is null);
+  -- записи: каждая таблица quality.* с правилом чтения, все сочетания осей, какие есть в таблице и влияют на правило; прочие
+  -- обязательные поля — уникальным текстом / нулём / пустым. Без триггеров (оси — прямо, как их поставил бы сервер).
+  -- Оси: компания × проект, объект, автор, исполнитель, фирма; место (Стройконтроль 2.0); название фирмы (Стройконтроль 1);
+  -- почта инженера и владелец черновика (только у записи без автора); проверка (пункты и фото).
+  create temp table ax_copr on commit drop as
+    select * from (values (ca, null::uuid), (ca, cont), (ca, p1), (ca, p2), (cb, null), (cb, bcont), (cb, bp)) v(co, pr);
+  create temp table ax_ob on commit drop as select * from (values (null::uuid), (cont), (p1), (p2)) v(ob);
+  create temp table ax_au on commit drop as select * from (values (null::uuid), (u_sec), (u_imp), (u_ctr), (u_own_ctr), (u_own_p1)) v(au);
+  create temp table ax_asg on commit drop as select * from (values (null::uuid), (u_imp), (u_own_p1)) v(asg);
+  create temp table ax_cp on commit drop as select * from (values (null::uuid), (f1), (f2)) v(cp);
+  create temp table ax_lo on commit drop as select * from (values (null::uuid), (k1), (s1), (a1), (d1), (k2)) v(lo);
+  create temp table ax_ctr on commit drop as
+    select * from (values (null::text), ('ООО Ромашка 059'), ('ромашка-алиас 059'), ('ООО «Лютик» 059'), ('неизвестный 059'), ('')) v(ctr);
+  create temp table ax_en on commit drop as
+    select * from (values (null::text), (u_imp || '@test.invalid'), (' ' || upper(u_sec::text) || '@test.invalid '),
+                          ('chuzhoi-059@test.invalid'), ('не почта')) v(en);
+  create temp table ax_ow on commit drop as select * from (values (null::uuid), (u_imp)) v(ow);
+  create temp table ax_ins(ins text) on commit drop;
   set local session_replication_role = replica;
-  for t in select distinct c.relname t from pg_policies pp join pg_class c on c.relname = pp.tablename
-             join pg_namespace s on s.oid = c.relnamespace and s.nspname = 'quality'
-            where pp.schemaname = 'quality' and pp.cmd = 'SELECT' order by 1 loop
+  for t in select x.t from (select distinct pp.tablename::text t from pg_policies pp where pp.schemaname = 'quality' and pp.cmd = 'SELECT') x
+            order by x.t in ('rbi_inspection_items', 'rbi_inspection_photos'), x.t loop
+    if t.t = 'rbi_inspection_items' and not exists (select 1 from ax_ins) then
+      -- проверки для пунктов и фото: разные по видимости (выборка) и несуществующая
+      insert into ax_ins select id from quality.rbi_inspections where core_company_id = ca order by md5(id) limit 24;
+      insert into ax_ins select id from quality.rbi_inspections where core_company_id = cb order by md5(id) limit 3;
+      insert into ax_ins values ('r59-нет-такой-проверки');
+    end if;
     select array_agg(column_name::text order by ordinal_position) into cols from information_schema.columns
      where table_schema = 'quality' and table_name = t.t;
-    -- оси таблицы: остальные — одно значение (null), чтобы не плодить одинаковые строки
-    sel := 'select distinct on (' || concat_ws(', ',
-             case when cols && array['core_company_id', 'company_id'] then 'co' end,
-             case when cols && array['core_project_id', 'project_id'] then 'pr' end,
-             case when 'core_object_id' = any(cols) then 'ob' end,
-             case when 'core_created_by' = any(cols) then 'au' end,
-             case when 'assigned_to_auth_user_id' = any(cols) then 'asg' end,
-             case when 'core_counterparty_id' = any(cols) then 'cp' end, '1') || ') * from t059_axes where true'
-           -- обязательная ось (проект у sk_links) — без пустых значений
-           || coalesce((select string_agg(format(' and %s is not null', case when column_name in ('core_project_id', 'project_id') then 'pr'
-                                                                          when column_name = 'core_object_id' then 'ob' else 'co' end), '')
-                          from information_schema.columns where table_schema = 'quality' and table_name = t.t and is_nullable = 'NO'
-                           and column_name in ('core_project_id', 'project_id', 'core_object_id')), '');
+    ax := array_remove(array[
+      case when cols && array['core_company_id', 'company_id'] then 'ax_copr' end,
+      case when 'core_object_id' = any(cols) and t.t not like 'rbi_inspection\_%' then 'ax_ob' end,
+      case when 'core_created_by' = any(cols) then 'ax_au' end,
+      case when 'assigned_to_auth_user_id' = any(cols) then 'ax_asg' end,
+      case when 'core_counterparty_id' = any(cols) then 'ax_cp' end,
+      case when t.t in ('construction_acceptance_v2', 'construction_defects_v2') then 'ax_lo' end,
+      case when t.t in ('construction_acceptance', 'construction_defects') then 'ax_ctr' end,
+      case when t.t in ('rbi_inspections', 'rbi_tasks', 'rbi_draft_sessions', 'rbi_sync_queue') then 'ax_en' end,
+      case when t.t = 'rbi_draft_sessions' then 'ax_ow' end,
+      case when t.t like 'rbi_inspection\_%' then 'ax_ins' end], null);
+    sel := 'select x.*, md5(row_to_json(x)::text) h from (select * from ' || array_to_string(ax, ' cross join ') || ') x where true'
+      || case when 'ax_en' = any(ax) then ' and (x.en is null or x.au is null)' else '' end
+      || case when 'ax_ow' = any(ax) then ' and (x.ow is null or x.au is null)' else '' end
+      || case when t.t like 'rbi_inspection\_%' then ' and x.pr is null' else '' end
+      -- обязательная ось (проект у sk_links) — без пустых значений
+      || coalesce((select string_agg(' and x.pr is not null', '') from information_schema.columns
+                    where table_schema = 'quality' and table_name = t.t and is_nullable = 'NO' and column_name in ('core_project_id', 'project_id')), '');
     begin
       execute format('insert into quality.%I(%s) select %s from (%s) x on conflict do nothing',
         t.t,
@@ -207,14 +236,20 @@ begin
           where table_schema = 'quality' and table_name = t.t
             and (is_nullable = 'NO' and column_default is null
                  or column_name in ('core_company_id', 'company_id', 'core_project_id', 'project_id', 'core_object_id', 'core_created_by',
-                                    'assigned_to_auth_user_id', 'core_counterparty_id'))),
+                                    'assigned_to_auth_user_id', 'core_counterparty_id', 'core_location_id', 'contractor', 'engineer_name',
+                                    'owner_auth_user_id', 'inspection_id'))),
         (select string_agg(case
             when column_name in ('core_company_id', 'company_id') then 'x.co'
-            when column_name in ('core_project_id', 'project_id') then 'x.pr'
-            when column_name = 'core_object_id' then 'x.ob'
+            when column_name in ('core_project_id', 'project_id') then case when 'ax_copr' = any(ax) then 'x.pr' else 'null' end
+            when column_name = 'core_object_id' then case when 'ax_ob' = any(ax) then 'x.ob' else 'null' end
             when column_name = 'core_created_by' then 'x.au'
             when column_name = 'assigned_to_auth_user_id' then 'x.asg'
             when column_name = 'core_counterparty_id' then 'x.cp'
+            when column_name = 'core_location_id' then case when 'ax_lo' = any(ax) then 'x.lo' else 'null' end
+            when column_name = 'contractor' and 'ax_ctr' = any(ax) then 'x.ctr'
+            when column_name = 'engineer_name' and 'ax_en' = any(ax) then case when is_nullable = 'NO' then 'coalesce(x.en, '''')' else 'x.en' end
+            when column_name = 'owner_auth_user_id' then case when 'ax_ow' = any(ax) then 'x.ow' else 'null' end
+            when column_name = 'inspection_id' and 'ax_ins' = any(ax) then 'x.ins'
             when data_type = 'uuid' then format('md5(x.h || %L)::uuid', column_name)
             when t.t = 'sk_links' and column_name = 'kind' then '''place'''
             when data_type in ('text', 'character varying') then format('''r59-'' || x.h || %L', column_name)
@@ -229,7 +264,8 @@ begin
           where table_schema = 'quality' and table_name = t.t
             and (is_nullable = 'NO' and column_default is null
                  or column_name in ('core_company_id', 'company_id', 'core_project_id', 'project_id', 'core_object_id', 'core_created_by',
-                                    'assigned_to_auth_user_id', 'core_counterparty_id'))),
+                                    'assigned_to_auth_user_id', 'core_counterparty_id', 'core_location_id', 'contractor', 'engineer_name',
+                                    'owner_auth_user_id', 'inspection_id'))),
         sel);
       get diagnostics n = row_count;
       insert into public.t059_tables values (t.t, case when 'id' = any(cols) then 'id::text' else 'ctid::text' end, n, null);

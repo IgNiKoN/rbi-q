@@ -19,11 +19,19 @@ const HTML = join(DIR, 'inventory.html');
 const args = new Set(process.argv.slice(2));
 const prodFile = process.argv.includes('--prod') ? process.argv[process.argv.indexOf('--prod') + 1] : null;
 
+/** P2-0078: правила чтения quality.* без вызова security definer на каждой строке. Разрешено: внутри скалярного подзапроса без
+ *  FROM — «( SELECT quality.f(…) AS f)», он считается один раз на запрос (initplan). Исключения — функции, которые правило зовёт
+ *  только для редких строк (запись без автора; свой пункт без проверки), с причиной. */
+const ROW_DEFINER_OK = {
+  'quality.member_by_email': 'автор записи по почте — только у записи без core_created_by (coalesce)',
+  'quality.row_exists': 'есть ли проверка — только у своего пункта / фото, чья проверка не видна'
+};
 const db = await serverDb();
 const tables = await readSchema(db);
 // P2-0072: заготовка «новая таблица модуля» (supabase/templates/new_module_table.sql) — в той же копии схемы, после описи
 let template = null;
 let noGuard = [];
+let rowDefiner = [];
 if (args.has('--check')) {
   const TPL = 'planfact.tpl_check_items';
   await db.exec(readFileSync(join(ROOT, 'supabase/templates/new_module_table.sql'), 'utf8').replaceAll('__schema__', 'planfact')
@@ -37,9 +45,40 @@ if (args.has('--check')) {
                      and c.column_name in ('company_id', 'core_company_id', 'project_id') and c.data_type = 'uuid')
         and not exists (select 1 from pg_trigger g where g.tgrelid = (quote_ident(t.table_schema) || '.' || quote_ident(t.table_name))::regclass
                          and g.tgname = 'zzzzz_demo_guard' and not g.tgisinternal) order by 1`)).rows.map((r) => r.t);
+  rowDefiner = await perRowDefiner(db);
 }
 await db.close();
 const evaluation = evaluate(tables);
+
+async function perRowDefiner(db) {
+  const defs = (await db.query(`select n.nspname || '.' || p.proname f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                                  where p.prosecdef and n.nspname in ('quality', 'core', 'planfact', 'public') group by 1`)).rows.map((r) => r.f);
+  const pols = (await db.query(`select tablename t, policyname p, qual q from pg_policies
+                                  where schemaname = 'quality' and cmd in ('SELECT', 'ALL') and qual is not null order by 1, 2`)).rows;
+  const out = [];
+  for (const { t, p, q } of pols) {
+    for (const f of defs) {
+      if (ROW_DEFINER_OK[f]) continue;
+      for (let i = q.indexOf(f + '('); i >= 0; i = q.indexOf(f + '(', i + 1)) {
+        // охватывающие скобки: есть ли среди них «( SELECT …» без FROM
+        let depth = 0, inInit = false;
+        for (let j = i - 1; j >= 0 && !inInit; j--) {
+          if (q[j] === ')') depth++;
+          else if (q[j] === '(') {
+            if (depth > 0) { depth--; continue; }
+            if (/^\(\s*SELECT\b/i.test(q.slice(j))) {
+              let d = 0, k = j;
+              for (; k < q.length; k++) { if (q[k] === '(') d++; else if (q[k] === ')' && --d === 0) break; }
+              inInit = !/\bFROM\b/i.test(q.slice(j, k));
+            }
+          }
+        }
+        if (!inInit) { out.push(`quality.${t} (${p}): ${f}`); break; }
+      }
+    }
+  }
+  return out;
+}
 const ceiling = existsSync(DEBT) ? JSON.parse(readFileSync(DEBT, 'utf8')) : null;
 
 if (args.has('--check')) {
@@ -50,8 +89,9 @@ if (args.has('--check')) {
   const tplBad = template ? Object.entries(template.rules).filter(([, r]) => r.s !== 'green' && r.s !== 'na').map(([c, r]) => `${c}: ${r.s} ${r.note}`) : ['не применилась'];
   for (const m of tplBad) console.error(`✕ заготовка новой таблицы (supabase/templates/new_module_table.sql) — ${m}`);
   for (const t of noGuard) console.error(`✕ ${t}: нет сторожа «Демо — только просмотр» (zzzzz_demo_guard, P2-0053) — добавить в миграцию, как в заготовке`);
-  console.log(`сторож таблиц: ${evaluation.length} таблиц, новые с нарушением ${fresh.length}, рост ${grew.length}, снизить потолок ${lower.length}; заготовка таблицы — ${tplBad.length ? 'не по стандарту' : 'зелёная по всем правилам'}; без сторожа демо — ${noGuard.length}`);
-  process.exit(fresh.length + grew.length + lower.length + tplBad.length + noGuard.length ? 1 : 0);
+  for (const m of rowDefiner) console.error(`✕ ${m}: правило чтения зовёт функцию security definer на каждой строке — права один раз на запрос: (select quality.readable_projects(…)) / quality.read_scope (P2-0078)`);
+  console.log(`сторож таблиц: ${evaluation.length} таблиц, новые с нарушением ${fresh.length}, рост ${grew.length}, снизить потолок ${lower.length}; заготовка таблицы — ${tplBad.length ? 'не по стандарту' : 'зелёная по всем правилам'}; без сторожа демо — ${noGuard.length}; чтение quality.* с функцией на строке — ${rowDefiner.length}`);
+  process.exit(fresh.length + grew.length + lower.length + tplBad.length + noGuard.length + rowDefiner.length ? 1 : 0);
 }
 
 if (args.has('--update-debt')) {
