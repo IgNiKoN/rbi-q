@@ -21,6 +21,38 @@ create or replace function pg_temp.val(q text) returns text language plpgsql as 
 declare v text; begin execute q into v; return coalesce(v, 'NULL'); exception when others then return sqlstate || ' ' || sqlerrm; end $f$;
 create or replace function pg_temp.t(c boolean, l text) returns text language sql as $f$
   select case when coalesce(c, false) then '' else 'FAIL ' || l || E'\n' end $f$;
+-- 058: «Сводка» и «Входящие» человека = прежнее правило (права на КАЖДОМ проекте платформы, в демо — только демо-компания;
+-- позиции и «ждёт подтверждения» — в области человека, область на каждой строке)
+create or replace function pg_temp.same_lists(u uuid, company uuid) returns text language plpgsql as $f$
+declare ref_s text; got_s text; ref_i text; got_i text;
+begin
+  perform pg_temp.as_user(u, company);
+  reset role;   -- эталон — без ограничений роли, с тем же человеком и заголовком
+  -- объект, его позиции и «ждёт подтверждения» в области человека (как было: область — на каждую строку)
+  select coalesce(string_agg(p.id::text || ':' ||
+      (select count(*) from planfact.vor_positions_current vp where vp.project_id = p.id and not vp.withdrawn
+         and planfact.in_area(vp.location_id, planfact.my_area(p.id))) || ':' ||
+      (select count(*) from planfact.fact_entries e join planfact.vor_positions vp on vp.id = e.position_id
+        where e.project_id = p.id and e.status = 'pending_approval' and planfact.in_area(vp.location_id, planfact.my_area(p.id))),
+      ',' order by p.id), '') into ref_s from core.projects p
+   where p.archived_at is null and planfact.has_permission(p.id, 'planfact.fact.view') and core.in_demo_scope(p.company_id);
+  select coalesce(string_agg(p.id::text || ':' || case when planfact.has_permission(p.id, 'planfact.fact.approve') then
+      (select count(*) from planfact.fact_entries e join planfact.vor_positions vp on vp.id = e.position_id
+        where e.project_id = p.id and e.status = 'pending_approval' and planfact.in_area(vp.location_id, planfact.my_area(p.id)))::text else '-' end,
+      ',' order by p.id), '') into ref_i from core.projects p
+   where p.archived_at is null and core.in_demo_scope(p.company_id)
+     and (planfact.has_permission(p.id, 'planfact.fact.approve') or planfact.has_permission(p.id, 'planfact.fact.create')
+          or planfact.has_permission(p.id, 'planfact.ks2.edit')
+          or (planfact.has_permission(p.id, 'planfact.fact.view')
+              and (planfact.has_permission(p.id, 'planfact.ks2.view') or planfact.has_permission(p.id, 'planfact.money.view'))));
+  execute 'set local role authenticated';
+  select coalesce(string_agg(x.project_id::text || ':' || x.positions || ':' || x.pending, ',' order by x.project_id), '') into got_s from public.pf_summary_portfolio() x;
+  select coalesce(string_agg(x.project_id::text || ':' || coalesce(x.pending::text, '-'), ',' order by x.project_id), '') into got_i from public.pf_my_inbox() x;
+  return case when ref_s = got_s and ref_i = got_i and ref_s <> '' then '' else format('сводка %s/%s, входящие %s/%s',
+    cardinality(string_to_array(got_s, ',')), cardinality(string_to_array(ref_s, ',')),
+    cardinality(string_to_array(got_i, ',')), cardinality(string_to_array(ref_i, ','))) end;
+end $f$;
+
 -- отпечаток всех строк core / planfact / quality (кроме журнала входов посетителя в демо): любая удачная запись его меняет.
 -- По версии строки (ctid, xmin), не по содержимому: вставка, правка и удаление меняют их, а большие поля (снимки отчётов
 -- Качества) не читаются — на боевом объёме тест укладывается в ожидание SQL Editor (≈ 1 мин)
@@ -337,6 +369,30 @@ begin
   perform pg_temp.as_user(v1, demo);
   res := res || pg_temp.t(not exists (select 1 from public.pf_summary_portfolio() x join core.projects p on p.id = x.project_id where p.company_id = cx),
                           'сводка в демо — свой объект посетителя не показан');
+  -- 058 (доработка 2): «Входящие» в демо — только объекты демо (перебор до проверки прав), вне демо — как раньше
+  if to_regprocedure('core.in_demo_scope(uuid)') is not null then
+    perform pg_temp.as_user(v1, demo);
+    res := res || pg_temp.t((select count(*) from public.pf_my_inbox()) >= 1
+                            and not exists (select 1 from public.pf_my_inbox() x join core.projects p on p.id = x.project_id where p.company_id <> demo),
+                            '058: «Входящие» в демо — только объекты демо-компании');
+    perform pg_temp.as_user(v1, cx);
+    res := res || pg_temp.t(exists (select 1 from public.pf_my_inbox() x join core.projects p on p.id = x.project_id where p.company_id = cx)
+                            and exists (select 1 from public.pf_my_inbox() x join core.projects p on p.id = x.project_id where p.company_id = demo),
+                            '058: «Входящие» вне демо — как раньше: объекты всех компаний человека');
+    perform pg_temp.as_user(v1, demo);
+    res := res || pg_temp.t(not exists (select 1 from public.pf_my_projects() x where x.company_id <> demo) and exists (select 1 from public.pf_my_projects()),
+                            '058: «Мои объекты» в демо — только объекты демо-компании');
+    perform pg_temp.as_user(v1, cx);
+    res := res || pg_temp.t(exists (select 1 from public.pf_my_projects() x where x.company_id = cx), '058: «Мои объекты» вне демо — свои объекты на месте');
+    -- результат = прежнее правило (права на каждом проекте) у посетителя (демо и своя), сотрудника на участке, ПТО, админа платформы
+    -- (вне демо: без заголовка и со своей компанией; в демо — посетитель)
+    for str in select pg_temp.same_lists(x.u, x.c) || ' ' || x.l from (values (v1, demo, 'посетитель в демо'), (v1, cx, 'посетитель в своей'),
+        (dfor, demo, 'прораб демо (участок)'), (dpto, demo, 'ПТО демо'), (padm, null::uuid, 'админ платформы без заголовка'),
+        (padm, cx, 'админ платформы, своя компания'), (padm, demo, 'админ платформы в демо'), (xadm, cx, 'админ компании')) x(u, c, l) loop
+      res := res || pg_temp.t(str !~ '^сводка', '058: «Сводка» и «Входящие» = прежнему правилу — ' || str);
+    end loop;
+  end if;
+  perform pg_temp.as_user(v1, demo);   -- дальше — посетитель в демо (как до проверок 058)
 
   -- запись прорабом-посетителем
   str := pg_temp.msg(format('select public.pf_fact_submit(%L, %L)', gen_random_uuid(),

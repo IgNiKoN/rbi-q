@@ -98,6 +98,8 @@ const DENIED = /нет права|нет доступа/i;
 export function createOfflineReader(deps: ReaderDeps): OfflineReader {
   const now = (): number => (deps.now ? deps.now() : Date.now());
   let silentUntil = 0;
+  /** когда сервер последний раз ответил на чтение (любое): ответил недавно — он жив, одно долгое чтение тишину не включает */
+  let answeredAt = 0;
   /** модуль → ключ чтения → время показанной копии */
   const shown = new Map<string, Map<string, string>>();
   /** модуль → чтения без сети, которых нет в копии (экран не открывали с интернетом) */
@@ -138,22 +140,39 @@ export function createOfflineReader(deps: ReaderDeps): OfflineReader {
         return r.ok ? { ok: true, value: r.value, meta: null } : r;
       }
       if (deps.offline() || now() < silentUntil) return fromCopy<T>(module, key, id, opts.quiet);
+      /** ответ сервера — в копию (и время); пометки этого чтения снимаются */
+      const keep = async (value: T): Promise<string> => {
+        const at = new Date(now()).toISOString();
+        let bytes = 0;
+        try { bytes = JSON.stringify(value ?? null).length; } catch { /* не сериализуется — не в копию */ }
+        const emptyList = Array.isArray(value) && value.length === 0;
+        if (bytes && !(emptyList && opts.keepEmpty === false)) await deps.store.put({ id, slot, module, key, project: opts.project ?? null, at, bytes, data: value });
+        note(module, key, null);
+        miss(module, key, false);
+        return at;
+      };
       let timer: ReturnType<typeof setTimeout> | undefined;
-      const r = await Promise.race([fetcher().catch((): Result<T> => ({ ok: false, message: NO_CONNECTION_TEXT })),
+      const asked = fetcher().catch((): Result<T> => ({ ok: false, message: NO_CONNECTION_TEXT }));
+      const r = await Promise.race([asked,
         new Promise<typeof TIMEOUT>((res) => { timer = setTimeout(() => res(TIMEOUT), deps.waitMs ?? READ_WAIT_MS); })]);
       clearTimeout(timer);
-      if (r === TIMEOUT) silentUntil = now() + SILENT_MS;
+      if (r === TIMEOUT) {
+        // P2-0053 (доработка 2): одно долгое чтение («Входящие» большой учётки) не должно на минуту оставлять экраны без данных
+        // (в демо копии нет — «Нужен интернет»): тишина — только если сервер не ответил ни на одно чтение за время ожидания;
+        // промолчавший запрос всё же ответил — сервер жив, тишина снимается
+        if (now() - answeredAt > (deps.waitMs ?? READ_WAIT_MS)) silentUntil = now() + SILENT_MS;
+        void asked.then(async (late) => {
+          if (!late.ok && late.message === NO_CONNECTION_TEXT) return;
+          silentUntil = 0; answeredAt = now();
+          if (late.ok) await keep(late.value);   // поздний ответ — в копию: пометка «Нужен интернет» этого чтения снимается
+        });
+      }
       if (r === TIMEOUT || (!r.ok && r.message === NO_CONNECTION_TEXT)) return fromCopy<T>(module, key, id, opts.quiet);
       silentUntil = 0;
+      answeredAt = now();
       // сервер отказал по правам — у человека больше нет этих данных: копия удаляется (цены и сметы без права estimate и т. п.)
       if (!r.ok) { if (DENIED.test(r.message)) { await deps.store.delete(id); note(module, key, null); } return r; }
-      const at = new Date(now()).toISOString();
-      let bytes = 0;
-      try { bytes = JSON.stringify(r.value ?? null).length; } catch { /* не сериализуется — не в копию */ }
-      const emptyList = Array.isArray(r.value) && r.value.length === 0;
-      if (bytes && !(emptyList && opts.keepEmpty === false)) await deps.store.put({ id, slot, module, key, project: opts.project ?? null, at, bytes, data: r.value });
-      note(module, key, null);
-      miss(module, key, false);
+      const at = await keep(r.value);
       return { ok: true, value: r.value, meta: { from: 'server', at, stale: false } };
     },
     async pruneProjects(module, allowed) {

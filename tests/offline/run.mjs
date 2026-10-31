@@ -16,6 +16,7 @@
 // P2-0075: t375, t1440 — тестовые компании у администратора платформы скрыты, «Показать тестовые» — видны (testco.mjs).
 // P2-0076: sk375, sk375dark, sk768, sk1024, sk1440, sk1440dark, sk1920 — внешний СК по номерам «Компании»: загрузка → «Разобрать» → Аналитика по id (sk.mjs).
 // P2-0078: s-pull-delta — синхронизация Качества только изменения: всё скачано → повтор 0 строк → изменённое приходит (pull-delta.mjs).
+// P2-0077: q-admin375, q-admin1440, q-eng375, q-eng1440 — автоплан задач Качества: руководитель не шлёт задачи инженеров каждый проход (qtasks.mjs).
 // P2-0067a: --gzip (или P2_OFFLINE_GZIP=1) — стенд отдаёт файлы приложения сжатыми, как nginx app.rbi-q.ru (servers.mjs, site.gzip).
 // Нужен Chromium playwright-core (npx playwright-core install chromium). Боевой сервер не используется.
 import { writeFileSync } from 'node:fs';
@@ -35,6 +36,7 @@ import { welcomeScenarios } from './welcome.mjs';
 import { testcoScenarios } from './testco.mjs';
 import { skScenarios } from './sk.mjs';
 import { pullDeltaScenarios } from './pull-delta.mjs';
+import { qtasksScenarios } from './qtasks.mjs';
 import { count, freshProfile, go, launch, note, ok, open, readStore, results, saveMark, signIn, state } from './lib.mjs';
 
 const args = process.argv.slice(2);
@@ -349,7 +351,7 @@ async function screen(width, scheme) {
 }
 
 const SCENARIOS = { cold375: () => cold(375, 812), cold1440: () => cold(1440, 900), rescue, expired, stale14, invalid, cache, otheruser,
-  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out), ...releaseScenarios(out), ...menuScenarios(out), ...viewScenarios(out), ...filesScenarios(out), ...deviceScenarios(out), ...syncScenarios(out), ...factScenarios(out), ...whoScenarios(out), ...welcomeScenarios(out), ...testcoScenarios(out), ...skScenarios(out), ...pullDeltaScenarios(out) };
+  screen375: () => screen(375, 'light'), screen768: () => screen(768, 'light'), screen1440: () => screen(1440, 'dark'), ...weatherScenarios(out), ...releaseScenarios(out), ...menuScenarios(out), ...viewScenarios(out), ...filesScenarios(out), ...deviceScenarios(out), ...syncScenarios(out), ...factScenarios(out), ...whoScenarios(out), ...welcomeScenarios(out), ...testcoScenarios(out), ...skScenarios(out), ...pullDeltaScenarios(out), ...qtasksScenarios(out) };
 const list = pick.length ? pick : Object.keys(SCENARIOS);
 for (const n of list) {
   if (!SCENARIOS[n]) { ok(false, 'нет сценария ' + n); continue; }

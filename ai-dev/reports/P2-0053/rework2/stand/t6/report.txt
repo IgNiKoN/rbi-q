@@ -1,0 +1,9 @@
+  == w-hang: сеть есть, ничего не грузится 5 мин → сервер ответил
+PASS w-hang: без сети записано 5 осмотров с фото, не отправлено: 5 — ["not_synced","not_synced","not_synced","not_synced","not_synced"]
+  замер: {"weather":"w-hang","title":"сеть есть, ничего не грузится 5 мин → сервер ответил","delivered":5,"lost":0,"photoRows":5,"files":5,"minutesToZero":6.6,"unsentLeft":0,"unsentWhy":[],"taps":0,"maxSendsPerRecord":1,"passes":1,"concurrentPasses":1,"concurrentInspectionPosts":1,"longestSyncingSec":3,"hungRequests":16}
+PASS w-hang: погода прошла до конца
+PASS w-hang: на сервере все 5 осмотров с фото, потерь нет — 5/5/0
+PASS w-hang: двух отправок одновременно нет — проходов 1, запросов 1
+PASS w-hang: «лже-сеть» не вешает «Синхронизация…» дольше ограничения — 3 с
+PASS w-hang: не хуже, чем до исправлений — минут 6.6 (было 6.6), отправок записи 1 (было 1)
+Итог: PASS 6, FAIL 0
