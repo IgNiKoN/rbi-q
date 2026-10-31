@@ -10,7 +10,7 @@
 
 ## 1. База: 057
 
-1. SQL Editor: `supabase/migrations/057_demo_mode_up.sql` целиком (буфер в UTF-8, md5 файла — в `checks.md`) → «Success». Проверка: `select to_regclass('core.demo_visits'), (select count(*) from pg_trigger where tgname = 'a0_demo_guard')` — таблица есть, сторожей ≈ 96.
+1. SQL Editor: `supabase/migrations/057_demo_mode_up.sql` целиком (буфер в UTF-8, md5 файла — в `checks.md`) → «Success». Проверка: `select to_regclass('core.demo_visits'), (select count(*) from pg_trigger where tgname = 'zzzzz_demo_guard')` — таблица есть, сторожей ≈ 96.
 2. SQL Editor: `tests/server/057_demo_mode.sql` (всё в транзакции, откатывается сам) → «FAIL всего: 0».
 3. Стоп-условие: ошибка 1–2 → `057_demo_mode_down.sql`, отчёт.
 

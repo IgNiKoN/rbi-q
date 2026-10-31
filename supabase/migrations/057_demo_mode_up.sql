@@ -152,7 +152,8 @@ begin
                 and c.column_name in ('company_id', 'core_company_id', 'project_id') and c.data_type = 'uuid'))
      order by 1, 2
   loop
-    execute format('create trigger a0_demo_guard before insert or update or delete on %I.%I for each row execute function core.demo_guard()', r.s, r.tb);
+    -- имя — последним среди триггеров «до записи»: сторож видит компанию, которую уже поставили триггеры привязки
+    execute format('create trigger zzzzz_demo_guard before insert or update or delete on %I.%I for each row execute function core.demo_guard()', r.s, r.tb);
     n := n + 1;
   end loop;
   raise notice '057: сторож «Демо — только просмотр» — таблиц %', n;

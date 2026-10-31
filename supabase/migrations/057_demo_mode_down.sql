@@ -26,8 +26,8 @@ drop policy if exists demo_visitor_no_delete on storage.objects;
 do $$
 declare r record;
 begin
-  for r in select tgrelid::regclass t from pg_trigger where tgname = 'a0_demo_guard' and not tgisinternal loop
-    execute format('drop trigger a0_demo_guard on %s', r.t);
+  for r in select tgrelid::regclass t from pg_trigger where tgname = 'zzzzz_demo_guard' and not tgisinternal loop
+    execute format('drop trigger zzzzz_demo_guard on %s', r.t);
   end loop;
 end $$;
 

@@ -244,7 +244,7 @@ begin
      and exists (select 1 from information_schema.columns c where c.table_schema = t.table_schema and c.table_name = t.table_name
                   and c.column_name in ('company_id', 'core_company_id', 'project_id') and c.data_type = 'uuid')
      and not exists (select 1 from pg_trigger g where g.tgrelid = (quote_ident(t.table_schema) || '.' || quote_ident(t.table_name))::regclass
-                      and g.tgname = 'a0_demo_guard');
+                      and g.tgname = 'zzzzz_demo_guard');
   res := res || pg_temp.t(bad is null, 'сторож на каждой таблице с компанией или проектом (нет: ' || coalesce(bad, '') || ')');
   begin
     insert into core.companies(name, is_test, is_demo) values ('Вторая демо 057', true, true);
@@ -327,6 +327,14 @@ begin
   res := res || pg_temp.t(p_before = p_after, 'прораб-посетитель: все функции записи и прямая запись — данные не изменились');
   res := res || pg_temp.t(bad in ('', 'public.pf_password_changed(); ', 'public.pf_password_changed(); public.pf_set_full_name(p_user uuid, p_full_name text); '),
                           'прораб-посетитель: без ошибки прошли только свои (не демо) функции: ' || bad);
+
+  -- запись без компании в строке (компанию ставит сервер по заголовку) — сторож видит уже поставленную компанию
+  perform pg_temp.as_user(v1, demo);
+  str := pg_temp.msg(format('insert into quality.construction_defects_v2 (id, "locationId", text, status) values (%L, %L, %L, %L)', gen_random_uuid(), f1, 'без компании', 'open'));
+  res := res || pg_temp.t(str <> 'OK', 'посетитель: замечание без компании в строке — отказ (' || str || ')');
+  reset role;
+  res := res || pg_temp.t((select tgname from pg_trigger where tgrelid = 'quality.construction_defects_v2'::regclass and not tgisinternal and tgtype & 2 = 2
+                            and tgtype & 1 = 1 order by tgname desc limit 1) = 'zzzzz_demo_guard', 'сторож — последний триггер «до записи» строки');
 
   -- смена роли: то же назначение, область — весь проект
   perform pg_temp.as_user(v1, demo);

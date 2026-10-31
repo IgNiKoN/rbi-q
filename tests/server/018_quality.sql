@@ -95,7 +95,7 @@ begin
      and tg.tgname not like '%_zzz_rights_guard'         -- 053: сторож действий проверок и задач
      and tg.tgname not like 'zzzz\_core\_ids%'           -- 054: номер записи core_id и связи по uuid
      and tg.tgname <> 'sk_records_zz_core_links'        -- 056: фирма, вид работ, место внешнего СК по соответствиям
-     and tg.tgname <> 'a0_demo_guard';                  -- 057: «Демо — только просмотр» для посетителя демо-компании
+     and tg.tgname <> 'zzzzz_demo_guard';                  -- 057: «Демо — только просмотр» для посетителя демо-компании
   res := res || pg_temp.t(n = 0, 'в quality только триггер привязки к компании (лишние: ' || coalesce(s, '—') || ')');
   select count(*), string_agg(p.proname, ', ') into n, s from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'quality' and has_function_privilege('anon', p.oid, 'execute');
