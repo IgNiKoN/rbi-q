@@ -200,6 +200,30 @@ export function clientScopeMode(p) {
     return 'client';
 }
 
+/** P2-0078: ключ метки «таблица загружена до» (localStorage). */
+export const tablePullKey = (table) => 'rbi_pull_at:' + table;
+
+/**
+ * P2-0078: с какого момента грузить таблицу, которую раньше каждый проход читали целиком. У каждой таблицы — своя метка
+ * (ставится только после её успешной загрузки — сбой одной таблицы не теряет её изменений). Полный проход (passSince === '':
+ * первый вход, смена прав, объектов или роли — общая метка сброшена) — метка снимается и таблица грузится целиком; без метки —
+ * целиком. passSince не задан (загрузка вне прохода) — по своей метке.
+ * @param {{ getItem(k: string): string|null, removeItem(k: string): void }} store
+ * @param {string} table
+ * @param {string} [passSince]
+ * @returns {string} ISO или '' (целиком)
+ */
+export function tablePullSince(store, table, passSince) {
+    if (passSince === '') { store.removeItem(tablePullKey(table)); return ''; }
+    return pullSinceWithOverlap(store.getItem(tablePullKey(table)) || '');
+}
+
+/** P2-0078: таблица загружена — метка = время начала загрузки (с запасом назад — pullSinceWithOverlap). */
+export function tablePullDone(store, table, startedAt) {
+    if (startedAt) store.setItem(tablePullKey(table), startedAt);
+}
+
 if (typeof window !== 'undefined') {
-    window.RbiSyncPullPolicy = { PULL_OVERLAP_MS, PULL_BATCH_SIZE, PULL_CONCURRENCY, pullSinceWithOverlap, pullPagedByIds, isThrottleError, indexLocalHistory, keepLocalOverCloud, clientScopeMode, useBulkLocalLookup };
+    window.RbiSyncPullPolicy = { PULL_OVERLAP_MS, PULL_BATCH_SIZE, PULL_CONCURRENCY, pullSinceWithOverlap, pullPagedByIds, isThrottleError, indexLocalHistory, keepLocalOverCloud, clientScopeMode, useBulkLocalLookup,
+        tablePullKey, tablePullSince, tablePullDone };
 }

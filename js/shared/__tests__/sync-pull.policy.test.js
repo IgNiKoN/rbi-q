@@ -9,6 +9,9 @@ import {
   pullPagedByIds,
   useBulkLocalLookup,
   clientScopeMode,
+  tablePullKey,
+  tablePullSince,
+  tablePullDone,
   PULL_BATCH_SIZE,
   PULL_CONCURRENCY,
   isThrottleError,
@@ -380,5 +383,33 @@ describe('P2-0025: одна выборка локальных записей —
     assert.equal(useBulkLocalLookup(true, 10), false);
     assert.equal(useBulkLocalLookup(false, 60), false);
     assert.equal(useBulkLocalLookup(false, 10000), false);
+  });
+});
+
+describe('P2-0078: таблица — только изменения (своя метка)', () => {
+  const mem = () => { const m = new Map(); return { m, getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
+  it('без метки — целиком; после загрузки — с метки минус 15 минут', () => {
+    const st = mem();
+    assert.equal(tablePullSince(st, 'location_nodes', '2026-10-31T10:00:00.000Z'), '');
+    tablePullDone(st, 'location_nodes', '2026-10-31T12:00:00.000Z');
+    assert.equal(tablePullSince(st, 'location_nodes', '2026-10-31T11:45:00.000Z'), '2026-10-31T11:45:00.000Z');
+    assert.equal(tablePullSince(st, 'location_nodes'), '2026-10-31T11:45:00.000Z', 'вне прохода — по своей метке');
+  });
+  it('полный проход (смена прав) — метка снимается, таблица целиком; сбой полной загрузки — следующий раз тоже целиком', () => {
+    const st = mem();
+    tablePullDone(st, 'contracts', '2026-10-31T12:00:00.000Z');
+    assert.equal(tablePullSince(st, 'contracts', ''), '');
+    assert.equal(st.getItem(tablePullKey('contracts')), null);
+    assert.equal(tablePullSince(st, 'contracts', '2026-10-31T12:30:00.000Z'), '', 'метки нет — целиком');
+  });
+  it('сбой одной таблицы не сдвигает её метку; метки таблиц независимы', () => {
+    const st = mem();
+    tablePullDone(st, 'contracts', '2026-10-31T12:00:00.000Z');
+    tablePullDone(st, 'location_nodes', '2026-10-31T12:00:00.000Z');
+    tablePullDone(st, 'location_nodes', '2026-10-31T13:00:00.000Z');   // contracts — сбой, метка прежняя
+    assert.equal(tablePullSince(st, 'contracts', 'x'), '2026-10-31T11:45:00.000Z');
+    assert.equal(tablePullSince(st, 'location_nodes', 'x'), '2026-10-31T12:45:00.000Z');
+    tablePullDone(st, 'contracts', '');
+    assert.equal(tablePullSince(st, 'contracts', 'x'), '2026-10-31T11:45:00.000Z', 'пустое время — метку не трогает');
   });
 });

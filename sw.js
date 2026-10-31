@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.31-e69c9245',
+  version: '2026.10.31-7186a17d',
   date: '2026-10-31',
-  digest: 'e69c9245',
+  digest: '7186a17d',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -252,7 +252,7 @@ const APP_RELEASE = {
     "js/services/storage.service.js": ["248032d4494ceb8a",4001,""],
     "js/services/storage/checklist-snapshot.utils.js": ["7d5230dec8f2d4f1",5441,""],
     "js/services/storage/history-memory.utils.js": ["88b0b2166bb100fc",4583,""],
-    "js/services/storage/storage-cache-manager.js": ["4990f114d95992cd",68611,""],
+    "js/services/storage/storage-cache-manager.js": ["9a3196d27d93bdd2",69382,""],
     "js/services/storage/storage-converters.utils.js": ["5b768eb8ecb3da99",6994,""],
     "js/services/storage/storage-db.core.js": ["cb8d5c153815d3aa",42133,""],
     "js/services/storage/storage-diagnostics.render.js": ["768558d07b1973df",11900,""],
@@ -266,13 +266,13 @@ const APP_RELEASE = {
     "js/services/sync/sync-cloud-prepare.utils.js": ["5d1e40c5615b7aec",26251,""],
     "js/services/sync/sync-connection.actions.js": ["c03e9fb129de969e",33859,""],
     "js/services/sync/sync-core.state.js": ["8210205e47f88b84",24463,""],
-    "js/services/sync/sync-engine.core.js": ["603153cfcc10284e",316086,""],
+    "js/services/sync/sync-engine.core.js": ["3a05f650395d7ff6",319524,""],
     "js/services/sync/sync-journal.policy.js": ["1ea3d3c7b4f08140",7669,""],
     "js/services/sync/sync-merge.policy.js": ["6cf44faf287a1a1f",7159,""],
     "js/services/sync/sync-net.policy.js": ["8ca918d5aee3540e",9752,""],
     "js/services/sync/sync-post-actions.js": ["b70e3b9c9fb7fdb0",10576,""],
     "js/services/sync/sync-progress.ui.js": ["4ec0843bd1d3f622",14900,""],
-    "js/services/sync/sync-pull.policy.js": ["62b98be9ab852312",12517,""],
+    "js/services/sync/sync-pull.policy.js": ["36e7af8fa5836408",14208,""],
     "js/services/sync/sync-push-pull.core.js": ["e096f319232cdcca",26758,""],
     "js/services/sync/sync-retry.policy.js": ["1fd88a0222131c6d",15091,""],
     "js/services/sync/sync-ui.render.js": ["f49203b01796a35c",27126,""],

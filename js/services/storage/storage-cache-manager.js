@@ -445,12 +445,28 @@ window.RbiStorageManager = {
         await dbPut(STORES.FILE_REGISTRY, normalized);
     },
 
-    async syncFileRegistryFromCloud() {
+    /** P2-0078: passSince — метка прохода синхронизации ('' — полный проход: реестр целиком); без неё — по своей метке. */
+    async syncFileRegistryFromCloud(opts = {}) {
         try {
             if (!window.supabaseClient || !window.syncConfig?.enabled || !STORES.FILE_REGISTRY) return 0;
 
             const pCode = window.syncConfig.projectCode || '';
             if (!pCode) return 0;
+
+            // P2-0078: только изменения со своей метки (раньше — весь реестр страницами каждый проход: 2,7 с на страницу на сервере);
+            // полный проход синхронизации или нет метки — целиком.
+            const pol = window.RbiSyncPullPolicy && window.RbiSyncPullPolicy.tablePullSince ? window.RbiSyncPullPolicy : null;
+            const since = pol ? pol.tablePullSince(localStorage, 'file_registry', opts.passSince) : '';
+            const startedAt = new Date().toISOString();
+            const page = (from, to) => {
+                let q = window.supabaseClient
+                    .from('file_registry')
+                    .select('*')
+                    .eq('project_code', pCode)
+                    .eq('is_deleted', false);
+                if (since) q = q.gt('updated_at', since);
+                return q.order('id', { ascending: true }).range(from, to);
+            };
 
             // Постранично (как остальные pull) — без жёсткого limit(5000).
             const pullFn = typeof window.rbiPullAllRows === 'function'
@@ -459,21 +475,9 @@ window.RbiStorageManager = {
 
             let data = [];
             if (pullFn) {
-                data = await pullFn((from, to) => window.supabaseClient
-                    .from('file_registry')
-                    .select('*')
-                    .eq('project_code', pCode)
-                    .eq('is_deleted', false)
-                    .order('id', { ascending: true })
-                    .range(from, to), 500);
+                data = await pullFn(page, 1000);
             } else {
-                const res = await window.supabaseClient
-                    .from('file_registry')
-                    .select('*')
-                    .eq('project_code', pCode)
-                    .eq('is_deleted', false)
-                    .order('id', { ascending: true })
-                    .range(0, 499);
+                const res = await page(0, 999);
                 if (res.error) throw res.error;
                 data = res.data || [];
             }
@@ -494,6 +498,7 @@ window.RbiStorageManager = {
 
                 count++;
             }
+            if (pol && pullFn) pol.tablePullDone(localStorage, 'file_registry', startedAt);
 
             return count;
         } catch (e) {

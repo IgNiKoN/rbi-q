@@ -33,6 +33,8 @@ export const sends = new Map();
 /** P2-0061: отправки строк любой таблицы — «таблица:id» → сколько раз (повтор той же строки — +1). */
 export const sendsAll = new Map();
 export const flow = { inflight: 0, maxInflight: 0, hung: 0 };
+/** P2-0078: выдано строк stand.serve — таблица → { queries, rows, delta } (delta — запросов «изменено после», updated_at=gt.). */
+export const served = new Map();
 /** P2-0064: факт с телефона (pf_fact_submit): id с телефона → ответ сервера (повтор — прежний ответ); calls — сколько раз пришло;
  *  entries — сколько записей факта создано (дубль был бы > 1 на id); reject — RegExp по тексту записи: отказ сервера с причиной. */
 export const fact = { byId: new Map(), calls: new Map(), entries: 0, reject: null };
@@ -40,7 +42,7 @@ const held = [];
 /** Сбросить погоду и содержимое сервера перед сценарием. */
 export function resetNet() {
   Object.assign(net, { mode: 'ok', latencyMs: 0, kbps: 0, failLeft: 0, failCode: 503, drops: [], reject: null });
-  rows.clear(); files.clear(); sends.clear(); sendsAll.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
+  rows.clear(); files.clear(); sends.clear(); sendsAll.clear(); served.clear(); Object.assign(flow, { inflight: 0, maxInflight: 0, hung: 0 });
   fact.byId.clear(); fact.calls.clear(); fact.entries = 0; fact.reject = null;
 }
 /** «Зависшие» запросы обрываются (связь пропала окончательно). */
@@ -215,8 +217,16 @@ function respond(req, res, u, body) {
       if (lost) { lost.left--; return req.socket.destroy(); }
       return v && v.__status ? json(res, v.__status, { message: v.message || 'Internal error', ...(v.code ? { code: v.code } : {}) }) : json(res, 200, v); }
     if (u.pathname.startsWith('/rest/v1/')) {
-      const served = stand.serve && stand.serve[u.pathname.slice(9)];
-      if (req.method === 'GET' && served) return json(res, 200, served, { 'Content-Range': `0-${Math.max(served.length - 1, 0)}/${served.length}` });
+      const tname = u.pathname.slice(9);
+      let serve = stand.serve && stand.serve[tname];
+      if (req.method === 'GET' && serve) {
+        // P2-0078: «изменено после» (updated_at=gt.<время>) — как PostgREST; счётчик выданных строк
+        const gt = (u.searchParams.get('updated_at') || '').match(/^gt\.(.+)$/);
+        if (gt) serve = serve.filter((r) => Date.parse(r.updated_at) > Date.parse(gt[1]));
+        const c = served.get(tname) || { queries: 0, rows: 0, delta: 0 };
+        c.queries++; c.rows += serve.length; if (gt) c.delta++; served.set(tname, c);
+        return json(res, 200, serve, { 'Content-Range': `0-${Math.max(serve.length - 1, 0)}/${serve.length}` });
+      }
       if (req.method === 'GET' || req.method === 'HEAD') return json(res, 200, [], { 'Content-Range': '*/0' });
       return json(res, 201, []);
     }
