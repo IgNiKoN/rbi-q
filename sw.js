@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.31-e8a65f66',
+  version: '2026.10.31-163d2871',
   date: '2026-10-31',
-  digest: 'e8a65f66',
+  digest: '163d2871',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -202,7 +202,7 @@ const APP_RELEASE = {
     "js/modules/quality/features/sk/sk.render.js": ["27cb5f9da4fd965a",107408,"quality"],
     "js/modules/quality/features/sk/sk.state.js": ["2ab85496b502636d",2225,"quality"],
     "js/modules/quality/features/tasks/tasks.actions.js": ["c113212551be6cf7",4792,"quality"],
-    "js/modules/quality/features/tasks/tasks.module.js": ["f2d816b9033c14a9",205783,"quality"],
+    "js/modules/quality/features/tasks/tasks.module.js": ["42d11faabd5d62a0",207470,"quality"],
     "js/modules/quality/features/tasks/tasks.render.js": ["4ee7cd12ca4464a8",2772,"quality"],
     "js/modules/quality/features/tasks/tasks.state.js": ["90d0302ed1b217a0",2707,"quality"],
     "js/modules/quality/index.js": ["9f82720a2feb8972",853,"quality"],
@@ -231,7 +231,7 @@ const APP_RELEASE = {
     "js/services/ai.service.js": ["81319b59599cf8c6",3352,""],
     "js/services/analytics.service.js": ["c3713abe691ce61d",5827,""],
     "js/services/app-mode.service.js": ["3d18214b2eee6f81",2137,""],
-    "js/services/company.service.js": ["4e572853e3816579",15292,""],
+    "js/services/company.service.js": ["ae3ab4df6bacea52",16419,""],
     "js/services/config.service.js": ["92754ac47eea9f80",3005,""],
     "js/services/contractor-directory.service.js": ["67818b1901038039",47075,""],
     "js/services/contractor-metrics.service.js": ["a5942bd8380696bc",12817,""],
