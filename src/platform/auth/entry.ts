@@ -22,6 +22,9 @@ import { EMPTY_SLOT_KEY, RESCUE_CSS, moveOrphans, renderRescueSheet, scanOrphans
 import type { IsUnsent } from './offline-rescue.ts';
 import { startNetStatus } from './net-status.ts';
 import { startDeviceSend } from '../services/offline/device-send.ts';
+import { DEMO_CSS, DEMO_PATH, demoCompanyOf, demoRoleTitle, enterDemo, leaveDemo, loadDemoRoles, renderDemoScreen, syncDemoChip, takeDemoGo, withoutDemo } from '../demo/demo-mode.ts';
+import type { DemoDeps } from '../demo/demo-mode.ts';
+import { deviceUserKey } from './quality-bridge.ts';
 
 type Rbi = Record<string, unknown> & {
   services?: { shell?: { renderSidebar?: () => void; renderMobileModuleMenu?: () => void } };
@@ -43,10 +46,11 @@ function ensureStyle(): void {
   if (document.getElementById(STYLE_ID)) return;
   const s = document.createElement('style');
   s.id = STYLE_ID;
-  s.textContent = LOGIN_CSS + PASSWORD_CSS + WELCOME_CSS + `
+  s.textContent = LOGIN_CSS + PASSWORD_CSS + WELCOME_CSS + DEMO_CSS + `
 .p2-company-switch{max-width:100%;font-size:12px;font-weight:700;min-height:40px;padding:4px 8px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--text-main)}
 .p2-show-test{display:inline-flex;align-items:center;gap:8px;font-size:13px;min-height:44px;margin-left:12px;cursor:pointer;color:var(--text-main)}
-.p2-show-test input{width:20px;height:20px;accent-color:var(--primary)}`;
+.p2-show-test input{width:20px;height:20px;accent-color:var(--primary)}
+.p2-demo-open{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:4px;padding:0;border:0;background:none;color:var(--accent-text);font:600 14px/1.2 inherit;font-family:inherit;cursor:pointer}`;
   document.head.appendChild(s);
 }
 
@@ -160,7 +164,7 @@ function renderCompanySwitch(host: HTMLElement | null): void {
   let tog = host.querySelector<HTMLLabelElement>('label.p2-show-test');
   const showTest = readShowTest(localStore());
   const opt = { isPlatformAdmin: st.isPlatformAdmin, showTest, keepId: st.companyId };
-  const list = visibleCompanies(st.companies, opt);
+  const list = withoutDemo(visibleCompanies(st.companies, opt), st.companyId);   // P2-0053: в демо — кнопкой «Демо»
   // галочка — только если у администратора платформы есть что скрывать (или уже показано)
   const canToggle = st.mode === 'email' && st.isPlatformAdmin && st.companies.some((c) => hiddenTest(c, { ...opt, showTest: false, keepId: null }));
   if (!canToggle) { if (tog) tog.remove(); tog = null; }
@@ -190,6 +194,20 @@ function renderCompanySwitch(host: HTMLElement | null): void {
     host.appendChild(sel);
   }
   if (tog) { tog.querySelector('input')!.checked = showTest; host.appendChild(tog); }
+  // P2-0053: «Демо» — заполненный «ЖК Демо» глазами любой роли
+  let demo = host.querySelector<HTMLButtonElement>('button.p2-demo-open');
+  if (st.mode !== 'email') { if (demo) demo.remove(); }
+  else {
+    if (!demo) {
+      demo = document.createElement('button');
+      demo.type = 'button';
+      demo.className = 'p2-demo-open';
+      demo.setAttribute('data-testid', 'p2-demo-open');
+      demo.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); go(DEMO_PATH, false); });
+    }
+    demo.textContent = demoCompanyOf(st) ? 'Демо: сменить роль или выйти' : 'Демо: посмотреть заполненный объект глазами любой роли';
+    host.appendChild(demo);
+  }
 }
 
 /** P2-0075: галочку «Показать тестовые» переключили (здесь или в «Администрировании платформы»): выбранная тестовая компания
@@ -230,6 +248,11 @@ function apply(st: PlatformState): void {
   } else {
     restoreShellUser();
   }
+  ensureStyle();
+  const demoCo = demoCompanyOf(st);
+  syncDemoChip(document, demoCo ? { role: demoRoleTitle(demoCo) } : null, { pick: () => go(DEMO_PATH, false), leave: () => void runLeave() });
+  if (demoCo && !st.checking && !st.offline) { const next = takeDemoGo({ storage: localStore() }); if (next && window.location.hash !== next) go(next); }
+  if (st.mode === 'email' && window.location.hash === DEMO_PATH) void drawDemo();
   if (st.mode === 'email' && st.mustChangePassword && st.email) { showPasswordScreen(st.email); return; }   // сначала свой пароль
   if (st.mode === 'none') { passwordShown = false; showLogin(); } else hideLogin();
   // P2-0060: открытый раздел больше не положен (ответ сервера после копии) — на главную с подсказкой; данные сервер и так не отдаёт
@@ -421,6 +444,66 @@ function fitWelcome(): void {
   el.style.paddingTop = shown ? Math.max(0, Math.round(h!.getBoundingClientRect().bottom)) + 'px' : '';
 }
 
+/** P2-0053: зависимости кнопки «Демо» — вход платформы, сервер, роутер оболочки. */
+function demoDeps(): DemoDeps {
+  return {
+    getState: () => getPlatform().getState(),
+    refresh: () => getPlatform().refresh(),
+    setCompany: (id) => getPlatform().setCompany(id),
+    rpc: api.rpc,
+    // адрес — сразу (вход в демо перезапускает страницу с базой демо: открыться она должна уже на экране роли)
+    go: (p) => { try { window.history.replaceState(null, '', p); } catch { /* без истории — только роутер */ } go(p, false); },
+    reload: () => window.location.reload(),
+    toast: (t) => { const f = w().showToast; if (typeof f === 'function') f(t); },
+    online: () => typeof navigator === 'undefined' || navigator.onLine !== false,
+    storage: localStore(),
+    userKey: deviceUserKey
+  };
+}
+async function runLeave(): Promise<void> {
+  const err = await leaveDemo(demoDeps());
+  if (err) { demoDeps().toast(err); document.querySelector('.p2d')?.classList.remove('p2d-busy'); }
+}
+
+const DEMO_VIEW_ID = 'tab-demo';
+let demoDrawing = 0;
+/** Экран #/demo: роли «ЖК Демо» с сервера; без связи / не готово — понятный текст. */
+async function drawDemo(): Promise<void> {
+  if (window.location.hash !== DEMO_PATH) return;
+  const st = getPlatform().getState();
+  if (st.mode !== 'email' || !st.email) { const p = homePath(); if (p && p !== DEMO_PATH) go(p); return; }
+  ensureStyle();
+  let el = document.getElementById(DEMO_VIEW_ID);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = DEMO_VIEW_ID;
+    el.className = 'view-section';
+    const anchor = document.getElementById('tab-mode-placeholder');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor.nextSibling);
+    else (document.getElementById('app-content') || document.body).appendChild(el);
+  }
+  document.querySelectorAll('.view-section').forEach((n) => n.classList.remove('active'));
+  el.classList.add('active');
+  el.classList.remove('hidden');
+  const header = document.getElementById('main-header');
+  if (header) header.style.display = 'block';
+  document.body.classList.add(WELCOME_BODY_CLASS);
+  const mine = ++demoDrawing;
+  const d = demoDeps();
+  const { roles, error } = await loadDemoRoles(d);
+  if (mine !== demoDrawing || window.location.hash !== DEMO_PATH) return;
+  const host = el;
+  renderDemoScreen(host, { roles, error, inDemo: !!demoCompanyOf(getPlatform().getState()),
+    choose: (role) => void enterDemo(d, role).then((e) => { if (e) { d.toast(e); host.querySelector('.p2d')?.classList.remove('p2d-busy'); } }),
+    leave: () => void runLeave(),
+    back: () => { if (window.history.length > 1) window.history.back(); else go(WELCOME_PATH); } });
+  const pad = w().updateBodyPadding;
+  if (typeof pad === 'function') pad();
+  const h = document.getElementById('main-header');
+  const shown = !!h && getComputedStyle(h).display !== 'none' && getComputedStyle(h).position === 'fixed';
+  host.style.paddingTop = shown ? Math.max(0, Math.round(h!.getBoundingClientRect().bottom)) + 'px' : '';
+}
+
 /** Маршрут #/welcome в роутере оболочки; уход с экрана снимает его класс с body. */
 function wireWelcome(): void {
   if (welcomeWired) return;
@@ -428,16 +511,17 @@ function wireWelcome(): void {
   if (!r || typeof r.addRoute !== 'function') return;
   welcomeWired = true;
   r.addRoute(WELCOME_PATH, () => { void (started || start()).then(drawWelcome); });
+  r.addRoute(DEMO_PATH, () => { void (started || start()).then(() => drawDemo()); });   // P2-0053
   window.addEventListener('rbi:route', (e) => {
     const path = (e as CustomEvent<{ path?: string }>).detail?.path;
+    if (path !== WELCOME_PATH && path !== DEMO_PATH) document.body.classList.remove(WELCOME_BODY_CLASS);
     if (path !== WELCOME_PATH) {
-      document.body.classList.remove(WELCOME_BODY_CLASS);
       if (welcomeVisit) markWelcomeSeen(localStore(), welcomeVisit.email);
       welcomeVisit = null;
     }
   });
   window.addEventListener('resize', fitWelcome);
-  if (window.location.hash === WELCOME_PATH && typeof r.renderRoute === 'function') r.renderRoute();
+  if ((window.location.hash === WELCOME_PATH || window.location.hash === DEMO_PATH) && typeof r.renderRoute === 'function') r.renderRoute();
 }
 
 /** Запуск при открытии (оболочка). Повторный вызов — то же состояние; экран входа показывается, если никто не вошёл. */
@@ -486,6 +570,9 @@ export const api = {
   signOut: async (): Promise<void> => { await getPlatform().signOut(); },
   showLogin,
   renderCompanySwitch,
+  /** P2-0053: экран «Демо» (роли «ЖК Демо») и «Выйти из демо». */
+  openDemo: (): void => go(DEMO_PATH, false),
+  leaveDemo: (): Promise<void> => runLeave(),
   /** P2-0028: «Настройки → Платформа → Мой профиль» (вызывают Настройки при показе). Не вошёл почтой — пусто. */
   renderMyProfile: (host: HTMLElement | null): void => {
     if (!host) return;

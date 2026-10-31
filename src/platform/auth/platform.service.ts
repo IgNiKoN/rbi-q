@@ -14,6 +14,8 @@ export interface PlatformCompany {
   id: string;
   name: string;
   is_test: boolean;
+  /** P2-0053: демо-компания кнопки «Демо» (смотреть глазами роли, только просмотр) */
+  is_demo?: boolean;
   roles: string[];
   modules: string[];
   can_manage_company: boolean;
@@ -118,7 +120,7 @@ export function parsePlatform(data: unknown): { isPlatformAdmin: boolean; compan
   return {
     isPlatformAdmin: d.is_platform_admin === true,
     companies: list.map((c: Record<string, unknown>) => ({
-      id: String(c.id), name: String(c.name || ''), is_test: c.is_test === true,
+      id: String(c.id), name: String(c.name || ''), is_test: c.is_test === true, is_demo: c.is_demo === true,
       roles: Array.isArray(c.roles) ? c.roles.map(String) : [],
       modules: Array.isArray(c.modules) ? c.modules.map(String) : [],
       can_manage_company: c.can_manage_company === true

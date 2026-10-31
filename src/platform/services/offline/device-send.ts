@@ -12,15 +12,18 @@ import { currentSlot, offlineNow } from './copy.ts';
 import { idbRecordStore, memoryRecordStore } from './device-records.ts';
 import type { DeviceRecord, DeviceRecordStore } from './device-records.ts';
 import { createSender, retryDelay, sendKindsFrom } from './send.ts';
+import { DEMO_READONLY } from '../../demo/demo-mode.ts';
 import type { PassResult, RpcAnswer, SendKind, Sender } from './send.ts';
 
 export const DEVICE_RECORDS_EVENT = 'rbi:device-records';
 const LOCK = 'p2-device-records';
 
-type St = { mode?: string; email?: string | null; companyId?: string | null; userId?: string | null; companies?: { id: string; modules?: string[] }[] };
+type St = { mode?: string; email?: string | null; companyId?: string | null; userId?: string | null; companies?: { id: string; modules?: string[]; is_demo?: boolean }[] };
 type W = { RBI?: { platform2?: { getState?: () => St }; deviceSend?: unknown }; RbiSyncJournal?: { add: (e: Record<string, unknown>) => void } };
 const win = (): W | undefined => (typeof window === 'undefined' ? undefined : (window as unknown as W));
 const state = (): St | undefined => win()?.RBI?.platform2?.getState?.();
+/** P2-0053: выбрана демо-компания (кнопка «Демо») — только просмотр. */
+const inDemoCompany = (): boolean => { const st = state(); return !!st?.companies?.find((x) => x.id === st.companyId)?.is_demo; };
 
 interface Holder { store: DeviceRecordStore; kinds: Record<string, SendKind>; sender: Sender; fails: number; timer: ReturnType<typeof setTimeout> | null; running: Promise<PassResult> | null; again: boolean; wired: boolean }
 const KEY = '__platform2DeviceSend';
@@ -99,6 +102,8 @@ function uuid(): string {
  * Сохранить на телефоне не удалось — ошибка (запись не потеряна молча).
  */
 export async function submitDeviceRecord(i: SubmitInput): Promise<SubmitResult> {
+  // P2-0053: в демо-компании записи не сохраняются и не уходят — сразу понятный отказ (сервер всё равно откажет)
+  if (inDemoCompany()) return { state: 'rejected', id: '', message: DEMO_READONLY };
   const H = holder();
   const slot = currentSlot();
   if (!slot) throw new Error('Нужно войти');

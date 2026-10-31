@@ -41,6 +41,7 @@ const svg = (inner: string, size: number): string =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
 const CHEVRON = svg('<path d="M9 6l6 6-6 6"/>', 20);
 const BOOK = svg('<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>', 18);
+const EYE = svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 18);
 const GEAR = svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 18);
 
 /** Стили экрана — токены темы «Стандартная» (css/style.css); подвкладки модуля и шапка Качества на этом экране не показываются.
@@ -105,6 +106,7 @@ export function renderWelcome(host: HTMLElement, o: WelcomeOptions): void {
     `<p class="p2w-p">Здесь ваши разделы. Откройте нужный — в следующий раз приложение сразу откроет тот, где вы были.</p>` +
     `<div class="p2w-grid${o.tiles.length === 1 ? ' p2w-one' : ''}">${tiles}</div>` +
     `<div class="p2w-foot"><button type="button" class="p2w-link" data-testid="p2-welcome-help" data-path="${HELP_PATH}">${BOOK}Как тут всё устроено — обучение</button>` +
+    `<button type="button" class="p2w-link" data-testid="p2-welcome-demo" data-path="#/demo">${EYE}Демо: заполненный объект глазами любой роли</button>` +
     `<button type="button" class="p2w-link" data-testid="p2-welcome-settings" data-path="#/settings">${GEAR}Настройки</button></div></section>`;
   // data-path без делегирования роутера оболочки (он ловит [data-path] на body): переход один, здесь
   host.querySelectorAll<HTMLElement>('[data-path]').forEach((b) => b.addEventListener('click', (e) => {
