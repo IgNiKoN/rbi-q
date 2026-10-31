@@ -57,9 +57,12 @@ create or replace function pg_temp.mydemo() returns uuid language sql security d
 create or replace function pg_temp.member(c uuid) returns boolean language sql security definer as $f$ select planfact.is_company_member(c) $f$;
 create or replace function pg_temp.padm() returns boolean language sql security definer as $f$ select planfact.is_platform_admin() $f$;
 create or replace function pg_temp.qadm() returns boolean language sql security definer as $f$ select quality.is_platform_admin() $f$;
--- без ошибки (кроме своего профиля) могут пройти только функции, которые с этими аргументами ничего не делают
+-- без ошибки (кроме своего профиля) могут пройти только функции, которые с этими аргументами ничего не делают;
+-- auth_name … rbi_get_my_name — проверки «кто я / можно ли» старого Качества РБИ, есть только на боевом (не в миграциях),
+-- только чтение (проверено на боевом 31.10.2026: в теле нет insert / update / delete / execute)
 create or replace function pg_temp.noop_only(p_bad text) returns boolean language sql as $f$
-  select coalesce(bool_and(x ~ '^public\.pf_(password_changed|set_full_name|estimate_refill|fill_object|import_places|overhead_template|remove_place_plan|restore_place|add_floors|copy_place|move_place)\('), true)
+  select coalesce(bool_and(x ~ '^public\.pf_(password_changed|set_full_name|estimate_refill|fill_object|import_places|overhead_template|remove_place_plan|restore_place|add_floors|copy_place|move_place)\('
+                        or x ~ '^public\.(auth_name|auth_role|can_create|is_admin|rbi_can_(create|update|view)_knowledge_base|rbi_get_my_name)\('), true)
     from unnest(string_to_array(trim(trailing '; ' from p_bad), '; ')) x where x <> '' $f$;
 create table pg_temp.ids(k text primary key, v uuid);
 grant all on pg_temp.ids to authenticated, anon;
