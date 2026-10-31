@@ -775,12 +775,20 @@ else {
       const val = (p) => p.format === 'uuid' ? crypto.randomUUID() : p.type === 'boolean' ? false : p.type === 'integer' || p.type === 'number' ? 1
         : p.format === 'jsonb' || p.format === 'json' ? {} : p.type === 'array' ? [] : /timestamp|date/.test(p.format || '') ? new Date().toISOString() : `${stampQ}-v`;
       const tables = Object.keys(defs).filter((t) => !t.startsWith('rpc')).sort();
-      check('018: в API раздела quality 55 таблиц', tables.length === 55, String(tables.length));
+      check('018: в API раздела quality 56 таблиц (056: + sk_links)', tables.length === 56, String(tables.length));
+      // 056: соответствия внешнего СК пишут только функции экрана (sk_link_set, sk_links_register) — прямая запись отказ, чтение по праву
+      const byRpc = ['sk_links'];
       let rt = 0;
       const parentInsp = `${stampQ}-parent`;
       const pi = await q('rbi_inspections', 'alfaAdmin', cA, { method: 'POST', body: JSON.stringify({ id: parentInsp, project_code: pRest }) });
       check('018: проверка-родитель для строк и фото', pi.ok, `статус ${pi.status}`);
       for (const t of tables) {
+        if (byRpc.includes(t)) {
+          const w = await q(t, 'alfaAdmin', cA, { method: 'POST', body: JSON.stringify({ id: crypto.randomUUID() }) });
+          check(`018: ${t} — прямая запись админом Альфы — отказ (пишут функции)`, w.status === 401 || w.status === 403, `статус ${w.status}`);
+          check(`018: ${t} — чтение админом Альфы`, (await cnt(t, 'alfaAdmin', cA, '&limit=1')) >= 0);
+          continue;
+        }
         const d = defs[t]; const row = {};
         // core_* (номер записи core_id, связи с ядром) ставит сервер, приложение их не шлёт (054: чужой core_id при uuid-номере — отказ)
         for (const c of d.required || []) if (!c.startsWith('core_') && !(d.properties[c]?.default !== undefined)) row[c] = val(d.properties[c] || {});
@@ -810,7 +818,7 @@ else {
       }
       await q(`contractors?id=eq.${stampQ}-ctr`, 'alfaAdmin', cA, { method: 'DELETE' });
       await q(`rbi_inspections?id=eq.${parentInsp}`, 'alfaAdmin', cA, { method: 'DELETE' });
-      check(`018: «туда-обратно» по таблицам quality: ${rt} из ${tables.length}`, rt === tables.length);
+      check(`018: «туда-обратно» по таблицам quality: ${rt} из ${tables.length - byRpc.length}`, rt === tables.length - byRpc.length);
 
       // 018d через настоящий Storage API: закрытый бакет компании, путь <компания>/…
       const st = (path, k, init = {}) => fetch(`${URL_}/storage/v1/object/${path}`, { ...init, headers: { apikey: ANON, Authorization: `Bearer ${tok[k] || ANON}`, ...(init.headers || {}) } });
