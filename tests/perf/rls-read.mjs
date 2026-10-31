@@ -1,6 +1,6 @@
 // P2-0078: замер чтения Качества под правилами строк (RLS) — до и после 059, на копии схемы (PGlite) с объёмом боевого
 // (31.10.2026: 39 проектов, file_registry 3 632, sk_records 11 900). Боевой сервер не используется. Нужен P2_PGLITE.
-// node tests/perf/rls-read.mjs [--files 3632] [--sk 11900] [--projects 39] [--runs 3]
+// node tests/perf/rls-read.mjs [--files 3632] [--sk 11900] [--projects 39] [--objects 5000] [--runs 3]
 // Печатает время запросов клиента (страница файлов по проекту, все файлы, все замечания СК) у руководителя, инженера на
 // 5 объектах и «своей фирмы»; число строк до = после.
 import { readFileSync } from 'node:fs';
@@ -10,7 +10,7 @@ import { serverDb } from '../server/pglite-db.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? Number(process.argv[i + 1]) : d; };
-const N_FILES = arg('--files', 3632), N_SK = arg('--sk', 11900), N_PROJ = arg('--projects', 39), RUNS = arg('--runs', 3);
+const N_FILES = arg('--files', 3632), N_SK = arg('--sk', 11900), N_PROJ = arg('--projects', 39), N_OBJ = arg('--objects', 5000), RUNS = arg('--runs', 3);
 
 const db = await serverDb({ upto: '058' });
 await db.exec(`
@@ -48,6 +48,9 @@ begin
     select 'sk' || i, cont::text, i::text, 'k' || i, ca, cont, case when i % 10 = 0 then null else p[1 + i % ${N_PROJ}] end, u_adm,
            case when i % 3 = 0 then f end, 'замечание ' || i
       from generate_series(1, ${N_SK}) i;
+  -- файлы Storage: одна папка «hashed_assets» компании (как у фото проверок) — список папки = storage.search
+  insert into storage.objects(id, bucket_id, name)
+    select gen_random_uuid(), 'quality-inspection-photos', ca || '/hashed_assets/photo_' || i || '.jpg' from generate_series(1, ${N_OBJ}) i;
   set local session_replication_role = origin;
 end $$;
 analyze quality.file_registry; analyze quality.sk_records;`);
@@ -57,7 +60,9 @@ const queries = {
   'файлы: страница по проекту': `select * from quality.file_registry where project_code = current_setting('perf.code') order by id limit 1000`,
   'файлы: все': `select id from quality.file_registry`,
   'замечания СК: все': `select * from quality.sk_records limit 25000`,
-  'замечания СК: число': `select count(*) n from quality.sk_records`
+  'замечания СК: число': `select count(*) n from quality.sk_records`,
+  'файлы Storage: список папки': `select name from storage.objects where bucket_id = 'quality-inspection-photos'
+    and name like current_setting('perf.ca') || '/hashed_assets/%' order by name limit 100`
 };
 async function measure(label) {
   const out = {};

@@ -5,7 +5,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { start, stop, net, rows, files, sends, flow, resetNet, releaseHeld, marks } from './servers.mjs';
+import { start, stop, net, rows, files, sends, flow, resetNet, releaseHeld, marks, log } from './servers.mjs';
 import { count, freshProfile, launch, note, ok, open, signIn } from './lib.mjs';
 
 const N = 5;               // осмотров с фото в каждой погоде
@@ -89,6 +89,7 @@ async function weather(tag, w) {
   for (const p of pages) await p.evaluate(() => { const w = window.__p2w; Object.assign(w, { passes: 0, max: w.active }); }).catch(() => {});
 
   const t0 = await pageNow(page);
+  const lists0 = log.filter((l) => l.includes('/storage/v1/object/list/')).length;
   let doneAt = null; let left = u0;
   for (let m = 0; m < MINUTES; m++) {
     await w.apply(m, ctx, page);
@@ -110,6 +111,8 @@ async function weather(tag, w) {
     lost: syncedLocal.filter((id) => !insp.has(id) || ![...ph.values()].some((x) => x.inspection_id === id)).length,
     photoRows: ids.filter((id) => [...ph.values()].some((x) => x.inspection_id === id)).length,
     files: [...files].filter((f) => ids.some((id) => f.includes(id))).length,
+    // P2-0078: списков папки Storage (storage.search на сервере) при отправке фото — должно быть 0
+    storageLists: log.filter((l) => l.includes('/storage/v1/object/list/')).length - lists0,
     minutesToZero: doneAt === null ? null : Math.round(doneAt / 6000) / 10,
     unsentLeft: left.length, unsentWhy: [...new Set(left)].slice(0, 3),
     taps: 0,
@@ -126,6 +129,7 @@ async function weather(tag, w) {
   // P2-0059 этап 2: всё дошло, без потерь, двух отправок одновременно нет
   ok(r.delivered === N && r.photoRows === N && r.lost === 0, `${tag}: на сервере все ${N} осмотров с фото, потерь нет`, `${r.delivered}/${r.photoRows}/${r.lost}`);
   ok(r.concurrentPasses <= 1 && r.concurrentInspectionPosts <= 1, `${tag}: двух отправок одновременно нет`, `проходов ${r.concurrentPasses}, запросов ${r.concurrentInspectionPosts}`);
+  ok(r.storageLists === 0, `${tag}: фото — без списка папки Storage (проверка одного файла)`, `списков ${r.storageLists}`);
   if (w.check) w.check(r);
   // P2-0059 этап 3: ни одна погода не хуже замера «до» (reports/P2-0059/measure-before.json)
   const was = BEFORE.find((x) => x.weather === tag);

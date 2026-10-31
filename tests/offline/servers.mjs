@@ -228,6 +228,9 @@ function respond(req, res, u, body) {
       return json(res, 200, found.map((f) => ({ name: f.slice(dir.length), id: f, metadata: { size: 1 } })));
     }
     if (u.pathname.startsWith('/storage/v1/object/') && (req.method === 'POST' || req.method === 'PUT')) return json(res, 200, { Key: u.pathname.slice(19), Id: 'f' });
+    // P2-0078: «есть ли файл» (storage exists — HEAD одного файла): есть — 200, нет — 400, как Storage
+    const hd = req.method === 'HEAD' && u.pathname.match(/^\/storage\/v1\/object\/(?!list\/|sign\/|public\/|info\/)(.+)$/);
+    if (hd) { res.writeHead(files.has(decodeURIComponent(hd[1])) ? 200 : 400, { 'Access-Control-Allow-Origin': '*' }); return res.end(); }
     // P2-0057: файл Storage сценария (путь, заголовки → { status, type, body } или null) — закрытые файлы по …/authenticated/…
     const own = req.method === 'GET' && stand.storage && u.pathname.startsWith('/storage/v1/object/') ? stand.storage(u.pathname, req.headers) : null;
     if (own) { res.writeHead(own.status || 200, { 'Content-Type': own.type || 'application/octet-stream', 'Access-Control-Allow-Origin': '*' }); return res.end(own.body); }

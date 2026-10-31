@@ -1,7 +1,7 @@
 -- P2-0078 (059), часть 2 из 2 — права чтения «до = после»: снимок ПОСЛЕ миграции и сравнение со снимком ДО
 -- (059_rls_fast.seed.pglite.sql на схеме 057 → 059_rls_fast_up.sql → этот файл; та же сессия). Ожидаемых отличий нет:
 -- каждый человек в каждой таблице видит ровно те же записи. После отката (… → 059_rls_fast_up.sql → 059_rls_fast_down.sql →
--- этот файл) — ещё и текст каждого правила таблиц Качества = до 059. Отчёт — ERROR P0001 «FAIL всего: N».
+-- этот файл) — ещё и текст каждого правила таблиц Качества и файлов (storage.objects) = до 059. Отчёт — ERROR P0001 «FAIL всего: N».
 select pg_temp.capture_all('после');
 
 do $$
@@ -11,7 +11,7 @@ begin
     select count(*), coalesce(string_agg(coalesce(b.t, a.t) || '.' || coalesce(b.p, a.p), ', '), '') into n_pol, pol
       from public.t059_pol b
       full join (select tablename::text t, policyname::text p, cmd::text, permissive::text, roles::text,
-                        coalesce(qual, '') qual, coalesce(with_check, '') wc from pg_policies where schemaname = 'quality') a
+                        coalesce(qual, '') qual, coalesce(with_check, '') wc from pg_policies where schemaname in ('quality', 'storage')) a
         on a.t = b.t and a.p = b.p
      where a is distinct from b;
     pol := format(E'\nоткат: правил не как до 059 — %s %s', n_pol, pol);

@@ -822,7 +822,17 @@ async function rbiSyncPass(mode = 'silent') {
         const storageDir = storageSlashIndex >= 0 ? storagePath.slice(0, storageSlashIndex) : '';
         const storageFileName = storageSlashIndex >= 0 ? storagePath.slice(storageSlashIndex + 1) : storagePath;
 
-        const objectExistsInBucket = async function () {
+        // P2-0078: «есть ли файл» — запрос одного файла (exists, HEAD), а не список папки (storage.search по всей папке на сервере —
+        // до 10 с). Список — только запасной путь: сервер не умеет exists или файл после загрузки «ещё не виден».
+        const objectExistsInBucket = async function (afterUpload) {
+            try {
+                const bucket = window.supabaseClient.storage.from(bucketName);
+                if (typeof bucket.exists === 'function') {
+                    const { data } = await bucket.exists(storagePath);
+                    if (data === true) return true;
+                    if (!afterUpload) return false;
+                }
+            } catch (_e) { /* запасной путь — список */ }
             // После upload Storage иногда отвечает с лагом — 2–3 попытки list.
             for (let attempt = 0; attempt < 3; attempt++) {
                 try {
@@ -861,7 +871,7 @@ async function rbiSyncPass(mode = 'silent') {
 
         // 6. Не возвращаем publicUrl, пока объект реально не виден в бакете
         // (иначе в записи остаётся сирота → offline-cache 404).
-        if (!(await objectExistsInBucket())) {
+        if (!(await objectExistsInBucket(true))) {
             console.error('[Sync] Upload OK, но объект не найден в Storage:', bucketName, storagePath);
             throw new Error(`[Sync] Файл не подтверждён в Storage после upload: ${bucketName}/${storagePath}`);
         }

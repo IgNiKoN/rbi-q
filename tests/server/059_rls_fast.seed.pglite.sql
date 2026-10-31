@@ -18,11 +18,11 @@ begin
 end $f$;
 
 create table public.t059_users(k text primary key, id uuid not null, co uuid);
-create table public.t059_tables(t text primary key, key text not null, n int, err text);
+create table public.t059_tables(t text primary key, key text not null, n int, err text, sch text not null default 'quality');
 create table public.t059(phase text, variant text, usr text, tbl text, ids text[], err text);
 -- правила таблиц Качества до 059 — для сверки после отката (059_rls_fast_compare.check.sql)
 create table public.t059_pol as select tablename::text t, policyname::text p, cmd::text, permissive::text, roles::text,
-  coalesce(qual, '') qual, coalesce(with_check, '') wc from pg_policies where schemaname = 'quality';
+  coalesce(qual, '') qual, coalesce(with_check, '') wc from pg_policies where schemaname in ('quality', 'storage');
 
 create or replace function pg_temp.capture(p_phase text, p_variant text, p_part_only boolean) returns void language plpgsql as $f$
 declare u record; t record; v text[]; e text;
@@ -34,7 +34,7 @@ begin
       v := null; e := null;
       begin
         perform pg_temp.as_user(u.id, u.co);
-        execute format('select coalesce(array_agg(%s order by %s), ''{}'') from quality.%I', t.key, t.key, t.t) into v;
+        execute format('select coalesce(array_agg(%s order by %s), ''{}'') from %I.%I', t.key, t.key, t.sch, t.t) into v;
       exception when others then e := sqlerrm;
       end;
       reset role;
@@ -273,6 +273,13 @@ begin
       insert into public.t059_tables values (t.t, '-', 0, sqlerrm);
     end;
   end loop;
+  -- файлы Storage (P2-0078 этап 3): бакеты Качества, Стройконтроля, общий и чужой; первая папка — своя / чужая компания,
+  -- uuid заглавными, не uuid, без папки, пусто
+  insert into storage.objects(id, bucket_id, name)
+  select gen_random_uuid(), b, nm from unnest(array['quality-inspection-photos', 'quality-construction-defects', 'quality-custom-assets',
+                                                   'quality-reports', 'inspection-photos']) b,
+    unnest(array[ca || '/x/1.jpg', upper(ca::text) || '/y.jpg', cb || '/z.jpg', 'не-uuid/q.jpg', ca::text, '', bp || '/p.jpg']) nm;
+  insert into public.t059_tables values ('objects', 'bucket_id || '':'' || name', (select count(*) from storage.objects), null, 'storage');
   set local session_replication_role = origin;
   perform set_config('request.jwt.claim.sub', '', false);
   perform set_config('request.jwt.claims', '', false);

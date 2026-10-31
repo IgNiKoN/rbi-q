@@ -114,6 +114,14 @@ begin
   end loop;
 end $$;
 
+drop policy quality_files_select on storage.objects;
+create policy quality_files_select on storage.objects for select to authenticated using (
+  bucket_id like 'quality-%' and quality.storage_can(bucket_id, name, false));
+drop policy quality_files_guard_select on storage.objects;
+create policy quality_files_guard_select on storage.objects as restrictive for select to authenticated using (
+  case when bucket_id like 'quality-%' then quality.storage_can(bucket_id, name, false) else true end);
+drop function quality.storage_companies(text[]);
+
 revoke execute on function quality.contractor_key(text) from authenticated;
 drop function quality.area_ok(quality.area_scope, uuid, uuid, uuid, uuid);
 drop function quality.area_scope(text[]);

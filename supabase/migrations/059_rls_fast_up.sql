@@ -487,6 +487,40 @@ begin
   end loop;
 end $$;
 
+-- 5. Этап 3 — файлы Качества (storage.objects, бакеты quality-*): чтение и сторож чтения звали quality.storage_can на КАЖДОМ
+-- файле бакета (список папки — storage.search — 10 с). Теперь: компании, где у человека есть просмотр модуля бакета, — один раз
+-- на запрос; файл — сравнение первой папки пути с этим списком. Смысл — как quality.storage_can (компания — первая папка, uuid
+-- без учёта регистра; бакет quality-construction-* — Стройконтроль, quality-custom-assets — Качество или Стройконтроль, прочие
+-- quality-* — Качество). Запись (insert / update / delete) не меняется.
+create or replace function quality.storage_companies(p_mods text[])
+ RETURNS text[]
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'core', 'planfact'
+AS $function$
+  select coalesce(array_agg(c.id::text), '{}') from core.companies c
+   where auth.uid() is not null and quality.has_actions(c.id, null, (select array_agg(m || '.view') from unnest(p_mods) m))
+$function$;
+comment on function quality.storage_companies(text[]) is
+  'P2-0078: компании (id текстом), где у человека есть просмотр модулей бакета (как quality.storage_can, чтение) — для правил storage.objects';
+revoke all on function quality.storage_companies(text[]) from public, anon;
+grant execute on function quality.storage_companies(text[]) to authenticated;
+
+drop policy quality_files_select on storage.objects;
+create policy quality_files_select on storage.objects for select to authenticated using (
+  bucket_id like 'quality-%'
+  and lower(split_part(coalesce(name, ''), '/', 1)) = any (case
+    when bucket_id like 'quality-construction-%' then (select quality.storage_companies('{construction}'))
+    when bucket_id = 'quality-custom-assets' then (select quality.storage_companies('{quality,construction}'))
+    else (select quality.storage_companies('{quality}')) end));
+drop policy quality_files_guard_select on storage.objects;
+create policy quality_files_guard_select on storage.objects as restrictive for select to authenticated using (
+  case when bucket_id like 'quality-%' then lower(split_part(coalesce(name, ''), '/', 1)) = any (case
+    when bucket_id like 'quality-construction-%' then (select quality.storage_companies('{construction}'))
+    when bucket_id = 'quality-custom-assets' then (select quality.storage_companies('{quality,construction}'))
+    else (select quality.storage_companies('{quality}')) end)
+  else true end);
+
 -- Пункты и фото проверки (quality.inspection_child_ok, чтение): проверка есть и видна (её правило) — видно; проверки нет —
 -- своё при просмотре или проведении проверок хоть где-то в компании. Видимые проверки — один раз на запрос (хеш).
 do $$
