@@ -7,16 +7,21 @@
 
 ## 0. До выкладки (Архитектор, только чтение боевого)
 
-1. Влить в ветку свежий `main` (после 058 и P2-0077): конфликты ожидаются только в `sw.js` (пересобрать `npm run build:version`),
-   `ai-dev/reference/schema-inventory.json` и `ai-dev/reports/P2-0069/inventory.html` (пересобрать `node scripts/schema-inventory.mjs`),
-   номера ТД (у этой ветки — 420–426).
-2. После влития 058 — перегнать «до = после» на схеме с 058 (2 запуска, ~2 мин каждый, `P2_PGLITE` — см. отчёт):
+1. Свежий `main` (058, 058b, P2-0077) влит в доработке 1 (`ef386658`); если `main` ушёл дальше — снова влить, пересобрать `sw.js`
+   (`npm run build:version`), бандл План/Факта (`npm run build:planfact`) и опись (`node scripts/schema-inventory.mjs`).
+2. «До = после» на схеме с 058 и 058b — сделано в доработке 1 (FAIL 0); при новом влитии повторить (`--upto` — последняя миграция до 059):
    ```
-   node tests/server/run-pglite.mjs --upto 058 --then 059_rls_fast.seed.pglite.sql --then 059_rls_fast_up.sql 059_rls_fast_compare.check.sql
-   node tests/server/run-pglite.mjs --upto 058 --then 059_rls_fast.seed.pglite.sql --then 059_rls_fast_up.sql --then 059_rls_fast_down.sql 059_rls_fast_compare.check.sql
+   node tests/server/run-pglite.mjs --upto 058b --then 059_rls_fast.seed.pglite.sql --then 059_rls_fast_up.sql 059_rls_fast_compare.check.sql
+   node tests/server/run-pglite.mjs --upto 058b --then 059_rls_fast.seed.pglite.sql --then 059_rls_fast_up.sql --then 059_rls_fast_down.sql 059_rls_fast_compare.check.sql
    node tests/server/run-pglite.mjs 059_pf_permissions.sql
    ```
    Ожидается `FAIL всего: 0` во всех трёх. 058 меняет `pf_summary_portfolio` / `pf_my_inbox` — правила Качества не трогает.
+2а. **Пробный прогон 059 на боевых данных** (Архитектор, или Исполнитель по его слову; только чтение — транзакция всегда
+   откатывается): `tests/server/059_rls_fast_prod_dryrun.sql` целиком в SQL Editor, 7 запусков — в строке «ЧАСТЬ» номер человека
+   1…7 (администратор компании, инженер качества, участник с областью по месту, подрядчик «своя фирма», заказчик, администратор
+   платформы, посетитель демо). Каждый — `ERROR P0001 «… FAIL всего: 0»`. Не уложилось в ~60 с — `p59.group` = `'quality'`, затем
+   `'storage'`. «canceling statement due to lock timeout» — повторить (таблицы заняты приложением). Любой FAIL — стоп, отчёт Исполнителю.
+   После правки 059 файл пересобрать: `node scripts/p2-0078/prod-dryrun.mjs` (сторож — `test:unit`).
 3. Замер «до» на боевом (только чтение), в отчёт:
    ```sql
    select left(query, 80) q, calls, round(total_exec_time) total_ms, round(mean_exec_time) mean_ms
