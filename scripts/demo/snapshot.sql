@@ -3,7 +3,7 @@
 -- записи сотрудников в сверку не входят); учётки не zd-…@demo.invalid. T0 — одна и та же метка до 057 и после засева
 -- (поставить в первой строке ниже перед первым запуском). Выполнить в SQL Editor до 057 и после засева; результат («Copy as
 -- JSON») — в reports/P2-0053/release/. Разные отпечатки у не демо-компаний — откат.
-with p as (select '2026-11-01 00:00:00+03'::timestamptz t0),
+with p as (select '2026-10-31 06:49:00+03'::timestamptz t0),
 t as (
   select c.table_schema s, c.table_name tb, max(c.column_name) filter (where c.column_name in ('company_id', 'core_company_id')) col,
          max(c.column_name) filter (where c.column_name in ('updated_at', 'created_at', 'at')) ts
