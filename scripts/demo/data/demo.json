@@ -50,7 +50,7 @@
     { "user": "pm",         "role": "project_manager", "project": true },
     { "user": "pto",        "role": "pto", "project": true },
     { "user": "foreman1",   "role": "foreman", "places": ["k2/Секция 1"], "fact_owner": true },
-    { "user": "foreman2",   "role": "foreman", "places": ["k2/Секция 2", "k3"], "fact_owner": true },
+    { "user": "foreman2",   "role": "foreman", "places": ["k2", "k3"], "fact_owner": true },
     { "user": "qc",         "role": "qc_engineer", "project": true },
     { "user": "economist",  "role": "economist", "project": true },
     { "user": "customer",   "role": "customer", "project": true },

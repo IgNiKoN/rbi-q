@@ -199,7 +199,7 @@ export function createApi(db, { log = null } = {}) {
     if (req.method === 'POST') {
       const rows = Array.isArray(data) ? data : [data];
       if (!rows.length) return { rows: [] };
-      const cols = sp.get('columns') ? sp.get('columns').split(',') : [...new Set(rows.flatMap((r) => Object.keys(r || {})))];
+      const cols = sp.get('columns') ? sp.get('columns').split(',').map((x) => x.trim().replace(/^"|"$/g, '')) : [...new Set(rows.flatMap((r) => Object.keys(r || {})))];
       params.push(JSON.stringify(rows));
       const merge = /resolution=merge-duplicates/.test(prefer), ignore = /resolution=ignore-duplicates/.test(prefer);
       let conflict = '';
@@ -210,7 +210,7 @@ export function createApi(db, { log = null } = {}) {
                                       where i.indrelid = $1::regclass and i.indisprimary`, [`${schema}.${tbl}`]);
           target = pk.rows.map((x) => x.attname).join(',');
         }
-        const tcols = target.split(',').map((x) => x.trim());
+        const tcols = target.split(',').map((x) => x.trim().replace(/^"|"$/g, ''));
         conflict = ` on conflict (${tcols.map(ident).join(', ')}) do ` + (ignore ? 'nothing' : 'update set ' + (cols.filter((c) => !tcols.includes(c)).map((c) => `${ident(c)} = excluded.${ident(c)}`).join(', ') || `${ident(tcols[0])} = excluded.${ident(tcols[0])}`));
       }
       return as(req, async (tx) => ({ rows: (await tx.query(`insert into ${t} (${cols.map(ident).join(', ')}) select ${cols.map(ident).join(', ')} from json_populate_recordset(null::${t}, $1::json)${conflict} returning *`, params)).rows, ret }));
@@ -274,9 +274,8 @@ export function createApi(db, { log = null } = {}) {
       const upsert = String(req.headers['x-upsert'] || '') === 'true' || req.method === 'PUT';
       await as(req, async (tx, claims) => {
         const meta = JSON.stringify({ size: body.length, mimetype: type });
-        if (upsert) await tx.query(`insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, $4::jsonb)
-                                    on conflict (bucket_id, name) do update set metadata = excluded.metadata, updated_at = now()`, [bucket, name, claims?.sub || null, meta]);
-        else await tx.query('insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, $4::jsonb)', [bucket, name, claims?.sub || null, meta]);
+        const was = upsert ? (await tx.query('update storage.objects set metadata = $3::jsonb where bucket_id = $1 and name = $2 returning 1', [bucket, name, meta])).rows.length : 0;
+        if (!was) await tx.query('insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, $4::jsonb)', [bucket, name, claims?.sub || null, meta]);
       });
       files.set(bucket + '/' + name, { body, type });
       return { json: { Key: bucket + '/' + name, Id: name } };

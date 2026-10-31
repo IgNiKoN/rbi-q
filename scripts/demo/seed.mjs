@@ -39,18 +39,31 @@ export async function runSeed({ url, anonKey, password, today = null, log = cons
     clients.set(user, c);
     return c;
   }
+  /** Клиент Качества и Стройконтроля: заголовок x-company-id (как мост Качества в приложении) — компанию строки ставит сервер. */
+  const qclients = new Map();
+  async function asCompany(user, company) {
+    const k = user + '|' + company;
+    if (qclients.has(k)) return qclients.get(k);
+    const c = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { 'x-company-id': company } } });
+    const { error } = await c.auth.signInWithPassword({ email: emailOf(user), password });
+    if (error) throw new Error(`вход ${emailOf(user)}: ${error.message}`);
+    qclients.set(k, c);
+    return c;
+  }
   const ok = (r, what) => {
     if (!r || r.error) throw new Error(`${what}: ${r && r.error ? r.error.message : 'нет ответа'}`);
     return r.data;
   };
   const base = today || new Date().toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(base)) throw new Error('--today — дата ГГГГ-ММ-ДД');
+  if (base > new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10)) throw new Error('--today не позже сегодняшнего дня: сервер не принимает факт в будущем');
   const day = (d) => { const t = new Date(base + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + d); return t.toISOString().slice(0, 10); };
-  const ctx = { DATA, as, ok, day, log, rand: rng(53), url, today: base };
+  const ctx = { DATA, as, asCompany, ok, day, log, rand: rng(53), url, today: base };
   const core = await seedCore(ctx);
   const planfact = await seedPlanfact(ctx, core);
   const quality = await seedQuality(ctx, core, planfact);
-  for (const c of clients.values()) await c.auth.signOut().catch(() => {});
-  return { core: core.summary, planfact: planfact.summary, quality: quality.summary };
+  for (const c of [...clients.values(), ...qclients.values()]) await c.auth.signOut().catch(() => {});
+  return { today: base, core: core.summary, planfact: planfact.summary, quality: quality.summary };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -111,7 +111,7 @@ export async function seedCore(ctx) {
   for (const w of DATA.work_types) {
     const r = (Array.isArray(wtRows) ? wtRows : []).find((x) => x.name === w.name);
     if (!r) throw new Error('вид работ не создан: ' + w.name);
-    workTypes[w.key] = { id: r.id, unit: unitId(w.unit), ...w };
+    workTypes[w.key] = { ...w, id: r.id, unitCode: w.unit, unit: unitId(w.unit) };
   }
 
   // PDF-планы этажей (ПТО; закрытый бакет ядра, версия 1 — текущая)

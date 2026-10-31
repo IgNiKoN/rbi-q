@@ -7,7 +7,7 @@ import { accountsSql } from './accounts.mjs';
 import { runSeed } from './seed.mjs';
 import { resetSql } from './stand.mjs';
 import { standDb, startStand } from './stand-server.mjs';
-import { checkSeed } from './checks.mjs';
+import { checkSeed, checkVisitor } from './checks.mjs';
 
 const ALFA = '0c000000-0000-4000-8000-0000000000a1', SAND = '0c000000-0000-4000-8000-0000000000b1';
 const U_ALFA = '0d000000-0000-4000-8000-0000000000a1', U_SAND = '0d000000-0000-4000-8000-0000000000b1', U_VIS = '0d000000-0000-4000-8000-0000000000b2';
@@ -72,6 +72,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const { db, stand, seed } = await standWithNeighbours(today);
     const first = await seed(console.log);
     for (const [ok, label] of await checkSeed(db, stand.apiUrl, first)) t(ok, label);
+    for (const role of ['foreman', 'pto', 'qc_engineer', 'contractor_rep']) for (const [ok, label] of await checkVisitor(db, stand.apiUrl, 'prorab.k0@sandbox.test.invalid', role)) t(ok, label);
     const v = await visit(db, U_VIS, 'foreman');
     t(v && v.role === 'foreman', 'посетитель из «песочницы» вошёл в демо прорабом');
     const before = await snapshot(db);
@@ -84,7 +85,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     t(left.c === 0 && left.u === 0 && left.vis === 1 && left.visits === 0, `сброс: демо-компании и zd-учёток нет, учётка посетителя на месте, визитов нет (${JSON.stringify(left)})`);
     await db.exec(accountsSql('stand'));
     const second = await seed();
-    t(JSON.stringify(first) === JSON.stringify(second), 'второй засев после сброса — те же числа');
+    t(JSON.stringify(first) === JSON.stringify(second), 'второй засев после сброса — те же числа' + (JSON.stringify(first) === JSON.stringify(second) ? '' : ': ' + JSON.stringify(second)));
     const v2 = await visit(db, U_VIS, 'qc_engineer');
     t(v2 && v2.role === 'qc_engineer', 'после сброса посетитель снова входит в демо');
     console.log(`сводка: ${JSON.stringify(first)} (${((Date.now() - t0) / 1000).toFixed(1)} с)`);

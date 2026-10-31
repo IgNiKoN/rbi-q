@@ -50,6 +50,32 @@ begin
     execute format('alter table %s disable trigger user', r.tbl);
   end loop;
 
+  -- круговые ссылки (акт КС-2 ↔ его выданная редакция и т. п.): в строках демо необязательные ссылки на другие таблицы
+  -- с компанией или проектом — пустые (не вышло из-за правил таблицы — оставляем, удаление по кругу разберёт порядок)
+  for r in
+    select format('%I.%I', n.nspname, t.relname) tbl, format('%I.%I', fn.nspname, f.relname) ref,
+           string_agg(format('%I = null', a.attname), ', ') sets
+      from pg_constraint k join pg_class t on t.oid = k.conrelid join pg_namespace n on n.oid = t.relnamespace
+      join pg_class f on f.oid = k.confrelid join pg_namespace fn on fn.oid = f.relnamespace
+      join pg_attribute a on a.attrelid = k.conrelid and a.attnum = any (k.conkey) and not a.attnotnull
+     where k.contype = 'f' and n.nspname in ('core', 'planfact', 'quality') and k.conrelid <> k.confrelid
+     group by 1, 2, k.oid
+  loop
+    continue when not exists (select 1 from unnest(v_tabs) x where split_part(x, '|', 1) = r.ref);
+    for v_pass in select 1 from unnest(v_tabs) x where split_part(x, '|', 1) = r.tbl loop
+      begin
+        execute format('update %s set %s where %s', r.tbl, r.sets,
+                       (select split_part(x, '|', 2) from unnest(v_tabs) x where split_part(x, '|', 1) = r.tbl)) using v_c, v_p;
+      exception when check_violation or not_null_violation or foreign_key_violation then null;
+      end;
+    end loop;
+  end loop;
+
+  -- акт КС-2 ↔ выданная редакция (обе ссылки обязательны для выданного акта): акты демо — в черновик без редакции
+  if to_regclass('planfact.ks2_acts') is not null then
+    update planfact.ks2_acts set status = 'draft', issued_revision_id = null where project_id = any(v_p);
+  end if;
+
   -- удаление: по кругу, пока есть что удалять (порядок задают внешние ключи)
   for v_pass in 1..12 loop
     v_done := true;
