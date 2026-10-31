@@ -522,7 +522,8 @@ async function _saveManualTask() {
 // 2. АВТОМАТИЧЕСКИЙ ПЛАНИРОВЩИК
 // =========================================================================
 
-async function _gameForceUpdatePlan(silent) {
+/** opts.allEngineers — план админа/РП на всех инженеров; только по кнопке «Синхронизировать» (P2-0077). */
+async function _gameForceUpdatePlan(silent, opts) {
     if (typeof silent === 'undefined') silent = false;
     if (!silent) showToast(_t('quality.tasks.toast.cleanup', '🧠 ИИ зачищает дубликаты и перестраивает план...'));
 
@@ -570,7 +571,7 @@ async function _gameForceUpdatePlan(silent) {
 
     window.rbi_tasksData = window.rbi_tasksData.filter(function(t){ return !t._deleted; });
 
-    await _gameGenerateWeeklyPlan(true);
+    await _gameGenerateWeeklyPlan(true, opts);
 
     // RBI FIX: sync только при реальных дубликатах. Если мы уже внутри triggerSync
     // (gameForceUpdatePlan(true) в конце цикла) — только dirty, без _sync: иначе
@@ -583,9 +584,17 @@ async function _gameForceUpdatePlan(silent) {
     if (!silent) setTimeout(function(){ showToast(_t('quality.tasks.toast.cleaned', '✨ База очищена, дубликаты инспекций удалены!')); }, 500);
 }
 
-async function _gameGenerateWeeklyPlan(force) {
+/** День срока задачи (местный): сравнение срока по дню, а не по миллисекундам (P2-0077). */
+function _taskDayKey(d) {
+    var x = new Date(d);
+    if (isNaN(x.getTime())) return String(d || '');
+    return x.getFullYear() + '-' + (x.getMonth() + 1) + '-' + x.getDate();
+}
+
+async function _gameGenerateWeeklyPlan(force, opts) {
     const _allInspections = _inspections();
     if (typeof force === 'undefined') force = false;
+    var allEngineers = !!(opts && opts.allEngineers);
     if (window.isPlanGenerating) return;
     window.isPlanGenerating = true;
 
@@ -605,7 +614,8 @@ async function _gameGenerateWeeklyPlan(force) {
         var currentWeekId = _gameSvc2.getWeekId(now);
         var startOfThisWeek = _gameSvc2.getStartOfWeek(now);
 
-        if (_getWeeklyPlan().weekId && _getWeeklyPlan().weekId !== currentWeekId) force = true;
+        var weekRolled = !!(_getWeeklyPlan().weekId && _getWeeklyPlan().weekId !== currentWeekId);
+        if (weekRolled) force = true;
 
         if (force) {
             var nowTime = new Date().setHours(0, 0, 0, 0);
@@ -623,14 +633,15 @@ async function _gameGenerateWeeklyPlan(force) {
         var newTasksCount = 0;
         _softDeleteStaffMeetingTasks();
 
-        // Админ/РП: полный план на всех — только при явном force (кнопка «Синхронизировать»/force plan).
-        // Обычный generate — только текущий инженер, иначе плодятся чужие локальные миры.
+        // Админ/РП: полный план на всех — только по кнопке «Синхронизировать» (opts.allEngineers).
+        // Пересчёт после синхронизации, при открытии базы, смене компании (force) — только текущий инженер:
+        // иначе устройство админа переписывает и шлёт задачи всех инженеров каждый проход (P2-0077, ТД 413).
         var engineersToProcess = [myName];
-        if (force && _permSvc2 && _permSvc2.isAdmin()) {
+        if (allEngineers && _permSvc2 && _permSvc2.isAdmin()) {
             var allEngs = Array.from(new Set(_allInspections.map(function(c){ return c.inspectorName; }).filter(Boolean)));
             if (allEngs.length > 0) engineersToProcess = allEngs;
             if (!engineersToProcess.includes(myName)) engineersToProcess.push(myName);
-        } else if (force && currentRole === 'project_manager') {
+        } else if (allEngineers && currentRole === 'project_manager') {
             var allEngs2 = Array.from(new Set(_allInspections.map(function(c){ return c.inspectorName; }).filter(Boolean)));
             if (allEngs2.length > 0) engineersToProcess = allEngs2;
         }
@@ -641,6 +652,8 @@ async function _gameGenerateWeeklyPlan(force) {
             var targetEngineer = engineersToProcess[ei];
             if (!targetEngineer || targetEngineer === 'Неизвестный инспектор') continue;
             var targetEngRef = _engineerRefFromName(targetEngineer);
+            // P2-0077: чужие существующие задачи (план админа на всех) не меняем — только досоздаём недостающие.
+            var isMine = _normalizeEngName(targetEngineer) === _normalizeEngName(myName);
             var b3AgendaNotes = [];
 
             var addTask = function(idSuffix, cat, icon, title, workTitle, contractor, prompt, lvl, tDate, tmplKey, taskType, targetCount) {
@@ -688,11 +701,13 @@ async function _gameGenerateWeeklyPlan(force) {
                     }
                 }
 
+                if (existingTask && !isMine) return existingTask;
+
                 if (existingTask) {
                     var oldId = existingTask.id;
                     // P2-0023: «к отправке» — только если план правда изменил задачу. Раньше каждая
                     // существующая задача помечалась при каждом пересчёте → отправка всех задач на каждом круге.
-                    var beforeSig = [existingTask.id, existingTask.engineerId, existingTask.target, existingTask.date].join('|');
+                    var beforeSig = [existingTask.id, existingTask.engineerId, existingTask.target, _taskDayKey(existingTask.date)].join('|');
                     if (String(oldId) !== String(taskId)) {
                         var ghost = Object.assign({}, existingTask, {
                             id: oldId, _deleted: true, is_deleted: true,
@@ -708,18 +723,14 @@ async function _gameGenerateWeeklyPlan(force) {
                         }
                     }
                     if (!existingTask.engineerId) existingTask.engineerId = engId;
-                    if (force && existingTask.status === 'pending') {
-                        if (taskType === 'Аудит') {
-                            var deficit = existingTask.target - (existingTask.done || 0);
-                            if (deficit > 0) {
-                                existingTask.target = deficit + targetCount;
-                                existingTask.date = tDate.toISOString();
-                            }
-                        } else {
-                            existingTask.date = tDate.toISOString();
-                        }
+                    // P2-0077: срок ставится только при создании задачи — пересчёт его не двигает
+                    // (раньше «Приёмка эталона» получала «сейчас» на каждом проходе, просроченное не было просроченным).
+                    // Недобор «Инспекции» прошлой недели переносится в цель один раз — на новой неделе.
+                    if (weekRolled && existingTask.status === 'pending' && taskType === 'Аудит') {
+                        var deficit = existingTask.target - (existingTask.done || 0);
+                        if (deficit > 0) existingTask.target = deficit + targetCount;
                     }
-                    var afterSig = [existingTask.id, existingTask.engineerId, existingTask.target, existingTask.date].join('|');
+                    var afterSig = [existingTask.id, existingTask.engineerId, existingTask.target, _taskDayKey(existingTask.date)].join('|');
                     if (afterSig !== beforeSig) {
                         _touchTaskForSync(existingTask);
                         _storage().put(_storage().stores().TASKS, existingTask);
@@ -785,8 +796,8 @@ async function _gameGenerateWeeklyPlan(force) {
                         (c.templateKey === pair.templateKey || c.templateTitle === pair.templateTitle);
                 });
                 if (hasEtalon) {
-                    // Акт уже оформлен — закрываем висящую задачу по этой паре.
-                    window.rbi_tasksData.forEach(function(t) {
+                    // Акт уже оформлен — закрываем висящую задачу по этой паре (только свою, P2-0077).
+                    if (isMine) window.rbi_tasksData.forEach(function(t) {
                         if (t._deleted || t.is_deleted) return;
                         if (t.engineerName !== targetEngineer) return;
                         if (t.taskType !== 'Эталон' && !(t.title && t.title.indexOf('Эталон') !== -1)) return;
@@ -847,6 +858,8 @@ async function _gameGenerateWeeklyPlan(force) {
                 if (deficit > 0 && !activeAuditTask && targetCount > 0) {
                     var taskDate = new Date(now); taskDate.setDate(now.getDate() + deadlineDays);
                     addTask('aud_multi', 'control', 'Контроль', 'Инспекция: ' + pair.contractor, pair.templateTitle, pair.contractor, promptText, lvl, taskDate, pair.templateKey, 'Аудит', targetCount);
+                } else if (!isMine) {
+                    // P2-0077: «Инспекция» чужой задачи — target/done/status не трогаем
                 } else if (deficit > 0 && activeAuditTask && activeAuditTask.target !== targetCount) {
                     activeAuditTask.target = targetCount;
                     activeAuditTask.done = validChecksDone;
@@ -963,7 +976,7 @@ async function _gameGenerateWeeklyPlan(force) {
                 if (b3AgendaNotes.length > 8) meetPrompt += '\n• …ещё ' + (b3AgendaNotes.length - 8);
             }
             var meetTask = addTask('meet_w', 'meeting', 'Совещание', 'Еженедельный разбор качества', 'Коммуникация', 'Системная', meetPrompt, 3, meetingDate, '', 'Совещание');
-            if (meetTask && b3AgendaNotes.length > 0 && meetTask.status === 'pending') {
+            if (isMine && meetTask && b3AgendaNotes.length > 0 && meetTask.status === 'pending') {
                 meetTask.prompt = meetPrompt;
                 meetTask.priorityLvl = Math.max(meetTask.priorityLvl || 0, 3);
                 meetTask.updatedAt = new Date().toISOString();
@@ -1255,7 +1268,7 @@ async function _renderTasksList(forceRender) {
 
     var globalActionsHtml =
         '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">' +
-            '<button onclick="gameForceUpdatePlan()" class="bg-[var(--card-bg)] text-ink border border-[var(--card-border)] py-2.5 rounded-xl font-bold text-rbi-caption uppercase active:scale-95 shadow-sm">' + _t('quality.tasks.actions.sync', 'Синхронизировать') + '</button>' +
+            '<button onclick="gameForceUpdatePlan(false, { allEngineers: true })" class="bg-[var(--card-bg)] text-ink border border-[var(--card-border)] py-2.5 rounded-xl font-bold text-rbi-caption uppercase active:scale-95 shadow-sm">' + _t('quality.tasks.actions.sync', 'Синхронизировать') + '</button>' +
             '<button onclick="rbi_openTaskModal()" class="bg-brand text-white py-2.5 rounded-xl font-bold text-rbi-caption uppercase active:scale-95 shadow-sm">' + _t('quality.tasks.actions.assign', 'Поручение') + '</button>' +
             '<button onclick="rbi_openCalendarModal()" class="bg-[var(--card-bg)] text-ink border border-[var(--card-border)] py-2.5 rounded-xl font-bold text-rbi-caption uppercase active:scale-95 shadow-sm">' + _t('quality.tasks.actions.calendar', 'Календарь') + '</button>' +
             '<button onclick="window.RBI.services.game.toggleAbsence()" class="bg-[var(--card-bg)] text-ink border border-[var(--card-border)] py-2.5 rounded-xl font-bold text-rbi-caption uppercase active:scale-95 shadow-sm">' + _t('quality.tasks.actions.leave', 'Отпуск') + '</button>' +
