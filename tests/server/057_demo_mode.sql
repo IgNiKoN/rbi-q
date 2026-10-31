@@ -21,13 +21,15 @@ create or replace function pg_temp.val(q text) returns text language plpgsql as 
 declare v text; begin execute q into v; return coalesce(v, 'NULL'); exception when others then return sqlstate || ' ' || sqlerrm; end $f$;
 create or replace function pg_temp.t(c boolean, l text) returns text language sql as $f$
   select case when coalesce(c, false) then '' else 'FAIL ' || l || E'\n' end $f$;
--- отпечаток всех строк core / planfact / quality (кроме журнала входов посетителя в демо): любая удачная запись его меняет
+-- отпечаток всех строк core / planfact / quality (кроме журнала входов посетителя в демо): любая удачная запись его меняет.
+-- По версии строки (ctid, xmin), не по содержимому: вставка, правка и удаление меняют их, а большие поля (снимки отчётов
+-- Качества) не читаются — на боевом объёме тест укладывается в ожидание SQL Editor (≈ 1 мин)
 create or replace function pg_temp.print(p_skip text[] default '{}') returns text language plpgsql security definer as $f$
 declare r record; v text; acc text := '';
 begin
   for r in select schemaname s, tablename t from pg_tables where schemaname in ('core', 'planfact', 'quality')
             and not (schemaname || '.' || tablename = any (p_skip)) order by 1, 2 loop
-    execute format('select coalesce(md5(string_agg(md5(x::text), '','' order by md5(x::text))), ''-'') from %I.%I x', r.s, r.t) into v;
+    execute format('select coalesce(md5(string_agg(x.ctid::text || x.xmin::text, '','' order by x.ctid)), ''-'') from %I.%I x', r.s, r.t) into v;
     acc := acc || r.s || '.' || r.t || '=' || v || ';';
   end loop;
   return md5(acc);
