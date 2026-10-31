@@ -1,0 +1,50 @@
+PASS 375: вошёл в свою компанию «Песочница — Клиент 0 (стенд)»
+PASS 375: экран «Демо» — 8 ролей
+PASS 375: экран «Демо» без горизонтальной прокрутки
+PASS 375 management: в демо, плашка «ДЕМО Руководитель ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 375 management: без горизонтальной прокрутки
+PASS 375 project_manager: в демо, плашка «ДЕМО Руководитель проекта ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 375 project_manager: без горизонтальной прокрутки
+PASS 375 pto: в демо, плашка «ДЕМО Инженер ПТО ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 375 pto: без горизонтальной прокрутки
+PASS 375 foreman: в демо, плашка «ДЕМО Прораб ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 375 foreman: без горизонтальной прокрутки
+PASS 375 qc_engineer: в демо, плашка «ДЕМО Инженер качества ▾ Выйти», раздел #/construction-v2, модули ["planfact","quality","construction","knowledge"]
+PASS 375 qc_engineer: без горизонтальной прокрутки
+PASS 375 economist: в демо, плашка «ДЕМО Экономист ▾ Выйти», раздел #/planfact, модули ["planfact"]
+PASS 375 economist: без горизонтальной прокрутки
+PASS 375 customer: в демо, плашка «ДЕМО Заказчик ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 375 customer: без горизонтальной прокрутки
+PASS 375 contractor_rep: в демо, плашка «ДЕМО Представитель подрядчика ▾ Выйти», раздел #/construction-v2, модули ["planfact","quality","construction","knowledge"]
+PASS 375 contractor_rep: без горизонтальной прокрутки
+PASS 375: роли с сервера в демо читаются
+PASS 375: «Выйти» — снова своя компания «Песочница — Клиент 0 (стенд)», плашки нет
+PASS 375: данные устройства своей компании на месте
+PASS 375: без сети — «Демо открывается только с интернетом — подключитесь к сети и попробуйте снова»
+PASS 1440: вошёл в свою компанию «Песочница — Клиент 0 (стенд)»
+PASS 1440: экран «Демо» — 8 ролей
+PASS 1440: экран «Демо» без горизонтальной прокрутки
+PASS 1440 management: в демо, плашка «ДЕМО Руководитель ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 1440 management: без горизонтальной прокрутки
+PASS 1440 project_manager: в демо, плашка «ДЕМО Руководитель проекта ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 1440 project_manager: без горизонтальной прокрутки
+PASS 1440 pto: в демо, плашка «ДЕМО Инженер ПТО ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 1440 pto: без горизонтальной прокрутки
+PASS 1440 foreman: в демо, плашка «ДЕМО Прораб ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 1440 foreman: без горизонтальной прокрутки
+PASS 1440 qc_engineer: в демо, плашка «ДЕМО Инженер качества ▾ Выйти», раздел #/construction-v2, модули ["planfact","quality","construction","knowledge"]
+PASS 1440 qc_engineer: без горизонтальной прокрутки
+PASS 1440 economist: в демо, плашка «ДЕМО Экономист ▾ Выйти», раздел #/planfact, модули ["planfact"]
+PASS 1440 economist: без горизонтальной прокрутки
+PASS 1440 customer: в демо, плашка «ДЕМО Заказчик ▾ Выйти», раздел #/planfact, модули ["planfact","quality","construction","knowledge"]
+PASS 1440 customer: без горизонтальной прокрутки
+PASS 1440 contractor_rep: в демо, плашка «ДЕМО Представитель подрядчика ▾ Выйти», раздел #/construction-v2, модули ["planfact","quality","construction","knowledge"]
+PASS 1440 contractor_rep: без горизонтальной прокрутки
+PASS 1440: роли с сервера в демо читаются
+PASS 1440: «Выйти» — снова своя компания «Песочница — Клиент 0 (стенд)», плашки нет
+PASS 1440: данные устройства своей компании на месте
+PASS 1440: без сети — «Демо открывается только с интернетом — подключитесь к сети и попробуйте снова»
+PASS админ платформы: до демо — администратор
+PASS админ платформы в демо — глазами прораба: позиций 54, только Корпус 2 секция 1, «администратор» скрыт
+PASS админ платформы в демо, запрос с другого устройства (без компании демо) — администрирование работает (200)
+PASS админ платформы: после «Выйти» — снова администратор

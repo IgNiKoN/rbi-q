@@ -1,0 +1,32 @@
+0: cold375 w1440 pf-batch q-ids s-contractor s-kinds s-rename
+1: cache cold1440 t375 pf-batch1440-dark q-ids-other pf-offline pf-offline1440
+2: w-slow otheruser rescue t1440 c-who375 c-who1440 w375
+3: double-start w-hang screen375 expired stale14 invalid sk375
+4: r-middeploy double-start-nolocks w-flap screen768 screen1440 w-offline sk375dark
+5: r-allow r-partial reasons375 w-drop w-5xx edit-mid sk768
+6: m-hang r-launch r-tabs reasons1440-dark w-tabs r-deploy sk1024
+7: v-summary1440 m-hang375 r-return r-chunk r-requests r-delta sk1440
+8: d-device v-other m-revoke r-queue r-transition r-size sk1440dark
+9: s-reject-retry d-quality-only v-prefetch375 m-first m-other v-summary375 sk1920
+10: s-foreign s-reject-retry-1440-dark d-screens v-prefetch1440 f-field f-manager
+11: pf-drop s-leader s-own-first s-module-off s-new-kind s-pull-scope
+время: 541 с
+t0: Итог: PASS 64, FAIL 0.
+t1: Итог: PASS 59, FAIL 0.
+t2: Итог: PASS 58, FAIL 2.
+t3: Итог: PASS 52, FAIL 0.
+t4: Итог: PASS 60, FAIL 0.
+t5: Итог: PASS 38, FAIL 4.
+t6: Итог: PASS 58, FAIL 0.
+t7: Итог: PASS 44, FAIL 0.
+t8: Итог: PASS 48, FAIL 0.
+t9: Итог: PASS 56, FAIL 0.
+t10: Итог: PASS 41, FAIL 0.
+t11: Итог: PASS 15, FAIL 0.
+
+Потоки 2 и 5 отдельно (тот же состав), ветка и main:
+platform-2-core-0053-2: Итог: PASS 58, FAIL 2.
+platform-2-core-0053-5: Итог: PASS 38, FAIL 4.
+platform-2-core-2: Итог: PASS 58, FAIL 2.
+platform-2-core-5: Итог: PASS 38, FAIL 4.
+rescue и sk768 по одному на ветке: PASS 10 / FAIL 0 и PASS 20 / FAIL 0
