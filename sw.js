@@ -2,9 +2,9 @@
 // P2-0066: номер версии и список файлов не правятся руками — их пишет сборка (npm run build:version) в участок ниже.
 // <app-version> — сгенерировано scripts/app-version.mjs (npm run build:version), руками не править
 const APP_RELEASE = {
-  version: '2026.10.31-5dc2ac03',
+  version: '2026.10.31-4970eb54',
   date: '2026-10-31',
-  digest: '5dc2ac03',
+  digest: '4970eb54',
   modules: {"planfact":"p2","company":"p2","platform-admin":"p2","construction-v2":"rbi","construction":"rbi","quality":"rbi"},
   prefixes: [["js/dist/planfact/","planfact"],["js/dist/company/","company"],["js/dist/platform-admin/","platform-admin"],["js/modules/construction-v2/","construction-v2"],["js/modules/construction/","construction"],["js/modules/quality/","quality"],["js/dist/construction-v2.js","construction-v2"],["js/dist/rbi-construction-","construction"]],
   files: {
@@ -231,7 +231,7 @@ const APP_RELEASE = {
     "js/services/ai.service.js": ["81319b59599cf8c6",3352,""],
     "js/services/analytics.service.js": ["c3713abe691ce61d",5827,""],
     "js/services/app-mode.service.js": ["3d18214b2eee6f81",2137,""],
-    "js/services/company.service.js": ["4e572853e3816579",15292,""],
+    "js/services/company.service.js": ["ae3ab4df6bacea52",16419,""],
     "js/services/config.service.js": ["92754ac47eea9f80",3005,""],
     "js/services/contractor-directory.service.js": ["67818b1901038039",47075,""],
     "js/services/contractor-metrics.service.js": ["a5942bd8380696bc",12817,""],

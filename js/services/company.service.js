@@ -76,8 +76,26 @@
     });
   }
 
+  /** JSON с ключами по алфавиту — сравнение, не зависящее от порядка ключей. */
+  function _stableJson(v) {
+    if (Array.isArray(v)) return '[' + v.map(_stableJson).join(',') + ']';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + _stableJson(v[k]); }).join(',') + '}';
+    }
+    return JSON.stringify(v === undefined ? null : v);
+  }
+
+  /**
+   * P2-0077 (ТД 415): зеркало в appSettings уже такое же — не писать. Иначе каждый проход синхронизации
+   * (pull настроек компании) ставил settingsUpdatedAt = now, и профиль инженера уходил на каждом проходе.
+   */
+  function _mirrorUnchanged(key, safe) {
+    return !!window.appSettings && _stableJson(window.appSettings[key]) === _stableJson(safe);
+  }
+
   function _mirrorRoleOverridesLocal(map) {
     var safe = _cloneRoleOverrides(map);
+    if (_mirrorUnchanged('roleMatrixOverrides', safe)) return Promise.resolve(true);
     var svc = _settingsSvc();
     if (svc && typeof svc.set === 'function') {
       return Promise.resolve(svc.set('roleMatrixOverrides', safe)).then(function () {
@@ -117,6 +135,7 @@
 
   function _mirrorOfficialTemplatesLocal(map) {
     var safe = _cloneOfficialTemplates(map);
+    if (_mirrorUnchanged('officialTemplates', safe)) return Promise.resolve(true);
     var svc = _settingsSvc();
     if (svc && typeof svc.set === 'function') {
       return Promise.resolve(svc.set('officialTemplates', safe)).then(function () {

@@ -1,7 +1,7 @@
 // P2-0077 (ТД 413): автоплан задач Качества и синхронизация. Журнал iPhone владельца 31.10.2026: у руководителя Качества
 // каждый проход «отправлено 84», затем «85» — пересчёт плана после прохода сдвигал сроки задач всех инженеров и слал их снова.
 // q-admin375, q-admin1440 — руководитель: на устройстве проверки и задачи инженера «Петров Пётр» (план «на всех» по кнопке
-//   «Синхронизировать»); три прохода синхронизации подряд → задачи не уходят, в журнале «отправлено 0», сроки инженера прежние.
+//   «Синхронизировать»); три прохода синхронизации подряд → задачи и профиль не уходят, в журнале «отправлено 0», сроки инженера прежние.
 // q-eng375, q-eng1440 — инженер: свои новые задачи уходят один раз, повторный проход — 0, закрытая своя задача — ровно 1.
 // Сервер — стенд (servers.mjs), боевой не используется.
 import { join } from 'node:path';
@@ -36,7 +36,6 @@ const markSynced = (page) => page.evaluate(async () => {
   for (const t of window.rbi_tasksData || []) { t.syncStatus = 'synced'; t.sync_status = 'synced'; await window.RBI.services.storage.put('rbi_tasks', t); }
 });
 const idle = (page) => page.waitForFunction(() => !window.isSyncing && !window.isPlanGenerating, null, { timeout: 60000 }).catch(() => {});
-const profileSent = (x) => (x.profile ? 1 : 0);
 const profileSends = () => apiLog.filter((l) => l.startsWith('POST /rest/v1/rbi_engineer_profiles')).length;
 const taskSends = () => [...sendsAll].filter(([k]) => k.startsWith('rbi_tasks:')).reduce((s, [, v]) => s + v, 0);
 
@@ -74,8 +73,8 @@ async function admin(out, width) {
     const p = [await pass(page), await pass(page), await pass(page)];
     note(`${tag}: проходы — ${p.map((x, i) => `${i + 1}: задач ушло ${x.tasks}, журнал «отправлено ${x.pushed}», профиль ${x.profile}`).join('; ')}`);
     ok(p[1].tasks === 0 && p[2].tasks === 0, `${tag}: проходы 2 и 3 — задачи на сервер не уходят`, p.map((x) => x.tasks).join('/'));
-    // «отправлено N» журнала = проверки + задачи + профиль; профиль пока уходит каждый проход (зеркало настроек компании, ТД 415)
-    ok(p.every((x) => x.pushed !== null && x.pushed - profileSent(x) === 0), `${tag}: журнал синхронизации — задач в «отправлено» нет`, p.map((x) => x.pushed + (x.profile ? ' (профиль)' : '')).join('/'));
+    // «отправлено N» журнала = проверки + задачи + профиль; профиль больше не уходит без изменений (ТД 415)
+    ok(p[1].pushed === 0 && p[2].pushed === 0, `${tag}: журнал синхронизации — повторный проход без изменений «отправлено 0»`, p.map((x) => x.pushed + (x.profile ? ' (профиль)' : '')).join('/'));
     ok(p[0].tasks === 0, `${tag}: проход 1 — тоже 0 (ничего не меняли)`, String(p[0].tasks));
     const now = await taskState(page);
     const moved = engWas.filter((w) => { const t = now.tasks.find((x) => x.id === w.id); return !t || t.date !== w.date || t.target !== w.target || t.status !== w.status; });
@@ -109,6 +108,7 @@ async function engineer(out, width) {
     const per = st0.tasks.map((t) => sendsAll.get('rbi_tasks:' + t.id) || 0);
     ok(st0.all > 0 && per.every((n) => n === 1), `${tag}: новые свои задачи ушли на сервер, каждая ровно 1 раз`, `${per.join(',')} (${st0.all} шт.)`);
     ok(p[3].tasks === 0 && p[4].tasks === 0, `${tag}: следующие проходы — 0`, p.map((x) => x.tasks).join('/'));
+    ok(p[4].pushed === 0, `${tag}: журнал — повторный проход без изменений «отправлено 0»`, p.map((x) => x.pushed).join('/'));
     const mine = st0.tasks.find((t) => /Эталон/.test(t.title) && t.status === 'pending');
     await page.evaluate((id) => window.rbi_markTaskDone(id, true).catch(() => {}), mine && mine.id);
     const c = [await pass(page), await pass(page)];
