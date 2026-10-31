@@ -123,7 +123,6 @@ create policy quality_files_guard_select on storage.objects as restrictive for s
 drop function quality.storage_companies(text[]);
 drop function public.pf_my_permissions_all(uuid[]);
 
-revoke execute on function quality.contractor_key(text) from authenticated;
 drop function quality.area_ok(quality.area_scope, uuid, uuid, uuid, uuid);
 drop function quality.area_scope(text[]);
 drop type quality.area_scope;

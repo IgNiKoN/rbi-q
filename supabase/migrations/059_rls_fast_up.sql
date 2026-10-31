@@ -186,7 +186,8 @@ comment on function quality.read_ok(quality.read_scope, uuid, uuid, uuid, uuid, 
 
 -- 2а. Правила quality.row_visible(компания, проект, действия, вид, автор, исполнитель, ключ фирмы, фирма) — Стройконтроль 1,
 -- черновики, очередь: как quality.assignment_sees. all_p — все записи проектов, mine_p — свои (автор или исполнитель — я),
--- ctr — «проект/ключ фирмы» (роль «своя фирма»: ключи — сопоставления фирмы и её название). Запись без проекта и записи
+-- ctr — «проект/название фирмы» (роль «своя фирма», как quality.contractor_matches: названия фирм в записях Стройконтроля 1, чей
+-- ключ — сопоставление фирмы или её название; ключ считается один раз на название, не на строке). Запись без проекта и записи
 -- проекта-контейнера — при любом назначении.
 create type quality.visible_scope as (me uuid, all_p uuid[], mine_p uuid[], ctr text[]);
 
@@ -200,7 +201,7 @@ declare
   c uuid := quality.request_company();
   s quality.visible_scope;
   v_all constant uuid := quality.any_project();
-  v_extra uuid[]; g record; v_p uuid[]; m text; v_keys text[];
+  v_extra uuid[]; g record; v_p uuid[]; m text; v_keys text[]; v_names text[];
 begin
   s := row(auth.uid(), '{}', '{}', '{}');
   if c is null or s.me is null then return s; end if;
@@ -232,7 +233,11 @@ begin
                         union
                         select quality.contractor_key(cp.name) from core.counterparties cp
                          where cp.id = g.counterparty_id and cp.company_id = c and cp.deleted_at is null);
-        s.ctr := s.ctr || array(select pp::text || '/' || k from unnest(v_p) pp, unnest(v_keys) k where k <> 'unknown_contractor');
+        v_names := array(select x.n from (select distinct d.contractor n from quality.construction_defects d where d.core_company_id = c
+                                           union select a.contractor from quality.construction_acceptance a where a.core_company_id = c) x
+                          where nullif(btrim(coalesce(x.n, '')), '') is not null and quality.contractor_key(x.n) = any(v_keys)
+                            and quality.contractor_key(x.n) <> 'unknown_contractor');
+        s.ctr := s.ctr || array(select pp::text || '/' || n from unnest(v_p) pp, unnest(v_names) n);
       end if;
     elsif p_kind = 'author' and (m || '.edit') = any(g.r) then s.mine_p := s.mine_p || v_p;
     else s.all_p := s.all_p || v_p;
@@ -251,14 +256,12 @@ AS $function$
 declare
   v_all constant uuid := 'ffffffff-ffff-ffff-ffff-ffffffffffff';
   k uuid := coalesce(p_project, '00000000-0000-0000-0000-000000000001'::uuid);   -- quality.no_project()
-  v_key text;
 begin
   if s.me is null then return false; end if;
   if s.all_p && array[k, v_all] then return true; end if;
   if coalesce(p_author = s.me or p_assignee = s.me, false) and s.mine_p && array[k, v_all] then return true; end if;
-  if cardinality(s.ctr) > 0 and nullif(btrim(coalesce(p_cname, '')), '') is not null then
-    v_key := quality.contractor_key(p_cname);
-    return s.ctr && array[k::text || '/' || v_key, v_all::text || '/' || v_key];
+  if cardinality(s.ctr) > 0 and p_cname is not null then
+    return s.ctr && array[k::text || '/' || p_cname, v_all::text || '/' || p_cname];
   end if;
   return false;
 end $function$;
@@ -379,8 +382,6 @@ grant execute on function quality.any_project(), quality.no_project(), quality.r
   quality.read_ok(quality.read_scope, uuid, uuid, uuid, uuid, uuid), quality.visible_scope(text[], text),
   quality.visible_ok(quality.visible_scope, uuid, uuid, uuid, text), quality.area_scope(text[]),
   quality.area_ok(quality.area_scope, uuid, uuid, uuid, uuid) to authenticated;
--- ключ фирмы по названию (чистая функция, без данных) — строку сверяет quality.visible_ok с правами вызывающего
-grant execute on function quality.contractor_key(text) to authenticated;
 
 -- 3. Правила чтения: этап 1 — file_registry (quality.can) и sk_records (quality.rec_ok).
 drop policy file_registry_select on quality.file_registry;

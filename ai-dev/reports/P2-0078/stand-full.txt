@@ -1,0 +1,37 @@
+# Полный стенд P2-0078: 12 потоков run.mjs, 83 сценариев
+0: w-offline r-deploy r-size stale14 v-summary375 s-pull-scope pf-offline1440
+1: w-slow r-middeploy sk375 invalid v-summary1440 s-reject-retry pf-drop
+2: w-hang r-partial sk375dark cache v-other s-reject-retry-1440-dark pf-batch
+3: w-flap r-tabs sk768 otheruser v-prefetch375 s-own-first pf-batch1440-dark
+4: w-drop r-chunk sk1024 screen375 v-prefetch1440 s-contractor c-who375
+5: w-5xx r-requests sk1440 screen768 f-field s-kinds c-who1440
+6: edit-mid r-delta sk1440dark screen1440 f-manager s-rename w375
+7: double-start r-allow sk1920 m-hang d-device s-foreign w1440
+8: double-start-nolocks r-launch cold375 m-hang375 d-quality-only s-leader t375
+9: reasons375 r-return cold1440 m-revoke d-screens q-ids t1440
+10: reasons1440-dark r-queue rescue m-first s-module-off q-ids-other s-pull-delta
+11: w-tabs r-transition expired m-other s-new-kind pf-offline
+t0 (259 с): Итог: PASS 31, FAIL 0. Запросов к подставному серверу: 989.
+t1 (510 с): Итог: PASS 33, FAIL 4. Запросов к подставному серверу: 1238.
+   FAIL sk375: «Разобрать» — 2 фирмы, 1 категория, 2 места — []
+   FAIL sk375: счётчик на подвкладке — 5
+   FAIL sk375: похожие для «Ромашка ООО» — первая «ООО Ромашка», не больше 3 — []
+   FAIL sk375: сценарий оборвался — page.click: Timeout 30000ms exceeded.
+t2 (627 с): Итог: PASS 57, FAIL 0. Запросов к подставному серверу: 1797.
+t3 (399 с): Итог: PASS 65, FAIL 0. Запросов к подставному серверу: 1161.
+t4 (379 с): Итог: PASS 68, FAIL 0. Запросов к подставному серверу: 1275.
+t5 (321 с): Итог: PASS 57, FAIL 0. Запросов к подставному серверу: 1283.
+t6 (365 с): Итог: PASS 47, FAIL 4. Запросов к подставному серверу: 858.
+   FAIL sk1440dark: «Разобрать» — 2 фирмы, 1 категория, 2 места — []
+   FAIL sk1440dark: счётчик на подвкладке — 5
+   FAIL sk1440dark: похожие для «Ромашка ООО» — первая «ООО Ромашка», не больше 3 — []
+   FAIL sk1440dark: сценарий оборвался — page.click: Timeout 30000ms exceeded.
+t7 (415 с): Итог: PASS 68, FAIL 0. Запросов к подставному серверу: 1401.
+t8 (261 с): Итог: PASS 40, FAIL 0. Запросов к подставному серверу: 1015.
+t9 (276 с): Итог: PASS 54, FAIL 0. Запросов к подставному серверу: 1023.
+t10 (260 с): Итог: PASS 46, FAIL 0. Запросов к подставному серверу: 1115.
+t11 (427 с): Итог: PASS 25, FAIL 0. Запросов к подставному серверу: 987.
+Сумма: PASS 591, FAIL 8; время прогона 627 с
+
+Перезапуск по одному (BLOCK_SIZING §6, ТД 409 — СК падает от соседних сценариев потока): sk375 — PASS 20, FAIL 0; sk1440dark — PASS 20, FAIL 0.
+Итог: PASS 599 (591 + 8 повторно), FAIL 0 после перезапуска; время 627 с — дольше 10 минут на 27 с (в следующий раз — 14 потоков).
